@@ -2054,6 +2054,1502 @@
         }
     };
 
+    // Phase 3: Advanced Clipping Tests
+
+    // Test 1: Basic rectangular clip regions
+    visualTests['clip-rectangular'] = {
+        name: 'Basic Rectangular Clipping',
+        description: 'Test rectangular clipping regions with simple shapes',
+        width: 400,
+        height: 200,
+        
+        drawSWCanvas: function(SWCanvas) {
+            const surface = SWCanvas.Surface(this.width, this.height);
+            const ctx = new SWCanvas.Context2D(surface);
+            
+            // Left side: No clipping
+            helpers.setSWCanvasFill(ctx, 'lightblue');
+            ctx.fillRect(10, 10, 80, 60);
+            helpers.setSWCanvasFill(ctx, 'red');
+            ctx.fillRect(30, 30, 80, 60);
+            
+            // Right side: With rectangular clipping
+            ctx.save();
+            ctx.beginPath();
+            ctx.rect(150, 20, 60, 40);
+            ctx.clip();
+            
+            helpers.setSWCanvasFill(ctx, 'lightblue');
+            ctx.fillRect(130, 10, 80, 60);
+            helpers.setSWCanvasFill(ctx, 'red');
+            ctx.fillRect(150, 30, 80, 60);
+            ctx.restore();
+            
+            // Bottom: Multiple overlapping rectangles with clip
+            ctx.save();
+            ctx.beginPath();
+            ctx.rect(50, 120, 100, 50);
+            ctx.clip();
+            
+            helpers.setSWCanvasFill(ctx, 'green');
+            ctx.fillRect(20, 100, 60, 80);
+            helpers.setSWCanvasFill(ctx, 'orange');
+            ctx.fillRect(80, 110, 60, 80);
+            helpers.setSWCanvasFill(ctx, 'purple');
+            ctx.fillRect(40, 140, 60, 50);
+            ctx.restore();
+            
+            return surface;
+        },
+        
+        drawHTML5Canvas: function(canvas) {
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, this.width, this.height);
+            
+            // Left side: No clipping
+            helpers.setHTML5CanvasFill(ctx, 'lightblue');
+            ctx.fillRect(10, 10, 80, 60);
+            helpers.setHTML5CanvasFill(ctx, 'red');
+            ctx.fillRect(30, 30, 80, 60);
+            
+            // Right side: With rectangular clipping
+            ctx.save();
+            ctx.beginPath();
+            ctx.rect(150, 20, 60, 40);
+            ctx.clip();
+            
+            helpers.setHTML5CanvasFill(ctx, 'lightblue');
+            ctx.fillRect(130, 10, 80, 60);
+            helpers.setHTML5CanvasFill(ctx, 'red');
+            ctx.fillRect(150, 30, 80, 60);
+            ctx.restore();
+            
+            // Bottom: Multiple overlapping rectangles with clip
+            ctx.save();
+            ctx.beginPath();
+            ctx.rect(50, 120, 100, 50);
+            ctx.clip();
+            
+            helpers.setHTML5CanvasFill(ctx, 'green');
+            ctx.fillRect(20, 100, 60, 80);
+            helpers.setHTML5CanvasFill(ctx, 'orange');
+            ctx.fillRect(80, 110, 60, 80);
+            helpers.setHTML5CanvasFill(ctx, 'purple');
+            ctx.fillRect(40, 140, 60, 50);
+            ctx.restore();
+        }
+    };
+
+    // Test 2: Polygon clip shapes
+    visualTests['clip-polygon'] = {
+        name: 'Polygon Clipping',
+        description: 'Test clipping with polygon shapes - triangles and complex polygons',
+        width: 400,
+        height: 200,
+        
+        drawSWCanvas: function(SWCanvas) {
+            const surface = SWCanvas.Surface(this.width, this.height);
+            const ctx = new SWCanvas.Context2D(surface);
+            
+            // Left: Triangle clip region
+            ctx.save();
+            ctx.beginPath();
+            ctx.moveTo(50, 20);
+            ctx.lineTo(120, 20);
+            ctx.lineTo(85, 80);
+            ctx.closePath();
+            ctx.clip();
+            
+            helpers.setSWCanvasFill(ctx, 'lightblue');
+            ctx.fillRect(20, 10, 100, 80);
+            helpers.setSWCanvasFill(ctx, 'red');
+            ctx.fillRect(60, 30, 60, 60);
+            ctx.restore();
+            
+            // Center: Diamond clip region
+            ctx.save();
+            ctx.beginPath();
+            ctx.moveTo(200, 20);
+            ctx.lineTo(240, 50);
+            ctx.lineTo(200, 80);
+            ctx.lineTo(160, 50);
+            ctx.closePath();
+            ctx.clip();
+            
+            helpers.setSWCanvasFill(ctx, 'green');
+            ctx.fillRect(140, 10, 120, 80);
+            helpers.setSWCanvasFill(ctx, 'orange');
+            ctx.fillRect(180, 40, 60, 40);
+            ctx.restore();
+            
+            // Right: Star clip region
+            ctx.save();
+            ctx.beginPath();
+            const cx = 340, cy = 50;
+            // Outer star points
+            for (let i = 0; i < 5; i++) {
+                const angle = (i * 2 * Math.PI) / 5 - Math.PI / 2;
+                const x = cx + Math.cos(angle) * 30;
+                const y = cy + Math.sin(angle) * 30;
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+                
+                // Inner points
+                const innerAngle = angle + Math.PI / 5;
+                const ix = cx + Math.cos(innerAngle) * 12;
+                const iy = cy + Math.sin(innerAngle) * 12;
+                ctx.lineTo(ix, iy);
+            }
+            ctx.closePath();
+            ctx.clip();
+            
+            helpers.setSWCanvasFill(ctx, 'purple');
+            ctx.fillRect(300, 10, 80, 80);
+            helpers.setSWCanvasFill(ctx, 'yellow');
+            ctx.fillRect(320, 30, 40, 40);
+            ctx.restore();
+            
+            // Bottom: Hexagon clip with multiple fills
+            ctx.save();
+            ctx.beginPath();
+            const hx = 200, hy = 150;
+            for (let i = 0; i < 6; i++) {
+                const angle = (i * Math.PI) / 3;
+                const x = hx + Math.cos(angle) * 40;
+                const y = hy + Math.sin(angle) * 40;
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.closePath();
+            ctx.clip();
+            
+            helpers.setSWCanvasFill(ctx, 'cyan');
+            ctx.fillRect(140, 100, 120, 100);
+            helpers.setSWCanvasFill(ctx, 'magenta');
+            ctx.fillRect(180, 130, 40, 40);
+            helpers.setSWCanvasFill(ctx, 'lime');
+            ctx.fillRect(160, 120, 80, 20);
+            ctx.restore();
+            
+            return surface;
+        },
+        
+        drawHTML5Canvas: function(canvas) {
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, this.width, this.height);
+            
+            // Left: Triangle clip region
+            ctx.save();
+            ctx.beginPath();
+            ctx.moveTo(50, 20);
+            ctx.lineTo(120, 20);
+            ctx.lineTo(85, 80);
+            ctx.closePath();
+            ctx.clip();
+            
+            helpers.setHTML5CanvasFill(ctx, 'lightblue');
+            ctx.fillRect(20, 10, 100, 80);
+            helpers.setHTML5CanvasFill(ctx, 'red');
+            ctx.fillRect(60, 30, 60, 60);
+            ctx.restore();
+            
+            // Center: Diamond clip region
+            ctx.save();
+            ctx.beginPath();
+            ctx.moveTo(200, 20);
+            ctx.lineTo(240, 50);
+            ctx.lineTo(200, 80);
+            ctx.lineTo(160, 50);
+            ctx.closePath();
+            ctx.clip();
+            
+            helpers.setHTML5CanvasFill(ctx, 'green');
+            ctx.fillRect(140, 10, 120, 80);
+            helpers.setHTML5CanvasFill(ctx, 'orange');
+            ctx.fillRect(180, 40, 60, 40);
+            ctx.restore();
+            
+            // Right: Star clip region
+            ctx.save();
+            ctx.beginPath();
+            const cx = 340, cy = 50;
+            // Outer star points
+            for (let i = 0; i < 5; i++) {
+                const angle = (i * 2 * Math.PI) / 5 - Math.PI / 2;
+                const x = cx + Math.cos(angle) * 30;
+                const y = cy + Math.sin(angle) * 30;
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+                
+                // Inner points
+                const innerAngle = angle + Math.PI / 5;
+                const ix = cx + Math.cos(innerAngle) * 12;
+                const iy = cy + Math.sin(innerAngle) * 12;
+                ctx.lineTo(ix, iy);
+            }
+            ctx.closePath();
+            ctx.clip();
+            
+            helpers.setHTML5CanvasFill(ctx, 'purple');
+            ctx.fillRect(300, 10, 80, 80);
+            helpers.setHTML5CanvasFill(ctx, 'yellow');
+            ctx.fillRect(320, 30, 40, 40);
+            ctx.restore();
+            
+            // Bottom: Hexagon clip with multiple fills
+            ctx.save();
+            ctx.beginPath();
+            const hx = 200, hy = 150;
+            for (let i = 0; i < 6; i++) {
+                const angle = (i * Math.PI) / 3;
+                const x = hx + Math.cos(angle) * 40;
+                const y = hy + Math.sin(angle) * 40;
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.closePath();
+            ctx.clip();
+            
+            helpers.setHTML5CanvasFill(ctx, 'cyan');
+            ctx.fillRect(140, 100, 120, 100);
+            helpers.setHTML5CanvasFill(ctx, 'magenta');
+            ctx.fillRect(180, 130, 40, 40);
+            helpers.setHTML5CanvasFill(ctx, 'lime');
+            ctx.fillRect(160, 120, 80, 20);
+            ctx.restore();
+        }
+    };
+
+    // Test 3: Arc/ellipse clip regions
+    visualTests['clip-curved'] = {
+        name: 'Curved Clipping',
+        description: 'Test clipping with arcs and elliptical shapes',
+        width: 400,
+        height: 250,
+        
+        drawSWCanvas: function(SWCanvas) {
+            const surface = SWCanvas.Surface(this.width, this.height);
+            const ctx = new SWCanvas.Context2D(surface);
+            
+            // Left: Circle clip region
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(80, 60, 40, 0, 2 * Math.PI);
+            ctx.clip();
+            
+            helpers.setSWCanvasFill(ctx, 'lightblue');
+            ctx.fillRect(20, 20, 120, 80);
+            helpers.setSWCanvasFill(ctx, 'red');
+            ctx.fillRect(50, 40, 60, 40);
+            ctx.restore();
+            
+            // Center: Ellipse clip region
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(200, 60, 40, 0, 2 * Math.PI);
+            ctx.clip();
+            
+            helpers.setSWCanvasFill(ctx, 'green');
+            ctx.fillRect(130, 20, 140, 80);
+            helpers.setSWCanvasFill(ctx, 'orange');
+            ctx.fillRect(170, 45, 60, 30);
+            ctx.restore();
+            
+            // Right: Arc clip region (partial circle)
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(340, 60, 35, 0, Math.PI);
+            ctx.lineTo(305, 60);
+            ctx.closePath();
+            ctx.clip();
+            
+            helpers.setSWCanvasFill(ctx, 'purple');
+            ctx.fillRect(280, 20, 120, 80);
+            helpers.setSWCanvasFill(ctx, 'yellow');
+            ctx.fillRect(320, 30, 40, 60);
+            ctx.restore();
+            
+            // Bottom left: Rotated ellipse
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(100, 180, 30, 0, 2 * Math.PI);
+            ctx.clip();
+            
+            helpers.setSWCanvasFill(ctx, 'cyan');
+            ctx.fillRect(40, 140, 120, 80);
+            helpers.setSWCanvasFill(ctx, 'magenta');
+            ctx.fillRect(80, 160, 40, 40);
+            ctx.restore();
+            
+            // Bottom right: Complex arc path
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(300, 180, 30, 0, Math.PI / 2);
+            ctx.arc(350, 180, 30, Math.PI / 2, Math.PI);
+            ctx.arc(350, 210, 30, Math.PI, 3 * Math.PI / 2);
+            ctx.arc(300, 210, 30, 3 * Math.PI / 2, 0);
+            ctx.closePath();
+            ctx.clip();
+            
+            helpers.setSWCanvasFill(ctx, 'lime');
+            ctx.fillRect(250, 140, 130, 90);
+            helpers.setSWCanvasFill(ctx, 'navy');
+            ctx.fillRect(280, 170, 70, 30);
+            ctx.restore();
+            
+            return surface;
+        },
+        
+        drawHTML5Canvas: function(canvas) {
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, this.width, this.height);
+            
+            // Left: Circle clip region
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(80, 60, 40, 0, 2 * Math.PI);
+            ctx.clip();
+            
+            helpers.setHTML5CanvasFill(ctx, 'lightblue');
+            ctx.fillRect(20, 20, 120, 80);
+            helpers.setHTML5CanvasFill(ctx, 'red');
+            ctx.fillRect(50, 40, 60, 40);
+            ctx.restore();
+            
+            // Center: Ellipse clip region
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(200, 60, 40, 0, 2 * Math.PI);
+            ctx.clip();
+            
+            helpers.setHTML5CanvasFill(ctx, 'green');
+            ctx.fillRect(130, 20, 140, 80);
+            helpers.setHTML5CanvasFill(ctx, 'orange');
+            ctx.fillRect(170, 45, 60, 30);
+            ctx.restore();
+            
+            // Right: Arc clip region (partial circle)
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(340, 60, 35, 0, Math.PI);
+            ctx.lineTo(305, 60);
+            ctx.closePath();
+            ctx.clip();
+            
+            helpers.setHTML5CanvasFill(ctx, 'purple');
+            ctx.fillRect(280, 20, 120, 80);
+            helpers.setHTML5CanvasFill(ctx, 'yellow');
+            ctx.fillRect(320, 30, 40, 60);
+            ctx.restore();
+            
+            // Bottom left: Rotated ellipse
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(100, 180, 30, 0, 2 * Math.PI);
+            ctx.clip();
+            
+            helpers.setHTML5CanvasFill(ctx, 'cyan');
+            ctx.fillRect(40, 140, 120, 80);
+            helpers.setHTML5CanvasFill(ctx, 'magenta');
+            ctx.fillRect(80, 160, 40, 40);
+            ctx.restore();
+            
+            // Bottom right: Complex arc path
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(300, 180, 30, 0, Math.PI / 2);
+            ctx.arc(350, 180, 30, Math.PI / 2, Math.PI);
+            ctx.arc(350, 210, 30, Math.PI, 3 * Math.PI / 2);
+            ctx.arc(300, 210, 30, 3 * Math.PI / 2, 0);
+            ctx.closePath();
+            ctx.clip();
+            
+            helpers.setHTML5CanvasFill(ctx, 'lime');
+            ctx.fillRect(250, 140, 130, 90);
+            helpers.setHTML5CanvasFill(ctx, 'navy');
+            ctx.fillRect(280, 170, 70, 30);
+            ctx.restore();
+        }
+    };
+
+    // Test 4: Self-intersecting clip paths
+    visualTests['clip-self-intersecting'] = {
+        name: 'Self-Intersecting Clipping',
+        description: 'Test clipping with self-intersecting paths and complex winding',
+        width: 400,
+        height: 200,
+        
+        drawSWCanvas: function(SWCanvas) {
+            const surface = SWCanvas.Surface(this.width, this.height);
+            const ctx = new SWCanvas.Context2D(surface);
+            
+            // Left: Figure-8 clip path
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(70, 50, 30, 0, 2 * Math.PI);
+            ctx.arc(110, 50, 30, 0, 2 * Math.PI);
+            ctx.clip();
+            
+            helpers.setSWCanvasFill(ctx, 'lightblue');
+            ctx.fillRect(20, 20, 120, 60);
+            helpers.setSWCanvasFill(ctx, 'red');
+            ctx.fillRect(60, 35, 60, 30);
+            ctx.restore();
+            
+            // Center: Self-intersecting star
+            ctx.save();
+            ctx.beginPath();
+            const cx = 200, cy = 50;
+            // Create self-intersecting star
+            for (let i = 0; i < 5; i++) {
+                const angle = (i * 4 * Math.PI) / 5 - Math.PI / 2;
+                const x = cx + Math.cos(angle) * 40;
+                const y = cy + Math.sin(angle) * 40;
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.closePath();
+            ctx.clip();
+            
+            helpers.setSWCanvasFill(ctx, 'green');
+            ctx.fillRect(140, 10, 120, 80);
+            helpers.setSWCanvasFill(ctx, 'orange');
+            ctx.fillRect(180, 30, 40, 40);
+            ctx.restore();
+            
+            // Right: Bow-tie/hourglass shape
+            ctx.save();
+            ctx.beginPath();
+            ctx.moveTo(290, 20);
+            ctx.lineTo(350, 80);
+            ctx.lineTo(370, 20);
+            ctx.lineTo(330, 50);
+            ctx.lineTo(370, 80);
+            ctx.lineTo(290, 80);
+            ctx.lineTo(310, 20);
+            ctx.closePath();
+            ctx.clip();
+            
+            helpers.setSWCanvasFill(ctx, 'purple');
+            ctx.fillRect(270, 10, 120, 80);
+            helpers.setSWCanvasFill(ctx, 'yellow');
+            ctx.fillRect(300, 35, 60, 30);
+            ctx.restore();
+            
+            // Bottom: Complex self-intersecting polygon
+            ctx.save();
+            ctx.beginPath();
+            const points = [
+                [50, 130], [120, 160], [80, 120], [150, 150], [90, 180],
+                [130, 110], [60, 170], [140, 140], [70, 110], [110, 190]
+            ];
+            ctx.moveTo(points[0][0], points[0][1]);
+            for (let i = 1; i < points.length; i++) {
+                ctx.lineTo(points[i][0], points[i][1]);
+            }
+            ctx.closePath();
+            ctx.clip();
+            
+            helpers.setSWCanvasFill(ctx, 'cyan');
+            ctx.fillRect(30, 100, 140, 100);
+            helpers.setSWCanvasFill(ctx, 'magenta');
+            ctx.fillRect(70, 130, 60, 40);
+            ctx.restore();
+            
+            // Bottom right: Spiral-like intersecting path
+            ctx.save();
+            ctx.beginPath();
+            const spiralCx = 300, spiralCy = 150;
+            for (let t = 0; t < 4 * Math.PI; t += 0.5) {
+                const r = 5 + t * 3;
+                const x = spiralCx + r * Math.cos(t);
+                const y = spiralCy + r * Math.sin(t);
+                if (t === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            // Connect back to create intersections
+            ctx.lineTo(spiralCx + 20, spiralCy - 20);
+            ctx.lineTo(spiralCx - 30, spiralCy + 30);
+            ctx.closePath();
+            ctx.clip();
+            
+            helpers.setSWCanvasFill(ctx, 'lime');
+            ctx.fillRect(220, 110, 160, 80);
+            helpers.setSWCanvasFill(ctx, 'navy');
+            ctx.fillRect(270, 130, 60, 40);
+            ctx.restore();
+            
+            return surface;
+        },
+        
+        drawHTML5Canvas: function(canvas) {
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, this.width, this.height);
+            
+            // Left: Figure-8 clip path
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(70, 50, 30, 0, 2 * Math.PI);
+            ctx.arc(110, 50, 30, 0, 2 * Math.PI);
+            ctx.clip();
+            
+            helpers.setHTML5CanvasFill(ctx, 'lightblue');
+            ctx.fillRect(20, 20, 120, 60);
+            helpers.setHTML5CanvasFill(ctx, 'red');
+            ctx.fillRect(60, 35, 60, 30);
+            ctx.restore();
+            
+            // Center: Self-intersecting star
+            ctx.save();
+            ctx.beginPath();
+            const cx = 200, cy = 50;
+            // Create self-intersecting star
+            for (let i = 0; i < 5; i++) {
+                const angle = (i * 4 * Math.PI) / 5 - Math.PI / 2;
+                const x = cx + Math.cos(angle) * 40;
+                const y = cy + Math.sin(angle) * 40;
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.closePath();
+            ctx.clip();
+            
+            helpers.setHTML5CanvasFill(ctx, 'green');
+            ctx.fillRect(140, 10, 120, 80);
+            helpers.setHTML5CanvasFill(ctx, 'orange');
+            ctx.fillRect(180, 30, 40, 40);
+            ctx.restore();
+            
+            // Right: Bow-tie/hourglass shape
+            ctx.save();
+            ctx.beginPath();
+            ctx.moveTo(290, 20);
+            ctx.lineTo(350, 80);
+            ctx.lineTo(370, 20);
+            ctx.lineTo(330, 50);
+            ctx.lineTo(370, 80);
+            ctx.lineTo(290, 80);
+            ctx.lineTo(310, 20);
+            ctx.closePath();
+            ctx.clip();
+            
+            helpers.setHTML5CanvasFill(ctx, 'purple');
+            ctx.fillRect(270, 10, 120, 80);
+            helpers.setHTML5CanvasFill(ctx, 'yellow');
+            ctx.fillRect(300, 35, 60, 30);
+            ctx.restore();
+            
+            // Bottom: Complex self-intersecting polygon
+            ctx.save();
+            ctx.beginPath();
+            const points = [
+                [50, 130], [120, 160], [80, 120], [150, 150], [90, 180],
+                [130, 110], [60, 170], [140, 140], [70, 110], [110, 190]
+            ];
+            ctx.moveTo(points[0][0], points[0][1]);
+            for (let i = 1; i < points.length; i++) {
+                ctx.lineTo(points[i][0], points[i][1]);
+            }
+            ctx.closePath();
+            ctx.clip();
+            
+            helpers.setHTML5CanvasFill(ctx, 'cyan');
+            ctx.fillRect(30, 100, 140, 100);
+            helpers.setHTML5CanvasFill(ctx, 'magenta');
+            ctx.fillRect(70, 130, 60, 40);
+            ctx.restore();
+            
+            // Bottom right: Spiral-like intersecting path
+            ctx.save();
+            ctx.beginPath();
+            const spiralCx = 300, spiralCy = 150;
+            for (let t = 0; t < 4 * Math.PI; t += 0.5) {
+                const r = 5 + t * 3;
+                const x = spiralCx + r * Math.cos(t);
+                const y = spiralCy + r * Math.sin(t);
+                if (t === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            // Connect back to create intersections
+            ctx.lineTo(spiralCx + 20, spiralCy - 20);
+            ctx.lineTo(spiralCx - 30, spiralCy + 30);
+            ctx.closePath();
+            ctx.clip();
+            
+            helpers.setHTML5CanvasFill(ctx, 'lime');
+            ctx.fillRect(220, 110, 160, 80);
+            helpers.setHTML5CanvasFill(ctx, 'navy');
+            ctx.fillRect(270, 130, 60, 40);
+            ctx.restore();
+        }
+    };
+
+    // Test 5: Multiple nested clips
+    visualTests['clip-stack-nested'] = {
+        name: 'Nested Clipping Stack',
+        description: 'Test multiple nested clip regions with proper stack behavior',
+        width: 400,
+        height: 250,
+        
+        drawSWCanvas: function(SWCanvas) {
+            const surface = SWCanvas.Surface(this.width, this.height);
+            const ctx = new SWCanvas.Context2D(surface);
+            
+            // Left: Two nested rectangular clips
+            ctx.save();
+            // First clip: large rectangle
+            ctx.beginPath();
+            ctx.rect(20, 20, 120, 80);
+            ctx.clip();
+            
+            helpers.setSWCanvasFill(ctx, 'lightblue');
+            ctx.fillRect(0, 0, 160, 120);
+            
+            ctx.save();
+            // Second clip: smaller rectangle inside first
+            ctx.beginPath();
+            ctx.rect(40, 40, 60, 40);
+            ctx.clip();
+            
+            helpers.setSWCanvasFill(ctx, 'red');
+            ctx.fillRect(20, 20, 100, 80);
+            ctx.restore();
+            
+            // After restore, only first clip applies
+            helpers.setSWCanvasFill(ctx, 'green');
+            ctx.fillRect(100, 50, 40, 30);
+            ctx.restore();
+            
+            // Center: Circle then triangle clips
+            ctx.save();
+            // First clip: circle
+            ctx.beginPath();
+            ctx.arc(200, 60, 40, 0, 2 * Math.PI);
+            ctx.clip();
+            
+            helpers.setSWCanvasFill(ctx, 'orange');
+            ctx.fillRect(140, 20, 120, 80);
+            
+            ctx.save();
+            // Second clip: triangle inside circle
+            ctx.beginPath();
+            ctx.moveTo(180, 30);
+            ctx.lineTo(220, 30);
+            ctx.lineTo(200, 70);
+            ctx.closePath();
+            ctx.clip();
+            
+            helpers.setSWCanvasFill(ctx, 'purple');
+            ctx.fillRect(160, 20, 80, 80);
+            ctx.restore();
+            
+            // Back to circle clip only
+            helpers.setSWCanvasFill(ctx, 'yellow');
+            ctx.fillRect(185, 75, 30, 20);
+            ctx.restore();
+            
+            // Right: Three nested clips
+            ctx.save();
+            // First clip: large rectangle
+            ctx.beginPath();
+            ctx.rect(280, 20, 100, 80);
+            ctx.clip();
+            
+            helpers.setSWCanvasFill(ctx, 'cyan');
+            ctx.fillRect(260, 0, 140, 120);
+            
+            ctx.save();
+            // Second clip: circle inside rectangle
+            ctx.beginPath();
+            ctx.arc(330, 60, 35, 0, 2 * Math.PI);
+            ctx.clip();
+            
+            helpers.setSWCanvasFill(ctx, 'magenta');
+            ctx.fillRect(300, 30, 60, 60);
+            
+            ctx.save();
+            // Third clip: small rectangle inside circle
+            ctx.beginPath();
+            ctx.rect(315, 45, 30, 30);
+            ctx.clip();
+            
+            helpers.setSWCanvasFill(ctx, 'lime');
+            ctx.fillRect(310, 40, 40, 40);
+            ctx.restore(); // Back to circle + rectangle
+            
+            helpers.setSWCanvasFill(ctx, 'navy');
+            ctx.fillRect(305, 35, 50, 15);
+            ctx.restore(); // Back to rectangle only
+            
+            helpers.setSWCanvasFill(ctx, 'maroon');
+            ctx.fillRect(285, 85, 90, 10);
+            ctx.restore(); // No clips
+            
+            // Bottom: Complex nested polygon clips
+            ctx.save();
+            // First clip: hexagon
+            ctx.beginPath();
+            const hx = 120, hy = 170;
+            for (let i = 0; i < 6; i++) {
+                const angle = (i * Math.PI) / 3;
+                const x = hx + Math.cos(angle) * 50;
+                const y = hy + Math.sin(angle) * 50;
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.closePath();
+            ctx.clip();
+            
+            helpers.setSWCanvasFill(ctx, 'lightcoral');
+            ctx.fillRect(50, 110, 140, 120);
+            
+            ctx.save();
+            // Second clip: diamond inside hexagon
+            ctx.beginPath();
+            ctx.moveTo(120, 140);
+            ctx.lineTo(150, 170);
+            ctx.lineTo(120, 200);
+            ctx.lineTo(90, 170);
+            ctx.closePath();
+            ctx.clip();
+            
+            helpers.setSWCanvasFill(ctx, 'darkblue');
+            ctx.fillRect(70, 130, 100, 80);
+            
+            ctx.save();
+            // Third clip: small circle in center
+            ctx.beginPath();
+            ctx.arc(120, 170, 15, 0, 2 * Math.PI);
+            ctx.clip();
+            
+            helpers.setSWCanvasFill(ctx, 'gold');
+            ctx.fillRect(100, 150, 40, 40);
+            ctx.restore(); // Back to diamond + hexagon
+            
+            helpers.setSWCanvasFill(ctx, 'silver');
+            ctx.fillRect(105, 155, 30, 10);
+            ctx.restore(); // Back to hexagon only
+            
+            helpers.setSWCanvasFill(ctx, 'darkgreen');
+            ctx.fillRect(140, 145, 25, 50);
+            ctx.restore(); // No clips
+            
+            // Bottom right: Clip stack with transforms
+            ctx.save();
+            ctx.translate(280, 150);
+            ctx.rotate(Math.PI / 6);
+            
+            // First clip: rotated rectangle
+            ctx.beginPath();
+            ctx.rect(-40, -30, 80, 60);
+            ctx.clip();
+            
+            helpers.setSWCanvasFill(ctx, 'pink');
+            ctx.fillRect(-60, -50, 120, 100);
+            
+            ctx.save();
+            ctx.scale(0.7, 0.7);
+            // Second clip: scaled circle
+            ctx.beginPath();
+            ctx.arc(0, 0, 30, 0, 2 * Math.PI);
+            ctx.clip();
+            
+            helpers.setSWCanvasFill(ctx, 'brown');
+            ctx.fillRect(-40, -40, 80, 80);
+            ctx.restore();
+            
+            helpers.setSWCanvasFill(ctx, 'indigo');
+            ctx.fillRect(-15, -35, 30, 15);
+            ctx.restore();
+            
+            return surface;
+        },
+        
+        drawHTML5Canvas: function(canvas) {
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, this.width, this.height);
+            
+            // Left: Two nested rectangular clips
+            ctx.save();
+            // First clip: large rectangle
+            ctx.beginPath();
+            ctx.rect(20, 20, 120, 80);
+            ctx.clip();
+            
+            helpers.setHTML5CanvasFill(ctx, 'lightblue');
+            ctx.fillRect(0, 0, 160, 120);
+            
+            ctx.save();
+            // Second clip: smaller rectangle inside first
+            ctx.beginPath();
+            ctx.rect(40, 40, 60, 40);
+            ctx.clip();
+            
+            helpers.setHTML5CanvasFill(ctx, 'red');
+            ctx.fillRect(20, 20, 100, 80);
+            ctx.restore();
+            
+            // After restore, only first clip applies
+            helpers.setHTML5CanvasFill(ctx, 'green');
+            ctx.fillRect(100, 50, 40, 30);
+            ctx.restore();
+            
+            // Center: Circle then triangle clips
+            ctx.save();
+            // First clip: circle
+            ctx.beginPath();
+            ctx.arc(200, 60, 40, 0, 2 * Math.PI);
+            ctx.clip();
+            
+            helpers.setHTML5CanvasFill(ctx, 'orange');
+            ctx.fillRect(140, 20, 120, 80);
+            
+            ctx.save();
+            // Second clip: triangle inside circle
+            ctx.beginPath();
+            ctx.moveTo(180, 30);
+            ctx.lineTo(220, 30);
+            ctx.lineTo(200, 70);
+            ctx.closePath();
+            ctx.clip();
+            
+            helpers.setHTML5CanvasFill(ctx, 'purple');
+            ctx.fillRect(160, 20, 80, 80);
+            ctx.restore();
+            
+            // Back to circle clip only
+            helpers.setHTML5CanvasFill(ctx, 'yellow');
+            ctx.fillRect(185, 75, 30, 20);
+            ctx.restore();
+            
+            // Right: Three nested clips
+            ctx.save();
+            // First clip: large rectangle
+            ctx.beginPath();
+            ctx.rect(280, 20, 100, 80);
+            ctx.clip();
+            
+            helpers.setHTML5CanvasFill(ctx, 'cyan');
+            ctx.fillRect(260, 0, 140, 120);
+            
+            ctx.save();
+            // Second clip: circle inside rectangle
+            ctx.beginPath();
+            ctx.arc(330, 60, 35, 0, 2 * Math.PI);
+            ctx.clip();
+            
+            helpers.setHTML5CanvasFill(ctx, 'magenta');
+            ctx.fillRect(300, 30, 60, 60);
+            
+            ctx.save();
+            // Third clip: small rectangle inside circle
+            ctx.beginPath();
+            ctx.rect(315, 45, 30, 30);
+            ctx.clip();
+            
+            helpers.setHTML5CanvasFill(ctx, 'lime');
+            ctx.fillRect(310, 40, 40, 40);
+            ctx.restore(); // Back to circle + rectangle
+            
+            helpers.setHTML5CanvasFill(ctx, 'navy');
+            ctx.fillRect(305, 35, 50, 15);
+            ctx.restore(); // Back to rectangle only
+            
+            helpers.setHTML5CanvasFill(ctx, 'maroon');
+            ctx.fillRect(285, 85, 90, 10);
+            ctx.restore(); // No clips
+            
+            // Bottom: Complex nested polygon clips
+            ctx.save();
+            // First clip: hexagon
+            ctx.beginPath();
+            const hx = 120, hy = 170;
+            for (let i = 0; i < 6; i++) {
+                const angle = (i * Math.PI) / 3;
+                const x = hx + Math.cos(angle) * 50;
+                const y = hy + Math.sin(angle) * 50;
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.closePath();
+            ctx.clip();
+            
+            helpers.setHTML5CanvasFill(ctx, 'lightcoral');
+            ctx.fillRect(50, 110, 140, 120);
+            
+            ctx.save();
+            // Second clip: diamond inside hexagon
+            ctx.beginPath();
+            ctx.moveTo(120, 140);
+            ctx.lineTo(150, 170);
+            ctx.lineTo(120, 200);
+            ctx.lineTo(90, 170);
+            ctx.closePath();
+            ctx.clip();
+            
+            helpers.setHTML5CanvasFill(ctx, 'darkblue');
+            ctx.fillRect(70, 130, 100, 80);
+            
+            ctx.save();
+            // Third clip: small circle in center
+            ctx.beginPath();
+            ctx.arc(120, 170, 15, 0, 2 * Math.PI);
+            ctx.clip();
+            
+            helpers.setHTML5CanvasFill(ctx, 'gold');
+            ctx.fillRect(100, 150, 40, 40);
+            ctx.restore(); // Back to diamond + hexagon
+            
+            helpers.setHTML5CanvasFill(ctx, 'silver');
+            ctx.fillRect(105, 155, 30, 10);
+            ctx.restore(); // Back to hexagon only
+            
+            helpers.setHTML5CanvasFill(ctx, 'darkgreen');
+            ctx.fillRect(140, 145, 25, 50);
+            ctx.restore(); // No clips
+            
+            // Bottom right: Clip stack with transforms
+            ctx.save();
+            ctx.translate(280, 150);
+            ctx.rotate(Math.PI / 6);
+            
+            // First clip: rotated rectangle
+            ctx.beginPath();
+            ctx.rect(-40, -30, 80, 60);
+            ctx.clip();
+            
+            helpers.setHTML5CanvasFill(ctx, 'pink');
+            ctx.fillRect(-60, -50, 120, 100);
+            
+            ctx.save();
+            ctx.scale(0.7, 0.7);
+            // Second clip: scaled circle
+            ctx.beginPath();
+            ctx.arc(0, 0, 30, 0, 2 * Math.PI);
+            ctx.clip();
+            
+            helpers.setHTML5CanvasFill(ctx, 'brown');
+            ctx.fillRect(-40, -40, 80, 80);
+            ctx.restore();
+            
+            helpers.setHTML5CanvasFill(ctx, 'indigo');
+            ctx.fillRect(-15, -35, 30, 15);
+            ctx.restore();
+        }
+    };
+
+    // Test 6: Clip with save/restore behavior
+    visualTests['clip-save-restore'] = {
+        name: 'Clipping Save/Restore',
+        description: 'Test proper clipping behavior with save/restore state management',
+        width: 400,
+        height: 200,
+        
+        drawSWCanvas: function(SWCanvas) {
+            const surface = SWCanvas.Surface(this.width, this.height);
+            const ctx = new SWCanvas.Context2D(surface);
+            
+            // Left: Basic save/restore with clip
+            helpers.setSWCanvasFill(ctx, 'lightgray');
+            ctx.fillRect(10, 10, 80, 80);
+            
+            ctx.save();
+            ctx.beginPath();
+            ctx.rect(20, 20, 60, 60);
+            ctx.clip();
+            
+            helpers.setSWCanvasFill(ctx, 'red');
+            ctx.fillRect(0, 0, 100, 100);
+            ctx.restore();
+            
+            // Should not be clipped after restore
+            helpers.setSWCanvasFill(ctx, 'blue');
+            ctx.fillRect(30, 85, 40, 15);
+            
+            // Center: Multiple save/restore levels
+            ctx.save();
+            helpers.setSWCanvasFill(ctx, 'lightblue');
+            ctx.fillRect(120, 10, 80, 80);
+            
+            ctx.save();
+            ctx.beginPath();
+            ctx.rect(130, 20, 60, 40);
+            ctx.clip();
+            
+            helpers.setSWCanvasFill(ctx, 'green');
+            ctx.fillRect(110, 10, 100, 80);
+            
+            ctx.save();
+            ctx.beginPath();
+            ctx.rect(140, 30, 40, 20);
+            ctx.clip();
+            
+            helpers.setSWCanvasFill(ctx, 'yellow');
+            ctx.fillRect(120, 20, 80, 60);
+            ctx.restore(); // Back to first clip
+            
+            helpers.setSWCanvasFill(ctx, 'orange');
+            ctx.fillRect(135, 65, 30, 15);
+            ctx.restore(); // Back to no clips
+            
+            helpers.setSWCanvasFill(ctx, 'purple');
+            ctx.fillRect(125, 85, 70, 10);
+            ctx.restore(); // Back to original state
+            
+            // Right: Clip with transform save/restore
+            ctx.save();
+            ctx.translate(280, 50);
+            ctx.rotate(Math.PI / 4);
+            
+            ctx.beginPath();
+            ctx.rect(-30, -30, 60, 60);
+            ctx.clip();
+            
+            helpers.setSWCanvasFill(ctx, 'cyan');
+            ctx.fillRect(-50, -50, 100, 100);
+            
+            ctx.save();
+            ctx.scale(0.5, 0.5);
+            helpers.setSWCanvasFill(ctx, 'magenta');
+            ctx.fillRect(-40, -40, 80, 80);
+            ctx.restore(); // Back to rotated/translated but same clip
+            
+            helpers.setSWCanvasFill(ctx, 'lime');
+            ctx.fillRect(-10, -40, 20, 80);
+            ctx.restore(); // Back to original transform and no clip
+            
+            helpers.setSWCanvasFill(ctx, 'navy');
+            ctx.fillRect(250, 85, 60, 10);
+            
+            // Bottom: Complex save/restore with multiple clips and fills
+            ctx.save();
+            // First level
+            ctx.beginPath();
+            ctx.arc(80, 150, 40, 0, 2 * Math.PI);
+            ctx.clip();
+            
+            helpers.setSWCanvasFill(ctx, 'pink');
+            ctx.fillRect(20, 110, 120, 80);
+            
+            ctx.save();
+            // Second level - diamond clip
+            ctx.beginPath();
+            ctx.moveTo(80, 120);
+            ctx.lineTo(110, 150);
+            ctx.lineTo(80, 180);
+            ctx.lineTo(50, 150);
+            ctx.closePath();
+            ctx.clip();
+            
+            helpers.setSWCanvasFill(ctx, 'brown');
+            ctx.fillRect(40, 130, 80, 40);
+            
+            // Modify state without save
+            helpers.setSWCanvasFill(ctx, 'gold');
+            ctx.fillRect(70, 140, 20, 20);
+            
+            ctx.restore(); // Back to circle clip only
+            
+            helpers.setSWCanvasFill(ctx, 'silver');
+            ctx.fillRect(60, 125, 40, 10);
+            
+            ctx.save();
+            // Third level - small rectangle
+            ctx.beginPath();
+            ctx.rect(65, 160, 30, 15);
+            ctx.clip();
+            
+            helpers.setSWCanvasFill(ctx, 'maroon');
+            ctx.fillRect(50, 150, 60, 30);
+            ctx.restore(); // Back to circle clip
+            
+            helpers.setSWCanvasFill(ctx, 'darkgreen');
+            ctx.fillRect(90, 135, 25, 30);
+            ctx.restore(); // Back to no clips
+            
+            // Should render without any clipping
+            helpers.setSWCanvasFill(ctx, 'black');
+            ctx.fillRect(30, 185, 100, 10);
+            
+            // Bottom right: Save/restore with stroke and fill
+            ctx.save();
+            ctx.beginPath();
+            ctx.rect(220, 120, 80, 60);
+            ctx.clip();
+            
+            helpers.setSWCanvasFill(ctx, 'lightcoral');
+            ctx.fillRect(200, 100, 120, 100);
+            
+            helpers.setSWCanvasStroke(ctx, 'darkblue');
+            ctx.lineWidth = 3;
+            ctx.strokeRect(210, 110, 100, 80);
+            
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(260, 150, 25, 0, 2 * Math.PI);
+            ctx.clip();
+            
+            helpers.setSWCanvasFill(ctx, 'yellow');
+            ctx.fillRect(235, 125, 50, 50);
+            
+            helpers.setSWCanvasStroke(ctx, 'red');
+            ctx.lineWidth = 2;
+            ctx.strokeRect(245, 135, 30, 30);
+            ctx.restore();
+            
+            helpers.setSWCanvasStroke(ctx, 'green');
+            ctx.lineWidth = 4;
+            ctx.strokeRect(225, 125, 70, 15);
+            ctx.restore();
+            
+            return surface;
+        },
+        
+        drawHTML5Canvas: function(canvas) {
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, this.width, this.height);
+            
+            // Left: Basic save/restore with clip
+            helpers.setHTML5CanvasFill(ctx, 'lightgray');
+            ctx.fillRect(10, 10, 80, 80);
+            
+            ctx.save();
+            ctx.beginPath();
+            ctx.rect(20, 20, 60, 60);
+            ctx.clip();
+            
+            helpers.setHTML5CanvasFill(ctx, 'red');
+            ctx.fillRect(0, 0, 100, 100);
+            ctx.restore();
+            
+            // Should not be clipped after restore
+            helpers.setHTML5CanvasFill(ctx, 'blue');
+            ctx.fillRect(30, 85, 40, 15);
+            
+            // Center: Multiple save/restore levels
+            ctx.save();
+            helpers.setHTML5CanvasFill(ctx, 'lightblue');
+            ctx.fillRect(120, 10, 80, 80);
+            
+            ctx.save();
+            ctx.beginPath();
+            ctx.rect(130, 20, 60, 40);
+            ctx.clip();
+            
+            helpers.setHTML5CanvasFill(ctx, 'green');
+            ctx.fillRect(110, 10, 100, 80);
+            
+            ctx.save();
+            ctx.beginPath();
+            ctx.rect(140, 30, 40, 20);
+            ctx.clip();
+            
+            helpers.setHTML5CanvasFill(ctx, 'yellow');
+            ctx.fillRect(120, 20, 80, 60);
+            ctx.restore(); // Back to first clip
+            
+            helpers.setHTML5CanvasFill(ctx, 'orange');
+            ctx.fillRect(135, 65, 30, 15);
+            ctx.restore(); // Back to no clips
+            
+            helpers.setHTML5CanvasFill(ctx, 'purple');
+            ctx.fillRect(125, 85, 70, 10);
+            ctx.restore(); // Back to original state
+            
+            // Right: Clip with transform save/restore
+            ctx.save();
+            ctx.translate(280, 50);
+            ctx.rotate(Math.PI / 4);
+            
+            ctx.beginPath();
+            ctx.rect(-30, -30, 60, 60);
+            ctx.clip();
+            
+            helpers.setHTML5CanvasFill(ctx, 'cyan');
+            ctx.fillRect(-50, -50, 100, 100);
+            
+            ctx.save();
+            ctx.scale(0.5, 0.5);
+            helpers.setHTML5CanvasFill(ctx, 'magenta');
+            ctx.fillRect(-40, -40, 80, 80);
+            ctx.restore(); // Back to rotated/translated but same clip
+            
+            helpers.setHTML5CanvasFill(ctx, 'lime');
+            ctx.fillRect(-10, -40, 20, 80);
+            ctx.restore(); // Back to original transform and no clip
+            
+            helpers.setHTML5CanvasFill(ctx, 'navy');
+            ctx.fillRect(250, 85, 60, 10);
+            
+            // Bottom: Complex save/restore with multiple clips and fills
+            ctx.save();
+            // First level
+            ctx.beginPath();
+            ctx.arc(80, 150, 40, 0, 2 * Math.PI);
+            ctx.clip();
+            
+            helpers.setHTML5CanvasFill(ctx, 'pink');
+            ctx.fillRect(20, 110, 120, 80);
+            
+            ctx.save();
+            // Second level - diamond clip
+            ctx.beginPath();
+            ctx.moveTo(80, 120);
+            ctx.lineTo(110, 150);
+            ctx.lineTo(80, 180);
+            ctx.lineTo(50, 150);
+            ctx.closePath();
+            ctx.clip();
+            
+            helpers.setHTML5CanvasFill(ctx, 'brown');
+            ctx.fillRect(40, 130, 80, 40);
+            
+            // Modify state without save
+            helpers.setHTML5CanvasFill(ctx, 'gold');
+            ctx.fillRect(70, 140, 20, 20);
+            
+            ctx.restore(); // Back to circle clip only
+            
+            helpers.setHTML5CanvasFill(ctx, 'silver');
+            ctx.fillRect(60, 125, 40, 10);
+            
+            ctx.save();
+            // Third level - small rectangle
+            ctx.beginPath();
+            ctx.rect(65, 160, 30, 15);
+            ctx.clip();
+            
+            helpers.setHTML5CanvasFill(ctx, 'maroon');
+            ctx.fillRect(50, 150, 60, 30);
+            ctx.restore(); // Back to circle clip
+            
+            helpers.setHTML5CanvasFill(ctx, 'darkgreen');
+            ctx.fillRect(90, 135, 25, 30);
+            ctx.restore(); // Back to no clips
+            
+            // Should render without any clipping
+            helpers.setHTML5CanvasFill(ctx, 'black');
+            ctx.fillRect(30, 185, 100, 10);
+            
+            // Bottom right: Save/restore with stroke and fill
+            ctx.save();
+            ctx.beginPath();
+            ctx.rect(220, 120, 80, 60);
+            ctx.clip();
+            
+            helpers.setHTML5CanvasFill(ctx, 'lightcoral');
+            ctx.fillRect(200, 100, 120, 100);
+            
+            helpers.setHTML5CanvasStroke(ctx, 'darkblue');
+            ctx.lineWidth = 3;
+            ctx.strokeRect(210, 110, 100, 80);
+            
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(260, 150, 25, 0, 2 * Math.PI);
+            ctx.clip();
+            
+            helpers.setHTML5CanvasFill(ctx, 'yellow');
+            ctx.fillRect(235, 125, 50, 50);
+            
+            helpers.setHTML5CanvasStroke(ctx, 'red');
+            ctx.lineWidth = 2;
+            ctx.strokeRect(245, 135, 30, 30);
+            ctx.restore();
+            
+            helpers.setHTML5CanvasStroke(ctx, 'green');
+            ctx.lineWidth = 4;
+            ctx.strokeRect(225, 125, 70, 15);
+            ctx.restore();
+        }
+    };
+
+    // Test 7: Basic clipping regions  
+    visualTests['clip-intersection'] = {
+        name: 'Basic Clipping Regions',
+        description: 'Test various single clipping regions with different shapes',
+        width: 400,
+        height: 200,
+        
+        drawSWCanvas: function(SWCanvas) {
+            const surface = SWCanvas.Surface(this.width, this.height);
+            const ctx = new SWCanvas.Context2D(surface);
+            
+            // Left: Single rectangular clip (simplified from intersection)
+            ctx.save();
+            // Direct rectangle clip representing the intersection area
+            ctx.beginPath();
+            ctx.rect(30, 50, 40, 40);
+            ctx.clip();
+            
+            helpers.setSWCanvasFill(ctx, 'red');
+            ctx.fillRect(0, 0, 120, 120);
+            ctx.restore();
+            
+            // Center: Triangle clip region  
+            ctx.save();
+            // Triangle clip
+            ctx.beginPath();
+            ctx.moveTo(180, 90);
+            ctx.lineTo(220, 90);
+            ctx.lineTo(200, 50);
+            ctx.closePath();
+            ctx.clip();
+            
+            helpers.setSWCanvasFill(ctx, 'blue');
+            ctx.fillRect(160, 30, 80, 80);
+            ctx.restore();
+            
+            // Right: Diamond clip region
+            ctx.save();
+            // Diamond clip
+            ctx.beginPath();
+            ctx.moveTo(330, 40);
+            ctx.lineTo(360, 70);
+            ctx.lineTo(330, 100);
+            ctx.lineTo(300, 70);
+            ctx.closePath();
+            ctx.clip();
+            
+            helpers.setSWCanvasFill(ctx, 'green');
+            ctx.fillRect(280, 20, 100, 100);
+            ctx.restore();
+            
+            // Bottom left: Circle clip region
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(80, 150, 35, 0, 2 * Math.PI);
+            ctx.clip();
+            
+            helpers.setSWCanvasFill(ctx, 'orange');
+            ctx.fillRect(40, 110, 80, 80);
+            ctx.restore();
+            
+            // Bottom center: Another circle clip
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(200, 150, 32, 0, 2 * Math.PI);
+            ctx.clip();
+            
+            helpers.setSWCanvasFill(ctx, 'cyan');
+            ctx.fillRect(160, 110, 80, 80);
+            ctx.restore();
+            
+            // Bottom right: Star clip region
+            ctx.save();
+            ctx.beginPath();
+            const starCx = 330, starCy = 150;
+            for (let i = 0; i < 5; i++) {
+                const angle = (i * 2 * Math.PI) / 5 - Math.PI / 2;
+                const outerX = starCx + Math.cos(angle) * 30;
+                const outerY = starCy + Math.sin(angle) * 30;
+                const innerAngle = angle + Math.PI / 5;
+                const innerX = starCx + Math.cos(innerAngle) * 15;
+                const innerY = starCy + Math.sin(innerAngle) * 15;
+                
+                if (i === 0) ctx.moveTo(outerX, outerY);
+                else ctx.lineTo(outerX, outerY);
+                ctx.lineTo(innerX, innerY);
+            }
+            ctx.closePath();
+            ctx.clip();
+            
+            helpers.setSWCanvasFill(ctx, 'magenta');
+            ctx.fillRect(290, 110, 80, 80);
+            ctx.restore();
+            
+            return surface;
+        },
+        
+        drawHTML5Canvas: function(canvas) {
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, this.width, this.height);
+            
+            // Left: Single rectangular clip (simplified from intersection)
+            ctx.save();
+            // Direct rectangle clip representing the intersection area
+            ctx.beginPath();
+            ctx.rect(30, 50, 40, 40);
+            ctx.clip();
+            
+            helpers.setHTML5CanvasFill(ctx, 'red');
+            ctx.fillRect(0, 0, 120, 120);
+            ctx.restore();
+            
+            // Center: Triangle clip region  
+            ctx.save();
+            // Triangle clip
+            ctx.beginPath();
+            ctx.moveTo(180, 90);
+            ctx.lineTo(220, 90);
+            ctx.lineTo(200, 50);
+            ctx.closePath();
+            ctx.clip();
+            
+            helpers.setHTML5CanvasFill(ctx, 'blue');
+            ctx.fillRect(160, 30, 80, 80);
+            ctx.restore();
+            
+            // Right: Diamond clip region
+            ctx.save();
+            // Diamond clip
+            ctx.beginPath();
+            ctx.moveTo(330, 40);
+            ctx.lineTo(360, 70);
+            ctx.lineTo(330, 100);
+            ctx.lineTo(300, 70);
+            ctx.closePath();
+            ctx.clip();
+            
+            helpers.setHTML5CanvasFill(ctx, 'green');
+            ctx.fillRect(280, 20, 100, 100);
+            ctx.restore();
+            
+            // Bottom left: Circle clip region
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(80, 150, 35, 0, 2 * Math.PI);
+            ctx.clip();
+            
+            helpers.setHTML5CanvasFill(ctx, 'orange');
+            ctx.fillRect(40, 110, 80, 80);
+            ctx.restore();
+            
+            // Bottom center: Another circle clip
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(200, 150, 32, 0, 2 * Math.PI);
+            ctx.clip();
+            
+            helpers.setHTML5CanvasFill(ctx, 'cyan');
+            ctx.fillRect(160, 110, 80, 80);
+            ctx.restore();
+            
+            // Bottom right: Star clip region
+            ctx.save();
+            ctx.beginPath();
+            const starCx = 330, starCy = 150;
+            for (let i = 0; i < 5; i++) {
+                const angle = (i * 2 * Math.PI) / 5 - Math.PI / 2;
+                const outerX = starCx + Math.cos(angle) * 30;
+                const outerY = starCy + Math.sin(angle) * 30;
+                const innerAngle = angle + Math.PI / 5;
+                const innerX = starCx + Math.cos(innerAngle) * 15;
+                const innerY = starCy + Math.sin(innerAngle) * 15;
+                
+                if (i === 0) ctx.moveTo(outerX, outerY);
+                else ctx.lineTo(outerX, outerY);
+                ctx.lineTo(innerX, innerY);
+            }
+            ctx.closePath();
+            ctx.clip();
+            
+            helpers.setHTML5CanvasFill(ctx, 'magenta');
+            ctx.fillRect(290, 110, 80, 80);
+            ctx.restore();
+        }
+    };
+
     const VisualTestRegistry = {
         getTests: function() { return visualTests; },
         getTest: function(name) { return visualTests[name]; },

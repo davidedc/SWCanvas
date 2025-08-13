@@ -22,6 +22,8 @@
         lightblue: { r: 173, g: 216, b: 230, css: '#ADD8E6' },
         lightgreen: { r: 144, g: 238, b: 144, css: '#90EE90' },
         lightcyan: { r: 224, g: 255, b: 255, css: '#E0FFFF' },
+        lightgray: { r: 211, g: 211, b: 211, css: '#D3D3D3' },
+        lime: { r: 0, g: 255, b: 0, css: '#00FF00' },
         
         // Common web colors
         orange: { r: 255, g: 165, b: 0, css: '#FFA500' },
@@ -30,6 +32,16 @@
         brown: { r: 165, g: 42, b: 42, css: '#A52A2A' },
         gray: { r: 128, g: 128, b: 128, css: '#808080' },
         grey: { r: 128, g: 128, b: 128, css: '#808080' },
+        
+        // Additional commonly used colors
+        navy: { r: 0, g: 0, b: 128, css: '#000080' },
+        maroon: { r: 128, g: 0, b: 0, css: '#800000' },
+        darkblue: { r: 0, g: 0, b: 139, css: '#00008B' },
+        darkgreen: { r: 0, g: 100, b: 0, css: '#006400' },
+        gold: { r: 255, g: 215, b: 0, css: '#FFD700' },
+        silver: { r: 192, g: 192, b: 192, css: '#C0C0C0' },
+        lightcoral: { r: 240, g: 128, b: 128, css: '#F08080' },
+        indigo: { r: 75, g: 0, b: 130, css: '#4B0082' },
         
         // Custom test colors (for cases where we need specific values)
         testLightBlue: { r: 0, g: 128, b: 255, css: '#0080FF' },
