@@ -126,11 +126,57 @@ function fillScanlineSpans(surface, y, intersections, color, fillRule, transform
                 
                 const offset = y * surface.stride + x * 4;
                 
-                // Simple copy for now (will be enhanced with proper blending later)
-                surface.data[offset] = color[0];     // R
-                surface.data[offset + 1] = color[1]; // G  
-                surface.data[offset + 2] = color[2]; // B
-                surface.data[offset + 3] = color[3]; // A
+                // Proper alpha blending (source-over)
+                const srcR = color[0];
+                const srcG = color[1];
+                const srcB = color[2];
+                const srcA = color[3];
+                
+                // Debug which branch we're taking for orange area pixel
+                if (x === 90 && y === 100) {
+                    console.log(`Polygon filler at (90,100): color=[${srcR},${srcG},${srcB},${srcA}]`);
+                }
+                
+                if (srcA === 255) {
+                    // Opaque source - simple copy
+                    if (x === 90 && y === 100) {
+                        console.log(`Taking opaque branch: srcA=${srcA}`);
+                    }
+                    surface.data[offset] = srcR;
+                    surface.data[offset + 1] = srcG;
+                    surface.data[offset + 2] = srcB;
+                    surface.data[offset + 3] = srcA;
+                } else if (srcA === 0) {
+                    // Transparent source - no change
+                    if (x === 90 && y === 100) {
+                        console.log(`Taking transparent branch: srcA=${srcA}`);
+                    }
+                    continue;
+                } else {
+                    // Alpha blending required
+                    const dstR = surface.data[offset];
+                    const dstG = surface.data[offset + 1];
+                    const dstB = surface.data[offset + 2];
+                    const dstA = surface.data[offset + 3];
+                    
+                    const srcAlpha = srcA / 255;
+                    const invSrcA = 1 - srcAlpha;
+                    
+                    const newR = Math.round(srcR * srcAlpha + dstR * invSrcA);
+                    const newG = Math.round(srcG * srcAlpha + dstG * invSrcA);
+                    const newB = Math.round(srcB * srcAlpha + dstB * invSrcA);
+                    const newA = Math.round(srcA + dstA * invSrcA);
+                    
+                    // Debug alpha blending for orange area pixel (90, 100)
+                    if (x === 90 && y === 100) {
+                        console.log(`Alpha blend: src=[${srcR},${srcG},${srcB},${srcA}] dst=[${dstR},${dstG},${dstB},${dstA}] -> [${newR},${newG},${newB},${newA}]`);
+                    }
+                    
+                    surface.data[offset] = newR;
+                    surface.data[offset + 1] = newG;
+                    surface.data[offset + 2] = newB;
+                    surface.data[offset + 3] = newA;
+                }
             }
         }
     }

@@ -3743,6 +3743,1371 @@
         }
     };
 
+    // Test 35: Combined Transform + Fill + Rotate - Rotated complex polygons
+    visualTests['combined-transform-fill-rotate'] = {
+        name: 'Rotated complex polygons',
+        width: 400, height: 300,
+        drawSWCanvas: function(SWCanvas) {
+            const surface = SWCanvas.Surface(400, 300);
+            const ctx = new SWCanvas.Context2D(surface);
+            
+            // White background
+            helpers.setSWCanvasFill(ctx, 'white');
+            ctx.fillRect(0, 0, 400, 300);
+            
+            // Test 1: Rotated star (top left)
+            ctx.save();
+            ctx.translate(100, 75);
+            ctx.rotate(Math.PI / 4); // 45 degrees
+            
+            ctx.beginPath();
+            // Create 6-pointed star
+            for (let i = 0; i < 6; i++) {
+                const angle = (i * Math.PI) / 3;
+                const outerRadius = 30;
+                const innerRadius = 15;
+                
+                const outerX = Math.cos(angle) * outerRadius;
+                const outerY = Math.sin(angle) * outerRadius;
+                const innerAngle = angle + Math.PI / 6;
+                const innerX = Math.cos(innerAngle) * innerRadius;
+                const innerY = Math.sin(innerAngle) * innerRadius;
+                
+                if (i === 0) ctx.moveTo(outerX, outerY);
+                else ctx.lineTo(outerX, outerY);
+                ctx.lineTo(innerX, innerY);
+            }
+            ctx.closePath();
+            
+            helpers.setSWCanvasFill(ctx, 'red');
+            ctx.fill();
+            ctx.restore();
+            
+            // Test 2: Rotated self-intersecting polygon (top right)
+            ctx.save();
+            ctx.translate(300, 75);
+            ctx.rotate(-Math.PI / 6); // -30 degrees
+            
+            ctx.beginPath();
+            // Figure-8 shape
+            ctx.moveTo(-40, -20);
+            ctx.quadraticCurveTo(0, -40, 40, -20);
+            ctx.quadraticCurveTo(0, 0, -40, 20);
+            ctx.quadraticCurveTo(0, 40, 40, 20);
+            ctx.quadraticCurveTo(0, 0, -40, -20);
+            ctx.closePath();
+            
+            helpers.setSWCanvasFill(ctx, 'green');
+            ctx.fill('evenodd');
+            ctx.restore();
+            
+            // Test 3: Multiple rotated rectangles with different angles (bottom left)
+            const colors = ['blue', 'orange', 'purple', 'brown'];
+            const angles = [0, Math.PI/6, Math.PI/3, Math.PI/2];
+            
+            for (let i = 0; i < 4; i++) {
+                ctx.save();
+                ctx.translate(100, 200);
+                ctx.rotate(angles[i]);
+                
+                helpers.setSWCanvasFill(ctx, colors[i]);
+                ctx.fillRect(-30 + i*5, -10 + i*5, 60, 20);
+                ctx.restore();
+            }
+            
+            // Test 4: Rotated complex path with curves (bottom right)
+            ctx.save();
+            ctx.translate(300, 200);
+            ctx.rotate(Math.PI / 8);
+            ctx.scale(0.8, 1.2);
+            
+            ctx.beginPath();
+            ctx.moveTo(-30, -25);
+            ctx.bezierCurveTo(-20, -40, 20, -40, 30, -25);
+            ctx.bezierCurveTo(40, -10, 40, 10, 30, 25);
+            ctx.bezierCurveTo(20, 40, -20, 40, -30, 25);
+            ctx.bezierCurveTo(-40, 10, -40, -10, -30, -25);
+            ctx.closePath();
+            
+            helpers.setSWCanvasFill(ctx, 'magenta');
+            ctx.fill();
+            ctx.restore();
+            
+            return surface;
+        },
+        drawHTML5Canvas: function(canvas) {
+            const ctx = canvas.getContext('2d');
+            
+            // White background
+            helpers.setHTML5CanvasFill(ctx, 'white');
+            ctx.fillRect(0, 0, 400, 300);
+            
+            // Test 1: Rotated star (top left)
+            ctx.save();
+            ctx.translate(100, 75);
+            ctx.rotate(Math.PI / 4); // 45 degrees
+            
+            ctx.beginPath();
+            // Create 6-pointed star
+            for (let i = 0; i < 6; i++) {
+                const angle = (i * Math.PI) / 3;
+                const outerRadius = 30;
+                const innerRadius = 15;
+                
+                const outerX = Math.cos(angle) * outerRadius;
+                const outerY = Math.sin(angle) * outerRadius;
+                const innerAngle = angle + Math.PI / 6;
+                const innerX = Math.cos(innerAngle) * innerRadius;
+                const innerY = Math.sin(innerAngle) * innerRadius;
+                
+                if (i === 0) ctx.moveTo(outerX, outerY);
+                else ctx.lineTo(outerX, outerY);
+                ctx.lineTo(innerX, innerY);
+            }
+            ctx.closePath();
+            
+            helpers.setHTML5CanvasFill(ctx, 'red');
+            ctx.fill();
+            ctx.restore();
+            
+            // Test 2: Rotated self-intersecting polygon (top right)
+            ctx.save();
+            ctx.translate(300, 75);
+            ctx.rotate(-Math.PI / 6); // -30 degrees
+            
+            ctx.beginPath();
+            // Figure-8 shape
+            ctx.moveTo(-40, -20);
+            ctx.quadraticCurveTo(0, -40, 40, -20);
+            ctx.quadraticCurveTo(0, 0, -40, 20);
+            ctx.quadraticCurveTo(0, 40, 40, 20);
+            ctx.quadraticCurveTo(0, 0, -40, -20);
+            ctx.closePath();
+            
+            helpers.setHTML5CanvasFill(ctx, 'green');
+            ctx.fill('evenodd');
+            ctx.restore();
+            
+            // Test 3: Multiple rotated rectangles with different angles (bottom left)
+            const colors = ['blue', 'orange', 'purple', 'brown'];
+            const angles = [0, Math.PI/6, Math.PI/3, Math.PI/2];
+            
+            for (let i = 0; i < 4; i++) {
+                ctx.save();
+                ctx.translate(100, 200);
+                ctx.rotate(angles[i]);
+                
+                helpers.setHTML5CanvasFill(ctx, colors[i]);
+                ctx.fillRect(-30 + i*5, -10 + i*5, 60, 20);
+                ctx.restore();
+            }
+            
+            // Test 4: Rotated complex path with curves (bottom right)
+            ctx.save();
+            ctx.translate(300, 200);
+            ctx.rotate(Math.PI / 8);
+            ctx.scale(0.8, 1.2);
+            
+            ctx.beginPath();
+            ctx.moveTo(-30, -25);
+            ctx.bezierCurveTo(-20, -40, 20, -40, 30, -25);
+            ctx.bezierCurveTo(40, -10, 40, 10, 30, 25);
+            ctx.bezierCurveTo(20, 40, -20, 40, -30, 25);
+            ctx.bezierCurveTo(-40, 10, -40, -10, -30, -25);
+            ctx.closePath();
+            
+            helpers.setHTML5CanvasFill(ctx, 'magenta');
+            ctx.fill();
+            ctx.restore();
+        }
+    };
+
+    // Test 36: Combined Transform + Fill + Scale - Scaled paths with fill rules
+    visualTests['combined-transform-fill-scale'] = {
+        name: 'Scaled paths with fill rules',
+        width: 400, height: 300,
+        drawSWCanvas: function(SWCanvas) {
+            const surface = SWCanvas.Surface(400, 300);
+            const ctx = new SWCanvas.Context2D(surface);
+            
+            // White background
+            helpers.setSWCanvasFill(ctx, 'white');
+            ctx.fillRect(0, 0, 400, 300);
+            
+            // Test 1: Asymmetrically scaled star with nonzero fill rule (top left)
+            ctx.save();
+            ctx.translate(100, 75);
+            ctx.scale(1.5, 0.8); // Wide and short
+            
+            ctx.beginPath();
+            // Create 5-pointed star
+            for (let i = 0; i < 5; i++) {
+                const angle = (i * 2 * Math.PI) / 5 - Math.PI / 2;
+                const outerRadius = 25;
+                const innerRadius = 12;
+                
+                const outerX = Math.cos(angle) * outerRadius;
+                const outerY = Math.sin(angle) * outerRadius;
+                const innerAngle = angle + Math.PI / 5;
+                const innerX = Math.cos(innerAngle) * innerRadius;
+                const innerY = Math.sin(innerAngle) * innerRadius;
+                
+                if (i === 0) ctx.moveTo(outerX, outerY);
+                else ctx.lineTo(outerX, outerY);
+                ctx.lineTo(innerX, innerY);
+            }
+            ctx.closePath();
+            
+            helpers.setSWCanvasFill(ctx, 'red');
+            ctx.fill('nonzero');
+            ctx.restore();
+            
+            // Test 2: Scaled self-intersecting shape with evenodd rule (top right)
+            ctx.save();
+            ctx.translate(300, 75);
+            ctx.scale(0.7, 1.8); // Tall and narrow
+            
+            ctx.beginPath();
+            // Bow-tie / hourglass shape
+            ctx.moveTo(-30, -20);
+            ctx.lineTo(30, 20);
+            ctx.lineTo(-30, 20);
+            ctx.lineTo(30, -20);
+            ctx.closePath();
+            
+            helpers.setSWCanvasFill(ctx, 'green');
+            ctx.fill('evenodd');
+            ctx.restore();
+            
+            // Test 3: Multiple scaled concentric shapes (bottom left)
+            const scales = [1.0, 0.75, 0.5, 0.25];
+            const colors = ['blue', 'orange', 'purple', 'yellow'];
+            
+            ctx.save();
+            ctx.translate(100, 200);
+            
+            for (let i = 0; i < scales.length; i++) {
+                ctx.save();
+                ctx.scale(scales[i], scales[i]);
+                
+                ctx.beginPath();
+                // Hexagon
+                for (let j = 0; j < 6; j++) {
+                    const angle = (j * Math.PI) / 3;
+                    const x = Math.cos(angle) * 30;
+                    const y = Math.sin(angle) * 30;
+                    if (j === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                }
+                ctx.closePath();
+                
+                helpers.setSWCanvasFill(ctx, colors[i]);
+                ctx.fill();
+                ctx.restore();
+            }
+            ctx.restore();
+            
+            // Test 4: Extremely scaled bezier curves (bottom right)
+            ctx.save();
+            ctx.translate(300, 200);
+            ctx.scale(2.5, 0.4); // Very wide and very short
+            
+            ctx.beginPath();
+            ctx.moveTo(-20, -15);
+            ctx.bezierCurveTo(-15, -30, 15, -30, 20, -15);
+            ctx.bezierCurveTo(25, 0, 25, 0, 20, 15);
+            ctx.bezierCurveTo(15, 30, -15, 30, -20, 15);
+            ctx.bezierCurveTo(-25, 0, -25, 0, -20, -15);
+            ctx.closePath();
+            
+            helpers.setSWCanvasFill(ctx, 'magenta');
+            ctx.fill();
+            ctx.restore();
+            
+            return surface;
+        },
+        drawHTML5Canvas: function(canvas) {
+            const ctx = canvas.getContext('2d');
+            
+            // White background
+            helpers.setHTML5CanvasFill(ctx, 'white');
+            ctx.fillRect(0, 0, 400, 300);
+            
+            // Test 1: Asymmetrically scaled star with nonzero fill rule (top left)
+            ctx.save();
+            ctx.translate(100, 75);
+            ctx.scale(1.5, 0.8); // Wide and short
+            
+            ctx.beginPath();
+            // Create 5-pointed star
+            for (let i = 0; i < 5; i++) {
+                const angle = (i * 2 * Math.PI) / 5 - Math.PI / 2;
+                const outerRadius = 25;
+                const innerRadius = 12;
+                
+                const outerX = Math.cos(angle) * outerRadius;
+                const outerY = Math.sin(angle) * outerRadius;
+                const innerAngle = angle + Math.PI / 5;
+                const innerX = Math.cos(innerAngle) * innerRadius;
+                const innerY = Math.sin(innerAngle) * innerRadius;
+                
+                if (i === 0) ctx.moveTo(outerX, outerY);
+                else ctx.lineTo(outerX, outerY);
+                ctx.lineTo(innerX, innerY);
+            }
+            ctx.closePath();
+            
+            helpers.setHTML5CanvasFill(ctx, 'red');
+            ctx.fill('nonzero');
+            ctx.restore();
+            
+            // Test 2: Scaled self-intersecting shape with evenodd rule (top right)
+            ctx.save();
+            ctx.translate(300, 75);
+            ctx.scale(0.7, 1.8); // Tall and narrow
+            
+            ctx.beginPath();
+            // Bow-tie / hourglass shape
+            ctx.moveTo(-30, -20);
+            ctx.lineTo(30, 20);
+            ctx.lineTo(-30, 20);
+            ctx.lineTo(30, -20);
+            ctx.closePath();
+            
+            helpers.setHTML5CanvasFill(ctx, 'green');
+            ctx.fill('evenodd');
+            ctx.restore();
+            
+            // Test 3: Multiple scaled concentric shapes (bottom left)
+            const scales = [1.0, 0.75, 0.5, 0.25];
+            const colors = ['blue', 'orange', 'purple', 'yellow'];
+            
+            ctx.save();
+            ctx.translate(100, 200);
+            
+            for (let i = 0; i < scales.length; i++) {
+                ctx.save();
+                ctx.scale(scales[i], scales[i]);
+                
+                ctx.beginPath();
+                // Hexagon
+                for (let j = 0; j < 6; j++) {
+                    const angle = (j * Math.PI) / 3;
+                    const x = Math.cos(angle) * 30;
+                    const y = Math.sin(angle) * 30;
+                    if (j === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                }
+                ctx.closePath();
+                
+                helpers.setHTML5CanvasFill(ctx, colors[i]);
+                ctx.fill();
+                ctx.restore();
+            }
+            ctx.restore();
+            
+            // Test 4: Extremely scaled bezier curves (bottom right)
+            ctx.save();
+            ctx.translate(300, 200);
+            ctx.scale(2.5, 0.4); // Very wide and very short
+            
+            ctx.beginPath();
+            ctx.moveTo(-20, -15);
+            ctx.bezierCurveTo(-15, -30, 15, -30, 20, -15);
+            ctx.bezierCurveTo(25, 0, 25, 0, 20, 15);
+            ctx.bezierCurveTo(15, 30, -15, 30, -20, 15);
+            ctx.bezierCurveTo(-25, 0, -25, 0, -20, -15);
+            ctx.closePath();
+            
+            helpers.setHTML5CanvasFill(ctx, 'magenta');
+            ctx.fill();
+            ctx.restore();
+        }
+    };
+
+    // Test 37: Combined Transform + Clip + Fill - Critical stencil buffer test
+    visualTests['combined-transform-clip-fill'] = {
+        name: 'Transform + Clip + Fill',
+        width: 400, height: 300,
+        drawSWCanvas: function(SWCanvas) {
+            const surface = SWCanvas.Surface(400, 300);
+            const ctx = new SWCanvas.Context2D(surface);
+            
+            // White background
+            helpers.setSWCanvasFill(ctx, 'white');
+            ctx.fillRect(0, 0, 400, 300);
+            
+            // Test 1: Rotated clip with translated fill (top left)
+            ctx.save();
+            ctx.translate(100, 75);
+            
+            // Rotated circular clip
+            ctx.save();
+            ctx.rotate(Math.PI / 4);
+            ctx.beginPath();
+            ctx.arc(0, 0, 25, 0, 2 * Math.PI);
+            ctx.clip();
+            ctx.restore();
+            
+            // Translated fill
+            ctx.translate(10, 10);
+            helpers.setSWCanvasFill(ctx, 'red');
+            ctx.fillRect(-30, -30, 60, 60);
+            ctx.restore();
+            
+            // Test 2: Scaled clip with scaled fill (top right)
+            ctx.save();
+            ctx.translate(300, 75);
+            ctx.scale(1.5, 0.8);
+            
+            // Star clip shape
+            ctx.beginPath();
+            for (let i = 0; i < 5; i++) {
+                const angle = (i * 2 * Math.PI) / 5 - Math.PI / 2;
+                const outerRadius = 20;
+                const innerRadius = 10;
+                
+                const outerX = Math.cos(angle) * outerRadius;
+                const outerY = Math.sin(angle) * outerRadius;
+                const innerAngle = angle + Math.PI / 5;
+                const innerX = Math.cos(innerAngle) * innerRadius;
+                const innerY = Math.sin(innerAngle) * innerRadius;
+                
+                if (i === 0) ctx.moveTo(outerX, outerY);
+                else ctx.lineTo(outerX, outerY);
+                ctx.lineTo(innerX, innerY);
+            }
+            ctx.closePath();
+            ctx.clip();
+            
+            // Fill with complex path
+            ctx.beginPath();
+            ctx.moveTo(-25, -20);
+            ctx.quadraticCurveTo(0, -35, 25, -20);
+            ctx.quadraticCurveTo(35, 0, 25, 20);
+            ctx.quadraticCurveTo(0, 35, -25, 20);
+            ctx.quadraticCurveTo(-35, 0, -25, -20);
+            ctx.closePath();
+            
+            helpers.setSWCanvasFill(ctx, 'green');
+            ctx.fill();
+            ctx.restore();
+            
+            // Test 3: Multiple clip intersections with transforms (bottom left)
+            ctx.save();
+            ctx.translate(100, 200);
+            
+            // First clip: rotated rectangle
+            ctx.save();
+            ctx.rotate(Math.PI / 6);
+            ctx.rect(-25, -15, 50, 30);
+            ctx.clip();
+            ctx.restore();
+            
+            // Second clip: scaled circle (intersection)
+            ctx.save();
+            ctx.scale(1.2, 0.6);
+            ctx.beginPath();
+            ctx.arc(0, 0, 25, 0, 2 * Math.PI);
+            ctx.clip();
+            ctx.restore();
+            
+            // Fill should only appear in intersection
+            helpers.setSWCanvasFill(ctx, 'blue');
+            ctx.fillRect(-40, -40, 80, 80);
+            ctx.restore();
+            
+            // Test 4: Complex nested transforms with clips (bottom right)
+            ctx.save();
+            ctx.translate(300, 200);
+            ctx.rotate(-Math.PI / 8);
+            ctx.scale(0.9, 1.1);
+            
+            // Outer clip: diamond
+            ctx.beginPath();
+            ctx.moveTo(0, -30);
+            ctx.lineTo(30, 0);
+            ctx.lineTo(0, 30);
+            ctx.lineTo(-30, 0);
+            ctx.closePath();
+            ctx.clip();
+            
+            ctx.save();
+            ctx.translate(5, -5);
+            ctx.rotate(Math.PI / 4);
+            ctx.scale(1.2, 0.8);
+            
+            // Inner clip: triangle
+            ctx.beginPath();
+            ctx.moveTo(0, -15);
+            ctx.lineTo(15, 15);
+            ctx.lineTo(-15, 15);
+            ctx.closePath();
+            ctx.clip();
+            
+            // Complex fill path
+            ctx.beginPath();
+            ctx.moveTo(-20, -20);
+            ctx.bezierCurveTo(-10, -30, 10, -30, 20, -20);
+            ctx.bezierCurveTo(30, -10, 30, 10, 20, 20);
+            ctx.bezierCurveTo(10, 30, -10, 30, -20, 20);
+            ctx.bezierCurveTo(-30, 10, -30, -10, -20, -20);
+            ctx.closePath();
+            
+            helpers.setSWCanvasFill(ctx, 'purple');
+            ctx.fill();
+            ctx.restore();
+            ctx.restore();
+            
+            return surface;
+        },
+        drawHTML5Canvas: function(canvas) {
+            const ctx = canvas.getContext('2d');
+            
+            // White background
+            helpers.setHTML5CanvasFill(ctx, 'white');
+            ctx.fillRect(0, 0, 400, 300);
+            
+            // Test 1: Rotated clip with translated fill (top left)
+            ctx.save();
+            ctx.translate(100, 75);
+            
+            // Rotated circular clip
+            ctx.save();
+            ctx.rotate(Math.PI / 4);
+            ctx.beginPath();
+            ctx.arc(0, 0, 25, 0, 2 * Math.PI);
+            ctx.clip();
+            ctx.restore();
+            
+            // Translated fill
+            ctx.translate(10, 10);
+            helpers.setHTML5CanvasFill(ctx, 'red');
+            ctx.fillRect(-30, -30, 60, 60);
+            ctx.restore();
+            
+            // Test 2: Scaled clip with scaled fill (top right)
+            ctx.save();
+            ctx.translate(300, 75);
+            ctx.scale(1.5, 0.8);
+            
+            // Star clip shape
+            ctx.beginPath();
+            for (let i = 0; i < 5; i++) {
+                const angle = (i * 2 * Math.PI) / 5 - Math.PI / 2;
+                const outerRadius = 20;
+                const innerRadius = 10;
+                
+                const outerX = Math.cos(angle) * outerRadius;
+                const outerY = Math.sin(angle) * outerRadius;
+                const innerAngle = angle + Math.PI / 5;
+                const innerX = Math.cos(innerAngle) * innerRadius;
+                const innerY = Math.sin(innerAngle) * innerRadius;
+                
+                if (i === 0) ctx.moveTo(outerX, outerY);
+                else ctx.lineTo(outerX, outerY);
+                ctx.lineTo(innerX, innerY);
+            }
+            ctx.closePath();
+            ctx.clip();
+            
+            // Fill with complex path
+            ctx.beginPath();
+            ctx.moveTo(-25, -20);
+            ctx.quadraticCurveTo(0, -35, 25, -20);
+            ctx.quadraticCurveTo(35, 0, 25, 20);
+            ctx.quadraticCurveTo(0, 35, -25, 20);
+            ctx.quadraticCurveTo(-35, 0, -25, -20);
+            ctx.closePath();
+            
+            helpers.setHTML5CanvasFill(ctx, 'green');
+            ctx.fill();
+            ctx.restore();
+            
+            // Test 3: Multiple clip intersections with transforms (bottom left)
+            ctx.save();
+            ctx.translate(100, 200);
+            
+            // First clip: rotated rectangle
+            ctx.save();
+            ctx.rotate(Math.PI / 6);
+            ctx.rect(-25, -15, 50, 30);
+            ctx.clip();
+            ctx.restore();
+            
+            // Second clip: scaled circle (intersection)
+            ctx.save();
+            ctx.scale(1.2, 0.6);
+            ctx.beginPath();
+            ctx.arc(0, 0, 25, 0, 2 * Math.PI);
+            ctx.clip();
+            ctx.restore();
+            
+            // Fill should only appear in intersection
+            helpers.setHTML5CanvasFill(ctx, 'blue');
+            ctx.fillRect(-40, -40, 80, 80);
+            ctx.restore();
+            
+            // Test 4: Complex nested transforms with clips (bottom right)
+            ctx.save();
+            ctx.translate(300, 200);
+            ctx.rotate(-Math.PI / 8);
+            ctx.scale(0.9, 1.1);
+            
+            // Outer clip: diamond
+            ctx.beginPath();
+            ctx.moveTo(0, -30);
+            ctx.lineTo(30, 0);
+            ctx.lineTo(0, 30);
+            ctx.lineTo(-30, 0);
+            ctx.closePath();
+            ctx.clip();
+            
+            ctx.save();
+            ctx.translate(5, -5);
+            ctx.rotate(Math.PI / 4);
+            ctx.scale(1.2, 0.8);
+            
+            // Inner clip: triangle
+            ctx.beginPath();
+            ctx.moveTo(0, -15);
+            ctx.lineTo(15, 15);
+            ctx.lineTo(-15, 15);
+            ctx.closePath();
+            ctx.clip();
+            
+            // Complex fill path
+            ctx.beginPath();
+            ctx.moveTo(-20, -20);
+            ctx.bezierCurveTo(-10, -30, 10, -30, 20, -20);
+            ctx.bezierCurveTo(30, -10, 30, 10, 20, 20);
+            ctx.bezierCurveTo(10, 30, -10, 30, -20, 20);
+            ctx.bezierCurveTo(-30, 10, -30, -10, -20, -20);
+            ctx.closePath();
+            
+            helpers.setHTML5CanvasFill(ctx, 'purple');
+            ctx.fill();
+            ctx.restore();
+            ctx.restore();
+        }
+    };
+
+    // Test 38: Combined All Features + GlobalAlpha - Ultimate comprehensive test
+    visualTests['combined-all-features'] = {
+        name: 'All features + globalAlpha',
+        width: 400, height: 300,
+        drawSWCanvas: function(SWCanvas) {
+            const surface = SWCanvas.Surface(400, 300);
+            const ctx = new SWCanvas.Context2D(surface);
+            
+            // White background
+            helpers.setSWCanvasFill(ctx, 'white');
+            ctx.fillRect(0, 0, 400, 300);
+            
+            // Test 1: Rotated clip with semi-transparent fill (top left)
+            ctx.save();
+            ctx.translate(100, 75);
+            ctx.rotate(Math.PI / 6);
+            ctx.globalAlpha = 0.7;
+            
+            // Diamond clip
+            ctx.beginPath();
+            ctx.moveTo(0, -25);
+            ctx.lineTo(25, 0);
+            ctx.lineTo(0, 25);
+            ctx.lineTo(-25, 0);
+            ctx.closePath();
+            ctx.clip();
+            
+            // Complex filled path with transparency
+            ctx.beginPath();
+            for (let i = 0; i < 6; i++) {
+                const angle = (i * Math.PI) / 3;
+                const x = Math.cos(angle) * 20;
+                const y = Math.sin(angle) * 20;
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.closePath();
+            
+            helpers.setSWCanvasFill(ctx, 'red');
+            ctx.fill();
+            ctx.restore();
+            
+            // Test 2: Scaled stroke with clip and alpha (top right)
+            ctx.save();
+            ctx.translate(300, 75);
+            ctx.scale(1.2, 0.8);
+            ctx.globalAlpha = 0.6;
+            
+            // Circular clip
+            ctx.beginPath();
+            ctx.arc(0, 0, 30, 0, 2 * Math.PI);
+            ctx.clip();
+            
+            // Stroked spiral path
+            ctx.beginPath();
+            ctx.moveTo(0, 0);
+            for (let t = 0; t < 4 * Math.PI; t += 0.2) {
+                const r = t * 3;
+                const x = Math.cos(t) * r;
+                const y = Math.sin(t) * r;
+                ctx.lineTo(x, y);
+            }
+            
+            ctx.lineWidth = 3;
+            helpers.setSWCanvasStroke(ctx, 'green');
+            ctx.stroke();
+            ctx.restore();
+            
+            // Test 3: Multiple nested clips with varying alpha (bottom left)
+            ctx.save();
+            ctx.translate(100, 200);
+            
+            // First clip: rotated rectangle
+            ctx.save();
+            ctx.rotate(-Math.PI / 8);
+            ctx.rect(-30, -20, 60, 40);
+            ctx.clip();
+            ctx.restore();
+            
+            // Second clip: scaled ellipse
+            ctx.save();
+            ctx.scale(0.8, 1.3);
+            ctx.beginPath();
+            ctx.arc(0, 0, 25, 0, 2 * Math.PI);
+            ctx.clip();
+            ctx.restore();
+            
+            // Layer 1: Semi-transparent background
+            ctx.globalAlpha = 0.4;
+            helpers.setSWCanvasFill(ctx, 'blue');
+            ctx.fillRect(-40, -40, 80, 80);
+            
+            // Layer 2: More transparent overlay
+            ctx.globalAlpha = 0.6;
+            ctx.beginPath();
+            ctx.moveTo(-15, -20);
+            ctx.quadraticCurveTo(0, -30, 15, -20);
+            ctx.quadraticCurveTo(25, 0, 15, 20);
+            ctx.quadraticCurveTo(0, 30, -15, 20);
+            ctx.quadraticCurveTo(-25, 0, -15, -20);
+            ctx.closePath();
+            
+            helpers.setSWCanvasFill(ctx, 'orange');
+            ctx.fill();
+            ctx.restore();
+            
+            // Test 4: Ultimate complexity - all features combined (bottom right)
+            ctx.save();
+            ctx.translate(300, 200);
+            ctx.rotate(Math.PI / 12);
+            ctx.scale(1.1, 0.9);
+            ctx.globalAlpha = 0.8;
+            
+            // Complex clip shape: star with hole
+            ctx.beginPath();
+            // Outer star
+            for (let i = 0; i < 5; i++) {
+                const angle = (i * 2 * Math.PI) / 5 - Math.PI / 2;
+                const outerRadius = 25;
+                const innerRadius = 12;
+                
+                const outerX = Math.cos(angle) * outerRadius;
+                const outerY = Math.sin(angle) * outerRadius;
+                const innerAngle = angle + Math.PI / 5;
+                const innerX = Math.cos(innerAngle) * innerRadius;
+                const innerY = Math.sin(innerAngle) * innerRadius;
+                
+                if (i === 0) ctx.moveTo(outerX, outerY);
+                else ctx.lineTo(outerX, outerY);
+                ctx.lineTo(innerX, innerY);
+            }
+            ctx.closePath();
+            ctx.clip();
+            
+            // Fill with complex path
+            ctx.save();
+            ctx.rotate(-Math.PI / 4);
+            ctx.globalAlpha = 0.9; // Alpha on alpha
+            
+            ctx.beginPath();
+            ctx.moveTo(-20, -15);
+            ctx.bezierCurveTo(-10, -25, 10, -25, 20, -15);
+            ctx.bezierCurveTo(25, 0, 25, 0, 20, 15);
+            ctx.bezierCurveTo(10, 25, -10, 25, -20, 15);
+            ctx.bezierCurveTo(-25, 0, -25, 0, -20, -15);
+            ctx.closePath();
+            
+            helpers.setSWCanvasFill(ctx, 'purple');
+            ctx.fill();
+            
+            // Add stroked outline on top
+            ctx.globalAlpha = 0.7;
+            ctx.lineWidth = 2;
+            helpers.setSWCanvasStroke(ctx, 'magenta');
+            ctx.stroke();
+            ctx.restore();
+            ctx.restore();
+            
+            return surface;
+        },
+        drawHTML5Canvas: function(canvas) {
+            const ctx = canvas.getContext('2d');
+            
+            // White background
+            helpers.setHTML5CanvasFill(ctx, 'white');
+            ctx.fillRect(0, 0, 400, 300);
+            
+            // Test 1: Rotated clip with semi-transparent fill (top left)
+            ctx.save();
+            ctx.translate(100, 75);
+            ctx.rotate(Math.PI / 6);
+            ctx.globalAlpha = 0.7;
+            
+            // Diamond clip
+            ctx.beginPath();
+            ctx.moveTo(0, -25);
+            ctx.lineTo(25, 0);
+            ctx.lineTo(0, 25);
+            ctx.lineTo(-25, 0);
+            ctx.closePath();
+            ctx.clip();
+            
+            // Complex filled path with transparency
+            ctx.beginPath();
+            for (let i = 0; i < 6; i++) {
+                const angle = (i * Math.PI) / 3;
+                const x = Math.cos(angle) * 20;
+                const y = Math.sin(angle) * 20;
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.closePath();
+            
+            helpers.setHTML5CanvasFill(ctx, 'red');
+            ctx.fill();
+            ctx.restore();
+            
+            // Test 2: Scaled stroke with clip and alpha (top right)
+            ctx.save();
+            ctx.translate(300, 75);
+            ctx.scale(1.2, 0.8);
+            ctx.globalAlpha = 0.6;
+            
+            // Circular clip
+            ctx.beginPath();
+            ctx.arc(0, 0, 30, 0, 2 * Math.PI);
+            ctx.clip();
+            
+            // Stroked spiral path
+            ctx.beginPath();
+            ctx.moveTo(0, 0);
+            for (let t = 0; t < 4 * Math.PI; t += 0.2) {
+                const r = t * 3;
+                const x = Math.cos(t) * r;
+                const y = Math.sin(t) * r;
+                ctx.lineTo(x, y);
+            }
+            
+            ctx.lineWidth = 3;
+            helpers.setHTML5CanvasStroke(ctx, 'green');
+            ctx.stroke();
+            ctx.restore();
+            
+            // Test 3: Multiple nested clips with varying alpha (bottom left)
+            ctx.save();
+            ctx.translate(100, 200);
+            
+            // First clip: rotated rectangle
+            ctx.save();
+            ctx.rotate(-Math.PI / 8);
+            ctx.rect(-30, -20, 60, 40);
+            ctx.clip();
+            ctx.restore();
+            
+            // Second clip: scaled ellipse
+            ctx.save();
+            ctx.scale(0.8, 1.3);
+            ctx.beginPath();
+            ctx.arc(0, 0, 25, 0, 2 * Math.PI);
+            ctx.clip();
+            ctx.restore();
+            
+            // Layer 1: Semi-transparent background
+            ctx.globalAlpha = 0.4;
+            helpers.setHTML5CanvasFill(ctx, 'blue');
+            ctx.fillRect(-40, -40, 80, 80);
+            
+            // Layer 2: More transparent overlay
+            ctx.globalAlpha = 0.6;
+            ctx.beginPath();
+            ctx.moveTo(-15, -20);
+            ctx.quadraticCurveTo(0, -30, 15, -20);
+            ctx.quadraticCurveTo(25, 0, 15, 20);
+            ctx.quadraticCurveTo(0, 30, -15, 20);
+            ctx.quadraticCurveTo(-25, 0, -15, -20);
+            ctx.closePath();
+            
+            helpers.setHTML5CanvasFill(ctx, 'orange');
+            ctx.fill();
+            ctx.restore();
+            
+            // Test 4: Ultimate complexity - all features combined (bottom right)
+            ctx.save();
+            ctx.translate(300, 200);
+            ctx.rotate(Math.PI / 12);
+            ctx.scale(1.1, 0.9);
+            ctx.globalAlpha = 0.8;
+            
+            // Complex clip shape: star with hole
+            ctx.beginPath();
+            // Outer star
+            for (let i = 0; i < 5; i++) {
+                const angle = (i * 2 * Math.PI) / 5 - Math.PI / 2;
+                const outerRadius = 25;
+                const innerRadius = 12;
+                
+                const outerX = Math.cos(angle) * outerRadius;
+                const outerY = Math.sin(angle) * outerRadius;
+                const innerAngle = angle + Math.PI / 5;
+                const innerX = Math.cos(innerAngle) * innerRadius;
+                const innerY = Math.sin(innerAngle) * innerRadius;
+                
+                if (i === 0) ctx.moveTo(outerX, outerY);
+                else ctx.lineTo(outerX, outerY);
+                ctx.lineTo(innerX, innerY);
+            }
+            ctx.closePath();
+            ctx.clip();
+            
+            // Fill with complex path
+            ctx.save();
+            ctx.rotate(-Math.PI / 4);
+            ctx.globalAlpha = 0.9; // Alpha on alpha
+            
+            ctx.beginPath();
+            ctx.moveTo(-20, -15);
+            ctx.bezierCurveTo(-10, -25, 10, -25, 20, -15);
+            ctx.bezierCurveTo(25, 0, 25, 0, 20, 15);
+            ctx.bezierCurveTo(10, 25, -10, 25, -20, 15);
+            ctx.bezierCurveTo(-25, 0, -25, 0, -20, -15);
+            ctx.closePath();
+            
+            helpers.setHTML5CanvasFill(ctx, 'purple');
+            ctx.fill();
+            
+            // Add stroked outline on top
+            ctx.globalAlpha = 0.7;
+            ctx.lineWidth = 2;
+            helpers.setHTML5CanvasStroke(ctx, 'magenta');
+            ctx.stroke();
+            ctx.restore();
+            ctx.restore();
+        }
+    };
+
+    // Test 39: Debug Alpha Blending Issue - Multiple nested clips with varying alpha
+    visualTests['debug-alpha-blending'] = {
+        name: 'Debug Alpha Blending Issue',
+        width: 200, height: 200,
+        drawSWCanvas: function(SWCanvas) {
+            const surface = SWCanvas.Surface(200, 200);
+            const ctx = new SWCanvas.Context2D(surface);
+            
+            // White background
+            helpers.setSWCanvasFill(ctx, 'white');
+            ctx.fillRect(0, 0, 200, 200);
+            
+            ctx.save();
+            ctx.translate(100, 100);
+            
+            // First clip: rotated rectangle
+            ctx.save();
+            ctx.rotate(-Math.PI / 8);
+            ctx.rect(-30, -20, 60, 40);
+            ctx.clip();
+            ctx.restore();
+            
+            // Second clip: scaled ellipse
+            ctx.save();
+            ctx.scale(0.8, 1.3);
+            ctx.beginPath();
+            ctx.arc(0, 0, 25, 0, 2 * Math.PI);
+            ctx.clip();
+            ctx.restore();
+            
+            // Layer 1: Semi-transparent background
+            ctx.globalAlpha = 0.4;
+            helpers.setSWCanvasFill(ctx, 'blue');
+            ctx.fillRect(-40, -40, 80, 80);
+            
+            // Check pixel value after first layer
+            const layer1Offset = 100 * surface.stride + 100 * 4;
+            const r1 = surface.data[layer1Offset];
+            const g1 = surface.data[layer1Offset + 1];
+            const b1 = surface.data[layer1Offset + 2];
+            const a1 = surface.data[layer1Offset + 3];
+            console.log(`After blue layer: R=${r1}, G=${g1}, B=${b1}, A=${a1}`);
+            
+            // Layer 2: More transparent overlay
+            ctx.globalAlpha = 0.6;
+            ctx.beginPath();
+            ctx.moveTo(-15, -20);
+            ctx.quadraticCurveTo(0, -30, 15, -20);
+            ctx.quadraticCurveTo(25, 0, 15, 20);
+            ctx.quadraticCurveTo(0, 30, -15, 20);
+            ctx.quadraticCurveTo(-25, 0, -15, -20);
+            ctx.closePath();
+            
+            helpers.setSWCanvasFill(ctx, 'orange');
+            ctx.fill();
+            ctx.restore();
+            
+            // Check pixel value inside orange shape at (90, 100) = (-10, 0) in translated coords
+            const orangeOffset = 100 * surface.stride + 90 * 4;
+            const r = surface.data[orangeOffset];
+            const g = surface.data[orangeOffset + 1];
+            const b = surface.data[orangeOffset + 2];
+            const a = surface.data[orangeOffset + 3];
+            
+            console.log(`SWCanvas orange area: R=${r}, G=${g}, B=${b}, A=${a}`);
+            
+            return surface;
+        },
+        drawHTML5Canvas: function(canvas) {
+            const ctx = canvas.getContext('2d');
+            
+            // White background
+            helpers.setHTML5CanvasFill(ctx, 'white');
+            ctx.fillRect(0, 0, 200, 200);
+            
+            ctx.save();
+            ctx.translate(100, 100);
+            
+            // First clip: rotated rectangle
+            ctx.save();
+            ctx.rotate(-Math.PI / 8);
+            ctx.rect(-30, -20, 60, 40);
+            ctx.clip();
+            ctx.restore();
+            
+            // Second clip: scaled ellipse
+            ctx.save();
+            ctx.scale(0.8, 1.3);
+            ctx.beginPath();
+            ctx.arc(0, 0, 25, 0, 2 * Math.PI);
+            ctx.clip();
+            ctx.restore();
+            
+            // Layer 1: Semi-transparent background
+            ctx.globalAlpha = 0.4;
+            helpers.setHTML5CanvasFill(ctx, 'blue');
+            ctx.fillRect(-40, -40, 80, 80);
+            
+            // Layer 2: More transparent overlay
+            ctx.globalAlpha = 0.6;
+            ctx.beginPath();
+            ctx.moveTo(-15, -20);
+            ctx.quadraticCurveTo(0, -30, 15, -20);
+            ctx.quadraticCurveTo(25, 0, 15, 20);
+            ctx.quadraticCurveTo(0, 30, -15, 20);
+            ctx.quadraticCurveTo(-25, 0, -15, -20);
+            ctx.closePath();
+            
+            helpers.setHTML5CanvasFill(ctx, 'orange');
+            ctx.fill();
+            ctx.restore();
+            
+            // Check pixel value at center of clipped region (100, 100)  
+            const imageData = ctx.getImageData(100, 100, 1, 1);
+            const r = imageData.data[0];
+            const g = imageData.data[1];
+            const b = imageData.data[2];
+            const a = imageData.data[3];
+            
+            console.log(`HTML5Canvas clipped center: R=${r}, G=${g}, B=${b}, A=${a}`);
+        }
+    };
+
+    // Test 40: Debug Star Shape Issue - Complex clip path with transforms
+    visualTests['debug-star-shape'] = {
+        name: 'Debug Star Shape Issue',
+        width: 200, height: 200,
+        drawSWCanvas: function(SWCanvas) {
+            const surface = SWCanvas.Surface(200, 200);
+            const ctx = new SWCanvas.Context2D(surface);
+            
+            // White background
+            helpers.setSWCanvasFill(ctx, 'white');
+            ctx.fillRect(0, 0, 200, 200);
+            
+            ctx.save();
+            ctx.translate(100, 100);
+            ctx.rotate(Math.PI / 12);
+            ctx.scale(1.1, 0.9);
+            ctx.globalAlpha = 0.8;
+            
+            // Complex clip shape: star with hole
+            ctx.beginPath();
+            // Outer star
+            for (let i = 0; i < 5; i++) {
+                const angle = (i * 2 * Math.PI) / 5 - Math.PI / 2;
+                const outerRadius = 25;
+                const innerRadius = 12;
+                
+                const outerX = Math.cos(angle) * outerRadius;
+                const outerY = Math.sin(angle) * outerRadius;
+                const innerAngle = angle + Math.PI / 5;
+                const innerX = Math.cos(innerAngle) * innerRadius;
+                const innerY = Math.sin(innerAngle) * innerRadius;
+                
+                if (i === 0) ctx.moveTo(outerX, outerY);
+                else ctx.lineTo(outerX, outerY);
+                ctx.lineTo(innerX, innerY);
+            }
+            ctx.closePath();
+            ctx.clip();
+            
+            // Fill with complex path
+            ctx.save();
+            ctx.rotate(-Math.PI / 4);
+            ctx.globalAlpha = 0.9; // Alpha on alpha
+            
+            ctx.beginPath();
+            ctx.moveTo(-20, -15);
+            ctx.bezierCurveTo(-10, -25, 10, -25, 20, -15);
+            ctx.bezierCurveTo(25, 0, 25, 0, 20, 15);
+            ctx.bezierCurveTo(10, 25, -10, 25, -20, 15);
+            ctx.bezierCurveTo(-25, 0, -25, 0, -20, -15);
+            ctx.closePath();
+            
+            helpers.setSWCanvasFill(ctx, 'purple');
+            ctx.fill();
+            
+            // Add stroked outline on top
+            ctx.globalAlpha = 0.7;
+            ctx.lineWidth = 2;
+            helpers.setSWCanvasStroke(ctx, 'magenta');
+            ctx.stroke();
+            ctx.restore();
+            ctx.restore();
+            
+            return surface;
+        },
+        drawHTML5Canvas: function(canvas) {
+            const ctx = canvas.getContext('2d');
+            
+            // White background
+            helpers.setHTML5CanvasFill(ctx, 'white');
+            ctx.fillRect(0, 0, 200, 200);
+            
+            ctx.save();
+            ctx.translate(100, 100);
+            ctx.rotate(Math.PI / 12);
+            ctx.scale(1.1, 0.9);
+            ctx.globalAlpha = 0.8;
+            
+            // Complex clip shape: star with hole
+            ctx.beginPath();
+            // Outer star
+            for (let i = 0; i < 5; i++) {
+                const angle = (i * 2 * Math.PI) / 5 - Math.PI / 2;
+                const outerRadius = 25;
+                const innerRadius = 12;
+                
+                const outerX = Math.cos(angle) * outerRadius;
+                const outerY = Math.sin(angle) * outerRadius;
+                const innerAngle = angle + Math.PI / 5;
+                const innerX = Math.cos(innerAngle) * innerRadius;
+                const innerY = Math.sin(innerAngle) * innerRadius;
+                
+                if (i === 0) ctx.moveTo(outerX, outerY);
+                else ctx.lineTo(outerX, outerY);
+                ctx.lineTo(innerX, innerY);
+            }
+            ctx.closePath();
+            ctx.clip();
+            
+            // Fill with complex path
+            ctx.save();
+            ctx.rotate(-Math.PI / 4);
+            ctx.globalAlpha = 0.9; // Alpha on alpha
+            
+            ctx.beginPath();
+            ctx.moveTo(-20, -15);
+            ctx.bezierCurveTo(-10, -25, 10, -25, 20, -15);
+            ctx.bezierCurveTo(25, 0, 25, 0, 20, 15);
+            ctx.bezierCurveTo(10, 25, -10, 25, -20, 15);
+            ctx.bezierCurveTo(-25, 0, -25, 0, -20, -15);
+            ctx.closePath();
+            
+            helpers.setHTML5CanvasFill(ctx, 'purple');
+            ctx.fill();
+            
+            // Add stroked outline on top
+            ctx.globalAlpha = 0.7;
+            ctx.lineWidth = 2;
+            helpers.setHTML5CanvasStroke(ctx, 'magenta');
+            ctx.stroke();
+            ctx.restore();
+            ctx.restore();
+        }
+    };
+
+    // Test 41: Pixel Analysis - Check exact pixel values at center
+    visualTests['pixel-analysis'] = {
+        name: 'Pixel Analysis Test',
+        width: 200, height: 200,
+        drawSWCanvas: function(SWCanvas) {
+            const surface = SWCanvas.Surface(200, 200);
+            const ctx = new SWCanvas.Context2D(surface);
+            
+            // White background
+            helpers.setSWCanvasFill(ctx, 'white');
+            ctx.fillRect(0, 0, 200, 200);
+            
+            ctx.save();
+            ctx.translate(100, 100);
+            
+            // First layer: Semi-transparent blue at alpha 0.4
+            ctx.globalAlpha = 0.4;
+            helpers.setSWCanvasFill(ctx, 'blue'); // RGB(0, 0, 255)
+            ctx.fillRect(-30, -30, 60, 60);
+            
+            // Second layer: Semi-transparent orange at alpha 0.6, overlapping
+            ctx.globalAlpha = 0.6;
+            helpers.setSWCanvasFill(ctx, 'orange'); // RGB(255, 165, 0)
+            ctx.fillRect(-20, -20, 40, 40);
+            
+            ctx.restore();
+            
+            // Check pixel value at center (100, 100)
+            const centerOffset = 100 * surface.stride + 100 * 4;
+            const r = surface.data[centerOffset];
+            const g = surface.data[centerOffset + 1];
+            const b = surface.data[centerOffset + 2];
+            const a = surface.data[centerOffset + 3];
+            
+            console.log(`SWCanvas center pixel: R=${r}, G=${g}, B=${b}, A=${a}`);
+            
+            return surface;
+        },
+        drawHTML5Canvas: function(canvas) {
+            const ctx = canvas.getContext('2d');
+            
+            // White background
+            helpers.setHTML5CanvasFill(ctx, 'white');
+            ctx.fillRect(0, 0, 200, 200);
+            
+            ctx.save();
+            ctx.translate(100, 100);
+            
+            // First layer: Semi-transparent blue at alpha 0.4
+            ctx.globalAlpha = 0.4;
+            helpers.setHTML5CanvasFill(ctx, 'blue'); // RGB(0, 0, 255)
+            ctx.fillRect(-30, -30, 60, 60);
+            
+            // Second layer: Semi-transparent orange at alpha 0.6, overlapping
+            ctx.globalAlpha = 0.6;
+            helpers.setHTML5CanvasFill(ctx, 'orange'); // RGB(255, 165, 0)
+            ctx.fillRect(-20, -20, 40, 40);
+            
+            ctx.restore();
+            
+            // Check pixel value at center (100, 100)
+            const imageData = ctx.getImageData(100, 100, 1, 1);
+            const r = imageData.data[0];
+            const g = imageData.data[1];
+            const b = imageData.data[2];
+            const a = imageData.data[3];
+            
+            console.log(`HTML5Canvas center pixel: R=${r}, G=${g}, B=${b}, A=${a}`);
+        }
+    };
+
+    // Test 42: Debug Star Path Generation - Isolated star path test
+    visualTests['debug-star-path'] = {
+        name: 'Debug Star Path Generation',
+        width: 200, height: 200,
+        drawSWCanvas: function(SWCanvas) {
+            const surface = SWCanvas.Surface(200, 200);
+            const ctx = new SWCanvas.Context2D(surface);
+            
+            // White background
+            helpers.setSWCanvasFill(ctx, 'white');
+            ctx.fillRect(0, 0, 200, 200);
+            
+            ctx.save();
+            ctx.translate(100, 100);
+            // No transforms - just the raw star
+            
+            // Draw star path for debugging
+            ctx.beginPath();
+            for (let i = 0; i < 5; i++) {
+                const angle = (i * 2 * Math.PI) / 5 - Math.PI / 2;
+                const outerRadius = 40;
+                const innerRadius = 20;
+                
+                console.log(`Star point ${i}: angle=${angle}`);
+                
+                const outerX = Math.cos(angle) * outerRadius;
+                const outerY = Math.sin(angle) * outerRadius;
+                const innerAngle = angle + Math.PI / 5;
+                const innerX = Math.cos(innerAngle) * innerRadius;
+                const innerY = Math.sin(innerAngle) * innerRadius;
+                
+                console.log(`  Outer: (${outerX.toFixed(2)}, ${outerY.toFixed(2)})`);
+                console.log(`  Inner: (${innerX.toFixed(2)}, ${innerY.toFixed(2)})`);
+                
+                if (i === 0) ctx.moveTo(outerX, outerY);
+                else ctx.lineTo(outerX, outerY);
+                ctx.lineTo(innerX, innerY);
+            }
+            ctx.closePath();
+            
+            helpers.setSWCanvasFill(ctx, 'red');
+            ctx.fill();
+            ctx.restore();
+            
+            return surface;
+        },
+        drawHTML5Canvas: function(canvas) {
+            const ctx = canvas.getContext('2d');
+            
+            // White background
+            helpers.setHTML5CanvasFill(ctx, 'white');
+            ctx.fillRect(0, 0, 200, 200);
+            
+            ctx.save();
+            ctx.translate(100, 100);
+            // No transforms - just the raw star
+            
+            // Draw star path for debugging
+            ctx.beginPath();
+            for (let i = 0; i < 5; i++) {
+                const angle = (i * 2 * Math.PI) / 5 - Math.PI / 2;
+                const outerRadius = 40;
+                const innerRadius = 20;
+                
+                const outerX = Math.cos(angle) * outerRadius;
+                const outerY = Math.sin(angle) * outerRadius;
+                const innerAngle = angle + Math.PI / 5;
+                const innerX = Math.cos(innerAngle) * innerRadius;
+                const innerY = Math.sin(innerAngle) * innerRadius;
+                
+                if (i === 0) ctx.moveTo(outerX, outerY);
+                else ctx.lineTo(outerX, outerY);
+                ctx.lineTo(innerX, innerY);
+            }
+            ctx.closePath();
+            
+            helpers.setHTML5CanvasFill(ctx, 'red');
+            ctx.fill();
+            ctx.restore();
+        }
+    };
+
     const VisualTestRegistry = {
         getTests: function() { return visualTests; },
         getTest: function(name) { return visualTests[name]; },

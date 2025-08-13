@@ -142,28 +142,31 @@ Rasterizer.prototype.fill = function(path, rule) {
         throw new Error('Must call beginOp before drawing operations');
     }
     
-    // Apply global alpha to fill color, then premultiply (same as fillRect)
+    // Apply global alpha to fill color (non-premultiplied for polygon filler)
     const color = this.currentOp.fillStyle || [0, 0, 0, 255];
     const globalAlpha = this.currentOp.globalAlpha;
     const effectiveAlpha = (color[3] / 255) * globalAlpha;
     const srcA = Math.round(effectiveAlpha * 255);
-    const srcR = Math.round(color[0] * effectiveAlpha);
-    const srcG = Math.round(color[1] * effectiveAlpha);
-    const srcB = Math.round(color[2] * effectiveAlpha);
+    const srcR = color[0]; // Keep RGB non-premultiplied
+    const srcG = color[1];
+    const srcB = color[2];
     
     const fillColor = [srcR, srcG, srcB, srcA];
     const fillRule = rule || 'nonzero';
     
     // Flatten path to polygons
     const polygons = flattenPath(path);
+    console.log(`Rasterizer.fill: Found ${polygons.length} polygons from path`);
     
     // Fill polygons with current transform and clipping
     if (this.currentOp.clipPath) {
         // With old-style path clipping - pass clip polygons for per-pixel testing
         const clipPolygons = flattenPath(this.currentOp.clipPath);
+        console.log(`Calling fillPolygons with clipPath`);
         fillPolygons(this.surface, polygons, fillColor, fillRule, this.currentOp.transform, clipPolygons, this.currentOp.clipMask);
     } else {
         // No path clipping - but may have stencil clipping
+        console.log(`Calling fillPolygons without clipPath`);
         fillPolygons(this.surface, polygons, fillColor, fillRule, this.currentOp.transform, null, this.currentOp.clipMask);
     }
 };

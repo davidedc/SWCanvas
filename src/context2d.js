@@ -268,6 +268,7 @@ Context2D.prototype.clearRect = function(x, y, width, height) {
 
 // M2: Path drawing methods
 Context2D.prototype.fill = function(path, rule) {
+    console.log(`Context2D.fill called with path=${!!path}, rule=${rule}`);
     let pathToFill, fillRule;
     
     // Handle different argument combinations:

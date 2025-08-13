@@ -649,11 +649,57 @@ function fillScanlineSpans(surface, y, intersections, color, fillRule, transform
                 
                 const offset = y * surface.stride + x * 4;
                 
-                // Simple copy for now (will be enhanced with proper blending later)
-                surface.data[offset] = color[0];     // R
-                surface.data[offset + 1] = color[1]; // G  
-                surface.data[offset + 2] = color[2]; // B
-                surface.data[offset + 3] = color[3]; // A
+                // Proper alpha blending (source-over)
+                const srcR = color[0];
+                const srcG = color[1];
+                const srcB = color[2];
+                const srcA = color[3];
+                
+                // Debug which branch we're taking for orange area pixel
+                if (x === 90 && y === 100) {
+                    console.log(`Polygon filler at (90,100): color=[${srcR},${srcG},${srcB},${srcA}]`);
+                }
+                
+                if (srcA === 255) {
+                    // Opaque source - simple copy
+                    if (x === 90 && y === 100) {
+                        console.log(`Taking opaque branch: srcA=${srcA}`);
+                    }
+                    surface.data[offset] = srcR;
+                    surface.data[offset + 1] = srcG;
+                    surface.data[offset + 2] = srcB;
+                    surface.data[offset + 3] = srcA;
+                } else if (srcA === 0) {
+                    // Transparent source - no change
+                    if (x === 90 && y === 100) {
+                        console.log(`Taking transparent branch: srcA=${srcA}`);
+                    }
+                    continue;
+                } else {
+                    // Alpha blending required
+                    const dstR = surface.data[offset];
+                    const dstG = surface.data[offset + 1];
+                    const dstB = surface.data[offset + 2];
+                    const dstA = surface.data[offset + 3];
+                    
+                    const srcAlpha = srcA / 255;
+                    const invSrcA = 1 - srcAlpha;
+                    
+                    const newR = Math.round(srcR * srcAlpha + dstR * invSrcA);
+                    const newG = Math.round(srcG * srcAlpha + dstG * invSrcA);
+                    const newB = Math.round(srcB * srcAlpha + dstB * invSrcA);
+                    const newA = Math.round(srcA + dstA * invSrcA);
+                    
+                    // Debug alpha blending for orange area pixel (90, 100)
+                    if (x === 90 && y === 100) {
+                        console.log(`Alpha blend: src=[${srcR},${srcG},${srcB},${srcA}] dst=[${dstR},${dstG},${dstB},${dstA}] -> [${newR},${newG},${newB},${newA}]`);
+                    }
+                    
+                    surface.data[offset] = newR;
+                    surface.data[offset + 1] = newG;
+                    surface.data[offset + 2] = newB;
+                    surface.data[offset + 3] = newA;
+                }
             }
         }
     }
@@ -1275,28 +1321,31 @@ Rasterizer.prototype.fill = function(path, rule) {
         throw new Error('Must call beginOp before drawing operations');
     }
     
-    // Apply global alpha to fill color, then premultiply (same as fillRect)
+    // Apply global alpha to fill color (non-premultiplied for polygon filler)
     const color = this.currentOp.fillStyle || [0, 0, 0, 255];
     const globalAlpha = this.currentOp.globalAlpha;
     const effectiveAlpha = (color[3] / 255) * globalAlpha;
     const srcA = Math.round(effectiveAlpha * 255);
-    const srcR = Math.round(color[0] * effectiveAlpha);
-    const srcG = Math.round(color[1] * effectiveAlpha);
-    const srcB = Math.round(color[2] * effectiveAlpha);
+    const srcR = color[0]; // Keep RGB non-premultiplied
+    const srcG = color[1];
+    const srcB = color[2];
     
     const fillColor = [srcR, srcG, srcB, srcA];
     const fillRule = rule || 'nonzero';
     
     // Flatten path to polygons
     const polygons = flattenPath(path);
+    console.log(`Rasterizer.fill: Found ${polygons.length} polygons from path`);
     
     // Fill polygons with current transform and clipping
     if (this.currentOp.clipPath) {
         // With old-style path clipping - pass clip polygons for per-pixel testing
         const clipPolygons = flattenPath(this.currentOp.clipPath);
+        console.log(`Calling fillPolygons with clipPath`);
         fillPolygons(this.surface, polygons, fillColor, fillRule, this.currentOp.transform, clipPolygons, this.currentOp.clipMask);
     } else {
         // No path clipping - but may have stencil clipping
+        console.log(`Calling fillPolygons without clipPath`);
         fillPolygons(this.surface, polygons, fillColor, fillRule, this.currentOp.transform, null, this.currentOp.clipMask);
     }
 };
@@ -1604,6 +1653,7 @@ Context2D.prototype.clearRect = function(x, y, width, height) {
 
 // M2: Path drawing methods
 Context2D.prototype.fill = function(path, rule) {
+    console.log(`Context2D.fill called with path=${!!path}, rule=${rule}`);
     let pathToFill, fillRule;
     
     // Handle different argument combinations:
