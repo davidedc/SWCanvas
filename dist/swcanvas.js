@@ -233,14 +233,10 @@ class Color {
     }
 }
 /**
- * Geometry classes for SWCanvas
+ * Point class for SWCanvas
  * 
- * Provides Point and Rectangle value objects to encapsulate geometric operations.
+ * Immutable 2D point representing a coordinate pair.
  * Following Joshua Bloch's principle of making small, focused, immutable classes.
- */
-
-/**
- * Immutable Point class representing a 2D coordinate
  */
 class Point {
     /**
@@ -249,8 +245,20 @@ class Point {
      * @param {number} y - Y coordinate
      */
     constructor(x, y) {
+        // Validate input parameters
+        if (typeof x !== 'number' || typeof y !== 'number') {
+            throw new Error('Point coordinates must be numbers');
+        }
+        
+        if (!isFinite(x) || !isFinite(y)) {
+            throw new Error('Point coordinates must be finite numbers');
+        }
+        
         this._x = x;
         this._y = y;
+        
+        // Make point immutable
+        Object.freeze(this);
     }
     
     get x() { return this._x; }
@@ -262,6 +270,9 @@ class Point {
      * @returns {Point} New Point instance
      */
     static from(obj) {
+        if (!obj || typeof obj.x !== 'number' || typeof obj.y !== 'number') {
+            throw new Error('Object must have numeric x and y properties');
+        }
         return new Point(obj.x, obj.y);
     }
     
@@ -274,11 +285,32 @@ class Point {
     }
     
     /**
+     * Create array of points from coordinate array
+     * @param {number[]} coords - Array of alternating x,y coordinates
+     * @returns {Point[]} Array of Point instances
+     */
+    static fromArray(coords) {
+        if (!Array.isArray(coords) || coords.length % 2 !== 0) {
+            throw new Error('Coordinates array must have even length');
+        }
+        
+        const points = [];
+        for (let i = 0; i < coords.length; i += 2) {
+            points.push(new Point(coords[i], coords[i + 1]));
+        }
+        return points;
+    }
+    
+    /**
      * Calculate distance to another point
      * @param {Point} other - Other point
      * @returns {number} Euclidean distance
      */
     distanceTo(other) {
+        if (!(other instanceof Point)) {
+            throw new Error('Argument must be a Point instance');
+        }
+        
         const dx = this._x - other._x;
         const dy = this._y - other._y;
         return Math.sqrt(dx * dx + dy * dy);
@@ -290,6 +322,10 @@ class Point {
      * @returns {number} Manhattan distance
      */
     manhattanDistanceTo(other) {
+        if (!(other instanceof Point)) {
+            throw new Error('Argument must be a Point instance');
+        }
+        
         return Math.abs(this._x - other._x) + Math.abs(this._y - other._y);
     }
     
@@ -309,6 +345,10 @@ class Point {
      * @returns {Point} New point representing sum
      */
     add(other) {
+        if (!(other instanceof Point)) {
+            throw new Error('Argument must be a Point instance');
+        }
+        
         return new Point(this._x + other._x, this._y + other._y);
     }
     
@@ -318,6 +358,10 @@ class Point {
      * @returns {Point} New point representing difference
      */
     subtract(other) {
+        if (!(other instanceof Point)) {
+            throw new Error('Argument must be a Point instance');
+        }
+        
         return new Point(this._x - other._x, this._y - other._y);
     }
     
@@ -327,6 +371,10 @@ class Point {
      * @returns {Point} New scaled point
      */
     scale(factor) {
+        if (typeof factor !== 'number') {
+            throw new Error('Scale factor must be a number');
+        }
+        
         return new Point(this._x * factor, this._y * factor);
     }
     
@@ -337,6 +385,10 @@ class Point {
      * @returns {Point} New scaled point
      */
     scaleXY(sx, sy) {
+        if (typeof sx !== 'number' || typeof sy !== 'number') {
+            throw new Error('Scale factors must be numbers');
+        }
+        
         return new Point(this._x * sx, this._y * sy);
     }
     
@@ -346,12 +398,30 @@ class Point {
      * @returns {Point} New rotated point
      */
     rotate(angle) {
+        if (typeof angle !== 'number') {
+            throw new Error('Angle must be a number');
+        }
+        
         const cos = Math.cos(angle);
         const sin = Math.sin(angle);
         return new Point(
             this._x * cos - this._y * sin,
             this._x * sin + this._y * cos
         );
+    }
+    
+    /**
+     * Rotate this point around a center point (immutable)
+     * @param {Point} center - Center of rotation
+     * @param {number} angle - Rotation angle in radians
+     * @returns {Point} New rotated point
+     */
+    rotateAround(center, angle) {
+        if (!(center instanceof Point)) {
+            throw new Error('Center must be a Point instance');
+        }
+        
+        return this.subtract(center).rotate(angle).add(center);
     }
     
     /**
@@ -363,12 +433,22 @@ class Point {
     }
     
     /**
+     * Get squared magnitude (avoids sqrt for performance)
+     * @returns {number} Squared vector magnitude
+     */
+    get magnitudeSquared() {
+        return this._x * this._x + this._y * this._y;
+    }
+    
+    /**
      * Normalize to unit vector (immutable)
      * @returns {Point} New normalized point
      */
     normalize() {
         const mag = this.magnitude;
-        if (mag === 0) return new Point(0, 0);
+        if (mag === 0) {
+            return new Point(0, 0);
+        }
         return new Point(this._x / mag, this._y / mag);
     }
     
@@ -378,6 +458,10 @@ class Point {
      * @returns {number} Dot product
      */
     dot(other) {
+        if (!(other instanceof Point)) {
+            throw new Error('Argument must be a Point instance');
+        }
+        
         return this._x * other._x + this._y * other._y;
     }
     
@@ -387,6 +471,10 @@ class Point {
      * @returns {number} Cross product magnitude
      */
     cross(other) {
+        if (!(other instanceof Point)) {
+            throw new Error('Argument must be a Point instance');
+        }
+        
         return this._x * other._y - this._y * other._x;
     }
     
@@ -407,11 +495,63 @@ class Point {
     }
     
     /**
+     * Ceiling coordinates to integers (immutable)
+     * @returns {Point} New point with ceiling coordinates
+     */
+    ceil() {
+        return new Point(Math.ceil(this._x), Math.ceil(this._y));
+    }
+    
+    /**
+     * Clamp coordinates to a range (immutable)
+     * @param {number} minX - Minimum X value
+     * @param {number} minY - Minimum Y value
+     * @param {number} maxX - Maximum X value
+     * @param {number} maxY - Maximum Y value
+     * @returns {Point} New clamped point
+     */
+    clamp(minX, minY, maxX, maxY) {
+        return new Point(
+            Math.max(minX, Math.min(maxX, this._x)),
+            Math.max(minY, Math.min(maxY, this._y))
+        );
+    }
+    
+    /**
+     * Interpolate between this point and another (immutable)
+     * @param {Point} other - Target point
+     * @param {number} t - Interpolation factor (0-1)
+     * @returns {Point} Interpolated point
+     */
+    lerp(other, t) {
+        if (!(other instanceof Point)) {
+            throw new Error('Target must be a Point instance');
+        }
+        
+        if (typeof t !== 'number' || t < 0 || t > 1) {
+            throw new Error('Interpolation factor must be between 0 and 1');
+        }
+        
+        return new Point(
+            this._x + (other._x - this._x) * t,
+            this._y + (other._y - this._y) * t
+        );
+    }
+    
+    /**
      * Convert to plain object
      * @returns {Object} {x, y} object
      */
     toObject() {
         return { x: this._x, y: this._y };
+    }
+    
+    /**
+     * Convert to array
+     * @returns {number[]} [x, y] array
+     */
+    toArray() {
+        return [this._x, this._y];
     }
     
     /**
@@ -427,6 +567,15 @@ class Point {
     }
     
     /**
+     * Check if point is at origin (0, 0)
+     * @param {number} tolerance - Tolerance for floating point comparison
+     * @returns {boolean} True if point is at origin
+     */
+    isOrigin(tolerance = 1e-10) {
+        return Math.abs(this._x) < tolerance && Math.abs(this._y) < tolerance;
+    }
+    
+    /**
      * String representation for debugging
      * @returns {string} Point description
      */
@@ -434,9 +583,11 @@ class Point {
         return `Point(${this._x}, ${this._y})`;
     }
 }
-
 /**
- * Immutable Rectangle class representing an axis-aligned bounding box
+ * Rectangle class for SWCanvas
+ * 
+ * Immutable Rectangle class representing an axis-aligned bounding box.
+ * Following Joshua Bloch's principle of making small, focused, immutable classes.
  */
 class Rectangle {
     /**
@@ -447,13 +598,27 @@ class Rectangle {
      * @param {number} height - Height
      */
     constructor(x, y, width, height) {
+        // Validate input parameters
+        if (typeof x !== 'number' || typeof y !== 'number' || 
+            typeof width !== 'number' || typeof height !== 'number') {
+            throw new Error('Rectangle parameters must be numbers');
+        }
+        
+        if (!isFinite(x) || !isFinite(y) || !isFinite(width) || !isFinite(height)) {
+            throw new Error('Rectangle parameters must be finite numbers');
+        }
+        
         if (width < 0 || height < 0) {
             throw new Error('Rectangle dimensions must be non-negative');
         }
+        
         this._x = x;
         this._y = y;
         this._width = width;
         this._height = height;
+        
+        // Make rectangle immutable
+        Object.freeze(this);
     }
     
     get x() { return this._x; }
@@ -473,11 +638,37 @@ class Rectangle {
      * @returns {Rectangle} New Rectangle
      */
     static fromCorners(topLeft, bottomRight) {
+        if (!(topLeft instanceof Point) || !(bottomRight instanceof Point)) {
+            throw new Error('Arguments must be Point instances');
+        }
+        
+        const width = bottomRight.x - topLeft.x;
+        const height = bottomRight.y - topLeft.y;
+        
+        if (width < 0 || height < 0) {
+            throw new Error('Bottom-right corner must be below and to the right of top-left corner');
+        }
+        
+        return new Rectangle(topLeft.x, topLeft.y, width, height);
+    }
+    
+    /**
+     * Create rectangle from center point and dimensions
+     * @param {Point} center - Center point
+     * @param {number} width - Rectangle width
+     * @param {number} height - Rectangle height
+     * @returns {Rectangle} New Rectangle
+     */
+    static fromCenter(center, width, height) {
+        if (!(center instanceof Point)) {
+            throw new Error('Center must be a Point instance');
+        }
+        
         return new Rectangle(
-            topLeft.x,
-            topLeft.y,
-            bottomRight.x - topLeft.x,
-            bottomRight.y - topLeft.y
+            center.x - width / 2,
+            center.y - height / 2,
+            width,
+            height
         );
     }
     
@@ -487,8 +678,19 @@ class Rectangle {
      * @returns {Rectangle} Bounding rectangle
      */
     static boundingBox(points) {
+        if (!Array.isArray(points)) {
+            throw new Error('Points must be an array');
+        }
+        
         if (points.length === 0) {
             return new Rectangle(0, 0, 0, 0);
+        }
+        
+        // Validate all points
+        for (const point of points) {
+            if (!(point instanceof Point)) {
+                throw new Error('All items must be Point instances');
+            }
         }
         
         let minX = Infinity, minY = Infinity;
@@ -502,6 +704,22 @@ class Rectangle {
         }
         
         return new Rectangle(minX, minY, maxX - minX, maxY - minY);
+    }
+    
+    /**
+     * Create empty rectangle
+     * @returns {Rectangle} Empty rectangle at origin
+     */
+    static empty() {
+        return new Rectangle(0, 0, 0, 0);
+    }
+    
+    /**
+     * Create unit rectangle (0, 0, 1, 1)
+     * @returns {Rectangle} Unit rectangle
+     */
+    static unit() {
+        return new Rectangle(0, 0, 1, 1);
     }
     
     /**
@@ -524,6 +742,14 @@ class Rectangle {
     }
     
     /**
+     * Get perimeter of rectangle
+     * @returns {number} Perimeter
+     */
+    get perimeter() {
+        return 2 * (this._width + this._height);
+    }
+    
+    /**
      * Check if rectangle is empty (zero area)
      * @returns {boolean} True if empty
      */
@@ -532,13 +758,39 @@ class Rectangle {
     }
     
     /**
+     * Check if rectangle is a square
+     * @returns {boolean} True if square
+     */
+    get isSquare() {
+        return this._width === this._height && this._width > 0;
+    }
+    
+    /**
      * Check if point is inside rectangle
      * @param {Point} point - Point to test
      * @returns {boolean} True if point is inside
      */
     contains(point) {
+        if (!(point instanceof Point)) {
+            throw new Error('Argument must be a Point instance');
+        }
+        
         return point.x >= this._x && point.x < this._x + this._width &&
                point.y >= this._y && point.y < this._y + this._height;
+    }
+    
+    /**
+     * Check if point is inside rectangle (inclusive of edges)
+     * @param {Point} point - Point to test
+     * @returns {boolean} True if point is inside or on edge
+     */
+    containsInclusive(point) {
+        if (!(point instanceof Point)) {
+            throw new Error('Argument must be a Point instance');
+        }
+        
+        return point.x >= this._x && point.x <= this._x + this._width &&
+               point.y >= this._y && point.y <= this._y + this._height;
     }
     
     /**
@@ -547,6 +799,10 @@ class Rectangle {
      * @returns {boolean} True if other is completely inside
      */
     containsRectangle(other) {
+        if (!(other instanceof Rectangle)) {
+            throw new Error('Argument must be a Rectangle instance');
+        }
+        
         return other._x >= this._x &&
                other._y >= this._y &&
                other._x + other._width <= this._x + this._width &&
@@ -559,6 +815,10 @@ class Rectangle {
      * @returns {boolean} True if rectangles intersect
      */
     intersects(other) {
+        if (!(other instanceof Rectangle)) {
+            throw new Error('Argument must be a Rectangle instance');
+        }
+        
         return !(other._x >= this._x + this._width ||
                 other._x + other._width <= this._x ||
                 other._y >= this._y + this._height ||
@@ -571,6 +831,10 @@ class Rectangle {
      * @returns {Rectangle|null} Intersection rectangle or null if no intersection
      */
     intersection(other) {
+        if (!(other instanceof Rectangle)) {
+            throw new Error('Argument must be a Rectangle instance');
+        }
+        
         const left = Math.max(this._x, other._x);
         const top = Math.max(this._y, other._y);
         const right = Math.min(this._x + this._width, other._x + other._width);
@@ -589,6 +853,10 @@ class Rectangle {
      * @returns {Rectangle} Union rectangle
      */
     union(other) {
+        if (!(other instanceof Rectangle)) {
+            throw new Error('Argument must be a Rectangle instance');
+        }
+        
         const left = Math.min(this._x, other._x);
         const top = Math.min(this._y, other._y);
         const right = Math.max(this._x + this._width, other._x + other._width);
@@ -604,7 +872,24 @@ class Rectangle {
      * @returns {Rectangle} New translated rectangle
      */
     translate(dx, dy) {
+        if (typeof dx !== 'number' || typeof dy !== 'number') {
+            throw new Error('Translation offsets must be numbers');
+        }
+        
         return new Rectangle(this._x + dx, this._y + dy, this._width, this._height);
+    }
+    
+    /**
+     * Translate rectangle by point (immutable)
+     * @param {Point} offset - Translation offset
+     * @returns {Rectangle} New translated rectangle
+     */
+    translateBy(offset) {
+        if (!(offset instanceof Point)) {
+            throw new Error('Offset must be a Point instance');
+        }
+        
+        return this.translate(offset.x, offset.y);
     }
     
     /**
@@ -613,7 +898,11 @@ class Rectangle {
      * @param {number} sy - Y scale factor
      * @returns {Rectangle} New scaled rectangle
      */
-    scale(sx, sy) {
+    scale(sx, sy = sx) {
+        if (typeof sx !== 'number' || typeof sy !== 'number') {
+            throw new Error('Scale factors must be numbers');
+        }
+        
         return new Rectangle(
             this._x * sx,
             this._y * sy,
@@ -628,6 +917,10 @@ class Rectangle {
      * @returns {Rectangle} New expanded rectangle
      */
     expand(margin) {
+        if (typeof margin !== 'number') {
+            throw new Error('Margin must be a number');
+        }
+        
         return new Rectangle(
             this._x - margin,
             this._y - margin,
@@ -637,11 +930,32 @@ class Rectangle {
     }
     
     /**
+     * Expand rectangle by different margins on each side (immutable)
+     * @param {number} left - Left margin
+     * @param {number} top - Top margin
+     * @param {number} right - Right margin
+     * @param {number} bottom - Bottom margin
+     * @returns {Rectangle} New expanded rectangle
+     */
+    expandBy(left, top, right, bottom) {
+        return new Rectangle(
+            this._x - left,
+            this._y - top,
+            this._width + left + right,
+            this._height + top + bottom
+        );
+    }
+    
+    /**
      * Clamp rectangle to fit within bounds (immutable)
      * @param {Rectangle} bounds - Bounding rectangle
      * @returns {Rectangle} New clamped rectangle
      */
     clamp(bounds) {
+        if (!(bounds instanceof Rectangle)) {
+            throw new Error('Bounds must be a Rectangle instance');
+        }
+        
         const left = Math.max(this._x, bounds._x);
         const top = Math.max(this._y, bounds._y);
         const right = Math.min(this._x + this._width, bounds._x + bounds._width);
@@ -669,16 +983,47 @@ class Rectangle {
     }
     
     /**
+     * Get all four corner points as array
+     * @returns {Point[]} Array of corner points
+     */
+    getCornerPoints() {
+        const c = this.corners;
+        return [c.topLeft, c.topRight, c.bottomRight, c.bottomLeft];
+    }
+    
+    /**
+     * Convert to object
+     * @returns {Object} {x, y, width, height} object
+     */
+    toObject() {
+        return {
+            x: this._x,
+            y: this._y,
+            width: this._width,
+            height: this._height
+        };
+    }
+    
+    /**
+     * Convert to array
+     * @returns {number[]} [x, y, width, height] array
+     */
+    toArray() {
+        return [this._x, this._y, this._width, this._height];
+    }
+    
+    /**
      * Check equality with another rectangle
      * @param {Rectangle} other - Other rectangle
-     * @returns {boolean} True if rectangles are equal
+     * @param {number} tolerance - Tolerance for floating point comparison
+     * @returns {boolean} True if rectangles are equal within tolerance
      */
-    equals(other) {
+    equals(other, tolerance = 1e-10) {
         return other instanceof Rectangle &&
-               this._x === other._x &&
-               this._y === other._y &&
-               this._width === other._width &&
-               this._height === other._height;
+               Math.abs(this._x - other._x) < tolerance &&
+               Math.abs(this._y - other._y) < tolerance &&
+               Math.abs(this._width - other._width) < tolerance &&
+               Math.abs(this._height - other._height) < tolerance;
     }
     
     /**
@@ -689,74 +1034,239 @@ class Rectangle {
         return `Rectangle(${this._x}, ${this._y}, ${this._width}, ${this._height})`;
     }
 }
-class Matrix {
+/**
+ * Transform2D class for SWCanvas
+ * 
+ * Represents a 2D affine transformation matrix using homogeneous coordinates.
+ * Immutable value object following Joshua Bloch's effective design principles.
+ * 
+ * Matrix format (2x3 affine transformation):
+ * | a  c  e |   | x |   | ax + cy + e |
+ * | b  d  f | × | y | = | bx + dy + f |
+ * | 0  0  1 |   | 1 |   |      1      |
+ */
+class Transform2D {
+    /**
+     * Create a Transform2D matrix
+     * @param {number[]|undefined} init - Optional [a, b, c, d, e, f] array
+     */
     constructor(init) {
-        if (init && init.length === 6) {
+        if (init && Array.isArray(init) && init.length === 6) {
+            // Validate input values
+            for (let i = 0; i < 6; i++) {
+                if (typeof init[i] !== 'number' || !isFinite(init[i])) {
+                    throw new Error(`Transform2D component ${i} must be a finite number`);
+                }
+            }
+            
             this.a = init[0];
             this.b = init[1]; 
             this.c = init[2];
             this.d = init[3];
             this.e = init[4];
             this.f = init[5];
+        } else if (init && init.length !== undefined) {
+            throw new Error('Transform2D initialization array must have exactly 6 elements');
         } else {
-            // Identity matrix
+            // Identity transformation
             this.a = 1; this.b = 0;
             this.c = 0; this.d = 1;
             this.e = 0; this.f = 0;
         }
+        
+        // Make transformation immutable
+        Object.freeze(this);
     }
 
+    /**
+     * Create identity transform
+     * @returns {Transform2D} Identity transformation
+     */
+    static identity() {
+        return new Transform2D();
+    }
+    
+    /**
+     * Create translation transform
+     * @param {number} x - X translation
+     * @param {number} y - Y translation
+     * @returns {Transform2D} Translation transformation
+     */
+    static translation(x, y) {
+        return new Transform2D([1, 0, 0, 1, x, y]);
+    }
+    
+    /**
+     * Create scaling transform
+     * @param {number} sx - X scale factor
+     * @param {number} sy - Y scale factor  
+     * @returns {Transform2D} Scaling transformation
+     */
+    static scaling(sx, sy) {
+        return new Transform2D([sx, 0, 0, sy, 0, 0]);
+    }
+    
+    /**
+     * Create rotation transform
+     * @param {number} angleInRadians - Rotation angle in radians
+     * @returns {Transform2D} Rotation transformation
+     */
+    static rotation(angleInRadians) {
+        const cos = Math.cos(angleInRadians);
+        const sin = Math.sin(angleInRadians);
+        return new Transform2D([cos, sin, -sin, cos, 0, 0]);
+    }
+
+    /**
+     * Multiply this transform with another (immutable)
+     * @param {Transform2D} other - Transform to multiply with
+     * @returns {Transform2D} Result of multiplication
+     */
     multiply(other) {
-        const result = new Matrix();
-        result.a = this.a * other.a + this.b * other.c;
-        result.b = this.a * other.b + this.b * other.d;
-        result.c = this.c * other.a + this.d * other.c;
-        result.d = this.c * other.b + this.d * other.d;
-        result.e = this.e * other.a + this.f * other.c + other.e;
-        result.f = this.e * other.b + this.f * other.d + other.f;
-        return result;
+        if (!(other instanceof Transform2D)) {
+            throw new Error('Can only multiply with another Transform2D');
+        }
+        
+        return new Transform2D([
+            this.a * other.a + this.b * other.c,
+            this.a * other.b + this.b * other.d,
+            this.c * other.a + this.d * other.c,
+            this.c * other.b + this.d * other.d,
+            this.e * other.a + this.f * other.c + other.e,
+            this.e * other.b + this.f * other.d + other.f
+        ]);
     }
 
+    /**
+     * Apply translation to this transform (immutable)
+     * @param {number} x - X translation
+     * @param {number} y - Y translation
+     * @returns {Transform2D} New transformed matrix
+     */
     translate(x, y) {
-        const t = new Matrix([1, 0, 0, 1, x, y]);
+        const t = Transform2D.translation(x, y);
         return this.multiply(t);
     }
 
+    /**
+     * Apply scaling to this transform (immutable)
+     * @param {number} sx - X scale factor
+     * @param {number} sy - Y scale factor
+     * @returns {Transform2D} New transformed matrix
+     */
     scale(sx, sy) {
-        const s = new Matrix([sx, 0, 0, sy, 0, 0]);
+        const s = Transform2D.scaling(sx, sy);
         return this.multiply(s);
     }
 
+    /**
+     * Apply rotation to this transform (immutable)
+     * @param {number} angleInRadians - Rotation angle in radians
+     * @returns {Transform2D} New transformed matrix
+     */
     rotate(angleInRadians) {
-        const cos = Math.cos(angleInRadians);
-        const sin = Math.sin(angleInRadians);
-        const r = new Matrix([cos, sin, -sin, cos, 0, 0]);
+        const r = Transform2D.rotation(angleInRadians);
         return this.multiply(r);
     }
 
+    /**
+     * Calculate inverse transformation (immutable)
+     * @returns {Transform2D} Inverse transformation
+     */
     invert() {
         const det = this.a * this.d - this.b * this.c;
+        
         if (Math.abs(det) < 1e-10) {
-            throw new Error('Matrix is not invertible');
+            throw new Error('Transform2D matrix is not invertible (determinant ≈ 0)');
         }
         
-        const result = new Matrix();
-        result.a = this.d / det;
-        result.b = -this.b / det;
-        result.c = -this.c / det;
-        result.d = this.a / det;
-        result.e = (this.c * this.f - this.d * this.e) / det;
-        result.f = (this.b * this.e - this.a * this.f) / det;
-        return result;
+        return new Transform2D([
+            this.d / det,
+            -this.b / det,
+            -this.c / det,
+            this.a / det,
+            (this.c * this.f - this.d * this.e) / det,
+            (this.b * this.e - this.a * this.f) / det
+        ]);
     }
 
+    /**
+     * Transform a point using this matrix
+     * @param {Object|Point} point - Point with x,y properties
+     * @returns {Object} Transformed point {x, y}
+     */
     transformPoint(point) {
+        if (!point || typeof point.x !== 'number' || typeof point.y !== 'number') {
+            throw new Error('Point must have numeric x and y properties');
+        }
+        
         return {
             x: this.a * point.x + this.c * point.y + this.e,
             y: this.b * point.x + this.d * point.y + this.f
         };
     }
+    
+    /**
+     * Transform multiple points efficiently
+     * @param {Array} points - Array of points to transform
+     * @returns {Array} Array of transformed points
+     */
+    transformPoints(points) {
+        return points.map(point => this.transformPoint(point));
+    }
+    
+    /**
+     * Get transformation as array
+     * @returns {number[]} [a, b, c, d, e, f] array
+     */
+    toArray() {
+        return [this.a, this.b, this.c, this.d, this.e, this.f];
+    }
+    
+    /**
+     * Check if this is the identity transformation
+     * @returns {boolean} True if identity
+     */
+    get isIdentity() {
+        return this.a === 1 && this.b === 0 && this.c === 0 && 
+               this.d === 1 && this.e === 0 && this.f === 0;
+    }
+    
+    /**
+     * Get transformation determinant
+     * @returns {number} Matrix determinant
+     */
+    get determinant() {
+        return this.a * this.d - this.b * this.c;
+    }
+    
+    /**
+     * Check equality with another transform
+     * @param {Transform2D} other - Transform to compare
+     * @param {number} tolerance - Floating point tolerance
+     * @returns {boolean} True if transforms are equal within tolerance
+     */
+    equals(other, tolerance = 1e-10) {
+        return other instanceof Transform2D &&
+               Math.abs(this.a - other.a) < tolerance &&
+               Math.abs(this.b - other.b) < tolerance &&
+               Math.abs(this.c - other.c) < tolerance &&
+               Math.abs(this.d - other.d) < tolerance &&
+               Math.abs(this.e - other.e) < tolerance &&
+               Math.abs(this.f - other.f) < tolerance;
+    }
+
+    /**
+     * String representation for debugging
+     * @returns {string} Matrix description
+     */
+    toString() {
+        return `Transform2D([${this.a}, ${this.b}, ${this.c}, ${this.d}, ${this.e}, ${this.f}])`;
+    }
 }
+
+// Legacy alias for backward compatibility
+const Matrix = Transform2D;
 
 class Path2D {
     constructor() {
@@ -824,20 +1334,136 @@ class Path2D {
         });
     }
 }
+/**
+ * Surface class for SWCanvas
+ * 
+ * Represents a 2D pixel surface with RGBA data storage.
+ * Following Joshua Bloch's principle of proper class design with validation,
+ * clear error messages, and immutable properties where sensible.
+ */
 class SurfaceClass {
+    /**
+     * Create a Surface
+     * @param {number} width - Surface width in pixels
+     * @param {number} height - Surface height in pixels
+     */
     constructor(width, height) {
-        if (width <= 0 || height <= 0) {
-            throw new Error('Surface dimensions must be positive');
+        // Validate parameters with descriptive error messages
+        if (typeof width !== 'number' || !Number.isInteger(width) || width <= 0) {
+            throw new Error('Surface width must be a positive integer');
         }
         
+        if (typeof height !== 'number' || !Number.isInteger(height) || height <= 0) {
+            throw new Error('Surface height must be a positive integer');
+        }
+        
+        // Check area first (SurfaceTooLarge takes precedence for test compatibility)
         if (width * height > 268435456) { // 16384 * 16384
             throw new Error('SurfaceTooLarge');
         }
         
-        this.width = width;
-        this.height = height;
-        this.stride = width * 4;
+        // Prevent memory issues with reasonable individual dimension limits
+        const maxDimension = 16384;
+        if (width > maxDimension || height > maxDimension) {
+            throw new Error(`Surface dimensions must be ≤ ${maxDimension}x${maxDimension}`);
+        }
+        
+        // Make dimensions immutable
+        Object.defineProperty(this, 'width', { value: width, writable: false });
+        Object.defineProperty(this, 'height', { value: height, writable: false });
+        Object.defineProperty(this, 'stride', { value: width * 4, writable: false });
+        
+        // Allocate pixel data (RGBA, non-premultiplied)
         this.data = new Uint8ClampedArray(this.stride * height);
+    }
+    
+    /**
+     * Create a copy of this surface
+     * @returns {SurfaceClass} New surface with copied data
+     */
+    clone() {
+        const clone = new SurfaceClass(this.width, this.height);
+        clone.data.set(this.data);
+        return clone;
+    }
+    
+    /**
+     * Get pixel color at coordinates
+     * @param {number} x - X coordinate
+     * @param {number} y - Y coordinate
+     * @returns {Color|null} Color at position, or null if out of bounds
+     */
+    getPixel(x, y) {
+        if (x < 0 || x >= this.width || y < 0 || y >= this.height) {
+            return null;
+        }
+        
+        const offset = y * this.stride + x * 4;
+        return new Color(
+            this.data[offset],
+            this.data[offset + 1], 
+            this.data[offset + 2],
+            this.data[offset + 3],
+            false // Non-premultiplied
+        );
+    }
+    
+    /**
+     * Set pixel color at coordinates
+     * @param {number} x - X coordinate
+     * @param {number} y - Y coordinate
+     * @param {Color} color - Color to set
+     */
+    setPixel(x, y, color) {
+        if (x < 0 || x >= this.width || y < 0 || y >= this.height) {
+            return; // Silently ignore out-of-bounds writes
+        }
+        
+        if (!(color instanceof Color)) {
+            throw new Error('Color must be a Color instance');
+        }
+        
+        const offset = y * this.stride + x * 4;
+        this.data[offset] = color.r;
+        this.data[offset + 1] = color.g;
+        this.data[offset + 2] = color.b;
+        this.data[offset + 3] = color.a;
+    }
+    
+    /**
+     * Clear surface to specified color
+     * @param {Color} color - Color to clear to (defaults to transparent)
+     */
+    clear(color = Color.transparent()) {
+        if (!(color instanceof Color)) {
+            throw new Error('Color must be a Color instance');
+        }
+        
+        const rgba = color.toRGBA();
+        
+        for (let i = 0; i < this.data.length; i += 4) {
+            this.data[i] = rgba[0];
+            this.data[i + 1] = rgba[1];
+            this.data[i + 2] = rgba[2];
+            this.data[i + 3] = rgba[3];
+        }
+    }
+    
+    /**
+     * Get memory usage in bytes
+     * @returns {number} Memory usage
+     */
+    getMemoryUsage() {
+        return this.data.byteLength;
+    }
+    
+    /**
+     * String representation for debugging
+     * @returns {string} Surface description
+     */
+    toString() {
+        const memoryMB = (this.getMemoryUsage() / (1024 * 1024)).toFixed(2);
+        return `Surface(${this.width}×${this.height}, ${memoryMB}MB)`;
     }
 }
 
@@ -845,6 +1471,9 @@ class SurfaceClass {
 function Surface(width, height) {
     return new SurfaceClass(width, height);
 }
+
+// Copy all prototype methods from SurfaceClass to Surface for proper inheritance-like behavior
+Object.setPrototypeOf(Surface.prototype, SurfaceClass.prototype);
 
 // Keep legacy factory function for backward compatibility
 function createSurface(width, height) {
@@ -2503,6 +3132,533 @@ class StrokeGenerator {
     }
 }
 /**
+ * ClipMaskHelper class for SWCanvas
+ * 
+ * Encapsulates bit manipulation operations for 1-bit stencil buffer clipping.
+ * Provides static methods for efficient bit manipulation following Joshua Bloch's
+ * principle of using static methods for stateless utility operations.
+ */
+class ClipMaskHelper {
+    /**
+     * Get bit value at pixel index in a 1-bit buffer
+     * @param {Uint8Array} buffer - 1-bit stencil buffer
+     * @param {number} pixelIndex - Linear pixel index
+     * @returns {number} 0 or 1
+     */
+    static getBit(buffer, pixelIndex) {
+        if (!buffer || !(buffer instanceof Uint8Array)) {
+            throw new Error('Buffer must be a Uint8Array');
+        }
+        
+        if (pixelIndex < 0 || !Number.isInteger(pixelIndex)) {
+            throw new Error('Pixel index must be a non-negative integer');
+        }
+        
+        const byteIndex = Math.floor(pixelIndex / 8);
+        const bitIndex = pixelIndex % 8;
+        
+        // Bounds check
+        if (byteIndex >= buffer.length) {
+            return 0; // Out of bounds pixels are considered clipped
+        }
+        
+        return (buffer[byteIndex] & (1 << bitIndex)) !== 0 ? 1 : 0;
+    }
+    
+    /**
+     * Set bit value at pixel index in a 1-bit buffer
+     * @param {Uint8Array} buffer - 1-bit stencil buffer
+     * @param {number} pixelIndex - Linear pixel index
+     * @param {number} value - 0 or 1
+     */
+    static setBit(buffer, pixelIndex, value) {
+        if (!buffer || !(buffer instanceof Uint8Array)) {
+            throw new Error('Buffer must be a Uint8Array');
+        }
+        
+        if (pixelIndex < 0 || !Number.isInteger(pixelIndex)) {
+            throw new Error('Pixel index must be a non-negative integer');
+        }
+        
+        const byteIndex = Math.floor(pixelIndex / 8);
+        const bitIndex = pixelIndex % 8;
+        
+        // Bounds check
+        if (byteIndex >= buffer.length) {
+            return; // Ignore out-of-bounds writes
+        }
+        
+        if (value) {
+            buffer[byteIndex] |= (1 << bitIndex);
+        } else {
+            buffer[byteIndex] &= ~(1 << bitIndex);
+        }
+    }
+    
+    /**
+     * Create a new 1-bit stencil buffer initialized to "no clipping" (all 1s)
+     * @param {number} width - Surface width in pixels
+     * @param {number} height - Surface height in pixels  
+     * @returns {Uint8Array} Stencil buffer with 1 bit per pixel, packed into bytes
+     */
+    static createClipMask(width, height) {
+        if (!Number.isInteger(width) || !Number.isInteger(height) || width <= 0 || height <= 0) {
+            throw new Error('Width and height must be positive integers');
+        }
+        
+        const numPixels = width * height;
+        const numBytes = Math.ceil(numPixels / 8);
+        const mask = new Uint8Array(numBytes);
+        
+        // Initialize to all 1s (no clipping)
+        mask.fill(0xFF);
+        
+        // Handle partial last byte if width*height is not divisible by 8
+        const remainderBits = numPixels % 8;
+        if (remainderBits !== 0) {
+            const lastByteIndex = numBytes - 1;
+            const lastByteMask = (1 << remainderBits) - 1;
+            mask[lastByteIndex] = lastByteMask;
+        }
+        
+        return mask;
+    }
+    
+    /**
+     * Clear a stencil buffer to "all clipped" state (all 0s)
+     * @param {Uint8Array} buffer - Buffer to clear
+     */
+    static clearMask(buffer) {
+        if (!buffer || !(buffer instanceof Uint8Array)) {
+            throw new Error('Buffer must be a Uint8Array');
+        }
+        
+        buffer.fill(0);
+    }
+    
+    /**
+     * Check if a pixel is clipped by the stencil buffer
+     * @param {Uint8Array|null} clipMask - 1-bit stencil buffer
+     * @param {number} x - Pixel x coordinate
+     * @param {number} y - Pixel y coordinate  
+     * @param {number} width - Surface width for indexing
+     * @returns {boolean} True if pixel should be clipped
+     */
+    static isPixelClipped(clipMask, x, y, width) {
+        if (!clipMask) return false; // No clipping active
+        
+        if (x < 0 || y < 0) return true; // Out of bounds pixels are clipped
+        
+        const pixelIndex = y * width + x;
+        return ClipMaskHelper.getBit(clipMask, pixelIndex) === 0; // 0 means clipped out
+    }
+    
+    /**
+     * Copy a stencil buffer (deep copy)
+     * @param {Uint8Array} source - Source buffer
+     * @returns {Uint8Array} Deep copy of source buffer
+     */
+    static copyMask(source) {
+        if (!source || !(source instanceof Uint8Array)) {
+            throw new Error('Source must be a Uint8Array');
+        }
+        
+        return new Uint8Array(source);
+    }
+    
+    /**
+     * Perform bitwise AND operation between two stencil buffers
+     * Result = buffer1 AND buffer2 (intersection of clip regions)
+     * @param {Uint8Array} buffer1 - First buffer (modified in place)
+     * @param {Uint8Array} buffer2 - Second buffer
+     */
+    static intersectMasks(buffer1, buffer2) {
+        if (!buffer1 || !buffer2 || !(buffer1 instanceof Uint8Array) || !(buffer2 instanceof Uint8Array)) {
+            throw new Error('Both buffers must be Uint8Arrays');
+        }
+        
+        if (buffer1.length !== buffer2.length) {
+            throw new Error('Buffers must have the same length');
+        }
+        
+        for (let i = 0; i < buffer1.length; i++) {
+            buffer1[i] &= buffer2[i];
+        }
+    }
+    
+    /**
+     * Check if mask represents "no clipping" state (all 1s)
+     * @param {Uint8Array} buffer - Buffer to check
+     * @param {number} numPixels - Total number of pixels
+     * @returns {boolean} True if no pixels are clipped
+     */
+    static isNoClipping(buffer, numPixels) {
+        if (!buffer || !(buffer instanceof Uint8Array)) {
+            return false;
+        }
+        
+        const numBytes = buffer.length;
+        
+        // Check if all bits are set to 1
+        for (let i = 0; i < numBytes - 1; i++) {
+            if (buffer[i] !== 0xFF) return false;
+        }
+        
+        // Check last byte (may be partial)
+        const remainderBits = numPixels % 8;
+        if (remainderBits === 0) {
+            return buffer[numBytes - 1] === 0xFF;
+        } else {
+            const lastByteMask = (1 << remainderBits) - 1;
+            return buffer[numBytes - 1] === lastByteMask;
+        }
+    }
+    
+    /**
+     * Count number of clipped pixels (for debugging)
+     * @param {Uint8Array} buffer - Buffer to analyze
+     * @param {number} numPixels - Total number of pixels
+     * @returns {number} Number of clipped pixels
+     */
+    static countClippedPixels(buffer, numPixels) {
+        if (!buffer || !(buffer instanceof Uint8Array)) {
+            return numPixels; // All pixels clipped if no buffer
+        }
+        
+        let count = 0;
+        for (let i = 0; i < numPixels; i++) {
+            if (ClipMaskHelper.getBit(buffer, i) === 0) {
+                count++;
+            }
+        }
+        return count;
+    }
+    
+    /**
+     * Get memory usage of a stencil buffer
+     * @param {number} width - Surface width
+     * @param {number} height - Surface height
+     * @returns {number} Memory usage in bytes
+     */
+    static getMemoryUsage(width, height) {
+        if (!Number.isInteger(width) || !Number.isInteger(height) || width <= 0 || height <= 0) {
+            return 0;
+        }
+        
+        const numPixels = width * height;
+        return Math.ceil(numPixels / 8);
+    }
+    
+    /**
+     * Create a pixel writer function for temporary clip buffers
+     * @param {Uint8Array} tempClipBuffer - Temporary clip buffer
+     * @param {number} width - Buffer width
+     * @param {number} height - Buffer height
+     * @returns {Function} Pixel writer function
+     */
+    static createClipPixelWriter(tempClipBuffer, width, height) {
+        return function clipPixel(x, y, coverage) {
+            // Bounds checking
+            if (x < 0 || x >= width || y < 0 || y >= height) return;
+            
+            // Convert coverage to binary (1 bit): >0.5 means inside, <=0.5 means outside
+            const pixelIndex = y * width + x;
+            const isInside = coverage > 0.5;
+            ClipMaskHelper.setBit(tempClipBuffer, pixelIndex, isInside ? 1 : 0);
+        };
+    }
+}
+/**
+ * ImageProcessor class for SWCanvas
+ * 
+ * Handles ImageLike interface validation and format conversions.
+ * Provides static methods following Joshua Bloch's principle of 
+ * using static methods for stateless utility operations.
+ */
+class ImageProcessor {
+    /**
+     * Validate and convert ImageLike object to standardized RGBA format
+     * @param {Object} imageLike - ImageLike object to validate and convert
+     * @returns {Object} Validated and converted image data
+     */
+    static validateAndConvert(imageLike) {
+        ImageProcessor._validateImageLike(imageLike);
+        
+        const expectedRGBLength = imageLike.width * imageLike.height * 3;
+        const expectedRGBALength = imageLike.width * imageLike.height * 4;
+        
+        if (imageLike.data.length === expectedRGBLength) {
+            return ImageProcessor._convertRGBToRGBA(imageLike);
+        } else if (imageLike.data.length === expectedRGBALength) {
+            // Already RGBA - return as-is with validation
+            return {
+                width: imageLike.width,
+                height: imageLike.height,
+                data: imageLike.data
+            };
+        } else {
+            throw new Error(
+                `ImageLike data length (${imageLike.data.length}) must match ` +
+                `width*height*3 (${expectedRGBLength}) for RGB or ` +
+                `width*height*4 (${expectedRGBALength}) for RGBA`
+            );
+        }
+    }
+    
+    /**
+     * Validate basic ImageLike interface properties
+     * @param {Object} imageLike - Object to validate
+     * @private
+     */
+    static _validateImageLike(imageLike) {
+        if (!imageLike || typeof imageLike !== 'object') {
+            throw new Error('ImageLike must be an object');
+        }
+        
+        if (typeof imageLike.width !== 'number' || imageLike.width <= 0 || !Number.isInteger(imageLike.width)) {
+            throw new Error('ImageLike width must be a positive integer');
+        }
+        
+        if (typeof imageLike.height !== 'number' || imageLike.height <= 0 || !Number.isInteger(imageLike.height)) {
+            throw new Error('ImageLike height must be a positive integer');
+        }
+        
+        if (!(imageLike.data instanceof Uint8ClampedArray)) {
+            throw new Error('ImageLike data must be a Uint8ClampedArray');
+        }
+        
+        // Additional validation for reasonable limits
+        const maxDimension = 16384;
+        if (imageLike.width > maxDimension || imageLike.height > maxDimension) {
+            throw new Error(`ImageLike dimensions must be ≤ ${maxDimension}x${maxDimension}`);
+        }
+    }
+    
+    /**
+     * Convert RGB image data to RGBA format
+     * @param {Object} rgbImage - RGB ImageLike object
+     * @returns {Object} RGBA ImageLike object
+     * @private
+     */
+    static _convertRGBToRGBA(rgbImage) {
+        const expectedRGBALength = rgbImage.width * rgbImage.height * 4;
+        const rgbaData = new Uint8ClampedArray(expectedRGBALength);
+        
+        // RGB to RGBA conversion - append alpha = 255 to each pixel
+        for (let i = 0; i < rgbImage.width * rgbImage.height; i++) {
+            const rgbOffset = i * 3;
+            const rgbaOffset = i * 4;
+            
+            rgbaData[rgbaOffset] = rgbImage.data[rgbOffset];         // R
+            rgbaData[rgbaOffset + 1] = rgbImage.data[rgbOffset + 1]; // G
+            rgbaData[rgbaOffset + 2] = rgbImage.data[rgbOffset + 2]; // B
+            rgbaData[rgbaOffset + 3] = 255;                          // A = fully opaque
+        }
+        
+        return {
+            width: rgbImage.width,
+            height: rgbImage.height,
+            data: rgbaData
+        };
+    }
+    
+    /**
+     * Convert Surface to ImageLike format
+     * @param {Surface} surface - Surface to convert
+     * @returns {Object} ImageLike representation of surface
+     */
+    static surfaceToImageLike(surface) {
+        if (!surface || typeof surface !== 'object') {
+            throw new Error('Surface must be a valid Surface object');
+        }
+        
+        if (!surface.width || !surface.height || !surface.data) {
+            throw new Error('Surface must have width, height, and data properties');
+        }
+        
+        return {
+            width: surface.width,
+            height: surface.height,
+            data: new Uint8ClampedArray(surface.data) // Create copy for safety
+        };
+    }
+    
+    /**
+     * Create a blank ImageLike object filled with specified color
+     * @param {number} width - Image width
+     * @param {number} height - Image height
+     * @param {Color|Array} fillColor - Color to fill with (Color instance or RGBA array)
+     * @returns {Object} ImageLike object
+     */
+    static createBlankImage(width, height, fillColor = [0, 0, 0, 255]) {
+        if (!Number.isInteger(width) || !Number.isInteger(height) || width <= 0 || height <= 0) {
+            throw new Error('Width and height must be positive integers');
+        }
+        
+        const numPixels = width * height;
+        const data = new Uint8ClampedArray(numPixels * 4);
+        
+        // Determine RGBA values
+        let r, g, b, a;
+        if (fillColor instanceof Color) {
+            const rgba = fillColor.toRGBA();
+            r = rgba[0];
+            g = rgba[1];
+            b = rgba[2];
+            a = rgba[3];
+        } else if (Array.isArray(fillColor) && fillColor.length >= 4) {
+            r = fillColor[0];
+            g = fillColor[1];
+            b = fillColor[2];
+            a = fillColor[3];
+        } else {
+            throw new Error('fillColor must be a Color instance or RGBA array');
+        }
+        
+        // Fill image with specified color
+        for (let i = 0; i < numPixels; i++) {
+            const offset = i * 4;
+            data[offset] = r;
+            data[offset + 1] = g;
+            data[offset + 2] = b;
+            data[offset + 3] = a;
+        }
+        
+        return {
+            width,
+            height,
+            data
+        };
+    }
+    
+    /**
+     * Extract a rectangular region from an ImageLike object
+     * @param {Object} source - Source ImageLike object
+     * @param {number} x - Source x coordinate
+     * @param {number} y - Source y coordinate
+     * @param {number} width - Region width
+     * @param {number} height - Region height
+     * @returns {Object} New ImageLike object containing the extracted region
+     */
+    static extractRegion(source, x, y, width, height) {
+        const validated = ImageProcessor.validateAndConvert(source);
+        
+        // Validate extraction bounds
+        if (x < 0 || y < 0 || x + width > validated.width || y + height > validated.height) {
+            throw new Error('Extraction region exceeds source image bounds');
+        }
+        
+        if (width <= 0 || height <= 0) {
+            throw new Error('Extraction region dimensions must be positive');
+        }
+        
+        const extractedData = new Uint8ClampedArray(width * height * 4);
+        
+        // Copy pixel data row by row
+        for (let row = 0; row < height; row++) {
+            const sourceRowStart = ((y + row) * validated.width + x) * 4;
+            const destRowStart = row * width * 4;
+            const rowLength = width * 4;
+            
+            extractedData.set(
+                validated.data.subarray(sourceRowStart, sourceRowStart + rowLength),
+                destRowStart
+            );
+        }
+        
+        return {
+            width,
+            height,
+            data: extractedData
+        };
+    }
+    
+    /**
+     * Scale an ImageLike object using nearest-neighbor interpolation
+     * @param {Object} source - Source ImageLike object
+     * @param {number} newWidth - Target width
+     * @param {number} newHeight - Target height
+     * @returns {Object} Scaled ImageLike object
+     */
+    static scaleImage(source, newWidth, newHeight) {
+        const validated = ImageProcessor.validateAndConvert(source);
+        
+        if (!Number.isInteger(newWidth) || !Number.isInteger(newHeight) || 
+            newWidth <= 0 || newHeight <= 0) {
+            throw new Error('Target dimensions must be positive integers');
+        }
+        
+        const scaledData = new Uint8ClampedArray(newWidth * newHeight * 4);
+        const scaleX = validated.width / newWidth;
+        const scaleY = validated.height / newHeight;
+        
+        for (let y = 0; y < newHeight; y++) {
+            for (let x = 0; x < newWidth; x++) {
+                // Nearest-neighbor sampling
+                const sourceX = Math.floor(x * scaleX);
+                const sourceY = Math.floor(y * scaleY);
+                
+                // Clamp to source bounds (shouldn't be necessary with correct scaling)
+                const clampedX = Math.min(sourceX, validated.width - 1);
+                const clampedY = Math.min(sourceY, validated.height - 1);
+                
+                const sourceOffset = (clampedY * validated.width + clampedX) * 4;
+                const destOffset = (y * newWidth + x) * 4;
+                
+                // Copy RGBA values
+                scaledData[destOffset] = validated.data[sourceOffset];
+                scaledData[destOffset + 1] = validated.data[sourceOffset + 1];
+                scaledData[destOffset + 2] = validated.data[sourceOffset + 2];
+                scaledData[destOffset + 3] = validated.data[sourceOffset + 3];
+            }
+        }
+        
+        return {
+            width: newWidth,
+            height: newHeight,
+            data: scaledData
+        };
+    }
+    
+    /**
+     * Check if an object conforms to the ImageLike interface
+     * @param {*} obj - Object to check
+     * @returns {boolean} True if object is ImageLike-compatible
+     */
+    static isImageLike(obj) {
+        try {
+            ImageProcessor._validateImageLike(obj);
+            
+            const expectedRGBLength = obj.width * obj.height * 3;
+            const expectedRGBALength = obj.width * obj.height * 4;
+            
+            return obj.data.length === expectedRGBLength || obj.data.length === expectedRGBALength;
+        } catch (error) {
+            return false;
+        }
+    }
+    
+    /**
+     * Get information about an ImageLike object
+     * @param {Object} imageLike - ImageLike object to analyze
+     * @returns {Object} Information about the image
+     */
+    static getImageInfo(imageLike) {
+        const validated = ImageProcessor.validateAndConvert(imageLike);
+        const isRGB = imageLike.data.length === imageLike.width * imageLike.height * 3;
+        
+        return {
+            width: validated.width,
+            height: validated.height,
+            pixelCount: validated.width * validated.height,
+            format: isRGB ? 'RGB' : 'RGBA',
+            dataSize: validated.data.length,
+            bytesPerPixel: isRGB ? 3 : 4,
+            memoryUsage: validated.data.byteLength
+        };
+    }
+}
+/**
  * StencilBuffer class for SWCanvas clipping system
  * 
  * Encapsulates the 1-bit stencil buffer implementation for memory-efficient clipping
@@ -3200,297 +4356,368 @@ class DrawingState {
         return `DrawingState(alpha=${this._currentState.globalAlpha}, stack=${this._stateStack.length}, ${clipInfo})`;
     }
 }
-// Helper function for clipMask bit checking (duplicated from context2d.js for standalone use)
-function getBit(buffer, pixelIndex) {
-    const byteIndex = Math.floor(pixelIndex / 8);
-    const bitIndex = pixelIndex % 8;
-    return (buffer[byteIndex] & (1 << bitIndex)) !== 0 ? 1 : 0;
-}
-
-// ImageLike interface validation and RGB→RGBA conversion
-function validateAndConvertImageLike(imageLike) {
-    if (!imageLike || typeof imageLike !== 'object') {
-        throw new Error('ImageLike must be an object');
-    }
-    
-    if (typeof imageLike.width !== 'number' || imageLike.width <= 0 || !Number.isInteger(imageLike.width)) {
-        throw new Error('ImageLike width must be a positive integer');
-    }
-    
-    if (typeof imageLike.height !== 'number' || imageLike.height <= 0 || !Number.isInteger(imageLike.height)) {
-        throw new Error('ImageLike height must be a positive integer');
-    }
-    
-    if (!(imageLike.data instanceof Uint8ClampedArray)) {
-        throw new Error('ImageLike data must be a Uint8ClampedArray');
-    }
-    
-    const expectedRGBLength = imageLike.width * imageLike.height * 3;
-    const expectedRGBALength = imageLike.width * imageLike.height * 4;
-    
-    if (imageLike.data.length === expectedRGBLength) {
-        // RGB to RGBA conversion - append alpha = 255 to each pixel
-        const rgbaData = new Uint8ClampedArray(expectedRGBALength);
-        for (let i = 0; i < imageLike.width * imageLike.height; i++) {
-            rgbaData[i * 4] = imageLike.data[i * 3];     // R
-            rgbaData[i * 4 + 1] = imageLike.data[i * 3 + 1]; // G
-            rgbaData[i * 4 + 2] = imageLike.data[i * 3 + 2]; // B
-            rgbaData[i * 4 + 3] = 255;                   // A = fully opaque
+/**
+ * Rasterizer class for SWCanvas
+ * 
+ * Handles low-level pixel operations and rendering pipeline.
+ * Converted to ES6 class following Joshua Bloch's effective OO principles.
+ * Encapsulates rendering state and provides clear separation of concerns.
+ */
+class Rasterizer {
+    /**
+     * Create a Rasterizer
+     * @param {Surface} surface - Target surface for rendering
+     */
+    constructor(surface) {
+        if (!surface || typeof surface !== 'object') {
+            throw new Error('Rasterizer requires a valid Surface object');
         }
         
-        return {
-            width: imageLike.width,
-            height: imageLike.height,
-            data: rgbaData
+        if (!surface.width || !surface.height || !surface.data) {
+            throw new Error('Surface must have width, height, and data properties');
+        }
+        
+        this._surface = surface;
+        this._currentOp = null;
+    }
+    
+    /**
+     * Get the target surface
+     * @returns {Surface} Target surface
+     */
+    get surface() {
+        return this._surface;
+    }
+    
+    /**
+     * Get current operation state
+     * @returns {Object|null} Current operation state
+     */
+    get currentOp() {
+        return this._currentOp;
+    }
+
+    /**
+     * Begin a rendering operation
+     * @param {Object} params - Operation parameters
+     */
+    beginOp(params = {}) {
+        this._validateParams(params);
+        
+        this._currentOp = {
+            composite: params.composite || 'source-over',
+            globalAlpha: params.globalAlpha !== undefined ? params.globalAlpha : 1.0,
+            transform: params.transform || new Transform2D(),
+            clipMask: params.clipMask || null,  // Stencil-based clipping
+            fillStyle: params.fillStyle || null,
+            strokeStyle: params.strokeStyle || null
         };
-    } else if (imageLike.data.length === expectedRGBALength) {
-        // Already RGBA - use as-is
-        return imageLike;
-    } else {
-        throw new Error(`ImageLike data length (${imageLike.data.length}) must match width*height*3 (${expectedRGBLength}) for RGB or width*height*4 (${expectedRGBALength}) for RGBA`);
-    }
-}
-
-function Rasterizer(surface) {
-    this.surface = surface;
-    this.currentOp = null;
-}
-
-Rasterizer.prototype.beginOp = function(params) {
-    this.currentOp = {
-        composite: params.composite || 'source-over',
-        globalAlpha: params.globalAlpha !== undefined ? params.globalAlpha : 1.0,
-        transform: params.transform || new Matrix(),
-        clipMask: params.clipMask || null,  // Stencil-based clipping (only clipping mechanism)
-        fillStyle: params.fillStyle || null,
-        strokeStyle: params.strokeStyle || null
-    };
-};
-
-Rasterizer.prototype.endOp = function() {
-    this.currentOp = null;
-};
-
-// Helper method to check if a pixel should be clipped by stencil buffer
-Rasterizer.prototype._isPixelClipped = function(x, y) {
-    if (!this.currentOp.clipMask) return false; // No clipping active
-    const pixelIndex = y * this.surface.width + x;
-    return getBit(this.currentOp.clipMask, pixelIndex) === 0; // 0 means clipped out
-};
-
-// Simple solid rectangle fill for M1
-Rasterizer.prototype.fillRect = function(x, y, width, height, color) {
-    if (!this.currentOp) {
-        throw new Error('Must call beginOp before drawing operations');
     }
     
-    // If there's stencil clipping, convert the rectangle to a path and use path filling
-    if (this.currentOp.clipMask) {
-        // Create a path for the rectangle
-        const rectPath = new Path2D();
-        rectPath.rect(x, y, width, height);
-        
-        // Use the existing path filling logic which handles stencil clipping properly
-        this.fill(rectPath, 'nonzero');
-        return;
+    /**
+     * End the current rendering operation
+     */
+    endOp() {
+        this._currentOp = null;
     }
     
-    // No clipping - use optimized direct rectangle filling
-    // Transform rectangle corners
-    const transform = this.currentOp.transform;
-    const topLeft = transform.transformPoint({x: x, y: y});
-    const topRight = transform.transformPoint({x: x + width, y: y});
-    const bottomLeft = transform.transformPoint({x: x, y: y + height});
-    const bottomRight = transform.transformPoint({x: x + width, y: y + height});
-    
-    // Find bounding box in device space
-    const minX = Math.max(0, Math.floor(Math.min(topLeft.x, topRight.x, bottomLeft.x, bottomRight.x)));
-    const maxX = Math.min(this.surface.width - 1, Math.ceil(Math.max(topLeft.x, topRight.x, bottomLeft.x, bottomRight.x)));
-    const minY = Math.max(0, Math.floor(Math.min(topLeft.y, topRight.y, bottomLeft.y, bottomRight.y)));
-    const maxY = Math.min(this.surface.height - 1, Math.ceil(Math.max(topLeft.y, topRight.y, bottomLeft.y, bottomRight.y)));
-    
-    // Optimized path for axis-aligned rectangles
-    if (this.currentOp.transform.b === 0 && this.currentOp.transform.c === 0) {
-        this._fillAxisAlignedRect(minX, minY, maxX - minX + 1, maxY - minY + 1, color);
-    } else {
-        // Handle rotated rectangles by converting to polygon
-        const rectPolygon = [
-            {x: x, y: y},
-            {x: x + width, y: y}, 
-            {x: x + width, y: y + height},
-            {x: x, y: y + height}
-        ];
-        
-        // Use existing polygon filling system which handles transforms and stencil clipping
-        const rectColor = PolygonFiller.colorFromRGBA(color);
-        PolygonFiller.fillPolygons(this.surface, [rectPolygon], rectColor, 'nonzero', this.currentOp.transform, this.currentOp.clipMask);
-    }
-};
-
-Rasterizer.prototype._fillAxisAlignedRect = function(x, y, width, height, color) {
-    const surface = this.surface;
-    const globalAlpha = this.currentOp.globalAlpha;
-    
-    // Apply global alpha to source color (keep non-premultiplied to match surface format)
-    const effectiveAlpha = (color[3] / 255) * globalAlpha; // Normalize to 0-1 range
-    const srcA = Math.round(effectiveAlpha * 255);
-    const srcR = color[0];
-    const srcG = color[1];
-    const srcB = color[2];
-    
-    
-    for (let py = y; py < y + height; py++) {
-        if (py < 0 || py >= surface.height) continue;
-        
-        for (let px = x; px < x + width; px++) {
-            if (px < 0 || px >= surface.width) continue;
-            
-            // Check stencil buffer clipping
-            if (this.currentOp.clipMask && this._isPixelClipped(px, py)) {
-                continue; // Skip pixels clipped by stencil buffer
+    /**
+     * Validate operation parameters
+     * @param {Object} params - Parameters to validate
+     * @private
+     */
+    _validateParams(params) {
+        if (params.globalAlpha !== undefined) {
+            if (typeof params.globalAlpha !== 'number' || params.globalAlpha < 0 || params.globalAlpha > 1) {
+                throw new Error('globalAlpha must be a number between 0 and 1');
             }
+        }
+        
+        if (params.composite && !['source-over', 'copy'].includes(params.composite)) {
+            throw new Error('Invalid composite operation. Supported: source-over, copy');
+        }
+        
+        if (params.transform && !(params.transform instanceof Transform2D) && !(params.transform instanceof Matrix)) {
+            throw new Error('transform must be a Transform2D or Matrix instance');
+        }
+    }
+
+    /**
+     * Ensure an operation is active
+     * @private
+     */
+    _requireActiveOp() {
+        if (!this._currentOp) {
+            throw new Error('Must call beginOp() before drawing operations');
+        }
+    }
+
+    /**
+     * Check if a pixel should be clipped by stencil buffer
+     * @param {number} x - Pixel x coordinate
+     * @param {number} y - Pixel y coordinate
+     * @returns {boolean} True if pixel should be clipped
+     * @private
+     */
+    _isPixelClipped(x, y) {
+        if (!this._currentOp?.clipMask) return false; // No clipping active
+        const pixelIndex = y * this._surface.width + x;
+        return Rasterizer._getBit(this._currentOp.clipMask, pixelIndex) === 0; // 0 means clipped out
+    }
+
+    /**
+     * Fill a rectangle with solid color
+     * @param {number} x - Rectangle x coordinate
+     * @param {number} y - Rectangle y coordinate
+     * @param {number} width - Rectangle width
+     * @param {number} height - Rectangle height
+     * @param {Array|Color} color - Fill color (RGBA array or Color instance)
+     */
+    fillRect(x, y, width, height, color) {
+        this._requireActiveOp();
+        
+        // Validate parameters
+        if (typeof x !== 'number' || typeof y !== 'number' || 
+            typeof width !== 'number' || typeof height !== 'number') {
+            throw new Error('Rectangle coordinates must be numbers');
+        }
+        
+        if (width < 0 || height < 0) {
+            throw new Error('Rectangle dimensions must be non-negative');
+        }
+        
+        if (width === 0 || height === 0) return; // Nothing to draw
+        
+        // If there's stencil clipping, convert the rectangle to a path and use path filling
+        if (this._currentOp.clipMask) {
+            // Create a path for the rectangle
+            const rectPath = new Path2D();
+            rectPath.rect(x, y, width, height);
             
-            const offset = py * surface.stride + px * 4;
+            // Use the existing path filling logic which handles stencil clipping properly
+            this.fill(rectPath, 'nonzero');
+            return;
+        }
+        
+        // No clipping - use optimized direct rectangle filling
+        // Transform rectangle corners
+        const transform = this._currentOp.transform;
+        const topLeft = transform.transformPoint({x: x, y: y});
+        const topRight = transform.transformPoint({x: x + width, y: y});
+        const bottomLeft = transform.transformPoint({x: x, y: y + height});
+        const bottomRight = transform.transformPoint({x: x + width, y: y + height});
+        
+        // Find bounding box in device space
+        const minX = Math.max(0, Math.floor(Math.min(topLeft.x, topRight.x, bottomLeft.x, bottomRight.x)));
+        const maxX = Math.min(this._surface.width - 1, Math.ceil(Math.max(topLeft.x, topRight.x, bottomLeft.x, bottomRight.x)));
+        const minY = Math.max(0, Math.floor(Math.min(topLeft.y, topRight.y, bottomLeft.y, bottomRight.y)));
+        const maxY = Math.min(this._surface.height - 1, Math.ceil(Math.max(topLeft.y, topRight.y, bottomLeft.y, bottomRight.y)));
+        
+        // Optimized path for axis-aligned rectangles
+        if (this._currentOp.transform.b === 0 && this._currentOp.transform.c === 0) {
+            this._fillAxisAlignedRect(minX, minY, maxX - minX + 1, maxY - minY + 1, color);
+        } else {
+            // Handle rotated rectangles by converting to polygon
+            const rectPolygon = [
+                {x: x, y: y},
+                {x: x + width, y: y}, 
+                {x: x + width, y: y + height},
+                {x: x, y: y + height}
+            ];
             
-            if (this.currentOp.composite === 'copy') {
-                // Copy mode
-                surface.data[offset] = srcR;
-                surface.data[offset + 1] = srcG;
-                surface.data[offset + 2] = srcB;
-                surface.data[offset + 3] = srcA;
-            } else {
-                // Source-over mode (non-premultiplied alpha blending to match surface format)
-                const dstR = surface.data[offset];
-                const dstG = surface.data[offset + 1];
-                const dstB = surface.data[offset + 2];
-                const dstA = surface.data[offset + 3];
+            // Use existing polygon filling system which handles transforms and stencil clipping
+            const rectColor = Array.isArray(color) ? PolygonFiller.colorFromRGBA(color) : color;
+            PolygonFiller.fillPolygons(this._surface, [rectPolygon], rectColor, 'nonzero', this._currentOp.transform, this._currentOp.clipMask);
+        }
+    }
+
+    /**
+     * Fill axis-aligned rectangle (optimized path)
+     * @param {number} x - Rectangle x
+     * @param {number} y - Rectangle y 
+     * @param {number} width - Rectangle width
+     * @param {number} height - Rectangle height
+     * @param {Array|Color} color - Fill color
+     * @private
+     */
+    _fillAxisAlignedRect(x, y, width, height, color) {
+        const surface = this._surface;
+        const globalAlpha = this._currentOp.globalAlpha;
+        
+        // Apply global alpha to source color (keep non-premultiplied to match surface format)
+        const effectiveAlpha = (color[3] / 255) * globalAlpha; // Normalize to 0-1 range
+        const srcA = Math.round(effectiveAlpha * 255);
+        const srcR = color[0];
+        const srcG = color[1];
+        const srcB = color[2];
+        
+        for (let py = y; py < y + height; py++) {
+            if (py < 0 || py >= surface.height) continue;
+            
+            for (let px = x; px < x + width; px++) {
+                if (px < 0 || px >= surface.width) continue;
                 
-                const srcAlpha = srcA / 255;
-                const invSrcAlpha = 1 - srcAlpha;
+                // Check stencil buffer clipping
+                if (this._currentOp.clipMask && this._isPixelClipped(px, py)) {
+                    continue; // Skip pixels clipped by stencil buffer
+                }
                 
-                // Use non-premultiplied formula (matches original and PolygonFiller)
-                surface.data[offset] = Math.round(srcR * srcAlpha + dstR * invSrcAlpha);
-                surface.data[offset + 1] = Math.round(srcG * srcAlpha + dstG * invSrcAlpha);
-                surface.data[offset + 2] = Math.round(srcB * srcAlpha + dstB * invSrcAlpha);
-                surface.data[offset + 3] = Math.round(srcA + dstA * invSrcAlpha);
+                const offset = py * surface.stride + px * 4;
+                
+                if (this._currentOp.composite === 'copy') {
+                    // Copy mode
+                    surface.data[offset] = srcR;
+                    surface.data[offset + 1] = srcG;
+                    surface.data[offset + 2] = srcB;
+                    surface.data[offset + 3] = srcA;
+                } else {
+                    // Source-over mode (non-premultiplied alpha blending to match surface format)
+                    const dstR = surface.data[offset];
+                    const dstG = surface.data[offset + 1];
+                    const dstB = surface.data[offset + 2];
+                    const dstA = surface.data[offset + 3];
+                    
+                    const srcAlpha = srcA / 255;
+                    const invSrcAlpha = 1 - srcAlpha;
+                    
+                    // Use non-premultiplied formula (matches original and PolygonFiller)
+                    surface.data[offset] = Math.round(srcR * srcAlpha + dstR * invSrcAlpha);
+                    surface.data[offset + 1] = Math.round(srcG * srcAlpha + dstG * invSrcAlpha);
+                    surface.data[offset + 2] = Math.round(srcB * srcAlpha + dstB * invSrcAlpha);
+                    surface.data[offset + 3] = Math.round(srcA + dstA * invSrcAlpha);
+                }
             }
         }
     }
-};
 
-// M2: Path filling implementation
-Rasterizer.prototype.fill = function(path, rule) {
-    if (!this.currentOp) {
-        throw new Error('Must call beginOp before drawing operations');
+    /**
+     * Fill a path using the current fill style
+     * @param {Path2D} path - Path to fill
+     * @param {string} rule - Fill rule ('nonzero' or 'evenodd')
+     */
+    fill(path, rule) {
+        this._requireActiveOp();
+        
+        // Apply global alpha to fill color
+        const colorData = this._currentOp.fillStyle || [0, 0, 0, 255];
+        const color = Array.isArray(colorData) ? 
+            new Color(colorData[0], colorData[1], colorData[2], colorData[3]) : colorData;
+        const fillColor = color.withGlobalAlpha(this._currentOp.globalAlpha);
+        const fillRule = rule || 'nonzero';
+        
+        // Flatten path to polygons
+        const polygons = PathFlattener.flattenPath(path);
+        // Fill polygons with current transform and stencil clipping
+        PolygonFiller.fillPolygons(this._surface, polygons, fillColor, fillRule, this._currentOp.transform, this._currentOp.clipMask);
     }
-    
-    // Apply global alpha to fill color
-    const colorData = this.currentOp.fillStyle || [0, 0, 0, 255];
-    const color = Array.isArray(colorData) ? 
-        new Color(colorData[0], colorData[1], colorData[2], colorData[3]) : colorData;
-    const fillColor = color.withGlobalAlpha(this.currentOp.globalAlpha);
-    const fillRule = rule || 'nonzero';
-    
-    // Flatten path to polygons
-    const polygons = PathFlattener.flattenPath(path);
-    // Fill polygons with current transform and stencil clipping
-    PolygonFiller.fillPolygons(this.surface, polygons, fillColor, fillRule, this.currentOp.transform, this.currentOp.clipMask);
-};
 
-Rasterizer.prototype.stroke = function(path, strokeProps) {
-    if (!this.currentOp) {
-        throw new Error('Must call beginOp before drawing operations');
+    /**
+     * Stroke a path using the current stroke style
+     * @param {Path2D} path - Path to stroke
+     * @param {Object} strokeProps - Stroke properties
+     */
+    stroke(path, strokeProps) {
+        this._requireActiveOp();
+        
+        // Apply global alpha to stroke color
+        const colorData = this._currentOp.strokeStyle || [0, 0, 0, 255];
+        const color = Array.isArray(colorData) ? 
+            new Color(colorData[0], colorData[1], colorData[2], colorData[3]) : colorData;
+        const strokeColor = color.withGlobalAlpha(this._currentOp.globalAlpha);
+        
+        // Generate stroke polygons using geometric approach
+        const strokePolygons = StrokeGenerator.generateStrokePolygons(path, strokeProps);
+        
+        // Fill stroke polygons with current transform and stencil clipping
+        PolygonFiller.fillPolygons(this._surface, strokePolygons, strokeColor, 'nonzero', this._currentOp.transform, this._currentOp.clipMask);
     }
-    
-    // Apply global alpha to stroke color
-    const colorData = this.currentOp.strokeStyle || [0, 0, 0, 255];
-    const color = Array.isArray(colorData) ? 
-        new Color(colorData[0], colorData[1], colorData[2], colorData[3]) : colorData;
-    const strokeColor = color.withGlobalAlpha(this.currentOp.globalAlpha);
-    
-    // Generate stroke polygons using geometric approach
-    const strokePolygons = StrokeGenerator.generateStrokePolygons(path, strokeProps);
-    
-    // Fill stroke polygons with current transform and stencil clipping
-    PolygonFiller.fillPolygons(this.surface, strokePolygons, strokeColor, 'nonzero', this.currentOp.transform, this.currentOp.clipMask);
-};
 
-Rasterizer.prototype.drawImage = function(img, sx, sy, sw, sh, dx, dy, dw, dh) {
-    if (!this.currentOp) {
-        throw new Error('Must call beginOp before drawing operations');
-    }
-    
-    // Validate and convert ImageLike (handles RGB→RGBA conversion)
-    const imageData = validateAndConvertImageLike(img);
-    
-    // Handle different parameter combinations
-    let sourceX, sourceY, sourceWidth, sourceHeight;
-    let destX, destY, destWidth, destHeight;
-    
-    if (arguments.length === 3) {
-        // drawImage(image, dx, dy)
-        sourceX = 0;
-        sourceY = 0; 
-        sourceWidth = imageData.width;
-        sourceHeight = imageData.height;
-        destX = sx; // Actually dx
-        destY = sy; // Actually dy
-        destWidth = sourceWidth;
-        destHeight = sourceHeight;
-    } else if (arguments.length === 5) {
-        // drawImage(image, dx, dy, dw, dh)
-        sourceX = 0;
-        sourceY = 0;
-        sourceWidth = imageData.width;
-        sourceHeight = imageData.height;
-        destX = sx; // Actually dx
-        destY = sy; // Actually dy  
-        destWidth = sw; // Actually dw
-        destHeight = sh; // Actually dh
-    } else if (arguments.length === 9) {
-        // drawImage(image, sx, sy, sw, sh, dx, dy, dw, dh)
-        sourceX = sx;
-        sourceY = sy;
-        sourceWidth = sw;
-        sourceHeight = sh;
-        destX = dx;
-        destY = dy;
-        destWidth = dw;
-        destHeight = dh;
-    } else {
-        throw new Error('Invalid number of arguments for drawImage');
-    }
-    
-    // Validate source rectangle bounds
-    if (sourceX < 0 || sourceY < 0 || sourceX + sourceWidth > imageData.width || sourceY + sourceHeight > imageData.height) {
-        throw new Error('Source rectangle is outside image bounds');
-    }
-    
-    // Apply transform to destination rectangle corners  
-    const transform = this.currentOp.transform;
-    const topLeft = transform.transformPoint({x: destX, y: destY});
-    const topRight = transform.transformPoint({x: destX + destWidth, y: destY});
-    const bottomLeft = transform.transformPoint({x: destX, y: destY + destHeight});
-    const bottomRight = transform.transformPoint({x: destX + destWidth, y: destY + destHeight});
-    
-    // Find bounding box in device space
-    const minX = Math.max(0, Math.floor(Math.min(topLeft.x, topRight.x, bottomLeft.x, bottomRight.x)));
-    const maxX = Math.min(this.surface.width - 1, Math.ceil(Math.max(topLeft.x, topRight.x, bottomLeft.x, bottomRight.x)));
-    const minY = Math.max(0, Math.floor(Math.min(topLeft.y, topRight.y, bottomLeft.y, bottomRight.y)));
-    const maxY = Math.min(this.surface.height - 1, Math.ceil(Math.max(topLeft.y, topRight.y, bottomLeft.y, bottomRight.y)));
-    
-    // Get inverse transform for mapping device pixels back to source  
-    const inverseTransform = transform.invert();
-    
-    const globalAlpha = this.currentOp.globalAlpha;
-    
-    // Render each pixel in the bounding box
-    for (let deviceY = minY; deviceY <= maxY; deviceY++) {
-        for (let deviceX = minX; deviceX <= maxX; deviceX++) {
-            // Check stencil clipping
-            if (this.currentOp.clipMask && this._isPixelClipped(deviceX, deviceY)) {
-                continue;
-            }
+    /**
+     * Draw an image to the surface
+     * @param {Object} img - ImageLike object to draw
+     * @param {number} sx - Source x (optional)
+     * @param {number} sy - Source y (optional)
+     * @param {number} sw - Source width (optional)
+     * @param {number} sh - Source height (optional)
+     * @param {number} dx - Destination x
+     * @param {number} dy - Destination y
+     * @param {number} dw - Destination width (optional)
+     * @param {number} dh - Destination height (optional)
+     */
+    drawImage(img, sx, sy, sw, sh, dx, dy, dw, dh) {
+        this._requireActiveOp();
+        
+        // Validate and convert ImageLike (handles RGB→RGBA conversion)
+        const imageData = ImageProcessor.validateAndConvert(img);
+        
+        // Handle different parameter combinations
+        let sourceX, sourceY, sourceWidth, sourceHeight;
+        let destX, destY, destWidth, destHeight;
+        
+        if (arguments.length === 3) {
+            // drawImage(image, dx, dy)
+            sourceX = 0;
+            sourceY = 0; 
+            sourceWidth = imageData.width;
+            sourceHeight = imageData.height;
+            destX = sx; // Actually dx
+            destY = sy; // Actually dy
+            destWidth = sourceWidth;
+            destHeight = sourceHeight;
+        } else if (arguments.length === 5) {
+            // drawImage(image, dx, dy, dw, dh)
+            sourceX = 0;
+            sourceY = 0;
+            sourceWidth = imageData.width;
+            sourceHeight = imageData.height;
+            destX = sx; // Actually dx
+            destY = sy; // Actually dy  
+            destWidth = sw; // Actually dw
+            destHeight = sh; // Actually dh
+        } else if (arguments.length === 9) {
+            // drawImage(image, sx, sy, sw, sh, dx, dy, dw, dh)
+            sourceX = sx;
+            sourceY = sy;
+            sourceWidth = sw;
+            sourceHeight = sh;
+            destX = dx;
+            destY = dy;
+            destWidth = dw;
+            destHeight = dh;
+        } else {
+            throw new Error('Invalid number of arguments for drawImage');
+        }
+        
+        // Validate source rectangle bounds
+        if (sourceX < 0 || sourceY < 0 || sourceX + sourceWidth > imageData.width || sourceY + sourceHeight > imageData.height) {
+            throw new Error('Source rectangle is outside image bounds');
+        }
+        
+        // Apply transform to destination rectangle corners  
+        const transform = this._currentOp.transform;
+        const topLeft = transform.transformPoint({x: destX, y: destY});
+        const topRight = transform.transformPoint({x: destX + destWidth, y: destY});
+        const bottomLeft = transform.transformPoint({x: destX, y: destY + destHeight});
+        const bottomRight = transform.transformPoint({x: destX + destWidth, y: destY + destHeight});
+        
+        // Find bounding box in device space
+        const minX = Math.max(0, Math.floor(Math.min(topLeft.x, topRight.x, bottomLeft.x, bottomRight.x)));
+        const maxX = Math.min(this._surface.width - 1, Math.ceil(Math.max(topLeft.x, topRight.x, bottomLeft.x, bottomRight.x)));
+        const minY = Math.max(0, Math.floor(Math.min(topLeft.y, topRight.y, bottomLeft.y, bottomRight.y)));
+        const maxY = Math.min(this._surface.height - 1, Math.ceil(Math.max(topLeft.y, topRight.y, bottomLeft.y, bottomRight.y)));
+        
+        // Get inverse transform for mapping device pixels back to source  
+        const inverseTransform = transform.invert();
+        
+        const globalAlpha = this._currentOp.globalAlpha;
+        
+        // Render each pixel in the bounding box
+        for (let deviceY = minY; deviceY <= maxY; deviceY++) {
+            for (let deviceX = minX; deviceX <= maxX; deviceX++) {
+                // Check stencil clipping
+                if (this._currentOp.clipMask && this._isPixelClipped(deviceX, deviceY)) {
+                    continue;
+                }
             
             // Transform device pixel back to destination space
             const destPoint = inverseTransform.transformPoint({x: deviceX, y: deviceY});
@@ -3528,39 +4755,50 @@ Rasterizer.prototype.drawImage = function(img, sx, sy, sw, sh, dx, dy, dw, dh) {
             // Skip transparent pixels
             if (finalSrcA === 0) continue;
             
-            // Get destination pixel for blending
-            const destOffset = deviceY * this.surface.stride + deviceX * 4;
-            
-            if (this.currentOp.composite === 'copy' || finalSrcA === 255) {
-                // Direct copy (no blending needed) - store non-premultiplied
-                this.surface.data[destOffset] = srcR;
-                this.surface.data[destOffset + 1] = srcG;
-                this.surface.data[destOffset + 2] = srcB;
-                this.surface.data[destOffset + 3] = finalSrcA;
-            } else {
-                // Alpha blending (source-over) - non-premultiplied formula
-                const dstR = this.surface.data[destOffset];
-                const dstG = this.surface.data[destOffset + 1];
-                const dstB = this.surface.data[destOffset + 2];
-                const dstA = this.surface.data[destOffset + 3];
+                // Get destination pixel for blending
+                const destOffset = deviceY * this._surface.stride + deviceX * 4;
                 
-                const srcAlpha = effectiveAlpha;
-                const invSrcAlpha = 1 - srcAlpha;
-                
-                // Use non-premultiplied formula (consistent with rest of codebase)
-                const newR = Math.round(srcR * srcAlpha + dstR * invSrcAlpha);
-                const newG = Math.round(srcG * srcAlpha + dstG * invSrcAlpha);
-                const newB = Math.round(srcB * srcAlpha + dstB * invSrcAlpha);
-                const newA = Math.round(finalSrcA + dstA * invSrcAlpha);
-                
-                this.surface.data[destOffset] = newR;
-                this.surface.data[destOffset + 1] = newG;
-                this.surface.data[destOffset + 2] = newB;
-                this.surface.data[destOffset + 3] = newA;
+                if (this._currentOp.composite === 'copy' || finalSrcA === 255) {
+                    // Direct copy (no blending needed) - store non-premultiplied
+                    this._surface.data[destOffset] = srcR;
+                    this._surface.data[destOffset + 1] = srcG;
+                    this._surface.data[destOffset + 2] = srcB;
+                    this._surface.data[destOffset + 3] = finalSrcA;
+                } else {
+                    // Alpha blending (source-over) - non-premultiplied formula
+                    const dstR = this._surface.data[destOffset];
+                    const dstG = this._surface.data[destOffset + 1];
+                    const dstB = this._surface.data[destOffset + 2];
+                    const dstA = this._surface.data[destOffset + 3];
+                    
+                    const srcAlpha = effectiveAlpha;
+                    const invSrcAlpha = 1 - srcAlpha;
+                    
+                    // Use non-premultiplied formula (consistent with rest of codebase)
+                    const newR = Math.round(srcR * srcAlpha + dstR * invSrcAlpha);
+                    const newG = Math.round(srcG * srcAlpha + dstG * invSrcAlpha);
+                    const newB = Math.round(srcB * srcAlpha + dstB * invSrcAlpha);
+                    const newA = Math.round(finalSrcA + dstA * invSrcAlpha);
+                    
+                    this._surface.data[destOffset] = newR;
+                    this._surface.data[destOffset + 1] = newG;
+                    this._surface.data[destOffset + 2] = newB;
+                    this._surface.data[destOffset + 3] = newA;
+                }
             }
         }
     }
-};
+
+    /**
+     * Static helper method to get bit from clip mask
+     * @param {Uint8Array} buffer - Stencil buffer
+     * @param {number} pixelIndex - Pixel index
+     * @returns {number} Bit value (0 or 1)
+     */
+    static _getBit(buffer, pixelIndex) {
+        return ClipMaskHelper.getBit(buffer, pixelIndex);
+    }
+}
 /**
  * STENCIL-BASED CLIPPING SYSTEM
  * 
@@ -4109,7 +5347,8 @@ if (typeof window !== 'undefined') {
     window.SWCanvas = {
         // Core API (public)
         Surface: Surface,
-        Matrix: Matrix,
+        Transform2D: Transform2D,
+        Matrix: Matrix, // Legacy alias for Transform2D
         Path2D: Path2D,
         Context2D: Context2D,
         encodeBMP: encodeBMP,
@@ -4133,7 +5372,8 @@ if (typeof window !== 'undefined') {
     module.exports = {
         // Core API (public)
         Surface: Surface,
-        Matrix: Matrix,
+        Transform2D: Transform2D,
+        Matrix: Matrix, // Legacy alias for Transform2D
         Path2D: Path2D,
         Context2D: Context2D,
         encodeBMP: encodeBMP,

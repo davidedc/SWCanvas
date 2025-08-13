@@ -21,7 +21,9 @@ EOF
 # Phase 1: Foundation classes (no dependencies)
 cat src/Color.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
-cat src/Geometry.js >> dist/swcanvas.js
+cat src/Point.js >> dist/swcanvas.js
+echo "" >> dist/swcanvas.js
+cat src/Rectangle.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
 cat src/Matrix.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
@@ -38,6 +40,10 @@ echo "" >> dist/swcanvas.js
 cat src/PolygonFiller.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
 cat src/StrokeGenerator.js >> dist/swcanvas.js
+echo "" >> dist/swcanvas.js
+cat src/ClipMaskHelper.js >> dist/swcanvas.js
+echo "" >> dist/swcanvas.js
+cat src/ImageProcessor.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
 cat src/StencilBuffer.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
@@ -58,7 +64,8 @@ if (typeof window !== 'undefined') {
     window.SWCanvas = {
         // Core API (public)
         Surface: Surface,
-        Matrix: Matrix,
+        Transform2D: Transform2D,
+        Matrix: Matrix, // Legacy alias for Transform2D
         Path2D: Path2D,
         Context2D: Context2D,
         encodeBMP: encodeBMP,
@@ -82,7 +89,8 @@ if (typeof window !== 'undefined') {
     module.exports = {
         // Core API (public)
         Surface: Surface,
-        Matrix: Matrix,
+        Transform2D: Transform2D,
+        Matrix: Matrix, // Legacy alias for Transform2D
         Path2D: Path2D,
         Context2D: Context2D,
         encodeBMP: encodeBMP,

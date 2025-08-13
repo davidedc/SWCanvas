@@ -1,208 +1,8 @@
 /**
- * Geometry classes for SWCanvas
+ * Rectangle class for SWCanvas
  * 
- * Provides Point and Rectangle value objects to encapsulate geometric operations.
+ * Immutable Rectangle class representing an axis-aligned bounding box.
  * Following Joshua Bloch's principle of making small, focused, immutable classes.
- */
-
-/**
- * Immutable Point class representing a 2D coordinate
- */
-class Point {
-    /**
-     * Create a Point
-     * @param {number} x - X coordinate
-     * @param {number} y - Y coordinate
-     */
-    constructor(x, y) {
-        this._x = x;
-        this._y = y;
-    }
-    
-    get x() { return this._x; }
-    get y() { return this._y; }
-    
-    /**
-     * Create Point from object with x,y properties
-     * @param {Object} obj - Object with x and y properties
-     * @returns {Point} New Point instance
-     */
-    static from(obj) {
-        return new Point(obj.x, obj.y);
-    }
-    
-    /**
-     * Create origin point (0, 0)
-     * @returns {Point} Origin point
-     */
-    static origin() {
-        return new Point(0, 0);
-    }
-    
-    /**
-     * Calculate distance to another point
-     * @param {Point} other - Other point
-     * @returns {number} Euclidean distance
-     */
-    distanceTo(other) {
-        const dx = this._x - other._x;
-        const dy = this._y - other._y;
-        return Math.sqrt(dx * dx + dy * dy);
-    }
-    
-    /**
-     * Calculate Manhattan distance to another point
-     * @param {Point} other - Other point
-     * @returns {number} Manhattan distance
-     */
-    manhattanDistanceTo(other) {
-        return Math.abs(this._x - other._x) + Math.abs(this._y - other._y);
-    }
-    
-    /**
-     * Add vector to this point (immutable)
-     * @param {number} dx - X offset
-     * @param {number} dy - Y offset
-     * @returns {Point} New translated point
-     */
-    translate(dx, dy) {
-        return new Point(this._x + dx, this._y + dy);
-    }
-    
-    /**
-     * Add another point to this point (immutable)
-     * @param {Point} other - Other point to add
-     * @returns {Point} New point representing sum
-     */
-    add(other) {
-        return new Point(this._x + other._x, this._y + other._y);
-    }
-    
-    /**
-     * Subtract another point from this point (immutable)
-     * @param {Point} other - Other point to subtract
-     * @returns {Point} New point representing difference
-     */
-    subtract(other) {
-        return new Point(this._x - other._x, this._y - other._y);
-    }
-    
-    /**
-     * Scale this point by a factor (immutable)
-     * @param {number} factor - Scale factor
-     * @returns {Point} New scaled point
-     */
-    scale(factor) {
-        return new Point(this._x * factor, this._y * factor);
-    }
-    
-    /**
-     * Scale this point by separate X and Y factors (immutable)
-     * @param {number} sx - X scale factor
-     * @param {number} sy - Y scale factor
-     * @returns {Point} New scaled point
-     */
-    scaleXY(sx, sy) {
-        return new Point(this._x * sx, this._y * sy);
-    }
-    
-    /**
-     * Rotate this point around origin (immutable)
-     * @param {number} angle - Rotation angle in radians
-     * @returns {Point} New rotated point
-     */
-    rotate(angle) {
-        const cos = Math.cos(angle);
-        const sin = Math.sin(angle);
-        return new Point(
-            this._x * cos - this._y * sin,
-            this._x * sin + this._y * cos
-        );
-    }
-    
-    /**
-     * Get magnitude (distance from origin)
-     * @returns {number} Vector magnitude
-     */
-    get magnitude() {
-        return Math.sqrt(this._x * this._x + this._y * this._y);
-    }
-    
-    /**
-     * Normalize to unit vector (immutable)
-     * @returns {Point} New normalized point
-     */
-    normalize() {
-        const mag = this.magnitude;
-        if (mag === 0) return new Point(0, 0);
-        return new Point(this._x / mag, this._y / mag);
-    }
-    
-    /**
-     * Calculate dot product with another point
-     * @param {Point} other - Other point/vector
-     * @returns {number} Dot product
-     */
-    dot(other) {
-        return this._x * other._x + this._y * other._y;
-    }
-    
-    /**
-     * Calculate cross product with another point (2D cross returns scalar)
-     * @param {Point} other - Other point/vector
-     * @returns {number} Cross product magnitude
-     */
-    cross(other) {
-        return this._x * other._y - this._y * other._x;
-    }
-    
-    /**
-     * Round coordinates to integers (immutable)
-     * @returns {Point} New point with rounded coordinates
-     */
-    round() {
-        return new Point(Math.round(this._x), Math.round(this._y));
-    }
-    
-    /**
-     * Floor coordinates to integers (immutable)
-     * @returns {Point} New point with floored coordinates
-     */
-    floor() {
-        return new Point(Math.floor(this._x), Math.floor(this._y));
-    }
-    
-    /**
-     * Convert to plain object
-     * @returns {Object} {x, y} object
-     */
-    toObject() {
-        return { x: this._x, y: this._y };
-    }
-    
-    /**
-     * Check equality with another point
-     * @param {Point} other - Other point
-     * @param {number} tolerance - Tolerance for floating point comparison
-     * @returns {boolean} True if points are equal within tolerance
-     */
-    equals(other, tolerance = 1e-10) {
-        return other instanceof Point &&
-               Math.abs(this._x - other._x) < tolerance &&
-               Math.abs(this._y - other._y) < tolerance;
-    }
-    
-    /**
-     * String representation for debugging
-     * @returns {string} Point description
-     */
-    toString() {
-        return `Point(${this._x}, ${this._y})`;
-    }
-}
-
-/**
- * Immutable Rectangle class representing an axis-aligned bounding box
  */
 class Rectangle {
     /**
@@ -213,13 +13,27 @@ class Rectangle {
      * @param {number} height - Height
      */
     constructor(x, y, width, height) {
+        // Validate input parameters
+        if (typeof x !== 'number' || typeof y !== 'number' || 
+            typeof width !== 'number' || typeof height !== 'number') {
+            throw new Error('Rectangle parameters must be numbers');
+        }
+        
+        if (!isFinite(x) || !isFinite(y) || !isFinite(width) || !isFinite(height)) {
+            throw new Error('Rectangle parameters must be finite numbers');
+        }
+        
         if (width < 0 || height < 0) {
             throw new Error('Rectangle dimensions must be non-negative');
         }
+        
         this._x = x;
         this._y = y;
         this._width = width;
         this._height = height;
+        
+        // Make rectangle immutable
+        Object.freeze(this);
     }
     
     get x() { return this._x; }
@@ -239,11 +53,37 @@ class Rectangle {
      * @returns {Rectangle} New Rectangle
      */
     static fromCorners(topLeft, bottomRight) {
+        if (!(topLeft instanceof Point) || !(bottomRight instanceof Point)) {
+            throw new Error('Arguments must be Point instances');
+        }
+        
+        const width = bottomRight.x - topLeft.x;
+        const height = bottomRight.y - topLeft.y;
+        
+        if (width < 0 || height < 0) {
+            throw new Error('Bottom-right corner must be below and to the right of top-left corner');
+        }
+        
+        return new Rectangle(topLeft.x, topLeft.y, width, height);
+    }
+    
+    /**
+     * Create rectangle from center point and dimensions
+     * @param {Point} center - Center point
+     * @param {number} width - Rectangle width
+     * @param {number} height - Rectangle height
+     * @returns {Rectangle} New Rectangle
+     */
+    static fromCenter(center, width, height) {
+        if (!(center instanceof Point)) {
+            throw new Error('Center must be a Point instance');
+        }
+        
         return new Rectangle(
-            topLeft.x,
-            topLeft.y,
-            bottomRight.x - topLeft.x,
-            bottomRight.y - topLeft.y
+            center.x - width / 2,
+            center.y - height / 2,
+            width,
+            height
         );
     }
     
@@ -253,8 +93,19 @@ class Rectangle {
      * @returns {Rectangle} Bounding rectangle
      */
     static boundingBox(points) {
+        if (!Array.isArray(points)) {
+            throw new Error('Points must be an array');
+        }
+        
         if (points.length === 0) {
             return new Rectangle(0, 0, 0, 0);
+        }
+        
+        // Validate all points
+        for (const point of points) {
+            if (!(point instanceof Point)) {
+                throw new Error('All items must be Point instances');
+            }
         }
         
         let minX = Infinity, minY = Infinity;
@@ -268,6 +119,22 @@ class Rectangle {
         }
         
         return new Rectangle(minX, minY, maxX - minX, maxY - minY);
+    }
+    
+    /**
+     * Create empty rectangle
+     * @returns {Rectangle} Empty rectangle at origin
+     */
+    static empty() {
+        return new Rectangle(0, 0, 0, 0);
+    }
+    
+    /**
+     * Create unit rectangle (0, 0, 1, 1)
+     * @returns {Rectangle} Unit rectangle
+     */
+    static unit() {
+        return new Rectangle(0, 0, 1, 1);
     }
     
     /**
@@ -290,6 +157,14 @@ class Rectangle {
     }
     
     /**
+     * Get perimeter of rectangle
+     * @returns {number} Perimeter
+     */
+    get perimeter() {
+        return 2 * (this._width + this._height);
+    }
+    
+    /**
      * Check if rectangle is empty (zero area)
      * @returns {boolean} True if empty
      */
@@ -298,13 +173,39 @@ class Rectangle {
     }
     
     /**
+     * Check if rectangle is a square
+     * @returns {boolean} True if square
+     */
+    get isSquare() {
+        return this._width === this._height && this._width > 0;
+    }
+    
+    /**
      * Check if point is inside rectangle
      * @param {Point} point - Point to test
      * @returns {boolean} True if point is inside
      */
     contains(point) {
+        if (!(point instanceof Point)) {
+            throw new Error('Argument must be a Point instance');
+        }
+        
         return point.x >= this._x && point.x < this._x + this._width &&
                point.y >= this._y && point.y < this._y + this._height;
+    }
+    
+    /**
+     * Check if point is inside rectangle (inclusive of edges)
+     * @param {Point} point - Point to test
+     * @returns {boolean} True if point is inside or on edge
+     */
+    containsInclusive(point) {
+        if (!(point instanceof Point)) {
+            throw new Error('Argument must be a Point instance');
+        }
+        
+        return point.x >= this._x && point.x <= this._x + this._width &&
+               point.y >= this._y && point.y <= this._y + this._height;
     }
     
     /**
@@ -313,6 +214,10 @@ class Rectangle {
      * @returns {boolean} True if other is completely inside
      */
     containsRectangle(other) {
+        if (!(other instanceof Rectangle)) {
+            throw new Error('Argument must be a Rectangle instance');
+        }
+        
         return other._x >= this._x &&
                other._y >= this._y &&
                other._x + other._width <= this._x + this._width &&
@@ -325,6 +230,10 @@ class Rectangle {
      * @returns {boolean} True if rectangles intersect
      */
     intersects(other) {
+        if (!(other instanceof Rectangle)) {
+            throw new Error('Argument must be a Rectangle instance');
+        }
+        
         return !(other._x >= this._x + this._width ||
                 other._x + other._width <= this._x ||
                 other._y >= this._y + this._height ||
@@ -337,6 +246,10 @@ class Rectangle {
      * @returns {Rectangle|null} Intersection rectangle or null if no intersection
      */
     intersection(other) {
+        if (!(other instanceof Rectangle)) {
+            throw new Error('Argument must be a Rectangle instance');
+        }
+        
         const left = Math.max(this._x, other._x);
         const top = Math.max(this._y, other._y);
         const right = Math.min(this._x + this._width, other._x + other._width);
@@ -355,6 +268,10 @@ class Rectangle {
      * @returns {Rectangle} Union rectangle
      */
     union(other) {
+        if (!(other instanceof Rectangle)) {
+            throw new Error('Argument must be a Rectangle instance');
+        }
+        
         const left = Math.min(this._x, other._x);
         const top = Math.min(this._y, other._y);
         const right = Math.max(this._x + this._width, other._x + other._width);
@@ -370,7 +287,24 @@ class Rectangle {
      * @returns {Rectangle} New translated rectangle
      */
     translate(dx, dy) {
+        if (typeof dx !== 'number' || typeof dy !== 'number') {
+            throw new Error('Translation offsets must be numbers');
+        }
+        
         return new Rectangle(this._x + dx, this._y + dy, this._width, this._height);
+    }
+    
+    /**
+     * Translate rectangle by point (immutable)
+     * @param {Point} offset - Translation offset
+     * @returns {Rectangle} New translated rectangle
+     */
+    translateBy(offset) {
+        if (!(offset instanceof Point)) {
+            throw new Error('Offset must be a Point instance');
+        }
+        
+        return this.translate(offset.x, offset.y);
     }
     
     /**
@@ -379,7 +313,11 @@ class Rectangle {
      * @param {number} sy - Y scale factor
      * @returns {Rectangle} New scaled rectangle
      */
-    scale(sx, sy) {
+    scale(sx, sy = sx) {
+        if (typeof sx !== 'number' || typeof sy !== 'number') {
+            throw new Error('Scale factors must be numbers');
+        }
+        
         return new Rectangle(
             this._x * sx,
             this._y * sy,
@@ -394,6 +332,10 @@ class Rectangle {
      * @returns {Rectangle} New expanded rectangle
      */
     expand(margin) {
+        if (typeof margin !== 'number') {
+            throw new Error('Margin must be a number');
+        }
+        
         return new Rectangle(
             this._x - margin,
             this._y - margin,
@@ -403,11 +345,32 @@ class Rectangle {
     }
     
     /**
+     * Expand rectangle by different margins on each side (immutable)
+     * @param {number} left - Left margin
+     * @param {number} top - Top margin
+     * @param {number} right - Right margin
+     * @param {number} bottom - Bottom margin
+     * @returns {Rectangle} New expanded rectangle
+     */
+    expandBy(left, top, right, bottom) {
+        return new Rectangle(
+            this._x - left,
+            this._y - top,
+            this._width + left + right,
+            this._height + top + bottom
+        );
+    }
+    
+    /**
      * Clamp rectangle to fit within bounds (immutable)
      * @param {Rectangle} bounds - Bounding rectangle
      * @returns {Rectangle} New clamped rectangle
      */
     clamp(bounds) {
+        if (!(bounds instanceof Rectangle)) {
+            throw new Error('Bounds must be a Rectangle instance');
+        }
+        
         const left = Math.max(this._x, bounds._x);
         const top = Math.max(this._y, bounds._y);
         const right = Math.min(this._x + this._width, bounds._x + bounds._width);
@@ -435,16 +398,47 @@ class Rectangle {
     }
     
     /**
+     * Get all four corner points as array
+     * @returns {Point[]} Array of corner points
+     */
+    getCornerPoints() {
+        const c = this.corners;
+        return [c.topLeft, c.topRight, c.bottomRight, c.bottomLeft];
+    }
+    
+    /**
+     * Convert to object
+     * @returns {Object} {x, y, width, height} object
+     */
+    toObject() {
+        return {
+            x: this._x,
+            y: this._y,
+            width: this._width,
+            height: this._height
+        };
+    }
+    
+    /**
+     * Convert to array
+     * @returns {number[]} [x, y, width, height] array
+     */
+    toArray() {
+        return [this._x, this._y, this._width, this._height];
+    }
+    
+    /**
      * Check equality with another rectangle
      * @param {Rectangle} other - Other rectangle
-     * @returns {boolean} True if rectangles are equal
+     * @param {number} tolerance - Tolerance for floating point comparison
+     * @returns {boolean} True if rectangles are equal within tolerance
      */
-    equals(other) {
+    equals(other, tolerance = 1e-10) {
         return other instanceof Rectangle &&
-               this._x === other._x &&
-               this._y === other._y &&
-               this._width === other._width &&
-               this._height === other._height;
+               Math.abs(this._x - other._x) < tolerance &&
+               Math.abs(this._y - other._y) < tolerance &&
+               Math.abs(this._width - other._width) < tolerance &&
+               Math.abs(this._height - other._height) < tolerance;
     }
     
     /**
