@@ -893,6 +893,59 @@
         }
     };
 
+    // Test 18: Transform matrix order dependency (A*B ≠ B*A)
+    visualTests['transform-matrix-order'] = {
+        name: 'Transform order dependency (A*B ≠ B*A)',
+        width: 200, height: 150,
+        drawSWCanvas: function(SWCanvas) {
+            const surface = SWCanvas.Surface(200, 150);
+            const ctx = new SWCanvas.Context2D(surface);
+            
+            // White background
+            ctx.setFillStyle(255, 255, 255, 255);
+            ctx.fillRect(0, 0, 200, 150);
+            
+            // Square 1: Translate(40,40) THEN Scale(2,2) - Red
+            ctx.save();
+            ctx.translate(40, 40);
+            ctx.scale(2, 2);
+            ctx.setFillStyle(255, 0, 0, 255);  // Red
+            ctx.fillRect(0, 0, 15, 15);
+            ctx.restore();
+            
+            // Square 2: Scale(2,2) THEN Translate(60,60) - Blue  
+            ctx.save();
+            ctx.scale(2, 2);
+            ctx.translate(60, 60);
+            ctx.setFillStyle(0, 0, 255, 255);  // Blue
+            ctx.fillRect(0, 0, 15, 15);
+            ctx.restore();
+            
+            return surface;
+        },
+        drawHTML5Canvas: function(html5Canvas) {
+            const ctx = html5Canvas.getContext('2d');
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, 200, 150);
+            
+            // Square 1: Translate(40,40) THEN Scale(2,2) - Red
+            ctx.save();
+            ctx.translate(40, 40);
+            ctx.scale(2, 2);
+            ctx.fillStyle = 'red';
+            ctx.fillRect(0, 0, 15, 15);
+            ctx.restore();
+            
+            // Square 2: Scale(2,2) THEN Translate(60,60) - Blue
+            ctx.save();
+            ctx.scale(2, 2);
+            ctx.translate(60, 60);
+            ctx.fillStyle = 'blue';
+            ctx.fillRect(0, 0, 15, 15);
+            ctx.restore();
+        }
+    };
+
     // Export for both Node.js and browser
     const VisualTestRegistry = {
         getTests: function() { return visualTests; },
