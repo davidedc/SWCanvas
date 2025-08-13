@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SWCanvas Test Page</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #f5f5f5;
+        }
+        
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .test-canvas {
+            border: 2px solid #ccc;
+            margin: 10px;
+            display: inline-block;
+        }
+        
+        .controls {
+            margin: 10px 0;
+        }
+        
+        button {
+            background: #007cba;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 2px;
+        }
+        
+        button:hover {
+            background: #005a87;
+        }
+        
+        .error {
+            color: red;
+            background: #ffe6e6;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        
+        .success {
+            color: green;
+            background: #e6ffe6;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        
+        .canvas-container {
+            display: inline-block;
+            text-align: center;
+            margin: 10px;
+        }
+        
+        .canvas-label {
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: #333;
+        }
+        
+        .test-output {
+            background: #f8f8f8;
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>SWCanvas Test Page</h1>
+    
+    <div class="test-section">
+        <h2>Library Status</h2>
+        <div id="library-status">Loading SWCanvas...</div>
+    </div>
+
+    <div class="test-section">
+        <h2>Shared Test Suite</h2>
+        <p>These are the same tests that run in Node.js, now running in the browser:</p>
+        <div class="controls">
+            <button onclick="runSharedTests()">Run Shared Test Suite</button>
+        </div>
+        <div id="shared-test-output" class="test-output" style="display: none;"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>M1 Visual Comparison: Basic Rectangles</h2>
+        <p>Visual comparison between HTML5 Canvas and SWCanvas rendering:</p>
+        <div class="controls">
+            <button onclick="browserVisualTests.runM1ComparisonTest()">Run Visual Comparison</button>
+            <button onclick="browserVisualTests.downloadBMP()">Download as BMP</button>
+        </div>
+        <div class="canvas-container">
+            <div class="canvas-label">HTML5 Canvas</div>
+            <canvas id="test-canvas" width="400" height="300" class="test-canvas"></canvas>
+        </div>
+        <div class="canvas-container">
+            <div class="canvas-label">SWCanvas</div>
+            <canvas id="swcanvas-result" width="400" height="300" class="test-canvas"></canvas>
+        </div>
+        <div id="test-results"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Interactive Test</h2>
+        <p>Interactive drawing with real-time comparison:</p>
+        <div class="controls">
+            <button onclick="browserVisualTests.clearCanvas()">Clear</button>
+            <button onclick="browserVisualTests.drawRedRect()">Red Rectangle</button>
+            <button onclick="browserVisualTests.drawBlueRect()">Blue Rectangle</button>
+            <button onclick="browserVisualTests.drawWithAlpha()">Semi-transparent Green</button>
+            <button onclick="browserVisualTests.testTransform()">Test Transform</button>
+        </div>
+        <div class="canvas-container">
+            <div class="canvas-label">HTML5 Canvas</div>
+            <canvas id="interactive-html5" width="400" height="300" class="test-canvas"></canvas>
+        </div>
+        <div class="canvas-container">
+            <div class="canvas-label">SWCanvas</div>
+            <canvas id="interactive-canvas" width="400" height="300" class="test-canvas"></canvas>
+        </div>
+    </div>
+
+    <script src="../dist/swcanvas.js"></script>
+    <script src="../tests/shared-test-suite.js"></script>
+    <script src="browser-visual-tests.js"></script>
+    <script>
+        let browserVisualTests;
+
+        function initializeTests() {
+            // Initialize browser visual tests
+            browserVisualTests = createBrowserVisualTests(SWCanvas);
+            browserVisualTests.initSWCanvas();
+        }
+
+        function runSharedTests() {
+            const outputDiv = document.getElementById('shared-test-output');
+            outputDiv.style.display = 'block';
+            outputDiv.innerHTML = '';
+
+            // Capture console.log output
+            const originalLog = console.log;
+            const logs = [];
+            console.log = function(...args) {
+                logs.push(args.join(' '));
+                originalLog.apply(console, arguments);
+            };
+
+            try {
+                const results = SharedTestSuite.runSharedTests(SWCanvas);
+                
+                // Restore console.log
+                console.log = originalLog;
+                
+                // Display results
+                outputDiv.innerHTML = logs.join('<br>') + 
+                    `<br><br><strong>${results.passed}/${results.total} tests passed</strong>`;
+                
+                if (results.failed > 0) {
+                    outputDiv.innerHTML += `<br><span style="color: red;">❌ ${results.failed} tests failed</span>`;
+                } else {
+                    outputDiv.innerHTML += '<br><span style="color: green;">✅ All tests passed!</span>';
+                }
+            } catch (error) {
+                // Restore console.log
+                console.log = originalLog;
+                
+                outputDiv.innerHTML = `<span style="color: red;">Error running tests: ${error.message}</span>`;
+            }
+        }
+
+        // Initialize on page load
+        window.onload = function() {
+            initializeTests();
+        };
+    </script>
+</body>
+</html>

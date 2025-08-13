@@ -1,0 +1,16 @@
+{
+  "name": "swcanvas",
+  "version": "1.0.0",
+  "description": "Deterministic 2D raster engine with Canvas-like API",
+  "main": "dist/swcanvas.js",
+  "scripts": {
+    "build": "./build.sh",
+    "test": "node tests/run-tests.js"
+  },
+  "keywords": ["canvas", "2d", "deterministic", "raster"],
+  "author": "",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
