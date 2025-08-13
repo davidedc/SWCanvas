@@ -120,7 +120,8 @@ Rasterizer.prototype.fillRect = function(x, y, width, height, color) {
         ];
         
         // Use existing polygon filling system which handles transforms and stencil clipping
-        fillPolygons(this.surface, [rectPolygon], color, 'nonzero', this.currentOp.transform, this.currentOp.clipMask);
+        const rectColor = PolygonFiller.colorFromRGBA(color);
+        PolygonFiller.fillPolygons(this.surface, [rectPolygon], rectColor, 'nonzero', this.currentOp.transform, this.currentOp.clipMask);
     }
 };
 
@@ -180,22 +181,17 @@ Rasterizer.prototype.fill = function(path, rule) {
         throw new Error('Must call beginOp before drawing operations');
     }
     
-    // Apply global alpha to fill color (non-premultiplied for polygon filler)
-    const color = this.currentOp.fillStyle || [0, 0, 0, 255];
-    const globalAlpha = this.currentOp.globalAlpha;
-    const effectiveAlpha = (color[3] / 255) * globalAlpha;
-    const srcA = Math.round(effectiveAlpha * 255);
-    const srcR = color[0]; // Keep RGB non-premultiplied
-    const srcG = color[1];
-    const srcB = color[2];
-    
-    const fillColor = [srcR, srcG, srcB, srcA];
+    // Apply global alpha to fill color
+    const colorData = this.currentOp.fillStyle || [0, 0, 0, 255];
+    const color = Array.isArray(colorData) ? 
+        new Color(colorData[0], colorData[1], colorData[2], colorData[3]) : colorData;
+    const fillColor = color.withGlobalAlpha(this.currentOp.globalAlpha);
     const fillRule = rule || 'nonzero';
     
     // Flatten path to polygons
-    const polygons = flattenPath(path);
+    const polygons = PathFlattener.flattenPath(path);
     // Fill polygons with current transform and stencil clipping
-    fillPolygons(this.surface, polygons, fillColor, fillRule, this.currentOp.transform, this.currentOp.clipMask);
+    PolygonFiller.fillPolygons(this.surface, polygons, fillColor, fillRule, this.currentOp.transform, this.currentOp.clipMask);
 };
 
 Rasterizer.prototype.stroke = function(path, strokeProps) {
@@ -204,21 +200,16 @@ Rasterizer.prototype.stroke = function(path, strokeProps) {
     }
     
     // Apply global alpha to stroke color
-    const color = this.currentOp.strokeStyle || [0, 0, 0, 255];
-    const globalAlpha = this.currentOp.globalAlpha;
-    const effectiveAlpha = (color[3] / 255) * globalAlpha;
-    const srcA = Math.round(effectiveAlpha * 255);
-    const srcR = color[0]; // Keep RGB non-premultiplied
-    const srcG = color[1];
-    const srcB = color[2];
-    
-    const strokeColor = [srcR, srcG, srcB, srcA];
+    const colorData = this.currentOp.strokeStyle || [0, 0, 0, 255];
+    const color = Array.isArray(colorData) ? 
+        new Color(colorData[0], colorData[1], colorData[2], colorData[3]) : colorData;
+    const strokeColor = color.withGlobalAlpha(this.currentOp.globalAlpha);
     
     // Generate stroke polygons using geometric approach
-    const strokePolygons = generateStrokePolygons(path, strokeProps);
+    const strokePolygons = StrokeGenerator.generateStrokePolygons(path, strokeProps);
     
     // Fill stroke polygons with current transform and stencil clipping
-    fillPolygons(this.surface, strokePolygons, strokeColor, 'nonzero', this.currentOp.transform, this.currentOp.clipMask);
+    PolygonFiller.fillPolygons(this.surface, strokePolygons, strokeColor, 'nonzero', this.currentOp.transform, this.currentOp.clipMask);
 };
 
 Rasterizer.prototype.drawImage = function(img, sx, sy, sw, sh, dx, dy, dw, dh) {

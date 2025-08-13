@@ -384,7 +384,7 @@ class Context2D {
     this._fillStyle = [255, 255, 255, 255]; // White (doesn't matter for clipping)
     
     // Flatten path and fill to temporary clip buffer
-    const polygons = flattenPath(pathToClip);
+    const polygons = PathFlattener.flattenPath(pathToClip);
     
     // Use a modified version of fillPolygons that writes to our clip buffer
     this._fillPolygonsToClipBuffer(polygons, clipRule, tempClipBuffer);

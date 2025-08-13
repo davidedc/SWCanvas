@@ -18,23 +18,36 @@ cat > dist/swcanvas.js << 'EOF'
 EOF
 
 # Concatenate source files in dependency order
+# Phase 1: Foundation classes (no dependencies)
+cat src/Color.js >> dist/swcanvas.js
+echo "" >> dist/swcanvas.js
+cat src/Geometry.js >> dist/swcanvas.js
+echo "" >> dist/swcanvas.js
 cat src/Matrix.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
 cat src/Path2D.js >> dist/swcanvas.js  
 echo "" >> dist/swcanvas.js
 cat src/Surface.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
-cat src/bmp.js >> dist/swcanvas.js
+
+# Phase 2: Service classes (depend on foundation)
+cat src/BitmapEncoder.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
-cat src/path-flattener.js >> dist/swcanvas.js
+cat src/PathFlattener.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
-cat src/polygon-filler.js >> dist/swcanvas.js
+cat src/PolygonFiller.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
-cat src/stroke-generator.js >> dist/swcanvas.js
+cat src/StrokeGenerator.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
-cat src/rasterizer.js >> dist/swcanvas.js
+cat src/StencilBuffer.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
-cat src/context2d.js >> dist/swcanvas.js
+
+# Phase 3: State and rendering classes (depend on services)
+cat src/DrawingState.js >> dist/swcanvas.js
+echo "" >> dist/swcanvas.js
+cat src/Rasterizer.js >> dist/swcanvas.js
+echo "" >> dist/swcanvas.js
+cat src/Context2D.js >> dist/swcanvas.js
 
 # Footer to expose globals
 cat >> dist/swcanvas.js << 'EOF'
@@ -43,22 +56,50 @@ cat >> dist/swcanvas.js << 'EOF'
 if (typeof window !== 'undefined') {
     // Browser
     window.SWCanvas = {
+        // Core API (public)
         Surface: Surface,
         Matrix: Matrix,
         Path2D: Path2D,
-        Rasterizer: Rasterizer,
         Context2D: Context2D,
-        encodeBMP: encodeBMP
+        encodeBMP: encodeBMP,
+        
+        // Advanced classes (for power users)
+        Color: Color,
+        Point: Point,
+        Rectangle: Rectangle,
+        BitmapEncoder: BitmapEncoder,
+        
+        // Internal classes (exposed for extensibility)
+        Rasterizer: Rasterizer,
+        DrawingState: DrawingState,
+        StencilBuffer: StencilBuffer,
+        PathFlattener: PathFlattener,
+        PolygonFiller: PolygonFiller,
+        StrokeGenerator: StrokeGenerator
     };
 } else if (typeof module !== 'undefined' && module.exports) {
     // Node.js
     module.exports = {
+        // Core API (public)
         Surface: Surface,
         Matrix: Matrix,
         Path2D: Path2D,
-        Rasterizer: Rasterizer,
         Context2D: Context2D,
-        encodeBMP: encodeBMP
+        encodeBMP: encodeBMP,
+        
+        // Advanced classes (for power users)
+        Color: Color,
+        Point: Point,
+        Rectangle: Rectangle,
+        BitmapEncoder: BitmapEncoder,
+        
+        // Internal classes (exposed for extensibility)
+        Rasterizer: Rasterizer,
+        DrawingState: DrawingState,
+        StencilBuffer: StencilBuffer,
+        PathFlattener: PathFlattener,
+        PolygonFiller: PolygonFiller,
+        StrokeGenerator: StrokeGenerator
     };
 }
 
