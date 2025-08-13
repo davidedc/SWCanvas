@@ -162,16 +162,21 @@ const bmpData = SWCanvas.encodeBMP(surface);
 
 ## Architecture
 
-### Core Components
+### Core Components (Object-Oriented Design)
 
 - **Surface**: Memory buffer for pixel data
 - **Context2D**: Drawing API and state management
-- **Matrix**: Transformation mathematics
+- **Matrix**: Transformation mathematics (immutable value object)
 - **Path2D**: Path definition and flattening
 - **Rasterizer**: Low-level pixel operations
-- **Polygon Filler**: Scanline-based polygon filling
-- **Stroke Generator**: Geometric stroke generation
-- **BMP Encoder**: Bitmap file format export
+- **Color**: Immutable color handling with premultiplied alpha support
+- **Geometry**: Point and Rectangle value objects
+- **StencilBuffer**: 1-bit clipping buffer management
+- **DrawingState**: Context state stack management
+- **PolygonFiller**: Scanline-based polygon filling (static methods)
+- **StrokeGenerator**: Geometric stroke generation (static methods)  
+- **PathFlattener**: Path-to-polygon conversion (static methods)
+- **BitmapEncoder**: BMP file format export (static methods)
 
 ### Key Features
 
@@ -194,23 +199,27 @@ const bmpData = SWCanvas.encodeBMP(surface);
 
 ## Development
 
-### Project Structure
+### Project Structure (Object-Oriented Architecture)
 
 ```
-src/              # Source files
-├── context2d.js     # Main drawing API
-├── surface.js       # Memory management
-├── matrix.js        # Transform mathematics
-├── rasterizer.js    # Low-level rendering
-├── polygon-filler.js # Scanline polygon filling
-├── stroke-generator.js # Stroke generation
-├── path-flattener.js   # Path to polygon conversion
-├── path2d.js        # Path definition
-└── bmp.js          # BMP file encoding
+src/              # Source files (ES6 Classes)
+├── Context2D.js     # Main drawing API (class)
+├── Surface.js       # Memory management (factory + class) 
+├── Matrix.js        # Transform mathematics (immutable class)
+├── Rasterizer.js    # Low-level rendering (prototype-based)
+├── Color.js         # Immutable color handling (class)
+├── Geometry.js      # Point and Rectangle value objects (classes)
+├── StencilBuffer.js # 1-bit clipping buffer (class)
+├── DrawingState.js  # State stack management (class)
+├── PolygonFiller.js # Scanline polygon filling (static methods)
+├── StrokeGenerator.js # Stroke generation (static methods)
+├── PathFlattener.js # Path to polygon conversion (static methods)
+├── BitmapEncoder.js # BMP file encoding (static methods)
+└── Path2D.js        # Path definition (class)
 
 tests/            # Test suite
 ├── shared-test-suite.js    # Core functionality tests
-├── visual-test-registry.js # 55+ visual tests
+├── visual-test-registry.js # 52+ visual tests
 ├── test-colors.js          # Color consistency system
 └── run-tests.js            # Node.js test runner
 
@@ -255,17 +264,28 @@ helpers.setHTML5CanvasFill(ctx, 'red');  // For HTML5 Canvas
 
 ### Build Process
 
-The build script (`build.sh`) concatenates source files in dependency order:
+The build script (`build.sh`) concatenates source files in dependency order, following OO architecture:
 
-1. Matrix mathematics
-2. Path definitions
-3. Surface management
-4. BMP encoding
-5. Path flattening
-6. Polygon filling
-7. Stroke generation
-8. Rasterizer
-9. Context2D API
+**Phase 1: Foundation Classes**
+1. Color - Immutable color handling
+2. Geometry - Point and Rectangle value objects  
+3. Matrix - Transformation mathematics
+4. Surface - Memory buffer management
+
+**Phase 2: Core Classes**
+5. StencilBuffer - 1-bit clipping system
+6. DrawingState - State management
+7. Path2D - Path definitions
+
+**Phase 3: Algorithm Classes** 
+8. PathFlattener - Path-to-polygon conversion (static methods)
+9. PolygonFiller - Scanline filling (static methods)
+10. StrokeGenerator - Stroke generation (static methods) 
+11. BitmapEncoder - BMP export (static methods)
+
+**Phase 4: High-Level Classes**
+12. Rasterizer - Rendering pipeline
+13. Context2D - Main drawing API
 
 ## License
 

@@ -13,19 +13,23 @@ This file provides Claude with essential context about the SWCanvas project for 
 - **Memory efficient**: 1-bit stencil clipping, optimized algorithms
 - **Well-tested**: 55+ visual tests with pixel-perfect validation
 
-## Architecture
+## Architecture (Object-Oriented Design)
 
 ### Core Components
 ```
-src/context2d.js      # Main API - implements Canvas 2D Context interface
-src/rasterizer.js     # Low-level pixel operations and rendering pipeline  
-src/polygon-filler.js # Scanline polygon filling with stencil clipping
-src/matrix.js         # Transform mathematics (translate/scale/rotate)
-src/surface.js        # Memory buffer management (RGBA pixel data)
-src/path2d.js         # Path definition and command recording
-src/path-flattener.js # Converts paths (lines/curves) to polygons
-src/stroke-generator.js # Geometric stroke path generation
-src/bmp.js           # BMP file format encoding for output
+src/Context2D.js      # Main API - implements Canvas 2D Context interface (class)
+src/Rasterizer.js     # Low-level pixel operations and rendering pipeline (prototype-based) 
+src/PolygonFiller.js  # Scanline polygon filling with stencil clipping (static methods)
+src/Matrix.js         # Transform mathematics - immutable value object (class)
+src/Surface.js        # Memory buffer management - RGBA pixel data (factory + class)
+src/Path2D.js         # Path definition and command recording (class)
+src/PathFlattener.js  # Converts paths to polygons (static methods)
+src/StrokeGenerator.js # Geometric stroke path generation (static methods)
+src/BitmapEncoder.js  # BMP file format encoding for output (static methods)
+src/Color.js          # Immutable color handling with premultiplied alpha (class)
+src/Geometry.js       # Point and Rectangle value objects (classes)
+src/StencilBuffer.js  # 1-bit clipping buffer management (class)
+src/DrawingState.js   # Context state stack management (class)
 ```
 
 ### Key Systems
@@ -36,11 +40,13 @@ src/bmp.js           # BMP file format encoding for output
 - Handles nested clipping via save/restore stack
 - **No legacy polygon clipping code** - uses only stencil approach
 
-#### Color System
-- **Premultiplied sRGB** throughout the pipeline
+#### Color System (OO Design)
+- **Color class**: Immutable color handling with premultiplied alpha internally
+- Surface stores **non-premultiplied RGBA** (0-255)
+- Color class handles conversion between premultiplied/non-premultiplied forms
 - CSS color names mapped to exact RGB values in `tests/test-colors.js`
-- Alpha blending uses source-over composition
-- Colors are (r,g,b,a) where 0-255, with alpha premultiplied for internal ops
+- Alpha blending uses source-over composition with correct math
+- Global alpha applied correctly via `Color.withGlobalAlpha()` method
 
 #### Transform System
 - Matrix-based transformations (translate, scale, rotate)
@@ -126,31 +132,37 @@ visualTests['new-test-name'] = {
 4. Check pixel values manually if needed
 5. Use git to compare before/after BMPs
 
-### Making API Changes
-1. Update `src/context2d.js` for public API
-2. Update `src/rasterizer.js` for rendering pipeline
-3. Ensure both SWCanvas and HTML5Canvas paths in tests do the same thing
-4. Run full test suite to verify no regressions
+### Making API Changes (OO Structure)
+1. Update `src/Context2D.js` for public API changes
+2. Update `src/Rasterizer.js` for rendering pipeline changes
+3. Update relevant classes (`PolygonFiller.js`, `StrokeGenerator.js`, etc.) as needed
+4. Ensure both SWCanvas and HTML5Canvas paths in tests do the same thing
+5. Run full test suite to verify no regressions
 
-## Current Status (As of Latest Session)
+## Current Status (As of Latest OO Refactoring)
 
 ### Recently Completed ✅
-- **Legacy Code Cleanup**: Removed all old polygon-clipper code and references
-- **Browser Test Fixes**: Fixed coordinate expectations in transform tests  
-- **Documentation**: Added comprehensive README.md and improved test docs
-- **Build System**: Verified working after cleanup
-- **Test Coverage**: All 31 shared tests + 55 visual tests passing
+- **Object-Oriented Refactoring**: Complete conversion to ES6 classes following Joshua Bloch principles
+- **Alpha Blending Fixes**: Corrected premultiplied vs non-premultiplied alpha handling throughout
+- **Stroke Generation**: Fixed round joins, miter limits, and missing helper functions
+- **Legacy Code Cleanup**: Removed all old functional implementation backup files
+- **Documentation Updates**: Updated README.md and CLAUDE.md to reflect OO structure
+- **Build System**: Updated dependency order for new class hierarchy
+- **Test Coverage**: All 31 shared tests + 52 visual tests passing with pixel-perfect accuracy
 
-### Key Implementation Details
-- **Clipping**: Uses stencil-only approach (no legacy polygon clipping)
-- **Colors**: Green = (0,128,0), not (0,255,0) - use test color helpers
-- **Coordinates**: Transform tests expect specific pixel positions - see fixed coordinates in shared-test-suite.js
-- **File Structure**: No temporary debug files, clean codebase
+### New OO Architecture Details
+- **Immutable Value Objects**: Color, Point, Rectangle, Matrix classes
+- **Static Algorithm Classes**: PolygonFiller, StrokeGenerator, PathFlattener, BitmapEncoder
+- **Encapsulated State Management**: StencilBuffer, DrawingState classes
+- **Proper Separation of Concerns**: Each class has single responsibility
+- **Consistent Alpha Handling**: Color class manages premultiplied/non-premultiplied conversion
+- **Memory Efficient**: StencilBuffer for 1-bit clipping, immutable objects prevent mutation bugs
 
 ### Test Output Status
-- **Node.js**: All tests passing, 55+ BMPs generated
-- **Browser**: Transform tests now pass after coordinate fixes
-- All test outputs in `tests/output/` are fresh and valid
+- **Node.js**: All tests passing, 52+ BMPs generated with correct alpha blending
+- **Browser**: All visual tests now produce pixel-perfect matches with HTML5 Canvas
+- **Alpha Issues Fixed**: "Debug Alpha Blending Issue" and "Scaled Stroke Behavior" now correct
+- All test outputs in `tests/output/` reflect new OO implementation
 
 ## Important Notes for Claude
 
@@ -166,10 +178,19 @@ visualTests['new-test-name'] = {
 - **Check all phases** - changes may affect multiple test categories
 - **Build before testing** - `npm run build` then `npm test`
 
-### Code Patterns
-- **Error handling**: Throw descriptive errors for invalid operations
-- **Memory efficiency**: Use existing Surface methods, don't duplicate buffers  
-- **Color handling**: Always use premultiplied RGBA internally
-- **Matrix math**: Use existing Matrix class methods, don't recreate logic
+### OO Code Patterns
+- **Error handling**: Throw descriptive errors with proper validation in constructors
+- **Memory efficiency**: Use immutable value objects, avoid buffer duplication
+- **Color handling**: Use Color class for all color operations, handles premultiplied/non-premultiplied correctly
+- **Matrix math**: Use Matrix class methods, immutable transformations
+- **Static methods**: Use for stateless algorithms (PolygonFiller, StrokeGenerator, etc.)
+- **Class hierarchy**: Foundation → Core → Algorithm → High-level (see build.sh dependency order)
+- **Encapsulation**: Private methods with underscore prefix, public API clearly defined
 
-This context should help Claude understand the project structure, current status, and development patterns for effective collaboration.
+### Key OO Principles Applied
+- **Single Responsibility**: Each class has one clear purpose
+- **Immutability**: Color, Point, Rectangle, Matrix are immutable value objects
+- **Composition over Inheritance**: Classes use other classes rather than extending
+- **Joshua Bloch Guidelines**: Effective use of static methods, immutability, clear APIs
+
+This context should help Claude understand the new OO project structure, current status, and development patterns for effective collaboration.
