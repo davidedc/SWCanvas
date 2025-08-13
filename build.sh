@@ -75,6 +75,8 @@ if (typeof window !== 'undefined') {
         Point: Point,
         Rectangle: Rectangle,
         BitmapEncoder: BitmapEncoder,
+        ClipMaskHelper: ClipMaskHelper,
+        ImageProcessor: ImageProcessor,
         
         // Internal classes (exposed for extensibility)
         Rasterizer: Rasterizer,
@@ -100,6 +102,8 @@ if (typeof window !== 'undefined') {
         Point: Point,
         Rectangle: Rectangle,
         BitmapEncoder: BitmapEncoder,
+        ClipMaskHelper: ClipMaskHelper,
+        ImageProcessor: ImageProcessor,
         
         // Internal classes (exposed for extensibility)
         Rasterizer: Rasterizer,
