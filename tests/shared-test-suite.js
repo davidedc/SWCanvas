@@ -682,13 +682,16 @@
                     saveBMP(surface, 'transform-basic-translate.bmp', 'basic translate test', SWCanvas);
                     
                     // Verify translated squares are in correct positions
-                    const redPixel = (20 * surface.stride) + (20 * 4);
-                    const bluePixel = (30 * surface.stride) + (70 * 4);
-                    const greenPixel = (60 * surface.stride) + (130 * 4);
+                    // Red square: fillRect(10,10,30,30) at origin -> (10,10) to (40,40)
+                    // Blue square: after translate(50,20), fillRect(10,10,30,30) -> (60,30) to (90,60)  
+                    // Green square: after translate(60,30), fillRect(10,10,30,30) -> (120,60) to (150,90)
+                    const redPixel = (25 * surface.stride) + (25 * 4);  // Center of red square
+                    const bluePixel = (45 * surface.stride) + (75 * 4); // Center of blue square  
+                    const greenPixel = (75 * surface.stride) + (135 * 4); // Center of green square
                     
                     if (surface.data[redPixel] < 200) throw new Error('Red square not found at origin');
                     if (surface.data[bluePixel + 2] < 200) throw new Error('Blue square not found at translated position');
-                    if (surface.data[greenPixel + 1] < 200) throw new Error('Green square not found at final position');
+                    if (surface.data[greenPixel + 1] < 100) throw new Error('Green square not found at final position'); // Green is 128, not 255
                     return;
                 }
             }
@@ -855,13 +858,15 @@
                     saveBMP(surface, 'transform-matrix-order.bmp', 'transform matrix order test', SWCanvas);
                     
                     // Check that red and blue squares are in different positions
-                    // Red square (T→S): should be around (30,30) scaled to 40x40  
-                    // Blue square (S→T): should be around (60,60) scaled to 40x40
+                    // Red square: translate(40,40) then scale(2,2) then fillRect(0,0,15,15)
+                    //   -> fillRect maps (0,0,15,15) to (40,40,70,70) 
+                    // Blue square: scale(2,2) then translate(60,60) then fillRect(0,0,15,15) 
+                    //   -> fillRect maps (0,0,15,15) to (60,60,90,90) then scale by 2 -> (120,120,180,180)
                     
-                    // Check for red pixels around expected area
+                    // Check for red pixels around expected area (40,40) to (70,70)
                     let redFound = false;
-                    for (let y = 25; y < 75; y++) {
-                        for (let x = 25; x < 75; x++) {
+                    for (let y = 35; y < 75; y++) {
+                        for (let x = 35; x < 75; x++) {
                             const offset = (y * surface.stride) + (x * 4);
                             if (surface.data[offset] > 200 && surface.data[offset + 1] < 50 && surface.data[offset + 2] < 50) {
                                 redFound = true;
@@ -871,10 +876,11 @@
                         if (redFound) break;
                     }
                     
-                    // Check for blue pixels around expected area
+                    // Check for blue pixels around expected area (120,120) to (180,180) - but surface is only 200x150
+                    // So check (120,120) to (150,150) area
                     let blueFound = false;
-                    for (let y = 55; y < 105; y++) {
-                        for (let x = 55; x < 105; x++) {
+                    for (let y = 115; y < 150; y++) {
+                        for (let x = 115; x < 150; x++) {
                             const offset = (y * surface.stride) + (x * 4);
                             if (surface.data[offset] < 50 && surface.data[offset + 1] < 50 && surface.data[offset + 2] > 200) {
                                 blueFound = true;
