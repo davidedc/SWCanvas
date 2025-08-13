@@ -12,8 +12,9 @@ function Context2D(surface) {
     this._fillStyle = [0, 0, 0, 255]; // Black, non-premultiplied
     this._strokeStyle = [0, 0, 0, 255]; // Black, non-premultiplied
     
-    // Internal path
+    // Internal path and clipping
     this._currentPath = new Path2D();
+    this._clipPath = null;
 }
 
 // State management
@@ -24,7 +25,8 @@ Context2D.prototype.save = function() {
         transform: new Matrix([this._transform.a, this._transform.b, this._transform.c, 
                               this._transform.d, this._transform.e, this._transform.f]),
         fillStyle: this._fillStyle.slice(),
-        strokeStyle: this._strokeStyle.slice()
+        strokeStyle: this._strokeStyle.slice(),
+        clipPath: this._clipPath // Note: shallow copy for M2, should be deep copy in full implementation
     });
 };
 
@@ -37,6 +39,7 @@ Context2D.prototype.restore = function() {
     this._transform = state.transform;
     this._fillStyle = state.fillStyle;
     this._strokeStyle = state.strokeStyle;
+    this._clipPath = state.clipPath;
 };
 
 // Transform methods
@@ -87,6 +90,10 @@ Context2D.prototype.rect = function(x, y, w, h) {
     this._currentPath.rect(x, y, w, h);
 };
 
+Context2D.prototype.arc = function(x, y, radius, startAngle, endAngle, counterclockwise) {
+    this._currentPath.arc(x, y, radius, startAngle, endAngle, counterclockwise);
+};
+
 // Drawing methods - simplified for M1 (only rectangles)
 Context2D.prototype.fillRect = function(x, y, width, height) {
     this.rasterizer.beginOp({
@@ -114,11 +121,61 @@ Context2D.prototype.clearRect = function(x, y, width, height) {
     this.rasterizer.endOp();
 };
 
-// Placeholder methods for later milestones
+// M2: Path drawing methods
 Context2D.prototype.fill = function(path, rule) {
-    throw new Error('Path filling not implemented in M1');
+    let pathToFill, fillRule;
+    
+    // Handle different argument combinations:
+    // fill() -> path = undefined, rule = undefined
+    // fill('evenodd') -> path = 'evenodd', rule = undefined  
+    // fill(path2d) -> path = path2d object, rule = undefined
+    // fill(path2d, 'evenodd') -> path = path2d object, rule = 'evenodd'
+    
+    if (arguments.length === 0) {
+        // fill() - use current path, nonzero rule
+        pathToFill = this._currentPath;
+        fillRule = 'nonzero';
+    } else if (arguments.length === 1) {
+        if (typeof path === 'string') {
+            // fill('evenodd') - use current path, specified rule
+            pathToFill = this._currentPath;
+            fillRule = path;
+        } else {
+            // fill(path2d) - use specified path, nonzero rule
+            pathToFill = path;
+            fillRule = 'nonzero';
+        }
+    } else {
+        // fill(path2d, 'evenodd') - use specified path and rule
+        pathToFill = path;
+        fillRule = rule;
+    }
+    
+    fillRule = fillRule || 'nonzero';
+    
+    this.rasterizer.beginOp({
+        composite: this.globalCompositeOperation,
+        globalAlpha: this.globalAlpha,
+        transform: this._transform,
+        clipPath: this._clipPath,
+        fillStyle: this._fillStyle
+    });
+    
+    this.rasterizer.fill(pathToFill, fillRule);
+    this.rasterizer.endOp();
 };
 
 Context2D.prototype.stroke = function(path) {
-    throw new Error('Path stroking not implemented in M1');
+    throw new Error('Path stroking not implemented until M3');
+};
+
+// M2: Clipping support
+Context2D.prototype.clip = function(path, rule) {
+    // If no path provided, use current internal path
+    const pathToClip = path || this._currentPath;
+    const clipRule = rule || 'nonzero';
+    
+    // For M2, we only support a single clip path (no clip stack)
+    // In a full implementation, this would intersect with existing clip
+    this._clipPath = pathToClip;
 };

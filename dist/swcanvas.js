@@ -66,7 +66,8 @@ Matrix.prototype.transformPoint = function(point) {
         x: this.a * point.x + this.c * point.y + this.e,
         y: this.b * point.x + this.d * point.y + this.f
     };
-};function Path2D() {
+};
+function Path2D() {
     this.commands = [];
 }
 
@@ -129,7 +130,8 @@ Path2D.prototype.ellipse = function(x, y, radiusX, radiusY, rotation, startAngle
         endAngle: endAngle,
         counterclockwise: !!counterclockwise
     });
-};function createSurface(width, height) {
+};
+function createSurface(width, height) {
     if (width <= 0 || height <= 0) {
         throw new Error('Surface dimensions must be positive');
     }
@@ -151,7 +153,8 @@ Path2D.prototype.ellipse = function(x, y, radiusX, radiusY, rotation, startAngle
 
 function Surface(width, height) {
     return createSurface(width, height);
-}function encodeBMP(surface) {
+}
+function encodeBMP(surface) {
     const width = surface.width;
     const height = surface.height;
     const data = surface.data;
@@ -231,7 +234,483 @@ function Surface(width, height) {
     }
     
     return buffer;
-}function Rasterizer(surface) {
+}
+// Path flattening utilities for converting curves to line segments
+// Implements deterministic curve flattening with 0.25px tolerance
+
+// Flatten a Path2D into a list of polygons (each polygon is an array of {x, y} points)
+function flattenPath(path2d) {
+    const polygons = [];
+    let currentPoly = [];
+    let currentPoint = {x: 0, y: 0};
+    let subpathStart = {x: 0, y: 0};
+    
+    for (const cmd of path2d.commands) {
+        switch (cmd.type) {
+            case 'moveTo':
+                // Start new subpath
+                if (currentPoly.length > 0) {
+                    polygons.push(currentPoly);
+                }
+                currentPoly = [];
+                currentPoint = {x: cmd.x, y: cmd.y};
+                subpathStart = {x: cmd.x, y: cmd.y};
+                currentPoly.push(currentPoint);
+                break;
+                
+            case 'lineTo':
+                currentPoint = {x: cmd.x, y: cmd.y};
+                currentPoly.push(currentPoint);
+                break;
+                
+            case 'closePath':
+                if (currentPoly.length > 0) {
+                    // Close the polygon by adding the start point if not already there
+                    const last = currentPoly[currentPoly.length - 1];
+                    if (last.x !== subpathStart.x || last.y !== subpathStart.y) {
+                        currentPoly.push({x: subpathStart.x, y: subpathStart.y});
+                    }
+                    polygons.push(currentPoly);
+                    currentPoly = [];
+                }
+                break;
+                
+            case 'quadraticCurveTo':
+                const quadPoints = flattenQuadraticBezier(
+                    currentPoint.x, currentPoint.y,
+                    cmd.cpx, cmd.cpy,
+                    cmd.x, cmd.y
+                );
+                // Add all points except the first (which is currentPoint)
+                for (let i = 1; i < quadPoints.length; i++) {
+                    currentPoly.push(quadPoints[i]);
+                }
+                currentPoint = {x: cmd.x, y: cmd.y};
+                break;
+                
+            case 'bezierCurveTo':
+                const cubicPoints = flattenCubicBezier(
+                    currentPoint.x, currentPoint.y,
+                    cmd.cp1x, cmd.cp1y,
+                    cmd.cp2x, cmd.cp2y,
+                    cmd.x, cmd.y
+                );
+                // Add all points except the first (which is currentPoint)
+                for (let i = 1; i < cubicPoints.length; i++) {
+                    currentPoly.push(cubicPoints[i]);
+                }
+                currentPoint = {x: cmd.x, y: cmd.y};
+                break;
+                
+            case 'arc':
+                const arcPoints = flattenArc(
+                    cmd.x, cmd.y, cmd.radius,
+                    cmd.startAngle, cmd.endAngle,
+                    cmd.counterclockwise
+                );
+                if (arcPoints.length > 0) {
+                    // Move to arc start if we're not already there
+                    const arcStart = arcPoints[0];
+                    const distance = Math.sqrt((currentPoint.x - arcStart.x) ** 2 + (currentPoint.y - arcStart.y) ** 2);
+                    if (distance > 0.01) {  // Add line to arc start if not already there
+                        currentPoly.push(arcStart);
+                    }
+                    // Add all arc points except the first
+                    for (let i = 1; i < arcPoints.length; i++) {
+                        currentPoly.push(arcPoints[i]);
+                    }
+                    currentPoint = arcPoints[arcPoints.length - 1];
+                }
+                break;
+                
+            case 'ellipse':
+                const ellipsePoints = flattenEllipse(
+                    cmd.x, cmd.y, cmd.radiusX, cmd.radiusY, cmd.rotation,
+                    cmd.startAngle, cmd.endAngle, cmd.counterclockwise
+                );
+                if (ellipsePoints.length > 0) {
+                    // Move to ellipse start if we're not already there
+                    const ellipseStart = ellipsePoints[0];
+                    const distance = Math.sqrt((currentPoint.x - ellipseStart.x) ** 2 + (currentPoint.y - ellipseStart.y) ** 2);
+                    if (distance > 0.01) {  // Add line to ellipse start if not already there
+                        currentPoly.push(ellipseStart);
+                    }
+                    // Add all ellipse points except the first
+                    for (let i = 1; i < ellipsePoints.length; i++) {
+                        currentPoly.push(ellipsePoints[i]);
+                    }
+                    currentPoint = ellipsePoints[ellipsePoints.length - 1];
+                }
+                break;
+        }
+    }
+    
+    // Add final polygon if exists
+    if (currentPoly.length > 0) {
+        polygons.push(currentPoly);
+    }
+    
+    return polygons;
+}
+
+// Flatten quadratic Bézier curve with 0.25px tolerance
+function flattenQuadraticBezier(x0, y0, x1, y1, x2, y2) {
+    const points = [{x: x0, y: y0}];
+    flattenQuadraticBezierRecursive(x0, y0, x1, y1, x2, y2, points, 0.25);
+    return points;
+}
+
+function flattenQuadraticBezierRecursive(x0, y0, x1, y1, x2, y2, points, tolerance) {
+    // Check if curve is flat enough
+    const dx = x2 - x0;
+    const dy = y2 - y0;
+    const d = Math.abs((x1 - x0) * dy - (y1 - y0) * dx) / Math.sqrt(dx * dx + dy * dy);
+    
+    if (d <= tolerance || points.length > 1000) { // Safety limit
+        points.push({x: x2, y: y2});
+        return;
+    }
+    
+    // Split curve at t=0.5
+    const x01 = (x0 + x1) / 2;
+    const y01 = (y0 + y1) / 2;
+    const x12 = (x1 + x2) / 2;
+    const y12 = (y1 + y2) / 2;
+    const x012 = (x01 + x12) / 2;
+    const y012 = (y01 + y12) / 2;
+    
+    // Recursively flatten both halves
+    flattenQuadraticBezierRecursive(x0, y0, x01, y01, x012, y012, points, tolerance);
+    flattenQuadraticBezierRecursive(x012, y012, x12, y12, x2, y2, points, tolerance);
+}
+
+// Flatten cubic Bézier curve with 0.25px tolerance  
+function flattenCubicBezier(x0, y0, x1, y1, x2, y2, x3, y3) {
+    const points = [{x: x0, y: y0}];
+    flattenCubicBezierRecursive(x0, y0, x1, y1, x2, y2, x3, y3, points, 0.25);
+    return points;
+}
+
+function flattenCubicBezierRecursive(x0, y0, x1, y1, x2, y2, x3, y3, points, tolerance) {
+    // Simplified flatness test - check distance from control points to line
+    const dx = x3 - x0;
+    const dy = y3 - y0;
+    const len = Math.sqrt(dx * dx + dy * dy);
+    
+    if (len === 0) {
+        points.push({x: x3, y: y3});
+        return;
+    }
+    
+    const d1 = Math.abs((x1 - x0) * dy - (y1 - y0) * dx) / len;
+    const d2 = Math.abs((x2 - x0) * dy - (y2 - y0) * dx) / len;
+    
+    if ((d1 + d2) <= tolerance || points.length > 1000) { // Safety limit
+        points.push({x: x3, y: y3});
+        return;
+    }
+    
+    // Split curve at t=0.5 using de Casteljau's algorithm
+    const x01 = (x0 + x1) / 2;
+    const y01 = (y0 + y1) / 2;
+    const x12 = (x1 + x2) / 2;
+    const y12 = (y1 + y2) / 2;
+    const x23 = (x2 + x3) / 2;
+    const y23 = (y2 + y3) / 2;
+    
+    const x012 = (x01 + x12) / 2;
+    const y012 = (y01 + y12) / 2;
+    const x123 = (x12 + x23) / 2;
+    const y123 = (y12 + y23) / 2;
+    
+    const x0123 = (x012 + x123) / 2;
+    const y0123 = (y012 + y123) / 2;
+    
+    // Recursively flatten both halves
+    flattenCubicBezierRecursive(x0, y0, x01, y01, x012, y012, x0123, y0123, points, tolerance);
+    flattenCubicBezierRecursive(x0123, y0123, x123, y123, x23, y23, x3, y3, points, tolerance);
+}
+
+// Flatten arc to line segments
+function flattenArc(cx, cy, radius, startAngle, endAngle, counterclockwise) {
+    if (radius <= 0) return [];
+    
+    // Normalize angles
+    let start = startAngle;
+    let end = endAngle;
+    
+    if (!counterclockwise && end < start) {
+        end += 2 * Math.PI;
+    } else if (counterclockwise && start < end) {
+        start += 2 * Math.PI;
+    }
+    
+    const totalAngle = Math.abs(end - start);
+    
+    // Calculate number of segments needed for 0.25px tolerance
+    // Use the formula: segments = ceil(totalAngle / (2 * acos(1 - tolerance/radius)))
+    const tolerance = 0.25;
+    const maxAngleStep = 2 * Math.acos(Math.max(0, 1 - tolerance / radius));
+    const segments = Math.max(1, Math.ceil(totalAngle / maxAngleStep));
+    
+    const points = [];
+    const angleStep = (end - start) / segments;
+    
+    for (let i = 0; i <= segments; i++) {
+        const angle = start + i * angleStep;
+        points.push({
+            x: cx + radius * Math.cos(angle),
+            y: cy + radius * Math.sin(angle)
+        });
+    }
+    
+    return points;
+}
+
+// Flatten ellipse to line segments
+function flattenEllipse(cx, cy, radiusX, radiusY, rotation, startAngle, endAngle, counterclockwise) {
+    if (radiusX <= 0 || radiusY <= 0) return [];
+    
+    // Normalize angles
+    let start = startAngle;
+    let end = endAngle;
+    
+    if (!counterclockwise && end < start) {
+        end += 2 * Math.PI;
+    } else if (counterclockwise && start < end) {
+        start += 2 * Math.PI;
+    }
+    
+    const totalAngle = Math.abs(end - start);
+    
+    // Calculate number of segments - use smaller radius for tolerance calculation
+    const minRadius = Math.min(radiusX, radiusY);
+    const tolerance = 0.25;
+    const maxAngleStep = 2 * Math.acos(Math.max(0, 1 - tolerance / minRadius));
+    const segments = Math.max(1, Math.ceil(totalAngle / maxAngleStep));
+    
+    const points = [];
+    const angleStep = (end - start) / segments;
+    const cosRot = Math.cos(rotation);
+    const sinRot = Math.sin(rotation);
+    
+    for (let i = 0; i <= segments; i++) {
+        const angle = start + i * angleStep;
+        const cos = Math.cos(angle);
+        const sin = Math.sin(angle);
+        
+        // Unrotated ellipse point
+        const x = radiusX * cos;
+        const y = radiusY * sin;
+        
+        // Apply rotation and translation
+        points.push({
+            x: cx + x * cosRot - y * sinRot,
+            y: cy + x * sinRot + y * cosRot
+        });
+    }
+    
+    return points;
+}
+// Polygon filling implementation with nonzero and evenodd winding rules
+// Uses scanline algorithm for efficient aliased filling
+
+// Fill polygons using scanline algorithm with specified winding rule
+function fillPolygons(surface, polygons, color, fillRule, transform) {
+    if (polygons.length === 0) return;
+    
+    // Transform all polygon vertices
+    const transformedPolygons = polygons.map(poly => 
+        poly.map(point => transform.transformPoint(point))
+    );
+    
+    // Find bounding box
+    let minY = Infinity, maxY = -Infinity;
+    for (const poly of transformedPolygons) {
+        for (const point of poly) {
+            minY = Math.min(minY, point.y);
+            maxY = Math.max(maxY, point.y);
+        }
+    }
+    
+    // Clamp to surface bounds
+    minY = Math.max(0, Math.floor(minY));
+    maxY = Math.min(surface.height - 1, Math.ceil(maxY));
+    
+    // Process each scanline
+    for (let y = minY; y <= maxY; y++) {
+        const intersections = [];
+        
+        // Find all intersections with this scanline
+        for (const poly of transformedPolygons) {
+            findPolygonIntersections(poly, y + 0.5, intersections); // Use pixel center
+        }
+        
+        // Sort intersections by x coordinate
+        intersections.sort((a, b) => a.x - b.x);
+        
+        // Fill spans based on winding rule
+        fillScanlineSpans(surface, y, intersections, color, fillRule);
+    }
+}
+
+// Find intersections between a polygon and a horizontal scanline
+function findPolygonIntersections(polygon, y, intersections) {
+    for (let i = 0; i < polygon.length; i++) {
+        const p1 = polygon[i];
+        const p2 = polygon[(i + 1) % polygon.length];
+        
+        // Skip horizontal edges
+        if (Math.abs(p1.y - p2.y) < 1e-10) continue;
+        
+        // Check if scanline crosses this edge
+        const minY = Math.min(p1.y, p2.y);
+        const maxY = Math.max(p1.y, p2.y);
+        
+        if (y >= minY && y < maxY) { // Note: < maxY to avoid double-counting vertices
+            // Calculate intersection point
+            const t = (y - p1.y) / (p2.y - p1.y);
+            const x = p1.x + t * (p2.x - p1.x);
+            
+            // Determine winding direction
+            const winding = p2.y > p1.y ? 1 : -1;
+            
+            intersections.push({x: x, winding: winding});
+        }
+    }
+}
+
+// Fill spans on a scanline based on winding rule
+function fillScanlineSpans(surface, y, intersections, color, fillRule) {
+    if (intersections.length === 0) return;
+    
+    let windingNumber = 0;
+    let inside = false;
+    
+    for (let i = 0; i < intersections.length; i++) {
+        const intersection = intersections[i];
+        const nextIntersection = intersections[i + 1];
+        
+        // Update winding number
+        windingNumber += intersection.winding;
+        
+        // Determine if we're inside based on fill rule
+        const wasInside = inside;
+        if (fillRule === 'evenodd') {
+            inside = (windingNumber % 2) !== 0;
+        } else { // nonzero
+            inside = windingNumber !== 0;
+        }
+        
+        // Fill span if we're inside
+        if (inside && nextIntersection) {
+            const startX = Math.max(0, Math.ceil(intersection.x));
+            const endX = Math.min(surface.width - 1, Math.floor(nextIntersection.x));
+            
+            for (let x = startX; x <= endX; x++) {
+                const offset = y * surface.stride + x * 4;
+                
+                // Simple copy for now (will be enhanced with proper blending later)
+                surface.data[offset] = color[0];     // R
+                surface.data[offset + 1] = color[1]; // G  
+                surface.data[offset + 2] = color[2]; // B
+                surface.data[offset + 3] = color[3]; // A
+            }
+        }
+    }
+}
+
+// Test if a point is inside polygons using winding rule
+function pointInPolygons(x, y, polygons, fillRule) {
+    let windingNumber = 0;
+    
+    for (const polygon of polygons) {
+        windingNumber += pointInPolygon(x, y, polygon);
+    }
+    
+    if (fillRule === 'evenodd') {
+        return (windingNumber % 2) !== 0;
+    } else { // nonzero
+        return windingNumber !== 0;
+    }
+}
+
+// Calculate winding number for a point relative to a polygon
+function pointInPolygon(x, y, polygon) {
+    let winding = 0;
+    
+    for (let i = 0; i < polygon.length; i++) {
+        const p1 = polygon[i];
+        const p2 = polygon[(i + 1) % polygon.length];
+        
+        if (p1.y <= y) {
+            if (p2.y > y) { // Upward crossing
+                if (isLeft(p1, p2, {x, y}) > 0) {
+                    winding++;
+                }
+            }
+        } else {
+            if (p2.y <= y) { // Downward crossing
+                if (isLeft(p1, p2, {x, y}) < 0) {
+                    winding--;
+                }
+            }
+        }
+    }
+    
+    return winding;
+}
+
+// Test if point P2 is left of the line P0P1
+function isLeft(P0, P1, P2) {
+    return ((P1.x - P0.x) * (P2.y - P0.y) - (P2.x - P0.x) * (P1.y - P0.y));
+}
+// Basic polygon clipping implementation
+// For M2, we implement simple clipping by intersection
+
+// Clip subject polygons by clip polygons 
+function clipPolygonsByPolygons(subjectPolygons, clipPolygons, clipRule) {
+    if (clipPolygons.length === 0) return subjectPolygons;
+    
+    let result = [];
+    
+    // For each subject polygon, test if it should be included
+    for (const subjectPoly of subjectPolygons) {
+        const clippedPoly = clipPolygonByPolygons(subjectPoly, clipPolygons, clipRule);
+        if (clippedPoly && clippedPoly.length > 0) {
+            result.push(clippedPoly);
+        }
+    }
+    
+    return result;
+}
+
+// Clip a single polygon by multiple clip polygons
+function clipPolygonByPolygons(polygon, clipPolygons, clipRule) {
+    // For M2, we use a simple approach: test each vertex of the subject polygon
+    // and only include vertices that are inside the clip region
+    
+    const clippedVertices = [];
+    
+    for (const vertex of polygon) {
+        if (pointInPolygons(vertex.x, vertex.y, clipPolygons, clipRule)) {
+            clippedVertices.push(vertex);
+        }
+    }
+    
+    // If we have at least 3 vertices, we have a valid polygon
+    if (clippedVertices.length >= 3) {
+        return clippedVertices;
+    }
+    
+    return null;
+}
+
+// Note: This is a very basic clipping implementation for M2.
+// A full implementation would use Sutherland-Hodgman clipping or similar
+// to properly handle edge intersections, but for M2 this simple approach
+// will work for basic clip testing.
+function Rasterizer(surface) {
     this.surface = surface;
     this.currentOp = null;
 }
@@ -241,7 +720,9 @@ Rasterizer.prototype.beginOp = function(params) {
         composite: params.composite || 'source-over',
         globalAlpha: params.globalAlpha !== undefined ? params.globalAlpha : 1.0,
         transform: params.transform || new Matrix(),
-        clipPath: params.clipPath || null
+        clipPath: params.clipPath || null,
+        fillStyle: params.fillStyle || null,
+        strokeStyle: params.strokeStyle || null
     };
 };
 
@@ -319,9 +800,37 @@ Rasterizer.prototype._fillAxisAlignedRect = function(x, y, width, height, color)
     }
 };
 
-// Placeholder implementations for later milestones
+// M2: Path filling implementation
 Rasterizer.prototype.fill = function(path, rule) {
-    throw new Error('Path filling not implemented in M1');
+    if (!this.currentOp) {
+        throw new Error('Must call beginOp before drawing operations');
+    }
+    
+    // Apply global alpha to fill color, then premultiply (same as fillRect)
+    const color = this.currentOp.fillStyle || [0, 0, 0, 255];
+    const globalAlpha = this.currentOp.globalAlpha;
+    const effectiveAlpha = (color[3] / 255) * globalAlpha;
+    const srcA = Math.round(effectiveAlpha * 255);
+    const srcR = Math.round(color[0] * effectiveAlpha);
+    const srcG = Math.round(color[1] * effectiveAlpha);
+    const srcB = Math.round(color[2] * effectiveAlpha);
+    
+    const fillColor = [srcR, srcG, srcB, srcA];
+    const fillRule = rule || 'nonzero';
+    
+    // Flatten path to polygons
+    const polygons = flattenPath(path);
+    
+    // Fill polygons with current transform and clipping
+    if (this.currentOp.clipPath) {
+        // With clipping - clip polygons first, then fill
+        const clipPolygons = flattenPath(this.currentOp.clipPath);
+        const clippedPolygons = clipPolygonsByPolygons(polygons, clipPolygons, 'nonzero');
+        fillPolygons(this.surface, clippedPolygons, fillColor, fillRule, this.currentOp.transform);
+    } else {
+        // No clipping - direct fill
+        fillPolygons(this.surface, polygons, fillColor, fillRule, this.currentOp.transform);
+    }
 };
 
 Rasterizer.prototype.stroke = function(path) {
@@ -330,7 +839,8 @@ Rasterizer.prototype.stroke = function(path) {
 
 Rasterizer.prototype.drawImage = function(img, sx, sy, sw, sh, dx, dy, dw, dh) {
     throw new Error('Image drawing not implemented in M1');
-};function Context2D(surface) {
+};
+function Context2D(surface) {
     this.surface = surface;
     this.rasterizer = new Rasterizer(surface);
     
@@ -344,8 +854,9 @@ Rasterizer.prototype.drawImage = function(img, sx, sy, sw, sh, dx, dy, dw, dh) {
     this._fillStyle = [0, 0, 0, 255]; // Black, non-premultiplied
     this._strokeStyle = [0, 0, 0, 255]; // Black, non-premultiplied
     
-    // Internal path
+    // Internal path and clipping
     this._currentPath = new Path2D();
+    this._clipPath = null;
 }
 
 // State management
@@ -356,7 +867,8 @@ Context2D.prototype.save = function() {
         transform: new Matrix([this._transform.a, this._transform.b, this._transform.c, 
                               this._transform.d, this._transform.e, this._transform.f]),
         fillStyle: this._fillStyle.slice(),
-        strokeStyle: this._strokeStyle.slice()
+        strokeStyle: this._strokeStyle.slice(),
+        clipPath: this._clipPath // Note: shallow copy for M2, should be deep copy in full implementation
     });
 };
 
@@ -369,6 +881,7 @@ Context2D.prototype.restore = function() {
     this._transform = state.transform;
     this._fillStyle = state.fillStyle;
     this._strokeStyle = state.strokeStyle;
+    this._clipPath = state.clipPath;
 };
 
 // Transform methods
@@ -419,6 +932,10 @@ Context2D.prototype.rect = function(x, y, w, h) {
     this._currentPath.rect(x, y, w, h);
 };
 
+Context2D.prototype.arc = function(x, y, radius, startAngle, endAngle, counterclockwise) {
+    this._currentPath.arc(x, y, radius, startAngle, endAngle, counterclockwise);
+};
+
 // Drawing methods - simplified for M1 (only rectangles)
 Context2D.prototype.fillRect = function(x, y, width, height) {
     this.rasterizer.beginOp({
@@ -446,13 +963,63 @@ Context2D.prototype.clearRect = function(x, y, width, height) {
     this.rasterizer.endOp();
 };
 
-// Placeholder methods for later milestones
+// M2: Path drawing methods
 Context2D.prototype.fill = function(path, rule) {
-    throw new Error('Path filling not implemented in M1');
+    let pathToFill, fillRule;
+    
+    // Handle different argument combinations:
+    // fill() -> path = undefined, rule = undefined
+    // fill('evenodd') -> path = 'evenodd', rule = undefined  
+    // fill(path2d) -> path = path2d object, rule = undefined
+    // fill(path2d, 'evenodd') -> path = path2d object, rule = 'evenodd'
+    
+    if (arguments.length === 0) {
+        // fill() - use current path, nonzero rule
+        pathToFill = this._currentPath;
+        fillRule = 'nonzero';
+    } else if (arguments.length === 1) {
+        if (typeof path === 'string') {
+            // fill('evenodd') - use current path, specified rule
+            pathToFill = this._currentPath;
+            fillRule = path;
+        } else {
+            // fill(path2d) - use specified path, nonzero rule
+            pathToFill = path;
+            fillRule = 'nonzero';
+        }
+    } else {
+        // fill(path2d, 'evenodd') - use specified path and rule
+        pathToFill = path;
+        fillRule = rule;
+    }
+    
+    fillRule = fillRule || 'nonzero';
+    
+    this.rasterizer.beginOp({
+        composite: this.globalCompositeOperation,
+        globalAlpha: this.globalAlpha,
+        transform: this._transform,
+        clipPath: this._clipPath,
+        fillStyle: this._fillStyle
+    });
+    
+    this.rasterizer.fill(pathToFill, fillRule);
+    this.rasterizer.endOp();
 };
 
 Context2D.prototype.stroke = function(path) {
-    throw new Error('Path stroking not implemented in M1');
+    throw new Error('Path stroking not implemented until M3');
+};
+
+// M2: Clipping support
+Context2D.prototype.clip = function(path, rule) {
+    // If no path provided, use current internal path
+    const pathToClip = path || this._currentPath;
+    const clipRule = rule || 'nonzero';
+    
+    // For M2, we only support a single clip path (no clip stack)
+    // In a full implementation, this would intersect with existing clip
+    this._clipPath = pathToClip;
 };
 // Export to global scope
 if (typeof window !== 'undefined') {

@@ -8,7 +8,9 @@ Rasterizer.prototype.beginOp = function(params) {
         composite: params.composite || 'source-over',
         globalAlpha: params.globalAlpha !== undefined ? params.globalAlpha : 1.0,
         transform: params.transform || new Matrix(),
-        clipPath: params.clipPath || null
+        clipPath: params.clipPath || null,
+        fillStyle: params.fillStyle || null,
+        strokeStyle: params.strokeStyle || null
     };
 };
 
@@ -86,9 +88,37 @@ Rasterizer.prototype._fillAxisAlignedRect = function(x, y, width, height, color)
     }
 };
 
-// Placeholder implementations for later milestones
+// M2: Path filling implementation
 Rasterizer.prototype.fill = function(path, rule) {
-    throw new Error('Path filling not implemented in M1');
+    if (!this.currentOp) {
+        throw new Error('Must call beginOp before drawing operations');
+    }
+    
+    // Apply global alpha to fill color, then premultiply (same as fillRect)
+    const color = this.currentOp.fillStyle || [0, 0, 0, 255];
+    const globalAlpha = this.currentOp.globalAlpha;
+    const effectiveAlpha = (color[3] / 255) * globalAlpha;
+    const srcA = Math.round(effectiveAlpha * 255);
+    const srcR = Math.round(color[0] * effectiveAlpha);
+    const srcG = Math.round(color[1] * effectiveAlpha);
+    const srcB = Math.round(color[2] * effectiveAlpha);
+    
+    const fillColor = [srcR, srcG, srcB, srcA];
+    const fillRule = rule || 'nonzero';
+    
+    // Flatten path to polygons
+    const polygons = flattenPath(path);
+    
+    // Fill polygons with current transform and clipping
+    if (this.currentOp.clipPath) {
+        // With clipping - clip polygons first, then fill
+        const clipPolygons = flattenPath(this.currentOp.clipPath);
+        const clippedPolygons = clipPolygonsByPolygons(polygons, clipPolygons, 'nonzero');
+        fillPolygons(this.surface, clippedPolygons, fillColor, fillRule, this.currentOp.transform);
+    } else {
+        // No clipping - direct fill
+        fillPolygons(this.surface, polygons, fillColor, fillRule, this.currentOp.transform);
+    }
 };
 
 Rasterizer.prototype.stroke = function(path) {

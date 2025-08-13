@@ -59,7 +59,14 @@
                 // Node.js environment
                 const fs = require('fs');
                 const path = require('path');
-                const outputPath = path.join(__dirname, filename);
+                
+                // Create output directory if it doesn't exist
+                const outputDir = path.join(__dirname, 'output');
+                if (!fs.existsSync(outputDir)) {
+                    fs.mkdirSync(outputDir, { recursive: true });
+                }
+                
+                const outputPath = path.join(outputDir, filename);
                 fs.writeFileSync(outputPath, Buffer.from(bmpData));
                 log(`  Saved ${description}: ${outputPath}`);
             } else {
@@ -269,6 +276,102 @@
             if (Math.abs(actualR - expectedR) > 1 || Math.abs(actualG - expectedG) > 1 || Math.abs(actualB - expectedB) > 1) {
                 throw new Error(`Alpha blending mismatch! Expected [${expectedR}, ${expectedG}, ${expectedB}], got [${actualR}, ${actualG}, ${actualB}]`);
             }
+        });
+
+        // M2: Path filling tests
+        test('Path filling - simple triangle', () => {
+            const surface = SWCanvas.Surface(100, 100);
+            const ctx = new SWCanvas.Context2D(surface);
+            
+            // White background
+            ctx.setFillStyle(255, 255, 255, 255);
+            ctx.fillRect(0, 0, 100, 100);
+            
+            // Draw red triangle using path
+            ctx.setFillStyle(255, 0, 0, 255);
+            ctx.beginPath();
+            ctx.moveTo(50, 10);
+            ctx.lineTo(80, 70);
+            ctx.lineTo(20, 70);
+            ctx.closePath();
+            ctx.fill();
+            
+            // Check a point inside the triangle
+            const insideOffset = (40 * surface.stride) + (50 * 4);
+            const r = surface.data[insideOffset];
+            const g = surface.data[insideOffset + 1];
+            const b = surface.data[insideOffset + 2];
+            
+            log(`  Triangle interior pixel: R=${r}, G=${g}, B=${b}`);
+            
+            // Should be red (allowing for some tolerance)
+            if (r < 200 || g > 50 || b > 50) {
+                throw new Error(`Expected red pixel inside triangle, got R=${r}, G=${g}, B=${b}`);
+            }
+            
+            saveBMP(surface, 'triangle-test.bmp', 'triangle path test', SWCanvas);
+        });
+
+        test('Path filling - evenodd vs nonzero', () => {
+            const surface = SWCanvas.Surface(100, 100);
+            const ctx = new SWCanvas.Context2D(surface);
+            
+            // White background
+            ctx.setFillStyle(255, 255, 255, 255);
+            ctx.fillRect(0, 0, 100, 100);
+            
+            // Create overlapping rectangles (outer and inner)
+            ctx.setFillStyle(255, 0, 0, 255);
+            ctx.beginPath();
+            // Outer rectangle
+            ctx.rect(20, 20, 60, 60);
+            // Inner rectangle (opposite winding)
+            ctx.rect(30, 30, 40, 40);
+            
+            // Fill with evenodd rule - should create a "hole"
+            ctx.fill('evenodd');
+            
+            // Check center (should be white - the "hole")
+            const centerOffset = (50 * surface.stride) + (50 * 4);
+            const centerR = surface.data[centerOffset];
+            log(`  Center pixel with evenodd: R=${centerR}`);
+            
+            // Center should be white (hole)
+            if (centerR < 200) {
+                throw new Error('Expected white center with evenodd rule');
+            }
+            
+            saveBMP(surface, 'evenodd-test.bmp', 'evenodd fill test', SWCanvas);
+        });
+
+        test('Basic clipping test', () => {
+            const surface = SWCanvas.Surface(100, 100);
+            const ctx = new SWCanvas.Context2D(surface);
+            
+            // White background
+            ctx.setFillStyle(255, 255, 255, 255);
+            ctx.fillRect(0, 0, 100, 100);
+            
+            // Set up circular clip path
+            ctx.beginPath();
+            ctx.arc(50, 50, 30, 0, 2 * Math.PI);
+            ctx.clip();
+            
+            // Fill a large red rectangle - should be clipped to circle
+            ctx.setFillStyle(255, 0, 0, 255);
+            ctx.fillRect(0, 0, 100, 100);
+            
+            // Check a point that should be clipped (outside circle)
+            const outsideOffset = (20 * surface.stride) + (20 * 4);
+            const outsideR = surface.data[outsideOffset];
+            log(`  Outside clip region: R=${outsideR}`);
+            
+            // Should still be white (clipped)
+            if (outsideR < 200) {
+                throw new Error('Clipping not working - expected white outside clip region');
+            }
+            
+            saveBMP(surface, 'clipping-test.bmp', 'basic clipping test', SWCanvas);
         });
 
         // Test results summary

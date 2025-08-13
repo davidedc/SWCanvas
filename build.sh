@@ -19,10 +19,21 @@ EOF
 
 # Concatenate source files in dependency order
 cat src/matrix.js >> dist/swcanvas.js
+echo "" >> dist/swcanvas.js
 cat src/path2d.js >> dist/swcanvas.js  
+echo "" >> dist/swcanvas.js
 cat src/surface.js >> dist/swcanvas.js
+echo "" >> dist/swcanvas.js
 cat src/bmp.js >> dist/swcanvas.js
+echo "" >> dist/swcanvas.js
+cat src/path-flattener.js >> dist/swcanvas.js
+echo "" >> dist/swcanvas.js
+cat src/polygon-filler.js >> dist/swcanvas.js
+echo "" >> dist/swcanvas.js
+cat src/polygon-clipper.js >> dist/swcanvas.js
+echo "" >> dist/swcanvas.js
 cat src/rasterizer.js >> dist/swcanvas.js
+echo "" >> dist/swcanvas.js
 cat src/context2d.js >> dist/swcanvas.js
 
 # Footer to expose globals
