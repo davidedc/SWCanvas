@@ -161,8 +161,14 @@ class Color {
             throw new Error('Global alpha must be in range 0-1');
         }
         
-        const newAlpha = Math.round(this._a * globalAlpha);
-        return new Color(this._r, this._g, this._b, newAlpha, true);
+        // Work with non-premultiplied values to apply global alpha correctly
+        const nonPremultR = this.r;
+        const nonPremultG = this.g;
+        const nonPremultB = this.b;
+        const nonPremultA = this.a;
+        
+        const newAlpha = Math.round(nonPremultA * globalAlpha);
+        return new Color(nonPremultR, nonPremultG, nonPremultB, newAlpha, false);
     }
     
     /**
@@ -1810,28 +1816,34 @@ class PolygonFiller {
         }
         
         if (color.isOpaque) {
-            // Opaque source - simple copy (premultiplied)
-            surface.data[offset] = color.premultipliedR;
-            surface.data[offset + 1] = color.premultipliedG;
-            surface.data[offset + 2] = color.premultipliedB;
-            surface.data[offset + 3] = color.premultipliedA;
+            // Opaque source - copy non-premultiplied values (surface stores non-premultiplied)
+            surface.data[offset] = color.r;
+            surface.data[offset + 1] = color.g;
+            surface.data[offset + 2] = color.b;
+            surface.data[offset + 3] = color.a;
             return;
         }
         
         // Alpha blending required (source-over composition)
+        // Surface stores non-premultiplied RGBA, use standard blending formula
         const dstR = surface.data[offset];
         const dstG = surface.data[offset + 1];
         const dstB = surface.data[offset + 2];
         const dstA = surface.data[offset + 3];
         
-        const srcAlpha = color.normalizedAlpha;
+        const srcR = color.r;
+        const srcG = color.g;
+        const srcB = color.b;
+        const srcA = color.a;
+        
+        const srcAlpha = srcA / 255;
         const invSrcAlpha = 1 - srcAlpha;
         
-        // Blend using premultiplied alpha math
-        const newR = Math.round(color.premultipliedR + dstR * invSrcAlpha);
-        const newG = Math.round(color.premultipliedG + dstG * invSrcAlpha);
-        const newB = Math.round(color.premultipliedB + dstB * invSrcAlpha);
-        const newA = Math.round(color.premultipliedA + dstA * invSrcAlpha);
+        // Use original non-premultiplied blending formula (matches original implementation)
+        const newR = Math.round(srcR * srcAlpha + dstR * invSrcAlpha);
+        const newG = Math.round(srcG * srcAlpha + dstG * invSrcAlpha);
+        const newB = Math.round(srcB * srcAlpha + dstB * invSrcAlpha);
+        const newA = Math.round(srcA + dstA * invSrcAlpha);
         
         surface.data[offset] = newR;
         surface.data[offset + 1] = newG;
@@ -2121,35 +2133,73 @@ class StrokeGenerator {
      * @private
      */
     static _generateMiterJoin(seg1, seg2, joinPoint, miterLimit) {
-        const halfWidth = seg1.normal.magnitude * (seg1.body[0].y - seg1.body[3].y) / 2;
+        // Calculate half width from segment body (same as original)
+        const halfWidth = Math.sqrt(
+            Math.pow(seg1.body[0].x - seg1.body[3].x, 2) + 
+            Math.pow(seg1.body[0].y - seg1.body[3].y, 2)
+        ) / 2;
         
-        // Determine which sides are outer
+        // Determine which sides are on the outside of the turn
         const cross = seg1.tangent.cross(seg2.tangent);
-        const outerSides = StrokeGenerator._getOuterSides(seg1, seg2, cross);
         
-        // Calculate miter point
-        const miterPoint = StrokeGenerator._calculateMiterPoint(
-            outerSides.outer1, seg1.tangent, outerSides.outer2, seg2.tangent
-        );
+        let outer1, outer2;
+        if (cross > 0) {
+            // Left turn - right sides are outer
+            outer1 = seg1.body[2]; // Right side of seg1 end
+            outer2 = seg2.body[3]; // Right side of seg2 start  
+        } else {
+            // Right turn - left sides are outer
+            outer1 = seg1.body[1]; // Left side of seg1 end
+            outer2 = seg2.body[0]; // Left side of seg2 start
+        }
+        
+        // Calculate miter point (intersection of extended outer edges)
+        // Extend seg1's outer edge forward
+        const seg1Extended = {
+            x: outer1.x + seg1.tangent.x * 100, 
+            y: outer1.y + seg1.tangent.y * 100
+        };
+        // Extend seg2's outer edge backward  
+        const seg2Extended = {
+            x: outer2.x - seg2.tangent.x * 100,
+            y: outer2.y - seg2.tangent.y * 100
+        };
+        
+        const miterPoint = StrokeGenerator._lineIntersection(outer1, seg1Extended, outer2, seg2Extended);
         
         if (!miterPoint) {
+            // Fallback to bevel if no intersection
             return StrokeGenerator._generateBevelJoin(seg1, seg2, joinPoint);
         }
         
         // Check miter limit
-        const miterLength = new Point(miterPoint.x, miterPoint.y).distanceTo(joinPoint);
+        const miterLength = Math.sqrt(
+            Math.pow(miterPoint.x - joinPoint.x, 2) + 
+            Math.pow(miterPoint.y - joinPoint.y, 2)
+        );
         const miterRatio = miterLength / halfWidth;
         
         if (miterRatio > miterLimit) {
+            // Exceeds miter limit - use bevel
             return StrokeGenerator._generateBevelJoin(seg1, seg2, joinPoint);
         }
         
-        const innerSides = StrokeGenerator._getInnerSides(seg1, seg2, cross);
+        // For miter join, we need to fill both the miter triangle and the inner area
+        let inner1, inner2;
+        if (cross > 0) {
+            // Left turn - left sides are inner
+            inner1 = seg1.body[1]; // Left side of seg1 end  
+            inner2 = seg2.body[0]; // Left side of seg2 start
+        } else {
+            // Right turn - right sides are inner
+            inner1 = seg1.body[2]; // Right side of seg1 end
+            inner2 = seg2.body[3]; // Right side of seg2 start
+        }
         
-        // Return miter triangle and connecting area
+        // Create miter triangle and inner quadrilateral
         return [
-            [outerSides.outer1, miterPoint, outerSides.outer2],  // Miter triangle
-            [outerSides.outer1, outerSides.outer2, innerSides.inner2, innerSides.inner1]  // Connecting area
+            [outer1, miterPoint, outer2],  // Miter triangle
+            [outer1, outer2, inner2, inner1]  // Inner connecting area
         ];
     }
     
@@ -2181,21 +2231,71 @@ class StrokeGenerator {
      * @private
      */
     static _generateRoundJoin(seg1, seg2, joinPoint) {
-        const halfWidth = seg1.normal.magnitude * (seg1.body[0].y - seg1.body[3].y) / 2;
+        // Calculate half width from segment body (distance between top and bottom edges)
+        const halfWidth = Math.sqrt(
+            Math.pow(seg1.body[0].x - seg1.body[3].x, 2) + 
+            Math.pow(seg1.body[0].y - seg1.body[3].y, 2)
+        ) / 2;
+        
+        // Determine which sides are on the outside of the turn
         const cross = seg1.tangent.cross(seg2.tangent);
-        const outerSides = StrokeGenerator._getOuterSides(seg1, seg2, cross);
         
-        // Calculate angles for the arc
-        const angle1 = Math.atan2(
-            outerSides.outer1.y - joinPoint.y, 
-            outerSides.outer1.x - joinPoint.x
-        );
-        const angle2 = Math.atan2(
-            outerSides.outer2.y - joinPoint.y, 
-            outerSides.outer2.x - joinPoint.x
-        );
+        let outer1, outer2;
+        if (cross > 0) {
+            // Left turn - right sides are outer
+            outer1 = seg1.body[2]; // Right side of seg1 end
+            outer2 = seg2.body[3]; // Right side of seg2 start  
+        } else {
+            // Right turn - left sides are outer
+            outer1 = seg1.body[1]; // Left side of seg1 end
+            outer2 = seg2.body[0]; // Left side of seg2 start
+        }
         
-        return StrokeGenerator._generateArcFan(joinPoint, halfWidth, angle1, angle2);
+        // Calculate angles
+        const angle1 = Math.atan2(outer1.y - joinPoint.y, outer1.x - joinPoint.x);
+        const angle2 = Math.atan2(outer2.y - joinPoint.y, outer2.x - joinPoint.x);
+        
+        let startAngle = angle1;
+        let endAngle = angle2;
+        
+        // Normalize angles to go the correct way around (from original implementation)
+        let angleDiff = endAngle - startAngle;
+        if (angleDiff > Math.PI) {
+            angleDiff -= 2 * Math.PI;
+        } else if (angleDiff < -Math.PI) {
+            angleDiff += 2 * Math.PI;
+        }
+        
+        // We want to go the convex way (positive turn)
+        if (angleDiff < 0) {
+            // Swap to go positive direction
+            const temp = startAngle;
+            startAngle = endAngle;
+            endAngle = temp;
+            angleDiff = -angleDiff;
+        }
+        
+        const segments = Math.max(2, Math.ceil(angleDiff / (Math.PI / 4))); // At least 2 segments
+        const angleStep = angleDiff / segments;
+        
+        const triangles = [];
+        for (let i = 0; i < segments; i++) {
+            const a1 = startAngle + i * angleStep;
+            const a2 = startAngle + (i + 1) * angleStep;
+            
+            const p1 = {
+                x: joinPoint.x + halfWidth * Math.cos(a1),
+                y: joinPoint.y + halfWidth * Math.sin(a1)
+            };
+            const p2 = {
+                x: joinPoint.x + halfWidth * Math.cos(a2),
+                y: joinPoint.y + halfWidth * Math.sin(a2)
+            };
+            
+            triangles.push([joinPoint.toObject(), p1, p2]);
+        }
+        
+        return triangles;
     }
     
     /**
@@ -2339,24 +2439,26 @@ class StrokeGenerator {
     }
     
     /**
-     * Calculate intersection point of two lines (for miter joins)
+     * Calculate intersection of two lines defined by points
      * @param {Object} p1 - First line point 1
-     * @param {Point} dir1 - First line direction
-     * @param {Object} p2 - Second line point 1
-     * @param {Point} dir2 - Second line direction
+     * @param {Object} p2 - First line point 2  
+     * @param {Object} p3 - Second line point 1
+     * @param {Object} p4 - Second line point 2
      * @returns {Object|null} Intersection point or null if parallel
      * @private
      */
-    static _calculateMiterPoint(p1, dir1, p2, dir2) {
-        const denom = dir1.cross(dir2);
-        if (Math.abs(denom) < 1e-10) return null; // Parallel lines
+    static _lineIntersection(p1, p2, p3, p4) {
+        const denom = (p1.x - p2.x) * (p3.y - p4.y) - (p1.y - p2.y) * (p3.x - p4.x);
         
-        const dp = new Point(p2.x - p1.x, p2.y - p1.y);
-        const t = dp.cross(dir2) / denom;
+        if (Math.abs(denom) < 1e-10) {
+            return null; // Lines are parallel
+        }
+        
+        const t = ((p1.x - p3.x) * (p3.y - p4.y) - (p1.y - p3.y) * (p3.x - p4.x)) / denom;
         
         return {
-            x: p1.x + t * dir1.x,
-            y: p1.y + t * dir1.y
+            x: p1.x + t * (p2.x - p1.x),
+            y: p1.y + t * (p2.y - p1.y)
         };
     }
     
@@ -3229,12 +3331,12 @@ Rasterizer.prototype._fillAxisAlignedRect = function(x, y, width, height, color)
     const surface = this.surface;
     const globalAlpha = this.currentOp.globalAlpha;
     
-    // Apply global alpha to source color, then premultiply
+    // Apply global alpha to source color (keep non-premultiplied to match surface format)
     const effectiveAlpha = (color[3] / 255) * globalAlpha; // Normalize to 0-1 range
     const srcA = Math.round(effectiveAlpha * 255);
-    const srcR = Math.round(color[0] * effectiveAlpha);
-    const srcG = Math.round(color[1] * effectiveAlpha);
-    const srcB = Math.round(color[2] * effectiveAlpha);
+    const srcR = color[0];
+    const srcG = color[1];
+    const srcB = color[2];
     
     
     for (let py = y; py < y + height; py++) {
@@ -3257,19 +3359,20 @@ Rasterizer.prototype._fillAxisAlignedRect = function(x, y, width, height, color)
                 surface.data[offset + 2] = srcB;
                 surface.data[offset + 3] = srcA;
             } else {
-                // Source-over mode (premultiplied alpha blending)
+                // Source-over mode (non-premultiplied alpha blending to match surface format)
                 const dstR = surface.data[offset];
                 const dstG = surface.data[offset + 1];
                 const dstB = surface.data[offset + 2];
                 const dstA = surface.data[offset + 3];
                 
-                const invSrcA = (255 - srcA) / 255;
+                const srcAlpha = srcA / 255;
+                const invSrcAlpha = 1 - srcAlpha;
                 
-                
-                surface.data[offset] = Math.round(srcR + dstR * invSrcA);
-                surface.data[offset + 1] = Math.round(srcG + dstG * invSrcA);
-                surface.data[offset + 2] = Math.round(srcB + dstB * invSrcA);
-                surface.data[offset + 3] = Math.round(srcA + dstA * invSrcA);
+                // Use non-premultiplied formula (matches original and PolygonFiller)
+                surface.data[offset] = Math.round(srcR * srcAlpha + dstR * invSrcAlpha);
+                surface.data[offset + 1] = Math.round(srcG * srcAlpha + dstG * invSrcAlpha);
+                surface.data[offset + 2] = Math.round(srcB * srcAlpha + dstB * invSrcAlpha);
+                surface.data[offset + 3] = Math.round(srcA + dstA * invSrcAlpha);
             }
         }
     }
@@ -3429,17 +3532,13 @@ Rasterizer.prototype.drawImage = function(img, sx, sy, sw, sh, dx, dy, dw, dh) {
             const destOffset = deviceY * this.surface.stride + deviceX * 4;
             
             if (this.currentOp.composite === 'copy' || finalSrcA === 255) {
-                // Direct copy (no blending needed)
-                const premultR = Math.round(srcR * effectiveAlpha);
-                const premultG = Math.round(srcG * effectiveAlpha);
-                const premultB = Math.round(srcB * effectiveAlpha);
-                
-                this.surface.data[destOffset] = premultR;
-                this.surface.data[destOffset + 1] = premultG;
-                this.surface.data[destOffset + 2] = premultB;
+                // Direct copy (no blending needed) - store non-premultiplied
+                this.surface.data[destOffset] = srcR;
+                this.surface.data[destOffset + 1] = srcG;
+                this.surface.data[destOffset + 2] = srcB;
                 this.surface.data[destOffset + 3] = finalSrcA;
             } else {
-                // Alpha blending (source-over)
+                // Alpha blending (source-over) - non-premultiplied formula
                 const dstR = this.surface.data[destOffset];
                 const dstG = this.surface.data[destOffset + 1];
                 const dstB = this.surface.data[destOffset + 2];
@@ -3447,17 +3546,11 @@ Rasterizer.prototype.drawImage = function(img, sx, sy, sw, sh, dx, dy, dw, dh) {
                 
                 const srcAlpha = effectiveAlpha;
                 const invSrcAlpha = 1 - srcAlpha;
-                const dstAlpha = dstA / 255;
                 
-                // Premultiplied source colors
-                const premultSrcR = srcR * srcAlpha;
-                const premultSrcG = srcG * srcAlpha; 
-                const premultSrcB = srcB * srcAlpha;
-                
-                // Blend with destination (assuming destination is already premultiplied)
-                const newR = Math.round(premultSrcR + dstR * invSrcAlpha);
-                const newG = Math.round(premultSrcG + dstG * invSrcAlpha);
-                const newB = Math.round(premultSrcB + dstB * invSrcAlpha);
+                // Use non-premultiplied formula (consistent with rest of codebase)
+                const newR = Math.round(srcR * srcAlpha + dstR * invSrcAlpha);
+                const newG = Math.round(srcG * srcAlpha + dstG * invSrcAlpha);
+                const newB = Math.round(srcB * srcAlpha + dstB * invSrcAlpha);
                 const newA = Math.round(finalSrcA + dstA * invSrcAlpha);
                 
                 this.surface.data[destOffset] = newR;

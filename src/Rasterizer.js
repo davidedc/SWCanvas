@@ -129,12 +129,12 @@ Rasterizer.prototype._fillAxisAlignedRect = function(x, y, width, height, color)
     const surface = this.surface;
     const globalAlpha = this.currentOp.globalAlpha;
     
-    // Apply global alpha to source color, then premultiply
+    // Apply global alpha to source color (keep non-premultiplied to match surface format)
     const effectiveAlpha = (color[3] / 255) * globalAlpha; // Normalize to 0-1 range
     const srcA = Math.round(effectiveAlpha * 255);
-    const srcR = Math.round(color[0] * effectiveAlpha);
-    const srcG = Math.round(color[1] * effectiveAlpha);
-    const srcB = Math.round(color[2] * effectiveAlpha);
+    const srcR = color[0];
+    const srcG = color[1];
+    const srcB = color[2];
     
     
     for (let py = y; py < y + height; py++) {
@@ -157,19 +157,20 @@ Rasterizer.prototype._fillAxisAlignedRect = function(x, y, width, height, color)
                 surface.data[offset + 2] = srcB;
                 surface.data[offset + 3] = srcA;
             } else {
-                // Source-over mode (premultiplied alpha blending)
+                // Source-over mode (non-premultiplied alpha blending to match surface format)
                 const dstR = surface.data[offset];
                 const dstG = surface.data[offset + 1];
                 const dstB = surface.data[offset + 2];
                 const dstA = surface.data[offset + 3];
                 
-                const invSrcA = (255 - srcA) / 255;
+                const srcAlpha = srcA / 255;
+                const invSrcAlpha = 1 - srcAlpha;
                 
-                
-                surface.data[offset] = Math.round(srcR + dstR * invSrcA);
-                surface.data[offset + 1] = Math.round(srcG + dstG * invSrcA);
-                surface.data[offset + 2] = Math.round(srcB + dstB * invSrcA);
-                surface.data[offset + 3] = Math.round(srcA + dstA * invSrcA);
+                // Use non-premultiplied formula (matches original and PolygonFiller)
+                surface.data[offset] = Math.round(srcR * srcAlpha + dstR * invSrcAlpha);
+                surface.data[offset + 1] = Math.round(srcG * srcAlpha + dstG * invSrcAlpha);
+                surface.data[offset + 2] = Math.round(srcB * srcAlpha + dstB * invSrcAlpha);
+                surface.data[offset + 3] = Math.round(srcA + dstA * invSrcAlpha);
             }
         }
     }
@@ -329,17 +330,13 @@ Rasterizer.prototype.drawImage = function(img, sx, sy, sw, sh, dx, dy, dw, dh) {
             const destOffset = deviceY * this.surface.stride + deviceX * 4;
             
             if (this.currentOp.composite === 'copy' || finalSrcA === 255) {
-                // Direct copy (no blending needed)
-                const premultR = Math.round(srcR * effectiveAlpha);
-                const premultG = Math.round(srcG * effectiveAlpha);
-                const premultB = Math.round(srcB * effectiveAlpha);
-                
-                this.surface.data[destOffset] = premultR;
-                this.surface.data[destOffset + 1] = premultG;
-                this.surface.data[destOffset + 2] = premultB;
+                // Direct copy (no blending needed) - store non-premultiplied
+                this.surface.data[destOffset] = srcR;
+                this.surface.data[destOffset + 1] = srcG;
+                this.surface.data[destOffset + 2] = srcB;
                 this.surface.data[destOffset + 3] = finalSrcA;
             } else {
-                // Alpha blending (source-over)
+                // Alpha blending (source-over) - non-premultiplied formula
                 const dstR = this.surface.data[destOffset];
                 const dstG = this.surface.data[destOffset + 1];
                 const dstB = this.surface.data[destOffset + 2];
@@ -347,17 +344,11 @@ Rasterizer.prototype.drawImage = function(img, sx, sy, sw, sh, dx, dy, dw, dh) {
                 
                 const srcAlpha = effectiveAlpha;
                 const invSrcAlpha = 1 - srcAlpha;
-                const dstAlpha = dstA / 255;
                 
-                // Premultiplied source colors
-                const premultSrcR = srcR * srcAlpha;
-                const premultSrcG = srcG * srcAlpha; 
-                const premultSrcB = srcB * srcAlpha;
-                
-                // Blend with destination (assuming destination is already premultiplied)
-                const newR = Math.round(premultSrcR + dstR * invSrcAlpha);
-                const newG = Math.round(premultSrcG + dstG * invSrcAlpha);
-                const newB = Math.round(premultSrcB + dstB * invSrcAlpha);
+                // Use non-premultiplied formula (consistent with rest of codebase)
+                const newR = Math.round(srcR * srcAlpha + dstR * invSrcAlpha);
+                const newG = Math.round(srcG * srcAlpha + dstG * invSrcAlpha);
+                const newB = Math.round(srcB * srcAlpha + dstB * invSrcAlpha);
                 const newA = Math.round(finalSrcA + dstA * invSrcAlpha);
                 
                 this.surface.data[destOffset] = newR;

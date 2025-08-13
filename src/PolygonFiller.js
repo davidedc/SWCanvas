@@ -220,28 +220,34 @@ class PolygonFiller {
         }
         
         if (color.isOpaque) {
-            // Opaque source - simple copy (premultiplied)
-            surface.data[offset] = color.premultipliedR;
-            surface.data[offset + 1] = color.premultipliedG;
-            surface.data[offset + 2] = color.premultipliedB;
-            surface.data[offset + 3] = color.premultipliedA;
+            // Opaque source - copy non-premultiplied values (surface stores non-premultiplied)
+            surface.data[offset] = color.r;
+            surface.data[offset + 1] = color.g;
+            surface.data[offset + 2] = color.b;
+            surface.data[offset + 3] = color.a;
             return;
         }
         
         // Alpha blending required (source-over composition)
+        // Surface stores non-premultiplied RGBA, use standard blending formula
         const dstR = surface.data[offset];
         const dstG = surface.data[offset + 1];
         const dstB = surface.data[offset + 2];
         const dstA = surface.data[offset + 3];
         
-        const srcAlpha = color.normalizedAlpha;
+        const srcR = color.r;
+        const srcG = color.g;
+        const srcB = color.b;
+        const srcA = color.a;
+        
+        const srcAlpha = srcA / 255;
         const invSrcAlpha = 1 - srcAlpha;
         
-        // Blend using premultiplied alpha math
-        const newR = Math.round(color.premultipliedR + dstR * invSrcAlpha);
-        const newG = Math.round(color.premultipliedG + dstG * invSrcAlpha);
-        const newB = Math.round(color.premultipliedB + dstB * invSrcAlpha);
-        const newA = Math.round(color.premultipliedA + dstA * invSrcAlpha);
+        // Use original non-premultiplied blending formula (matches original implementation)
+        const newR = Math.round(srcR * srcAlpha + dstR * invSrcAlpha);
+        const newG = Math.round(srcG * srcAlpha + dstG * invSrcAlpha);
+        const newB = Math.round(srcB * srcAlpha + dstB * invSrcAlpha);
+        const newA = Math.round(srcA + dstA * invSrcAlpha);
         
         surface.data[offset] = newR;
         surface.data[offset + 1] = newG;

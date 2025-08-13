@@ -158,8 +158,14 @@ class Color {
             throw new Error('Global alpha must be in range 0-1');
         }
         
-        const newAlpha = Math.round(this._a * globalAlpha);
-        return new Color(this._r, this._g, this._b, newAlpha, true);
+        // Work with non-premultiplied values to apply global alpha correctly
+        const nonPremultR = this.r;
+        const nonPremultG = this.g;
+        const nonPremultB = this.b;
+        const nonPremultA = this.a;
+        
+        const newAlpha = Math.round(nonPremultA * globalAlpha);
+        return new Color(nonPremultR, nonPremultG, nonPremultB, newAlpha, false);
     }
     
     /**
