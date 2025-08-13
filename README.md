@@ -1,0 +1,247 @@
+# SWCanvas
+
+A deterministic 2D raster engine with Canvas-like API. SWCanvas provides pixel-perfect, cross-platform 2D rendering that produces identical results on any system, making it ideal for testing, screenshots, and server-side graphics.
+
+## Features
+
+- **Deterministic Rendering**: Identical results across all platforms and browsers
+- **HTML5 Canvas Compatibility**: Drop-in replacement with familiar API
+- **Memory Efficient Clipping**: Stencil-based clipping system with proper intersection support
+- **Comprehensive Test Coverage**: 55+ visual tests ensuring pixel-perfect accuracy
+- **Cross-Platform**: Works in Node.js and browsers
+- **No Dependencies**: Pure JavaScript implementation
+
+## Quick Start
+
+### Building
+
+```bash
+npm run build
+```
+
+This generates `dist/swcanvas.js` containing the complete library.
+
+### Node.js Usage
+
+```javascript
+const SWCanvas = require('./dist/swcanvas.js');
+
+const surface = SWCanvas.Surface(800, 600);
+const ctx = new SWCanvas.Context2D(surface);
+
+ctx.setFillStyle(255, 0, 0, 255); // Red
+ctx.fillRect(10, 10, 100, 50);
+
+// Export as BMP
+const bmpData = SWCanvas.encodeBMP(surface);
+```
+
+### Browser Usage
+
+```html
+<script src="dist/swcanvas.js"></script>
+<script>
+const surface = SWCanvas.Surface(800, 600);
+const ctx = new SWCanvas.Context2D(surface);
+
+ctx.setFillStyle(255, 0, 0, 255); // Red
+ctx.fillRect(10, 10, 100, 50);
+</script>
+```
+
+## Testing
+
+### Run All Tests
+
+```bash
+npm test
+```
+
+This runs 31+ shared tests and generates 55+ visual test BMPs in `tests/output/`.
+
+### Browser Tests
+
+Open `examples/test.html` in a web browser for:
+- Side-by-side HTML5 Canvas vs SWCanvas comparisons
+- Interactive visual tests
+- BMP download functionality
+
+### Test Structure
+
+- **Shared Tests**: Core functionality tests that run in both Node.js and browsers
+- **Visual Tests**: 55+ comprehensive rendering tests with BMP output
+- **Browser Tests**: Interactive visual comparison tools
+
+See [tests/README.md](tests/README.md) for detailed test documentation.
+
+## API Documentation
+
+SWCanvas implements a subset of the HTML5 Canvas 2D API:
+
+### Surface Creation
+```javascript
+const surface = SWCanvas.Surface(width, height);
+```
+
+### Context Creation
+```javascript
+const ctx = new SWCanvas.Context2D(surface);
+```
+
+### Drawing Operations
+```javascript
+// Rectangle filling
+ctx.fillRect(x, y, width, height);
+
+// Path operations
+ctx.beginPath();
+ctx.moveTo(x, y);
+ctx.lineTo(x2, y2);
+ctx.fill();
+ctx.stroke();
+
+// Transforms
+ctx.translate(x, y);
+ctx.scale(x, y);
+ctx.rotate(angle);
+
+// Clipping
+ctx.clip();
+
+// State management
+ctx.save();
+ctx.restore();
+```
+
+### Color Setting
+```javascript
+ctx.setFillStyle(r, g, b, a);    // 0-255 values
+ctx.setStrokeStyle(r, g, b, a);  // 0-255 values
+```
+
+### BMP Export
+```javascript
+const bmpData = SWCanvas.encodeBMP(surface);
+// Returns ArrayBuffer containing BMP file data
+```
+
+## Architecture
+
+### Core Components
+
+- **Surface**: Memory buffer for pixel data
+- **Context2D**: Drawing API and state management
+- **Matrix**: Transformation mathematics
+- **Path2D**: Path definition and flattening
+- **Rasterizer**: Low-level pixel operations
+- **Polygon Filler**: Scanline-based polygon filling
+- **Stroke Generator**: Geometric stroke generation
+- **BMP Encoder**: Bitmap file format export
+
+### Key Features
+
+#### Stencil-Based Clipping
+- 1-bit per pixel memory efficiency
+- Proper clip intersection with AND operations
+- Supports complex nested clipping scenarios
+- Matches HTML5 Canvas behavior exactly
+
+#### Deterministic Rendering
+- Fixed-point arithmetic for transforms
+- Consistent rasterization algorithms
+- Identical results across platforms
+- No floating-point precision issues
+
+#### Premultiplied sRGB
+- Consistent alpha blending
+- Matches HTML5 Canvas color handling
+- Proper transparency composition
+
+## Development
+
+### Project Structure
+
+```
+src/              # Source files
+├── context2d.js     # Main drawing API
+├── surface.js       # Memory management
+├── matrix.js        # Transform mathematics
+├── rasterizer.js    # Low-level rendering
+├── polygon-filler.js # Scanline polygon filling
+├── stroke-generator.js # Stroke generation
+├── path-flattener.js   # Path to polygon conversion
+├── path2d.js        # Path definition
+└── bmp.js          # BMP file encoding
+
+tests/            # Test suite
+├── shared-test-suite.js    # Core functionality tests
+├── visual-test-registry.js # 55+ visual tests
+├── test-colors.js          # Color consistency system
+└── run-tests.js            # Node.js test runner
+
+examples/         # Browser examples
+└── test.html        # Visual comparison tool
+
+dist/             # Built library
+└── swcanvas.js      # Concatenated distribution file
+```
+
+### Adding New Tests
+
+#### For Core Functionality
+Add to `tests/shared-test-suite.js` - automatically runs in both Node.js and browsers.
+
+#### For Visual Rendering  
+Add to `tests/visual-test-registry.js` with both SWCanvas and HTML5 Canvas implementations:
+
+```javascript
+visualTests['my-new-test'] = {
+    name: 'My New Test Description',
+    width: 200, height: 150,
+    drawSWCanvas: function(SWCanvas) {
+        const surface = SWCanvas.Surface(200, 150);
+        const ctx = new SWCanvas.Context2D(surface);
+        // ... drawing operations
+        return surface;
+    },
+    drawHTML5Canvas: function(html5Canvas) {
+        const ctx = html5Canvas.getContext('2d');
+        // ... identical drawing operations
+    }
+};
+```
+
+Use the color system from `tests/test-colors.js` to ensure consistency:
+
+```javascript
+helpers.setSWCanvasFill(ctx, 'red');    // For SWCanvas
+helpers.setHTML5CanvasFill(ctx, 'red');  // For HTML5 Canvas
+```
+
+### Build Process
+
+The build script (`build.sh`) concatenates source files in dependency order:
+
+1. Matrix mathematics
+2. Path definitions
+3. Surface management
+4. BMP encoding
+5. Path flattening
+6. Polygon filling
+7. Stroke generation
+8. Rasterizer
+9. Context2D API
+
+## License
+
+MIT License - see LICENSE file for details.
+
+## Contributing
+
+1. **Build**: `npm run build`
+2. **Test**: `npm test` 
+3. **Visual Test**: Open `examples/test.html` in browser
+4. **Add Tests**: Follow patterns in `tests/visual-test-registry.js`
+5. **Verify**: Ensure identical results in both Node.js and browser
+
+The comprehensive test suite ensures any changes maintain pixel-perfect compatibility with HTML5 Canvas.
