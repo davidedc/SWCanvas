@@ -91,13 +91,45 @@
 - Full transform system now matches HTML5 Canvas exactly
 
 ## Next Action  
-🎉 **Phase 4 Combined Feature Tests FULLY COMPLETED!** 
+🎯 **Phase 5: Image Rendering Implementation** 
+
+Implementing `drawImage` functionality with nearest-neighbor sampling and ImageLike interface.
+
+### Implementation Plan
+
+**Phase 5A: Core ImageLike Infrastructure**
+- [ ] Define ImageLike interface: `{ width, height, data: Uint8ClampedArray }`
+- [ ] Implement RGB→RGBA auto-conversion (3-channel → 4-channel with alpha=255)
+- [ ] Add ImageLike validation and error handling
+
+**Phase 5B: Rasterizer Implementation**  
+- [ ] Implement drawImage with nearest-neighbor sampling in rasterizer.js
+- [ ] Handle transforms, clipping, and globalAlpha integration
+- [ ] Ensure proper alpha blending with existing pixels
+
+**Phase 5C: Context2D API Integration**
+- [ ] Add drawImage method to Context2D API with parameter validation
+- [ ] Support multiple drawImage signatures (basic position, scaling, source rectangles)
+
+**Phase 5D: Testing Strategy**
+- [ ] Create synthetic ImageLike test objects (programmatic patterns)
+- [ ] Test RGB vs RGBA ImageLike handling with 3-channel conversion
+- [ ] Add surface-to-ImageLike conversion utility for advanced testing
+- [ ] Create browser compatibility via ImageData conversion for HTML5 Canvas comparisons
+- [ ] Test drawImage with scaling, transforms, clipping, and alpha blending scenarios
+
+**Phase 5E: Documentation**
+- [ ] Add drawImage documentation and API examples to README.md
+- [ ] Update CLAUDE.md with drawImage implementation details
+
+### Testing Approach
+Using synthetic ImageLike objects and surface-to-ImageLike conversion for deterministic, cross-platform testing without external image dependencies.
+
+**Previous Achievement: Phase 4 COMPLETED!** ✅
 - ✅ Coverage-Based Clipping System FULLY IMPLEMENTED & TESTED
-- ✅ All integration tests completed (fill, stroke, clip, transform combinations)
+- ✅ All integration tests completed (fill, stroke, clip, transform combinations)  
 - ✅ Stencil-only clipping system migration completed
 - ✅ 55 comprehensive visual tests implemented and passing
-
-**Ready for Phase 5: Edge Cases & Robustness (optional)**
 
 ### Completed Achievements
 - **✅ Coverage-Based Clipping**: 1-bit stencil buffer system implemented
