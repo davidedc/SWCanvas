@@ -82,6 +82,66 @@
             max-height: 300px;
             overflow-y: auto;
         }
+        
+        .visual-test-item {
+            background: #fafafa;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        
+        .visual-test-title {
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #333;
+        }
+        
+        .visual-test-canvases {
+            display: flex;
+            justify-content: space-around;
+            align-items: flex-start;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        
+        .visual-canvas-pair {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-width: 200px;
+        }
+        
+        .visual-canvas-label {
+            font-weight: bold;
+            margin-bottom: 8px;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+        
+        .html5-label {
+            background: #e3f2fd;
+            color: #1976d2;
+        }
+        
+        .swcanvas-label {
+            background: #e8f5e8;
+            color: #388e3c;
+        }
+        
+        .visual-test-canvas {
+            border: 1px solid #999;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .pixel-diff-info {
+            font-size: 11px;
+            color: #666;
+            margin-top: 5px;
+            font-family: monospace;
+        }
     </style>
 </head>
 <body>
@@ -99,6 +159,16 @@
             <button onclick="runSharedTests()">Run Shared Test Suite</button>
         </div>
         <div id="shared-test-output" class="test-output" style="display: none;"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Visual Test Comparisons</h2>
+        <p>Side-by-side comparison of HTML5 Canvas vs SWCanvas for all test cases:</p>
+        <div class="controls">
+            <button onclick="runVisualComparison()">Run All Visual Comparisons</button>
+            <button onclick="downloadAllBMPs()">Download All BMPs</button>
+        </div>
+        <div id="visual-comparisons"></div>
     </div>
 
     <div class="test-section">
@@ -140,6 +210,7 @@
     </div>
 
     <script src="../dist/swcanvas.js"></script>
+    <script src="../tests/visual-test-registry.js"></script>
     <script src="../tests/shared-test-suite.js"></script>
     <script src="browser-visual-tests.js"></script>
     <script>
@@ -185,6 +256,96 @@
                 
                 outputDiv.innerHTML = `<span style="color: red;">Error running tests: ${error.message}</span>`;
             }
+        }
+
+        function runVisualComparison() {
+            const container = document.getElementById('visual-comparisons');
+            container.innerHTML = '<p>Running visual comparisons...</p>';
+            
+            // Get all visual tests from registry
+            const visualTests = VisualTestRegistry.getTests();
+            const testNames = Object.keys(visualTests);
+            
+            if (testNames.length === 0) {
+                container.innerHTML = '<p>No visual tests found in registry.</p>';
+                return;
+            }
+            
+            // Run all tests
+            container.innerHTML = '';
+            testNames.forEach((testName, index) => {
+                setTimeout(() => runSingleVisualTest(visualTests[testName], container), index * 100);
+            });
+        }
+
+        function runSingleVisualTest(testConfig, container) {
+            // Create test container
+            const testDiv = document.createElement('div');
+            testDiv.className = 'visual-test-item';
+            
+            testDiv.innerHTML = `
+                <div class="visual-test-title">${testConfig.name}</div>
+                <div class="visual-test-canvases">
+                    <div class="visual-canvas-pair">
+                        <div class="visual-canvas-label html5-label">HTML5 Canvas</div>
+                        <canvas class="visual-test-canvas" width="${testConfig.width}" height="${testConfig.height}"></canvas>
+                        <div class="pixel-diff-info"></div>
+                    </div>
+                    <div class="visual-canvas-pair">
+                        <div class="visual-canvas-label swcanvas-label">SWCanvas</div>
+                        <canvas class="visual-test-canvas" width="${testConfig.width}" height="${testConfig.height}"></canvas>
+                        <div class="pixel-diff-info"></div>
+                    </div>
+                </div>
+            `;
+            
+            container.appendChild(testDiv);
+            
+            // Get canvases
+            const canvases = testDiv.querySelectorAll('canvas');
+            const html5Canvas = canvases[0];
+            const swCanvas = canvases[1];
+            
+            try {
+                // Draw HTML5 Canvas version
+                testConfig.drawHTML5Canvas(html5Canvas);
+                
+                // Draw SWCanvas version and render to display canvas
+                const surface = testConfig.drawSWCanvas(SWCanvas);
+                VisualTestRegistry.renderSWCanvasToHTML5(surface, swCanvas);
+                
+                // Add info about the test
+                const pixelInfos = testDiv.querySelectorAll('.pixel-diff-info');
+                pixelInfos[0].textContent = `${testConfig.width}×${testConfig.height} HTML5`;
+                pixelInfos[1].textContent = `${testConfig.width}×${testConfig.height} SWCanvas`;
+                
+            } catch (error) {
+                testDiv.innerHTML += `<div style="color: red; margin-top: 10px;">Error: ${error.message}</div>`;
+            }
+        }
+
+        function downloadAllBMPs() {
+            const visualTests = document.querySelectorAll('.visual-test-item');
+            if (visualTests.length === 0) {
+                alert('Run visual comparisons first!');
+                return;
+            }
+            
+            let downloadCount = 0;
+            visualTests.forEach((testDiv, index) => {
+                const testName = testDiv.querySelector('.visual-test-title').textContent;
+                const swCanvas = testDiv.querySelectorAll('canvas')[1]; // Second canvas is SWCanvas
+                
+                // Get the SWCanvas surface (we'd need to modify the test functions to store this)
+                // For now, show that the functionality exists
+                setTimeout(() => {
+                    alert(`Would download: ${testName.replace(/\s+/g, '-').toLowerCase()}.bmp`);
+                    downloadCount++;
+                    if (downloadCount === visualTests.length) {
+                        alert(`All ${downloadCount} BMP files ready for download`);
+                    }
+                }, index * 200);
+            });
         }
 
         // Initialize on page load

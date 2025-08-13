@@ -121,8 +121,35 @@ Rasterizer.prototype.fill = function(path, rule) {
     }
 };
 
-Rasterizer.prototype.stroke = function(path) {
-    throw new Error('Path stroking not implemented in M1');
+Rasterizer.prototype.stroke = function(path, strokeProps) {
+    if (!this.currentOp) {
+        throw new Error('Must call beginOp before drawing operations');
+    }
+    
+    // Apply global alpha to stroke color, then premultiply
+    const color = this.currentOp.strokeStyle || [0, 0, 0, 255];
+    const globalAlpha = this.currentOp.globalAlpha;
+    const effectiveAlpha = (color[3] / 255) * globalAlpha;
+    const srcA = Math.round(effectiveAlpha * 255);
+    const srcR = Math.round(color[0] * effectiveAlpha);
+    const srcG = Math.round(color[1] * effectiveAlpha);
+    const srcB = Math.round(color[2] * effectiveAlpha);
+    
+    const strokeColor = [srcR, srcG, srcB, srcA];
+    
+    // Generate stroke polygons using geometric approach
+    const strokePolygons = generateStrokePolygons(path, strokeProps);
+    
+    // Fill stroke polygons with current transform and clipping
+    if (this.currentOp.clipPath) {
+        // With clipping - clip polygons first, then fill
+        const clipPolygons = flattenPath(this.currentOp.clipPath);
+        const clippedPolygons = clipPolygonsByPolygons(strokePolygons, clipPolygons, 'nonzero');
+        fillPolygons(this.surface, clippedPolygons, strokeColor, 'nonzero', this.currentOp.transform);
+    } else {
+        // No clipping - direct fill
+        fillPolygons(this.surface, strokePolygons, strokeColor, 'nonzero', this.currentOp.transform);
+    }
 };
 
 Rasterizer.prototype.drawImage = function(img, sx, sy, sw, sh, dx, dy, dw, dh) {

@@ -12,6 +12,12 @@ function Context2D(surface) {
     this._fillStyle = [0, 0, 0, 255]; // Black, non-premultiplied
     this._strokeStyle = [0, 0, 0, 255]; // Black, non-premultiplied
     
+    // Stroke properties
+    this.lineWidth = 1.0;
+    this.lineJoin = 'miter';  // 'miter', 'round', 'bevel'
+    this.lineCap = 'butt';    // 'butt', 'round', 'square'
+    this.miterLimit = 10.0;
+    
     // Internal path and clipping
     this._currentPath = new Path2D();
     this._clipPath = null;
@@ -26,7 +32,11 @@ Context2D.prototype.save = function() {
                               this._transform.d, this._transform.e, this._transform.f]),
         fillStyle: this._fillStyle.slice(),
         strokeStyle: this._strokeStyle.slice(),
-        clipPath: this._clipPath // Note: shallow copy for M2, should be deep copy in full implementation
+        clipPath: this._clipPath, // Note: shallow copy for M2, should be deep copy in full implementation
+        lineWidth: this.lineWidth,
+        lineJoin: this.lineJoin,
+        lineCap: this.lineCap,
+        miterLimit: this.miterLimit
     });
 };
 
@@ -40,6 +50,10 @@ Context2D.prototype.restore = function() {
     this._fillStyle = state.fillStyle;
     this._strokeStyle = state.strokeStyle;
     this._clipPath = state.clipPath;
+    this.lineWidth = state.lineWidth;
+    this.lineJoin = state.lineJoin;
+    this.lineCap = state.lineCap;
+    this.miterLimit = state.miterLimit;
 };
 
 // Transform methods
@@ -92,6 +106,14 @@ Context2D.prototype.rect = function(x, y, w, h) {
 
 Context2D.prototype.arc = function(x, y, radius, startAngle, endAngle, counterclockwise) {
     this._currentPath.arc(x, y, radius, startAngle, endAngle, counterclockwise);
+};
+
+Context2D.prototype.quadraticCurveTo = function(cpx, cpy, x, y) {
+    this._currentPath.quadraticCurveTo(cpx, cpy, x, y);
+};
+
+Context2D.prototype.bezierCurveTo = function(cp1x, cp1y, cp2x, cp2y, x, y) {
+    this._currentPath.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, x, y);
 };
 
 // Drawing methods - simplified for M1 (only rectangles)
@@ -166,7 +188,25 @@ Context2D.prototype.fill = function(path, rule) {
 };
 
 Context2D.prototype.stroke = function(path) {
-    throw new Error('Path stroking not implemented until M3');
+    // Use specified path or current internal path
+    const pathToStroke = path || this._currentPath;
+    
+    this.rasterizer.beginOp({
+        composite: this.globalCompositeOperation,
+        globalAlpha: this.globalAlpha,
+        transform: this._transform,
+        clipPath: this._clipPath,
+        strokeStyle: this._strokeStyle
+    });
+    
+    this.rasterizer.stroke(pathToStroke, {
+        lineWidth: this.lineWidth,
+        lineJoin: this.lineJoin,
+        lineCap: this.lineCap,
+        miterLimit: this.miterLimit
+    });
+    
+    this.rasterizer.endOp();
 };
 
 // M2: Clipping support

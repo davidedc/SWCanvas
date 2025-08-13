@@ -32,6 +32,8 @@ cat src/polygon-filler.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
 cat src/polygon-clipper.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
+cat src/stroke-generator.js >> dist/swcanvas.js
+echo "" >> dist/swcanvas.js
 cat src/rasterizer.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
 cat src/context2d.js >> dist/swcanvas.js

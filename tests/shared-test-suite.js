@@ -205,6 +205,17 @@
 
         // Integration test: Create a simple image
         test('Create and save a simple test image', () => {
+            // Use visual test registry if available, otherwise fall back to inline test
+            if (typeof VisualTestRegistry !== 'undefined') {
+                const visualTest = VisualTestRegistry.getTest('simple-test');
+                if (visualTest) {
+                    const surface = visualTest.drawSWCanvas(SWCanvas);
+                    saveBMP(surface, 'test-output.bmp', 'test image', SWCanvas);
+                    return;
+                }
+            }
+            
+            // Fallback inline test
             const surface = SWCanvas.Surface(100, 100);
             const ctx = new SWCanvas.Context2D(surface);
             
@@ -222,6 +233,51 @@
 
         // Alpha blending test
         test('Alpha blending test - semi-transparent rectangles', () => {
+            // Use visual test registry if available
+            if (typeof VisualTestRegistry !== 'undefined') {
+                const visualTest = VisualTestRegistry.getTest('alpha-test');
+                if (visualTest) {
+                    const surface = visualTest.drawSWCanvas(SWCanvas);
+                    
+                    // Continue with original test verification logic...
+                    // Check specific pixel values to verify alpha blending
+                    const redPixelOffset = (30 * surface.stride) + (30 * 4); // Red area
+                    const bluePixelOffset = (80 * surface.stride) + (80 * 4); // Blue area
+                    const greenOverRedOffset = (50 * surface.stride) + (50 * 4); // Green over red
+                    const greenOverWhiteOffset = (50 * surface.stride) + (110 * 4); // Green over white
+                    const whiteOnlyOffset = (10 * surface.stride) + (10 * 4); // Pure white background
+                    
+                    log(`  Pure white background: R=${surface.data[whiteOnlyOffset]}, G=${surface.data[whiteOnlyOffset+1]}, B=${surface.data[whiteOnlyOffset+2]}, A=${surface.data[whiteOnlyOffset+3]}`);
+                    log(`  Red pixel: R=${surface.data[redPixelOffset]}, G=${surface.data[redPixelOffset+1]}, B=${surface.data[redPixelOffset+2]}, A=${surface.data[redPixelOffset+3]}`);
+                    log(`  Blue pixel: R=${surface.data[bluePixelOffset]}, G=${surface.data[bluePixelOffset+1]}, B=${surface.data[bluePixelOffset+2]}, A=${surface.data[bluePixelOffset+3]}`);
+                    log(`  Green over red: R=${surface.data[greenOverRedOffset]}, G=${surface.data[greenOverRedOffset+1]}, B=${surface.data[greenOverRedOffset+2]}, A=${surface.data[greenOverRedOffset+3]}`);
+                    log(`  Green over white: R=${surface.data[greenOverWhiteOffset]}, G=${surface.data[greenOverWhiteOffset+1]}, B=${surface.data[greenOverWhiteOffset+2]}, A=${surface.data[greenOverWhiteOffset+3]}`);
+                    
+                    // Save alpha blending test image
+                    saveBMP(surface, 'alpha-test.bmp', 'alpha test image', SWCanvas);
+                    
+                    // Expected values for 50% green over white:
+                    // 50% green over white: src=[0,128,0,128] dst=[255,255,255,255] 
+                    // Result should be: [127, 255, 127, 255]
+                    const expectedR = 127;
+                    const expectedG = 255;  
+                    const expectedB = 127;
+                    const actualR = surface.data[greenOverWhiteOffset];
+                    const actualG = surface.data[greenOverWhiteOffset + 1];
+                    const actualB = surface.data[greenOverWhiteOffset + 2];
+                    
+                    log(`  Expected green over white: [${expectedR}, ${expectedG}, ${expectedB}]`);
+                    log(`  Actual green over white:   [${actualR}, ${actualG}, ${actualB}]`);
+                    
+                    // Allow ±1 tolerance for rounding differences
+                    if (Math.abs(actualR - expectedR) > 1 || Math.abs(actualG - expectedG) > 1 || Math.abs(actualB - expectedB) > 1) {
+                        throw new Error(`Alpha blending mismatch! Expected [${expectedR}, ${expectedG}, ${expectedB}], got [${actualR}, ${actualG}, ${actualB}]`);
+                    }
+                    return;
+                }
+            }
+            
+            // Fallback inline test
             const surface = SWCanvas.Surface(200, 150);
             const ctx = new SWCanvas.Context2D(surface);
             
@@ -372,6 +428,186 @@
             }
             
             saveBMP(surface, 'clipping-test.bmp', 'basic clipping test', SWCanvas);
+        });
+
+        // M3: Stroke tests
+        test('Basic stroke - simple line', () => {
+            const surface = SWCanvas.Surface(100, 100);
+            const ctx = new SWCanvas.Context2D(surface);
+            
+            // White background
+            ctx.setFillStyle(255, 255, 255, 255);
+            ctx.fillRect(0, 0, 100, 100);
+            
+            // Draw red line stroke
+            ctx.setStrokeStyle(255, 0, 0, 255);
+            ctx.lineWidth = 5;
+            ctx.beginPath();
+            ctx.moveTo(10, 50);
+            ctx.lineTo(90, 50);
+            ctx.stroke();
+            
+            // Check stroke is present
+            const centerOffset = (50 * surface.stride) + (50 * 4);
+            const r = surface.data[centerOffset];
+            log(`  Line stroke pixel: R=${r}`);
+            
+            if (r < 200) {
+                throw new Error('Expected red stroke line');
+            }
+            
+            saveBMP(surface, 'stroke-basic-line.bmp', 'basic stroke line', SWCanvas);
+        });
+
+        test('Stroke joins - miter, bevel, round', () => {
+            const surface = SWCanvas.Surface(300, 100);
+            const ctx = new SWCanvas.Context2D(surface);
+            
+            // White background
+            ctx.setFillStyle(255, 255, 255, 255);
+            ctx.fillRect(0, 0, 300, 100);
+            
+            ctx.setStrokeStyle(0, 0, 255, 255);
+            ctx.lineWidth = 8;
+            
+            // Miter join
+            ctx.lineJoin = 'miter';
+            ctx.beginPath();
+            ctx.moveTo(20, 20);
+            ctx.lineTo(50, 50);
+            ctx.lineTo(80, 20);
+            ctx.stroke();
+            
+            // Bevel join
+            ctx.lineJoin = 'bevel';
+            ctx.beginPath();
+            ctx.moveTo(120, 20);
+            ctx.lineTo(150, 50);
+            ctx.lineTo(180, 20);
+            ctx.stroke();
+            
+            // Round join
+            ctx.lineJoin = 'round';
+            ctx.beginPath();
+            ctx.moveTo(220, 20);
+            ctx.lineTo(250, 50);
+            ctx.lineTo(280, 20);
+            ctx.stroke();
+            
+            saveBMP(surface, 'stroke-joins.bmp', 'stroke joins test', SWCanvas);
+        });
+
+        test('Stroke caps - butt, square, round', () => {
+            const surface = SWCanvas.Surface(300, 150);
+            const ctx = new SWCanvas.Context2D(surface);
+            
+            // White background
+            ctx.setFillStyle(255, 255, 255, 255);
+            ctx.fillRect(0, 0, 300, 150);
+            
+            ctx.setStrokeStyle(0, 128, 0, 255);
+            ctx.lineWidth = 12;
+            
+            // Butt caps
+            ctx.lineCap = 'butt';
+            ctx.beginPath();
+            ctx.moveTo(50, 30);
+            ctx.lineTo(50, 70);
+            ctx.stroke();
+            
+            // Square caps
+            ctx.lineCap = 'square';
+            ctx.beginPath();
+            ctx.moveTo(150, 30);
+            ctx.lineTo(150, 70);
+            ctx.stroke();
+            
+            // Round caps
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.moveTo(250, 30);
+            ctx.lineTo(250, 70);
+            ctx.stroke();
+            
+            saveBMP(surface, 'stroke-caps.bmp', 'stroke caps test', SWCanvas);
+        });
+
+        test('Stroke with different line widths', () => {
+            const surface = SWCanvas.Surface(200, 150);
+            const ctx = new SWCanvas.Context2D(surface);
+            
+            // White background
+            ctx.setFillStyle(255, 255, 255, 255);
+            ctx.fillRect(0, 0, 200, 150);
+            
+            ctx.setStrokeStyle(128, 0, 128, 255);
+            
+            const widths = [1, 3, 6, 10, 15];
+            for (let i = 0; i < widths.length; i++) {
+                const y = 25 + i * 25;
+                ctx.lineWidth = widths[i];
+                ctx.beginPath();
+                ctx.moveTo(20, y);
+                ctx.lineTo(180, y);
+                ctx.stroke();
+            }
+            
+            saveBMP(surface, 'stroke-widths.bmp', 'stroke widths test', SWCanvas);
+        });
+
+        test('Complex path stroke with curves', () => {
+            const surface = SWCanvas.Surface(150, 150);
+            const ctx = new SWCanvas.Context2D(surface);
+            
+            // White background
+            ctx.setFillStyle(255, 255, 255, 255);
+            ctx.fillRect(0, 0, 150, 150);
+            
+            // Draw a curved path
+            ctx.setStrokeStyle(255, 128, 0, 255);
+            ctx.lineWidth = 4;
+            ctx.lineJoin = 'round';
+            ctx.lineCap = 'round';
+            
+            ctx.beginPath();
+            ctx.moveTo(20, 50);
+            ctx.quadraticCurveTo(75, 20, 130, 50);
+            ctx.quadraticCurveTo(100, 100, 50, 120);
+            ctx.lineTo(20, 100);
+            ctx.stroke();
+            
+            saveBMP(surface, 'stroke-curves.bmp', 'stroke curves test', SWCanvas);
+        });
+
+        test('Miter limit test', () => {
+            const surface = SWCanvas.Surface(200, 100);
+            const ctx = new SWCanvas.Context2D(surface);
+            
+            // White background
+            ctx.setFillStyle(255, 255, 255, 255);
+            ctx.fillRect(0, 0, 200, 100);
+            
+            ctx.setStrokeStyle(255, 0, 255, 255);
+            ctx.lineWidth = 6;
+            ctx.lineJoin = 'miter';
+            
+            // Sharp angle with default miter limit (should create miter)
+            ctx.miterLimit = 10;
+            ctx.beginPath();
+            ctx.moveTo(40, 20);
+            ctx.lineTo(50, 50);
+            ctx.lineTo(60, 20);
+            ctx.stroke();
+            
+            // Very sharp angle with low miter limit (should fallback to bevel)
+            ctx.miterLimit = 2;
+            ctx.beginPath();
+            ctx.moveTo(140, 20);
+            ctx.lineTo(150, 50);
+            ctx.lineTo(160, 20);
+            ctx.stroke();
+            
+            saveBMP(surface, 'stroke-miter-limit.bmp', 'stroke miter limit test', SWCanvas);
         });
 
         // Test results summary
