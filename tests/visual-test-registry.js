@@ -368,6 +368,132 @@
         }
     };
 
+    // Test 9: Stroke Miter Limit (Original Test)
+    visualTests['stroke-miter-limit'] = {
+        name: 'Miter limit test',
+        width: 200, height: 100,
+        drawSWCanvas: function(SWCanvas) {
+            const surface = SWCanvas.Surface(200, 100);
+            const ctx = new SWCanvas.Context2D(surface);
+            
+            // White background
+            ctx.setFillStyle(255, 255, 255, 255);
+            ctx.fillRect(0, 0, 200, 100);
+            
+            ctx.setStrokeStyle(255, 0, 255, 255);
+            ctx.lineWidth = 6;
+            ctx.lineJoin = 'miter';
+            
+            // Sharp angle with default miter limit (should create miter)
+            ctx.miterLimit = 10;
+            ctx.beginPath();
+            ctx.moveTo(40, 20);
+            ctx.lineTo(50, 50);
+            ctx.lineTo(60, 20);
+            ctx.stroke();
+            
+            // Very sharp angle with low miter limit (should fallback to bevel)
+            ctx.miterLimit = 2;
+            ctx.beginPath();
+            ctx.moveTo(140, 20);
+            ctx.lineTo(150, 50);
+            ctx.lineTo(160, 20);
+            ctx.stroke();
+            
+            return surface;
+        },
+        drawHTML5Canvas: function(html5Canvas) {
+            const ctx = html5Canvas.getContext('2d');
+            
+            // White background
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, 200, 100);
+            
+            ctx.strokeStyle = 'magenta';
+            ctx.lineWidth = 6;
+            ctx.lineJoin = 'miter';
+            
+            // Sharp angle with default miter limit (should create miter)
+            ctx.miterLimit = 10;
+            ctx.beginPath();
+            ctx.moveTo(40, 20);
+            ctx.lineTo(50, 50);
+            ctx.lineTo(60, 20);
+            ctx.stroke();
+            
+            // Very sharp angle with low miter limit (should fallback to bevel)
+            ctx.miterLimit = 2;
+            ctx.beginPath();
+            ctx.moveTo(140, 20);
+            ctx.lineTo(150, 50);
+            ctx.lineTo(160, 20);
+            ctx.stroke();
+        }
+    };
+
+    // Test 10: Miter Limit Basic Functionality
+    visualTests['miter-limits-basic'] = {
+        name: 'Miter limit property and basic functionality',
+        width: 100, height: 100,
+        drawSWCanvas: function(SWCanvas) {
+            const surface = SWCanvas.Surface(100, 100);
+            const ctx = new SWCanvas.Context2D(surface);
+            
+            // White background
+            ctx.setFillStyle(255, 255, 255, 255);
+            ctx.fillRect(0, 0, 100, 100);
+            
+            ctx.setStrokeStyle(0, 0, 255, 255);
+            ctx.lineWidth = 6;
+            ctx.lineJoin = 'miter';
+            
+            // Test different miter limit values
+            const miterLimits = [1.0, 2.0, 5.0, 10.0];
+            
+            for (let i = 0; i < miterLimits.length; i++) {
+                const limit = miterLimits[i];
+                ctx.miterLimit = limit;
+                
+                // Draw a V shape at different positions
+                const x = 20 + i * 20;
+                ctx.beginPath();
+                ctx.moveTo(x - 5, 60);
+                ctx.lineTo(x, 40);
+                ctx.lineTo(x + 5, 60);
+                ctx.stroke();
+            }
+            
+            return surface;
+        },
+        drawHTML5Canvas: function(html5Canvas) {
+            const ctx = html5Canvas.getContext('2d');
+            
+            // White background
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, 100, 100);
+            
+            ctx.strokeStyle = 'blue';
+            ctx.lineWidth = 6;
+            ctx.lineJoin = 'miter';
+            
+            // Test different miter limit values
+            const miterLimits = [1.0, 2.0, 5.0, 10.0];
+            
+            for (let i = 0; i < miterLimits.length; i++) {
+                const limit = miterLimits[i];
+                ctx.miterLimit = limit;
+                
+                // Draw a V shape at different positions
+                const x = 20 + i * 20;
+                ctx.beginPath();
+                ctx.moveTo(x - 5, 60);
+                ctx.lineTo(x, 40);
+                ctx.lineTo(x + 5, 60);
+                ctx.stroke();
+            }
+        }
+    };
+
     // Export for both Node.js and browser
     const VisualTestRegistry = {
         getTests: function() { return visualTests; },

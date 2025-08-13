@@ -121,7 +121,9 @@ Context2D.prototype.fillRect = function(x, y, width, height) {
     this.rasterizer.beginOp({
         composite: this.globalCompositeOperation,
         globalAlpha: this.globalAlpha,
-        transform: this._transform
+        transform: this._transform,
+        clipPath: this._clipPath,
+        fillStyle: this._fillStyle
     });
     
     this.rasterizer.fillRect(x, y, width, height, this._fillStyle);

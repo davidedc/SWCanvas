@@ -2,13 +2,18 @@
 // Uses scanline algorithm for efficient aliased filling
 
 // Fill polygons using scanline algorithm with specified winding rule
-function fillPolygons(surface, polygons, color, fillRule, transform) {
+function fillPolygons(surface, polygons, color, fillRule, transform, clipPolygons) {
     if (polygons.length === 0) return;
     
     // Transform all polygon vertices
     const transformedPolygons = polygons.map(poly => 
         poly.map(point => transform.transformPoint(point))
     );
+    
+    // Transform clip polygons if provided
+    const transformedClipPolygons = clipPolygons ? clipPolygons.map(poly => 
+        poly.map(point => transform.transformPoint(point))
+    ) : null;
     
     // Find bounding box
     let minY = Infinity, maxY = -Infinity;
@@ -36,7 +41,7 @@ function fillPolygons(surface, polygons, color, fillRule, transform) {
         intersections.sort((a, b) => a.x - b.x);
         
         // Fill spans based on winding rule
-        fillScanlineSpans(surface, y, intersections, color, fillRule);
+        fillScanlineSpans(surface, y, intersections, color, fillRule, transformedClipPolygons);
     }
 }
 
@@ -67,7 +72,7 @@ function findPolygonIntersections(polygon, y, intersections) {
 }
 
 // Fill spans on a scanline based on winding rule
-function fillScanlineSpans(surface, y, intersections, color, fillRule) {
+function fillScanlineSpans(surface, y, intersections, color, fillRule, transformedClipPolygons) {
     if (intersections.length === 0) return;
     
     let windingNumber = 0;
@@ -94,6 +99,13 @@ function fillScanlineSpans(surface, y, intersections, color, fillRule) {
             const endX = Math.min(surface.width - 1, Math.floor(nextIntersection.x));
             
             for (let x = startX; x <= endX; x++) {
+                // Check clipping if clip polygons are provided
+                if (transformedClipPolygons && transformedClipPolygons.length > 0) {
+                    if (!pointInPolygons(x, y, transformedClipPolygons, 'nonzero')) {
+                        continue; // Skip pixels outside clip region
+                    }
+                }
+                
                 const offset = y * surface.stride + x * 4;
                 
                 // Simple copy for now (will be enhanced with proper blending later)

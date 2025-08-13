@@ -516,13 +516,18 @@ function flattenEllipse(cx, cy, radiusX, radiusY, rotation, startAngle, endAngle
 // Uses scanline algorithm for efficient aliased filling
 
 // Fill polygons using scanline algorithm with specified winding rule
-function fillPolygons(surface, polygons, color, fillRule, transform) {
+function fillPolygons(surface, polygons, color, fillRule, transform, clipPolygons) {
     if (polygons.length === 0) return;
     
     // Transform all polygon vertices
     const transformedPolygons = polygons.map(poly => 
         poly.map(point => transform.transformPoint(point))
     );
+    
+    // Transform clip polygons if provided
+    const transformedClipPolygons = clipPolygons ? clipPolygons.map(poly => 
+        poly.map(point => transform.transformPoint(point))
+    ) : null;
     
     // Find bounding box
     let minY = Infinity, maxY = -Infinity;
@@ -550,7 +555,7 @@ function fillPolygons(surface, polygons, color, fillRule, transform) {
         intersections.sort((a, b) => a.x - b.x);
         
         // Fill spans based on winding rule
-        fillScanlineSpans(surface, y, intersections, color, fillRule);
+        fillScanlineSpans(surface, y, intersections, color, fillRule, transformedClipPolygons);
     }
 }
 
@@ -581,7 +586,7 @@ function findPolygonIntersections(polygon, y, intersections) {
 }
 
 // Fill spans on a scanline based on winding rule
-function fillScanlineSpans(surface, y, intersections, color, fillRule) {
+function fillScanlineSpans(surface, y, intersections, color, fillRule, transformedClipPolygons) {
     if (intersections.length === 0) return;
     
     let windingNumber = 0;
@@ -608,6 +613,13 @@ function fillScanlineSpans(surface, y, intersections, color, fillRule) {
             const endX = Math.min(surface.width - 1, Math.floor(nextIntersection.x));
             
             for (let x = startX; x <= endX; x++) {
+                // Check clipping if clip polygons are provided
+                if (transformedClipPolygons && transformedClipPolygons.length > 0) {
+                    if (!pointInPolygons(x, y, transformedClipPolygons, 'nonzero')) {
+                        continue; // Skip pixels outside clip region
+                    }
+                }
+                
                 const offset = y * surface.stride + x * 4;
                 
                 // Simple copy for now (will be enhanced with proper blending later)
@@ -687,23 +699,9 @@ function clipPolygonsByPolygons(subjectPolygons, clipPolygons, clipRule) {
 
 // Clip a single polygon by multiple clip polygons
 function clipPolygonByPolygons(polygon, clipPolygons, clipRule) {
-    // For M2, we use a simple approach: test each vertex of the subject polygon
-    // and only include vertices that are inside the clip region
-    
-    const clippedVertices = [];
-    
-    for (const vertex of polygon) {
-        if (pointInPolygons(vertex.x, vertex.y, clipPolygons, clipRule)) {
-            clippedVertices.push(vertex);
-        }
-    }
-    
-    // If we have at least 3 vertices, we have a valid polygon
-    if (clippedVertices.length >= 3) {
-        return clippedVertices;
-    }
-    
-    return null;
+    // For M2: Don't pre-clip geometry, let the rasterizer handle clipping per-pixel
+    // This ensures correct clipping behavior without complex geometric intersection
+    return polygon;
 }
 
 // Note: This is a very basic clipping implementation for M2.
@@ -859,13 +857,8 @@ function generateJoin(seg1, seg2, lineJoin, miterLimit) {
         return generateBevelJoin(seg1, seg2, joinPoint);
     }
     
-    // Determine if this is a convex or concave turn
-    const isConvex = cross > 0;
-    
-    if (!isConvex) {
-        // Concave turn - no join needed (segments naturally overlap)
-        return [];
-    }
+    // Always generate join geometry - the join functions will handle the correct side
+    // The distinction between convex/concave is handled in the individual join functions
     
     // Convex turn - generate appropriate join
     switch (lineJoin) {
@@ -887,9 +880,19 @@ function generateMiterJoin(seg1, seg2, joinPoint, miterLimit) {
         Math.pow(seg1.body[0].y - seg1.body[3].y, 2)
     ) / 2;
     
-    // Get outer edge points - seg1 end (right) and seg2 start (left)  
-    const outer1 = seg1.body[1]; // End right side of seg1
-    const outer2 = seg2.body[0]; // Start left side of seg2
+    // Determine which sides are on the outside of the turn
+    const cross = seg1.tangent.x * seg2.tangent.y - seg1.tangent.y * seg2.tangent.x;
+    
+    let outer1, outer2;
+    if (cross > 0) {
+        // Left turn - right sides are outer
+        outer1 = seg1.body[2]; // Right side of seg1 end
+        outer2 = seg2.body[3]; // Right side of seg2 start  
+    } else {
+        // Right turn - left sides are outer
+        outer1 = seg1.body[1]; // Left side of seg1 end
+        outer2 = seg2.body[0]; // Left side of seg2 start
+    }
     
     // Calculate miter point (intersection of extended outer edges)
     // Extend seg1's right edge forward
@@ -922,19 +925,48 @@ function generateMiterJoin(seg1, seg2, joinPoint, miterLimit) {
         return generateBevelJoin(seg1, seg2, joinPoint);
     }
     
-    // Create miter triangle
+    // For miter join, we need to fill both the miter triangle and the inner area
+    let inner1, inner2;
+    if (cross > 0) {
+        // Left turn - left sides are inner
+        inner1 = seg1.body[1]; // Left side of seg1 end  
+        inner2 = seg2.body[0]; // Left side of seg2 start
+    } else {
+        // Right turn - right sides are inner
+        inner1 = seg1.body[2]; // Right side of seg1 end
+        inner2 = seg2.body[3]; // Right side of seg2 start
+    }
+    
+    // Create miter triangle and inner quadrilateral
     return [
-        [outer1, miterPoint, outer2]
+        [outer1, miterPoint, outer2],  // Miter triangle
+        [outer1, outer2, inner2, inner1]  // Inner connecting area
     ];
 }
 
 // Generate bevel join
 function generateBevelJoin(seg1, seg2, joinPoint) {
-    const outer1 = seg1.body[1]; // Right side of seg1
-    const outer2 = seg2.body[0]; // Right side of seg2
+    // Determine which sides are on the outside of the turn
+    const cross = seg1.tangent.x * seg2.tangent.y - seg1.tangent.y * seg2.tangent.x;
     
+    let outer1, outer2, inner1, inner2;
+    if (cross > 0) {
+        // Left turn - right sides are outer, left sides are inner
+        outer1 = seg1.body[2]; // Right side of seg1 end
+        outer2 = seg2.body[3]; // Right side of seg2 start
+        inner1 = seg1.body[1]; // Left side of seg1 end  
+        inner2 = seg2.body[0]; // Left side of seg2 start
+    } else {
+        // Right turn - left sides are outer, right sides are inner
+        outer1 = seg1.body[1]; // Left side of seg1 end
+        outer2 = seg2.body[0]; // Left side of seg2 start
+        inner1 = seg1.body[2]; // Right side of seg1 end
+        inner2 = seg2.body[3]; // Right side of seg2 start
+    }
+    
+    // Create a quadrilateral that connects outer edges to inner edges
     return [
-        [outer1, outer2, joinPoint]
+        [outer1, outer2, inner2, inner1]
     ];
 }
 
@@ -945,8 +977,19 @@ function generateRoundJoin(seg1, seg2, joinPoint) {
         Math.pow(seg1.body[0].y - seg1.body[3].y, 2)
     ) / 2;
     
-    const outer1 = seg1.body[1]; // End right side of seg1  
-    const outer2 = seg2.body[0]; // Start left side of seg2
+    // Determine which sides are on the outside of the turn
+    const cross = seg1.tangent.x * seg2.tangent.y - seg1.tangent.y * seg2.tangent.x;
+    
+    let outer1, outer2;
+    if (cross > 0) {
+        // Left turn - right sides are outer
+        outer1 = seg1.body[2]; // Right side of seg1 end
+        outer2 = seg2.body[3]; // Right side of seg2 start  
+    } else {
+        // Right turn - left sides are outer
+        outer1 = seg1.body[1]; // Left side of seg1 end
+        outer2 = seg2.body[0]; // Left side of seg2 start
+    }
     
     // Calculate angles
     const angle1 = Math.atan2(outer1.y - joinPoint.y, outer1.x - joinPoint.x);
@@ -1087,6 +1130,18 @@ Rasterizer.prototype.fillRect = function(x, y, width, height, color) {
         throw new Error('Must call beginOp before drawing operations');
     }
     
+    // If there's clipping, convert the rectangle to a path and use path filling
+    if (this.currentOp.clipPath) {
+        // Create a path for the rectangle
+        const rectPath = new Path2D();
+        rectPath.rect(x, y, width, height);
+        
+        // Use the existing path filling logic which handles clipping properly
+        this.fill(rectPath, 'nonzero');
+        return;
+    }
+    
+    // No clipping - use optimized direct rectangle filling
     // Transform rectangle corners
     const transform = this.currentOp.transform;
     const topLeft = transform.transformPoint({x: x, y: y});
@@ -1174,10 +1229,9 @@ Rasterizer.prototype.fill = function(path, rule) {
     
     // Fill polygons with current transform and clipping
     if (this.currentOp.clipPath) {
-        // With clipping - clip polygons first, then fill
+        // With clipping - pass clip polygons for per-pixel testing
         const clipPolygons = flattenPath(this.currentOp.clipPath);
-        const clippedPolygons = clipPolygonsByPolygons(polygons, clipPolygons, 'nonzero');
-        fillPolygons(this.surface, clippedPolygons, fillColor, fillRule, this.currentOp.transform);
+        fillPolygons(this.surface, polygons, fillColor, fillRule, this.currentOp.transform, clipPolygons);
     } else {
         // No clipping - direct fill
         fillPolygons(this.surface, polygons, fillColor, fillRule, this.currentOp.transform);
@@ -1205,10 +1259,9 @@ Rasterizer.prototype.stroke = function(path, strokeProps) {
     
     // Fill stroke polygons with current transform and clipping
     if (this.currentOp.clipPath) {
-        // With clipping - clip polygons first, then fill
+        // With clipping - pass clip polygons for per-pixel testing
         const clipPolygons = flattenPath(this.currentOp.clipPath);
-        const clippedPolygons = clipPolygonsByPolygons(strokePolygons, clipPolygons, 'nonzero');
-        fillPolygons(this.surface, clippedPolygons, strokeColor, 'nonzero', this.currentOp.transform);
+        fillPolygons(this.surface, strokePolygons, strokeColor, 'nonzero', this.currentOp.transform, clipPolygons);
     } else {
         // No clipping - direct fill
         fillPolygons(this.surface, strokePolygons, strokeColor, 'nonzero', this.currentOp.transform);
@@ -1341,7 +1394,9 @@ Context2D.prototype.fillRect = function(x, y, width, height) {
     this.rasterizer.beginOp({
         composite: this.globalCompositeOperation,
         globalAlpha: this.globalAlpha,
-        transform: this._transform
+        transform: this._transform,
+        clipPath: this._clipPath,
+        fillStyle: this._fillStyle
     });
     
     this.rasterizer.fillRect(x, y, width, height, this._fillStyle);

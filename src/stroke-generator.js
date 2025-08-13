@@ -147,13 +147,8 @@ function generateJoin(seg1, seg2, lineJoin, miterLimit) {
         return generateBevelJoin(seg1, seg2, joinPoint);
     }
     
-    // Determine if this is a convex or concave turn
-    const isConvex = cross > 0;
-    
-    if (!isConvex) {
-        // Concave turn - no join needed (segments naturally overlap)
-        return [];
-    }
+    // Always generate join geometry - the join functions will handle the correct side
+    // The distinction between convex/concave is handled in the individual join functions
     
     // Convex turn - generate appropriate join
     switch (lineJoin) {
@@ -175,9 +170,19 @@ function generateMiterJoin(seg1, seg2, joinPoint, miterLimit) {
         Math.pow(seg1.body[0].y - seg1.body[3].y, 2)
     ) / 2;
     
-    // Get outer edge points - seg1 end (right) and seg2 start (left)  
-    const outer1 = seg1.body[1]; // End right side of seg1
-    const outer2 = seg2.body[0]; // Start left side of seg2
+    // Determine which sides are on the outside of the turn
+    const cross = seg1.tangent.x * seg2.tangent.y - seg1.tangent.y * seg2.tangent.x;
+    
+    let outer1, outer2;
+    if (cross > 0) {
+        // Left turn - right sides are outer
+        outer1 = seg1.body[2]; // Right side of seg1 end
+        outer2 = seg2.body[3]; // Right side of seg2 start  
+    } else {
+        // Right turn - left sides are outer
+        outer1 = seg1.body[1]; // Left side of seg1 end
+        outer2 = seg2.body[0]; // Left side of seg2 start
+    }
     
     // Calculate miter point (intersection of extended outer edges)
     // Extend seg1's right edge forward
@@ -210,19 +215,48 @@ function generateMiterJoin(seg1, seg2, joinPoint, miterLimit) {
         return generateBevelJoin(seg1, seg2, joinPoint);
     }
     
-    // Create miter triangle
+    // For miter join, we need to fill both the miter triangle and the inner area
+    let inner1, inner2;
+    if (cross > 0) {
+        // Left turn - left sides are inner
+        inner1 = seg1.body[1]; // Left side of seg1 end  
+        inner2 = seg2.body[0]; // Left side of seg2 start
+    } else {
+        // Right turn - right sides are inner
+        inner1 = seg1.body[2]; // Right side of seg1 end
+        inner2 = seg2.body[3]; // Right side of seg2 start
+    }
+    
+    // Create miter triangle and inner quadrilateral
     return [
-        [outer1, miterPoint, outer2]
+        [outer1, miterPoint, outer2],  // Miter triangle
+        [outer1, outer2, inner2, inner1]  // Inner connecting area
     ];
 }
 
 // Generate bevel join
 function generateBevelJoin(seg1, seg2, joinPoint) {
-    const outer1 = seg1.body[1]; // Right side of seg1
-    const outer2 = seg2.body[0]; // Right side of seg2
+    // Determine which sides are on the outside of the turn
+    const cross = seg1.tangent.x * seg2.tangent.y - seg1.tangent.y * seg2.tangent.x;
     
+    let outer1, outer2, inner1, inner2;
+    if (cross > 0) {
+        // Left turn - right sides are outer, left sides are inner
+        outer1 = seg1.body[2]; // Right side of seg1 end
+        outer2 = seg2.body[3]; // Right side of seg2 start
+        inner1 = seg1.body[1]; // Left side of seg1 end  
+        inner2 = seg2.body[0]; // Left side of seg2 start
+    } else {
+        // Right turn - left sides are outer, right sides are inner
+        outer1 = seg1.body[1]; // Left side of seg1 end
+        outer2 = seg2.body[0]; // Left side of seg2 start
+        inner1 = seg1.body[2]; // Right side of seg1 end
+        inner2 = seg2.body[3]; // Right side of seg2 start
+    }
+    
+    // Create a quadrilateral that connects outer edges to inner edges
     return [
-        [outer1, outer2, joinPoint]
+        [outer1, outer2, inner2, inner1]
     ];
 }
 
@@ -233,8 +267,19 @@ function generateRoundJoin(seg1, seg2, joinPoint) {
         Math.pow(seg1.body[0].y - seg1.body[3].y, 2)
     ) / 2;
     
-    const outer1 = seg1.body[1]; // End right side of seg1  
-    const outer2 = seg2.body[0]; // Start left side of seg2
+    // Determine which sides are on the outside of the turn
+    const cross = seg1.tangent.x * seg2.tangent.y - seg1.tangent.y * seg2.tangent.x;
+    
+    let outer1, outer2;
+    if (cross > 0) {
+        // Left turn - right sides are outer
+        outer1 = seg1.body[2]; // Right side of seg1 end
+        outer2 = seg2.body[3]; // Right side of seg2 start  
+    } else {
+        // Right turn - left sides are outer
+        outer1 = seg1.body[1]; // Left side of seg1 end
+        outer2 = seg2.body[0]; // Left side of seg2 start
+    }
     
     // Calculate angles
     const angle1 = Math.atan2(outer1.y - joinPoint.y, outer1.x - joinPoint.x);

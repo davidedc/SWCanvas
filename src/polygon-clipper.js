@@ -20,23 +20,9 @@ function clipPolygonsByPolygons(subjectPolygons, clipPolygons, clipRule) {
 
 // Clip a single polygon by multiple clip polygons
 function clipPolygonByPolygons(polygon, clipPolygons, clipRule) {
-    // For M2, we use a simple approach: test each vertex of the subject polygon
-    // and only include vertices that are inside the clip region
-    
-    const clippedVertices = [];
-    
-    for (const vertex of polygon) {
-        if (pointInPolygons(vertex.x, vertex.y, clipPolygons, clipRule)) {
-            clippedVertices.push(vertex);
-        }
-    }
-    
-    // If we have at least 3 vertices, we have a valid polygon
-    if (clippedVertices.length >= 3) {
-        return clippedVertices;
-    }
-    
-    return null;
+    // For M2: Don't pre-clip geometry, let the rasterizer handle clipping per-pixel
+    // This ensures correct clipping behavior without complex geometric intersection
+    return polygon;
 }
 
 // Note: This is a very basic clipping implementation for M2.

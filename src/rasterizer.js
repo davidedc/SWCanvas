@@ -24,6 +24,18 @@ Rasterizer.prototype.fillRect = function(x, y, width, height, color) {
         throw new Error('Must call beginOp before drawing operations');
     }
     
+    // If there's clipping, convert the rectangle to a path and use path filling
+    if (this.currentOp.clipPath) {
+        // Create a path for the rectangle
+        const rectPath = new Path2D();
+        rectPath.rect(x, y, width, height);
+        
+        // Use the existing path filling logic which handles clipping properly
+        this.fill(rectPath, 'nonzero');
+        return;
+    }
+    
+    // No clipping - use optimized direct rectangle filling
     // Transform rectangle corners
     const transform = this.currentOp.transform;
     const topLeft = transform.transformPoint({x: x, y: y});
@@ -111,10 +123,9 @@ Rasterizer.prototype.fill = function(path, rule) {
     
     // Fill polygons with current transform and clipping
     if (this.currentOp.clipPath) {
-        // With clipping - clip polygons first, then fill
+        // With clipping - pass clip polygons for per-pixel testing
         const clipPolygons = flattenPath(this.currentOp.clipPath);
-        const clippedPolygons = clipPolygonsByPolygons(polygons, clipPolygons, 'nonzero');
-        fillPolygons(this.surface, clippedPolygons, fillColor, fillRule, this.currentOp.transform);
+        fillPolygons(this.surface, polygons, fillColor, fillRule, this.currentOp.transform, clipPolygons);
     } else {
         // No clipping - direct fill
         fillPolygons(this.surface, polygons, fillColor, fillRule, this.currentOp.transform);
@@ -142,10 +153,9 @@ Rasterizer.prototype.stroke = function(path, strokeProps) {
     
     // Fill stroke polygons with current transform and clipping
     if (this.currentOp.clipPath) {
-        // With clipping - clip polygons first, then fill
+        // With clipping - pass clip polygons for per-pixel testing
         const clipPolygons = flattenPath(this.currentOp.clipPath);
-        const clippedPolygons = clipPolygonsByPolygons(strokePolygons, clipPolygons, 'nonzero');
-        fillPolygons(this.surface, clippedPolygons, strokeColor, 'nonzero', this.currentOp.transform);
+        fillPolygons(this.surface, strokePolygons, strokeColor, 'nonzero', this.currentOp.transform, clipPolygons);
     } else {
         // No clipping - direct fill
         fillPolygons(this.surface, strokePolygons, strokeColor, 'nonzero', this.currentOp.transform);
