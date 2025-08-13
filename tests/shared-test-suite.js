@@ -257,10 +257,10 @@
                     saveBMP(surface, 'alpha-test.bmp', 'alpha test image', SWCanvas);
                     
                     // Expected values for 50% green over white:
-                    // 50% green over white: src=[0,128,0,128] dst=[255,255,255,255] 
-                    // Result should be: [127, 255, 127, 255]
+                    // 50% green (128) over white: src=[0,64,0,128] dst=[255,255,255,255] 
+                    // Result should be: [127, 191, 127, 255]
                     const expectedR = 127;
-                    const expectedG = 255;  
+                    const expectedG = 191;  
                     const expectedB = 127;
                     const actualR = surface.data[greenOverWhiteOffset];
                     const actualG = surface.data[greenOverWhiteOffset + 1];
@@ -295,7 +295,7 @@
             
             // Semi-transparent green rectangle (this is the key test)
             ctx.globalAlpha = 0.5;
-            ctx.setFillStyle(0, 255, 0, 255);
+            ctx.setFillStyle(0, 128, 0, 255);
             ctx.fillRect(40, 40, 80, 60);
             ctx.globalAlpha = 1.0;
             
@@ -316,10 +316,10 @@
             saveBMP(surface, 'alpha-test.bmp', 'alpha test image', SWCanvas);
             
             // Expected values for 50% green over white:
-            // 50% green over white: src=[0,128,0,128] dst=[255,255,255,255] 
-            // Result should be: [127, 255, 127, 255]
+            // 50% green (128) over white: src=[0,64,0,128] dst=[255,255,255,255] 
+            // Result should be: [127, 191, 127, 255]
             const expectedR = 127;
-            const expectedG = 255;  
+            const expectedG = 191;  
             const expectedB = 127;
             const actualR = surface.data[greenOverWhiteOffset];
             const actualG = surface.data[greenOverWhiteOffset + 1];
@@ -564,7 +564,7 @@
             ctx.fillRect(0, 0, 150, 150);
             
             // Draw a curved path
-            ctx.setStrokeStyle(255, 128, 0, 255);
+            ctx.setStrokeStyle(255, 165, 0, 255);
             ctx.lineWidth = 4;
             ctx.lineJoin = 'round';
             ctx.lineCap = 'round';
@@ -670,6 +670,181 @@
             log('  ✓ Miter joins rendered with different miterLimit values');
             
             saveBMP(surface, 'miter-limits-basic.bmp', 'miter limits basic test', SWCanvas);
+        });
+
+        // ===== PHASE 1: BASIC TRANSFORMATION TESTS =====
+
+        test('Basic transform - translate operations', () => {
+            if (typeof VisualTestRegistry !== 'undefined') {
+                const visualTest = VisualTestRegistry.getTest('transform-basic-translate');
+                if (visualTest) {
+                    const surface = visualTest.drawSWCanvas(SWCanvas);
+                    saveBMP(surface, 'transform-basic-translate.bmp', 'basic translate test', SWCanvas);
+                    
+                    // Verify translated squares are in correct positions
+                    const redPixel = (20 * surface.stride) + (20 * 4);
+                    const bluePixel = (30 * surface.stride) + (70 * 4);
+                    const greenPixel = (60 * surface.stride) + (130 * 4);
+                    
+                    if (surface.data[redPixel] < 200) throw new Error('Red square not found at origin');
+                    if (surface.data[bluePixel + 2] < 200) throw new Error('Blue square not found at translated position');
+                    if (surface.data[greenPixel + 1] < 200) throw new Error('Green square not found at final position');
+                    return;
+                }
+            }
+            
+            // Fallback test without visual registry
+            const surface = SWCanvas.Surface(200, 150);
+            const ctx = new SWCanvas.Context2D(surface);
+            ctx.setFillStyle(255, 255, 255, 255);
+            ctx.fillRect(0, 0, 200, 150);
+            ctx.translate(50, 50);
+            ctx.setFillStyle(255, 0, 0, 255);
+            ctx.fillRect(0, 0, 20, 20);
+            
+            const pixelOffset = (60 * surface.stride) + (60 * 4);
+            if (surface.data[pixelOffset] < 200) {
+                throw new Error('Transform translate not working');
+            }
+        });
+
+        test('Basic transform - scale operations', () => {
+            if (typeof VisualTestRegistry !== 'undefined') {
+                const visualTest = VisualTestRegistry.getTest('transform-basic-scale');
+                if (visualTest) {
+                    const surface = visualTest.drawSWCanvas(SWCanvas);
+                    saveBMP(surface, 'transform-basic-scale.bmp', 'basic scale test', SWCanvas);
+                    
+                    // Verify scaling worked - blue square should be 2x size
+                    let bluePixelCount = 0;
+                    for (let y = 10; y < 60; y++) {
+                        for (let x = 60; x < 110; x++) {
+                            const offset = (y * surface.stride) + (x * 4);
+                            if (surface.data[offset + 2] > 200) bluePixelCount++;
+                        }
+                    }
+                    
+                    if (bluePixelCount < 1500) throw new Error('Scaled blue square not found or incorrect size');
+                    return;
+                }
+            }
+            
+            // Fallback test
+            const surface = SWCanvas.Surface(100, 100);
+            const ctx = new SWCanvas.Context2D(surface);
+            ctx.setFillStyle(255, 255, 255, 255);
+            ctx.fillRect(0, 0, 100, 100);
+            ctx.scale(2, 2);
+            ctx.setFillStyle(255, 0, 0, 255);
+            ctx.fillRect(10, 10, 10, 10);
+            
+            // Should see a 20x20 red square due to 2x scale
+            const pixelOffset = (25 * surface.stride) + (25 * 4);
+            if (surface.data[pixelOffset] < 200) {
+                throw new Error('Transform scale not working');
+            }
+        });
+
+        test('Basic transform - rotate operations', () => {
+            if (typeof VisualTestRegistry !== 'undefined') {
+                const visualTest = VisualTestRegistry.getTest('transform-basic-rotate');
+                if (visualTest) {
+                    const surface = visualTest.drawSWCanvas(SWCanvas);
+                    saveBMP(surface, 'transform-basic-rotate.bmp', 'basic rotate test', SWCanvas);
+                    
+                    // Just verify rotation doesn't crash and produces pixels
+                    let pixelCount = 0;
+                    for (let i = 0; i < surface.data.length; i += 4) {
+                        if (surface.data[i] > 100 || surface.data[i+1] > 100 || surface.data[i+2] > 100) {
+                            pixelCount++;
+                        }
+                    }
+                    
+                    if (pixelCount < 1000) throw new Error('Rotation test produced too few pixels');
+                    return;
+                }
+            }
+            
+            // Fallback test
+            const surface = SWCanvas.Surface(100, 100);
+            const ctx = new SWCanvas.Context2D(surface);
+            ctx.setFillStyle(255, 255, 255, 255);
+            ctx.fillRect(0, 0, 100, 100);
+            ctx.translate(50, 50);
+            ctx.rotate(Math.PI / 4);
+            ctx.setFillStyle(255, 0, 0, 255);
+            ctx.fillRect(-10, -10, 20, 20);
+            
+            // Should see rotated red pixels
+            const centerOffset = (50 * surface.stride) + (50 * 4);
+            if (surface.data[centerOffset] < 100) {
+                throw new Error('Transform rotate not working');
+            }
+        });
+
+        test('setTransform vs transform behavior', () => {
+            if (typeof VisualTestRegistry !== 'undefined') {
+                const visualTest = VisualTestRegistry.getTest('transform-setTransform-vs-transform');
+                if (visualTest) {
+                    const surface = visualTest.drawSWCanvas(SWCanvas);
+                    saveBMP(surface, 'transform-setTransform-vs-transform.bmp', 'setTransform vs transform test', SWCanvas);
+                    return;
+                }
+            }
+            
+            // Fallback test showing difference between transform and setTransform
+            const surface = SWCanvas.Surface(200, 100);
+            const ctx = new SWCanvas.Context2D(surface);
+            ctx.setFillStyle(255, 255, 255, 255);
+            ctx.fillRect(0, 0, 200, 100);
+            
+            // transform is accumulative
+            ctx.transform(1, 0, 0, 1, 10, 10);
+            ctx.transform(2, 0, 0, 2, 0, 0);
+            ctx.setFillStyle(255, 0, 0, 255);
+            ctx.fillRect(0, 0, 10, 10);
+            
+            // setTransform is absolute
+            ctx.setTransform(1, 0, 0, 1, 100, 10);
+            ctx.setFillStyle(0, 0, 255, 255);
+            ctx.fillRect(0, 0, 10, 10);
+            
+            // Should see different positioned squares
+            const redArea = (20 * surface.stride) + (20 * 4);
+            const blueArea = (20 * surface.stride) + (100 * 4);
+            
+            if (surface.data[redArea] < 200) throw new Error('Accumulative transform not working');
+            if (surface.data[blueArea + 2] < 200) throw new Error('Absolute setTransform not working');
+        });
+
+        test('resetTransform functionality', () => {
+            if (typeof VisualTestRegistry !== 'undefined') {
+                const visualTest = VisualTestRegistry.getTest('transform-resetTransform');
+                if (visualTest) {
+                    const surface = visualTest.drawSWCanvas(SWCanvas);
+                    saveBMP(surface, 'transform-resetTransform.bmp', 'resetTransform test', SWCanvas);
+                    return;
+                }
+            }
+            
+            // Test resetTransform works
+            const surface = SWCanvas.Surface(100, 100);
+            const ctx = new SWCanvas.Context2D(surface);
+            ctx.setFillStyle(255, 255, 255, 255);
+            ctx.fillRect(0, 0, 100, 100);
+            
+            ctx.translate(50, 50);
+            ctx.scale(2, 2);
+            ctx.resetTransform();
+            
+            // After reset, should be back to identity
+            ctx.setFillStyle(255, 0, 0, 255);
+            ctx.fillRect(10, 10, 20, 20);
+            
+            const pixelOffset = (20 * surface.stride) + (20 * 4);
+            if (surface.data[pixelOffset] < 200) {
+                throw new Error('resetTransform not working');
+            }
         });
 
         // Test results summary

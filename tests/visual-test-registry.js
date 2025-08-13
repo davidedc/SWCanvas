@@ -85,7 +85,7 @@
             
             // Semi-transparent green rectangle
             ctx.globalAlpha = 0.5;
-            ctx.setFillStyle(0, 255, 0, 255);
+            ctx.setFillStyle(0, 128, 0, 255);
             ctx.fillRect(40, 40, 80, 60);
             ctx.globalAlpha = 1.0;
             
@@ -100,7 +100,7 @@
             ctx.fillStyle = 'blue';
             ctx.fillRect(60, 60, 80, 60);
             ctx.globalAlpha = 0.5;
-            ctx.fillStyle = 'rgb(0, 255, 0)';
+            ctx.fillStyle = 'green';
             ctx.fillRect(40, 40, 80, 60);
             ctx.globalAlpha = 1.0;
         }
@@ -337,7 +337,7 @@
             ctx.fillRect(0, 0, 150, 150);
             
             // Draw a curved path
-            ctx.setStrokeStyle(255, 128, 0, 255);
+            ctx.setStrokeStyle(255, 165, 0, 255);
             ctx.lineWidth = 4;
             ctx.lineJoin = 'round';
             ctx.lineCap = 'round';
@@ -491,6 +491,405 @@
                 ctx.lineTo(x + 5, 60);
                 ctx.stroke();
             }
+        }
+    };
+
+    // ===== PHASE 1: BASIC TRANSFORMATION TESTS =====
+
+    // Test 11: Basic Translation
+    visualTests['transform-basic-translate'] = {
+        name: 'Basic translation operations',
+        width: 200, height: 150,
+        drawSWCanvas: function(SWCanvas) {
+            const surface = SWCanvas.Surface(200, 150);
+            const ctx = new SWCanvas.Context2D(surface);
+            
+            // White background
+            ctx.setFillStyle(255, 255, 255, 255);
+            ctx.fillRect(0, 0, 200, 150);
+            
+            // Red square at origin
+            ctx.setFillStyle(255, 0, 0, 255);
+            ctx.fillRect(10, 10, 30, 30);
+            
+            // Translate and draw blue square
+            ctx.translate(50, 20);
+            ctx.setFillStyle(0, 0, 255, 255);
+            ctx.fillRect(10, 10, 30, 30);
+            
+            // Translate again and draw green square
+            ctx.translate(60, 30);
+            ctx.setFillStyle(0, 128, 0, 255);
+            ctx.fillRect(10, 10, 30, 30);
+            
+            return surface;
+        },
+        drawHTML5Canvas: function(html5Canvas) {
+            const ctx = html5Canvas.getContext('2d');
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, 200, 150);
+            
+            // Red square at origin
+            ctx.fillStyle = 'red';
+            ctx.fillRect(10, 10, 30, 30);
+            
+            // Translate and draw blue square
+            ctx.translate(50, 20);
+            ctx.fillStyle = 'blue';
+            ctx.fillRect(10, 10, 30, 30);
+            
+            // Translate again and draw green square
+            ctx.translate(60, 30);
+            ctx.fillStyle = 'green';
+            ctx.fillRect(10, 10, 30, 30);
+        }
+    };
+
+    // Test 12: Basic Scaling
+    visualTests['transform-basic-scale'] = {
+        name: 'Basic scaling operations',
+        width: 200, height: 150,
+        drawSWCanvas: function(SWCanvas) {
+            const surface = SWCanvas.Surface(200, 150);
+            const ctx = new SWCanvas.Context2D(surface);
+            
+            // White background
+            ctx.setFillStyle(255, 255, 255, 255);
+            ctx.fillRect(0, 0, 200, 150);
+            
+            // Original size red square
+            ctx.setFillStyle(255, 0, 0, 255);
+            ctx.fillRect(10, 10, 20, 20);
+            
+            // Scale 2x and draw blue square
+            ctx.translate(60, 10);
+            ctx.scale(2, 2);
+            ctx.setFillStyle(0, 0, 255, 255);
+            ctx.fillRect(0, 0, 20, 20);
+            
+            // Reset, scale 0.5x and draw green square
+            ctx.resetTransform();
+            ctx.translate(10, 60);
+            ctx.scale(0.5, 0.5);
+            ctx.setFillStyle(0, 128, 0, 255);
+            ctx.fillRect(0, 0, 40, 40);
+            
+            return surface;
+        },
+        drawHTML5Canvas: function(html5Canvas) {
+            const ctx = html5Canvas.getContext('2d');
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, 200, 150);
+            
+            // Original size red square
+            ctx.fillStyle = 'red';
+            ctx.fillRect(10, 10, 20, 20);
+            
+            // Scale 2x and draw blue square
+            ctx.translate(60, 10);
+            ctx.scale(2, 2);
+            ctx.fillStyle = 'blue';
+            ctx.fillRect(0, 0, 20, 20);
+            
+            // Reset, scale 0.5x and draw green square
+            ctx.resetTransform();
+            ctx.translate(10, 60);
+            ctx.scale(0.5, 0.5);
+            ctx.fillStyle = 'green';
+            ctx.fillRect(0, 0, 40, 40);
+        }
+    };
+
+    // Test 13: Basic Rotation
+    visualTests['transform-basic-rotate'] = {
+        name: 'Basic rotation operations',
+        width: 200, height: 150,
+        drawSWCanvas: function(SWCanvas) {
+            const surface = SWCanvas.Surface(200, 150);
+            const ctx = new SWCanvas.Context2D(surface);
+            
+            // White background
+            ctx.setFillStyle(255, 255, 255, 255);
+            ctx.fillRect(0, 0, 200, 150);
+            
+            // Original red square
+            ctx.setFillStyle(255, 0, 0, 255);
+            ctx.fillRect(20, 20, 25, 25);
+            
+            // Rotate 45 degrees and draw blue square
+            ctx.translate(100, 40);
+            ctx.rotate(Math.PI / 4);
+            ctx.setFillStyle(0, 0, 255, 255);
+            ctx.fillRect(-12, -12, 25, 25);
+            
+            // Reset, rotate 90 degrees and draw green square
+            ctx.resetTransform();
+            ctx.translate(60, 100);
+            ctx.rotate(Math.PI / 2);
+            ctx.setFillStyle(0, 128, 0, 255);
+            ctx.fillRect(-12, -12, 25, 25);
+            
+            return surface;
+        },
+        drawHTML5Canvas: function(html5Canvas) {
+            const ctx = html5Canvas.getContext('2d');
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, 200, 150);
+            
+            // Original red square
+            ctx.fillStyle = 'red';
+            ctx.fillRect(20, 20, 25, 25);
+            
+            // Rotate 45 degrees and draw blue square
+            ctx.translate(100, 40);
+            ctx.rotate(Math.PI / 4);
+            ctx.fillStyle = 'blue';
+            ctx.fillRect(-12, -12, 25, 25);
+            
+            // Reset, rotate 90 degrees and draw green square
+            ctx.resetTransform();
+            ctx.translate(60, 100);
+            ctx.rotate(Math.PI / 2);
+            ctx.fillStyle = 'green';
+            ctx.fillRect(-12, -12, 25, 25);
+        }
+    };
+
+    // Test 14: setTransform vs transform behavior
+    visualTests['transform-setTransform-vs-transform'] = {
+        name: 'setTransform vs transform behavior comparison',
+        width: 250, height: 150,
+        drawSWCanvas: function(SWCanvas) {
+            const surface = SWCanvas.Surface(250, 150);
+            const ctx = new SWCanvas.Context2D(surface);
+            
+            // White background
+            ctx.setFillStyle(255, 255, 255, 255);
+            ctx.fillRect(0, 0, 250, 150);
+            
+            // Left side: Using transform() - accumulative
+            ctx.setFillStyle(255, 0, 0, 255);
+            ctx.transform(1, 0, 0, 1, 20, 20); // translate(20, 20)
+            ctx.fillRect(0, 0, 20, 20);
+            
+            ctx.transform(2, 0, 0, 2, 0, 0); // scale(2, 2) - accumulative
+            ctx.setFillStyle(0, 128, 0, 255);
+            ctx.fillRect(15, 0, 15, 15);
+            
+            // Right side: Using setTransform() - absolute
+            ctx.setTransform(1, 0, 0, 1, 150, 20); // absolute translate(150, 20)
+            ctx.setFillStyle(0, 0, 255, 255);
+            ctx.fillRect(0, 0, 20, 20);
+            
+            ctx.setTransform(2, 0, 0, 2, 150, 60); // absolute scale + translate
+            ctx.setFillStyle(255, 0, 255, 255);
+            ctx.fillRect(0, 0, 15, 15);
+            
+            return surface;
+        },
+        drawHTML5Canvas: function(html5Canvas) {
+            const ctx = html5Canvas.getContext('2d');
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, 250, 150);
+            
+            // Left side: Using transform() - accumulative
+            ctx.fillStyle = 'red';
+            ctx.transform(1, 0, 0, 1, 20, 20);
+            ctx.fillRect(0, 0, 20, 20);
+            
+            ctx.transform(2, 0, 0, 2, 0, 0);
+            ctx.fillStyle = 'green';
+            ctx.fillRect(15, 0, 15, 15);
+            
+            // Right side: Using setTransform() - absolute
+            ctx.setTransform(1, 0, 0, 1, 150, 20);
+            ctx.fillStyle = 'blue';
+            ctx.fillRect(0, 0, 20, 20);
+            
+            ctx.setTransform(2, 0, 0, 2, 150, 60);
+            ctx.fillStyle = 'magenta';
+            ctx.fillRect(0, 0, 15, 15);
+        }
+    };
+
+    // Test 15: resetTransform functionality
+    visualTests['transform-resetTransform'] = {
+        name: 'resetTransform functionality',
+        width: 200, height: 150,
+        drawSWCanvas: function(SWCanvas) {
+            const surface = SWCanvas.Surface(200, 150);
+            const ctx = new SWCanvas.Context2D(surface);
+            
+            // White background
+            ctx.setFillStyle(255, 255, 255, 255);
+            ctx.fillRect(0, 0, 200, 150);
+            
+            // Apply complex transform
+            ctx.translate(50, 30);
+            ctx.rotate(Math.PI / 6);
+            ctx.scale(1.5, 1.5);
+            
+            // Draw transformed red square
+            ctx.setFillStyle(255, 0, 0, 255);
+            ctx.fillRect(0, 0, 20, 20);
+            
+            // Reset transform and draw blue square at origin
+            ctx.resetTransform();
+            ctx.setFillStyle(0, 0, 255, 255);
+            ctx.fillRect(10, 80, 20, 20);
+            
+            // Apply new transform after reset
+            ctx.translate(120, 50);
+            ctx.scale(0.8, 0.8);
+            ctx.setFillStyle(0, 128, 0, 255);
+            ctx.fillRect(0, 0, 25, 25);
+            
+            return surface;
+        },
+        drawHTML5Canvas: function(html5Canvas) {
+            const ctx = html5Canvas.getContext('2d');
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, 200, 150);
+            
+            // Apply complex transform
+            ctx.translate(50, 30);
+            ctx.rotate(Math.PI / 6);
+            ctx.scale(1.5, 1.5);
+            
+            // Draw transformed red square
+            ctx.fillStyle = 'red';
+            ctx.fillRect(0, 0, 20, 20);
+            
+            // Reset transform and draw blue square at origin
+            ctx.resetTransform();
+            ctx.fillStyle = 'blue';
+            ctx.fillRect(10, 80, 20, 20);
+            
+            // Apply new transform after reset
+            ctx.translate(120, 50);
+            ctx.scale(0.8, 0.8);
+            ctx.fillStyle = 'green';
+            ctx.fillRect(0, 0, 25, 25);
+        }
+    };
+
+    // Test 16: Transform state save/restore
+    visualTests['transform-state-save-restore'] = {
+        name: 'Transform with save/restore stack',
+        width: 200, height: 150,
+        drawSWCanvas: function(SWCanvas) {
+            const surface = SWCanvas.Surface(200, 150);
+            const ctx = new SWCanvas.Context2D(surface);
+            
+            // White background
+            ctx.setFillStyle(255, 255, 255, 255);
+            ctx.fillRect(0, 0, 200, 150);
+            
+            // Initial transform
+            ctx.translate(30, 30);
+            ctx.scale(1.2, 1.2);
+            
+            // Draw red square with initial transform
+            ctx.setFillStyle(255, 0, 0, 255);
+            ctx.fillRect(0, 0, 20, 20);
+            
+            // Save state, apply additional transform
+            ctx.save();
+            ctx.rotate(Math.PI / 4);
+            ctx.translate(40, 0);
+            
+            // Draw blue square with combined transforms
+            ctx.setFillStyle(0, 0, 255, 255);
+            ctx.fillRect(0, 0, 15, 15);
+            
+            // Restore to saved state, draw green square
+            ctx.restore();
+            ctx.translate(0, 40);
+            ctx.setFillStyle(0, 128, 0, 255);
+            ctx.fillRect(0, 0, 18, 18);
+            
+            return surface;
+        },
+        drawHTML5Canvas: function(html5Canvas) {
+            const ctx = html5Canvas.getContext('2d');
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, 200, 150);
+            
+            // Initial transform
+            ctx.translate(30, 30);
+            ctx.scale(1.2, 1.2);
+            
+            // Draw red square with initial transform
+            ctx.fillStyle = 'red';
+            ctx.fillRect(0, 0, 20, 20);
+            
+            // Save state, apply additional transform
+            ctx.save();
+            ctx.rotate(Math.PI / 4);
+            ctx.translate(40, 0);
+            
+            // Draw blue square with combined transforms
+            ctx.fillStyle = 'blue';
+            ctx.fillRect(0, 0, 15, 15);
+            
+            // Restore to saved state, draw green square
+            ctx.restore();
+            ctx.translate(0, 40);
+            ctx.fillStyle = 'green';
+            ctx.fillRect(0, 0, 18, 18);
+        }
+    };
+
+    // Test 17: Combined transform operations
+    visualTests['transform-combined-operations'] = {
+        name: 'Multiple transforms combined',
+        width: 200, height: 150,
+        drawSWCanvas: function(SWCanvas) {
+            const surface = SWCanvas.Surface(200, 150);
+            const ctx = new SWCanvas.Context2D(surface);
+            
+            // White background
+            ctx.setFillStyle(255, 255, 255, 255);
+            ctx.fillRect(0, 0, 200, 150);
+            
+            // Complex combined transform: translate + rotate + scale
+            ctx.translate(100, 75);
+            ctx.rotate(Math.PI / 6);
+            ctx.scale(1.5, 0.8);
+            ctx.translate(-15, -10);
+            
+            // Draw transformed rectangle
+            ctx.setFillStyle(255, 165, 0, 255);
+            ctx.fillRect(0, 0, 30, 20);
+            
+            // Draw border to show original position
+            ctx.resetTransform();
+            ctx.setStrokeStyle(128, 128, 128, 255);
+            ctx.lineWidth = 1;
+            ctx.strokeRect(85, 65, 30, 20);
+            
+            return surface;
+        },
+        drawHTML5Canvas: function(html5Canvas) {
+            const ctx = html5Canvas.getContext('2d');
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, 200, 150);
+            
+            // Complex combined transform: translate + rotate + scale
+            ctx.translate(100, 75);
+            ctx.rotate(Math.PI / 6);
+            ctx.scale(1.5, 0.8);
+            ctx.translate(-15, -10);
+            
+            // Draw transformed rectangle
+            ctx.fillStyle = 'orange';
+            ctx.fillRect(0, 0, 30, 20);
+            
+            // Draw border to show original position
+            ctx.resetTransform();
+            ctx.strokeStyle = 'gray';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(85, 65, 30, 20);
         }
     };
 

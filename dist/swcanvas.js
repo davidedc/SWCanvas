@@ -1155,9 +1155,25 @@ Rasterizer.prototype.fillRect = function(x, y, width, height, color) {
     const minY = Math.max(0, Math.floor(Math.min(topLeft.y, topRight.y, bottomLeft.y, bottomRight.y)));
     const maxY = Math.min(this.surface.height - 1, Math.ceil(Math.max(topLeft.y, topRight.y, bottomLeft.y, bottomRight.y)));
     
-    // For M1, we'll do axis-aligned rectangles only (no rotation support yet)
+    // Optimized path for axis-aligned rectangles
     if (this.currentOp.transform.b === 0 && this.currentOp.transform.c === 0) {
         this._fillAxisAlignedRect(minX, minY, maxX - minX + 1, maxY - minY + 1, color);
+    } else {
+        // Handle rotated rectangles by converting to polygon
+        const rectPolygon = [
+            {x: x, y: y},
+            {x: x + width, y: y}, 
+            {x: x + width, y: y + height},
+            {x: x, y: y + height}
+        ];
+        
+        // Use existing polygon filling system which handles transforms
+        if (this.currentOp.clipPath) {
+            const clipPolygons = flattenPath(this.currentOp.clipPath);
+            fillPolygons(this.surface, [rectPolygon], color, 'nonzero', this.currentOp.transform, clipPolygons);
+        } else {
+            fillPolygons(this.surface, [rectPolygon], color, 'nonzero', this.currentOp.transform);
+        }
     }
 };
 
@@ -1332,7 +1348,7 @@ Context2D.prototype.restore = function() {
 // Transform methods
 Context2D.prototype.transform = function(a, b, c, d, e, f) {
     const m = new Matrix([a, b, c, d, e, f]);
-    this._transform = this._transform.multiply(m);
+    this._transform = m.multiply(this._transform);
 };
 
 Context2D.prototype.setTransform = function(a, b, c, d, e, f) {
@@ -1341,6 +1357,19 @@ Context2D.prototype.setTransform = function(a, b, c, d, e, f) {
 
 Context2D.prototype.resetTransform = function() {
     this._transform = new Matrix();
+};
+
+// Convenience transform methods
+Context2D.prototype.translate = function(x, y) {
+    this._transform = new Matrix().translate(x, y).multiply(this._transform);
+};
+
+Context2D.prototype.scale = function(sx, sy) {
+    this._transform = new Matrix().scale(sx, sy).multiply(this._transform);
+};
+
+Context2D.prototype.rotate = function(angleInRadians) {
+    this._transform = new Matrix().rotate(angleInRadians).multiply(this._transform);
 };
 
 // Style setters (simplified for M1)
@@ -1404,7 +1433,28 @@ Context2D.prototype.fillRect = function(x, y, width, height) {
 };
 
 Context2D.prototype.strokeRect = function(x, y, width, height) {
-    throw new Error('strokeRect not implemented in M1');
+    // Create a rectangular path
+    const rectPath = new Path2D();
+    rectPath.rect(x, y, width, height);
+    rectPath.closePath();
+    
+    // Stroke the path using existing stroke infrastructure
+    this.rasterizer.beginOp({
+        composite: this.globalCompositeOperation,
+        globalAlpha: this.globalAlpha,
+        transform: this._transform,
+        clipPath: this._clipPath,
+        strokeStyle: this._strokeStyle
+    });
+    
+    this.rasterizer.stroke(rectPath, {
+        lineWidth: this.lineWidth,
+        lineJoin: this.lineJoin,
+        lineCap: this.lineCap,
+        miterLimit: this.miterLimit
+    });
+    
+    this.rasterizer.endOp();
 };
 
 Context2D.prototype.clearRect = function(x, y, width, height) {

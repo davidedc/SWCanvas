@@ -49,9 +49,25 @@ Rasterizer.prototype.fillRect = function(x, y, width, height, color) {
     const minY = Math.max(0, Math.floor(Math.min(topLeft.y, topRight.y, bottomLeft.y, bottomRight.y)));
     const maxY = Math.min(this.surface.height - 1, Math.ceil(Math.max(topLeft.y, topRight.y, bottomLeft.y, bottomRight.y)));
     
-    // For M1, we'll do axis-aligned rectangles only (no rotation support yet)
+    // Optimized path for axis-aligned rectangles
     if (this.currentOp.transform.b === 0 && this.currentOp.transform.c === 0) {
         this._fillAxisAlignedRect(minX, minY, maxX - minX + 1, maxY - minY + 1, color);
+    } else {
+        // Handle rotated rectangles by converting to polygon
+        const rectPolygon = [
+            {x: x, y: y},
+            {x: x + width, y: y}, 
+            {x: x + width, y: y + height},
+            {x: x, y: y + height}
+        ];
+        
+        // Use existing polygon filling system which handles transforms
+        if (this.currentOp.clipPath) {
+            const clipPolygons = flattenPath(this.currentOp.clipPath);
+            fillPolygons(this.surface, [rectPolygon], color, 'nonzero', this.currentOp.transform, clipPolygons);
+        } else {
+            fillPolygons(this.surface, [rectPolygon], color, 'nonzero', this.currentOp.transform);
+        }
     }
 };
 
