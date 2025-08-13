@@ -5108,6 +5108,309 @@
         }
     };
 
+    // Test 43: Combined Transform + Stroke + Rotate - Phase 4 Integration Test
+    visualTests['combined-transform-stroke-rotate'] = {
+        name: 'Rotated Stroke Joins',
+        width: 200, height: 200,
+        drawSWCanvas: function(SWCanvas) {
+            const surface = SWCanvas.Surface(200, 200);
+            const ctx = new SWCanvas.Context2D(surface);
+            
+            // White background
+            helpers.setSWCanvasFill(ctx, 'white');
+            ctx.fillRect(0, 0, 200, 200);
+            
+            ctx.save();
+            ctx.translate(100, 100);
+            ctx.rotate(Math.PI / 6); // 30 degrees
+            ctx.scale(1.2, 0.8); // Non-uniform scaling
+            
+            // Complex path with sharp corners to test stroke joins
+            ctx.beginPath();
+            ctx.moveTo(-60, -40);
+            ctx.lineTo(20, -40);
+            ctx.lineTo(40, -20);
+            ctx.lineTo(40, 20);
+            ctx.lineTo(20, 40);
+            ctx.lineTo(-20, 40);
+            ctx.lineTo(-40, 20);
+            ctx.lineTo(-40, -20);
+            ctx.closePath();
+            
+            // Test different stroke properties
+            ctx.lineWidth = 8;
+            ctx.lineJoin = 'miter';
+            ctx.miterLimit = 4;
+            ctx.globalAlpha = 0.8;
+            
+            helpers.setSWCanvasStroke(ctx, 'blue');
+            ctx.stroke();
+            
+            // Add smaller rotated shape inside
+            ctx.save();
+            ctx.rotate(Math.PI / 4); // Additional 45 degrees
+            ctx.beginPath();
+            ctx.moveTo(-15, -15);
+            ctx.lineTo(15, -15);
+            ctx.lineTo(15, 15);
+            ctx.lineTo(-15, 15);
+            ctx.closePath();
+            
+            ctx.lineWidth = 4;
+            ctx.lineJoin = 'round';
+            helpers.setSWCanvasStroke(ctx, 'orange');
+            ctx.stroke();
+            ctx.restore();
+            
+            ctx.restore();
+            return surface;
+        },
+        drawHTML5Canvas: function(canvas) {
+            const ctx = canvas.getContext('2d');
+            
+            // White background
+            helpers.setHTML5CanvasFill(ctx, 'white');
+            ctx.fillRect(0, 0, 200, 200);
+            
+            ctx.save();
+            ctx.translate(100, 100);
+            ctx.rotate(Math.PI / 6); // 30 degrees
+            ctx.scale(1.2, 0.8); // Non-uniform scaling
+            
+            // Complex path with sharp corners to test stroke joins
+            ctx.beginPath();
+            ctx.moveTo(-60, -40);
+            ctx.lineTo(20, -40);
+            ctx.lineTo(40, -20);
+            ctx.lineTo(40, 20);
+            ctx.lineTo(20, 40);
+            ctx.lineTo(-20, 40);
+            ctx.lineTo(-40, 20);
+            ctx.lineTo(-40, -20);
+            ctx.closePath();
+            
+            // Test different stroke properties
+            ctx.lineWidth = 8;
+            ctx.lineJoin = 'miter';
+            ctx.miterLimit = 4;
+            ctx.globalAlpha = 0.8;
+            
+            helpers.setHTML5CanvasStroke(ctx, 'blue');
+            ctx.stroke();
+            
+            // Add smaller rotated shape inside
+            ctx.save();
+            ctx.rotate(Math.PI / 4); // Additional 45 degrees
+            ctx.beginPath();
+            ctx.moveTo(-15, -15);
+            ctx.lineTo(15, -15);
+            ctx.lineTo(15, 15);
+            ctx.lineTo(-15, 15);
+            ctx.closePath();
+            
+            ctx.lineWidth = 4;
+            ctx.lineJoin = 'round';
+            helpers.setHTML5CanvasStroke(ctx, 'orange');
+            ctx.stroke();
+            ctx.restore();
+            
+            ctx.restore();
+        }
+    };
+
+    // Test 44: Combined Transform + Stroke + Scale - Phase 4 Integration Test
+    visualTests['combined-transform-stroke-scale'] = {
+        name: 'Scaled Stroke Behavior',
+        width: 200, height: 200,
+        drawSWCanvas: function(SWCanvas) {
+            const surface = SWCanvas.Surface(200, 200);
+            const ctx = new SWCanvas.Context2D(surface);
+            
+            // White background
+            helpers.setSWCanvasFill(ctx, 'white');
+            ctx.fillRect(0, 0, 200, 200);
+            
+            // Test different scaling effects on strokes
+            const scales = [[2, 1], [1, 2], [0.5, 2], [1.5, 1.5]];
+            const colors = ['red', 'blue', 'green', 'purple'];
+            
+            for (let i = 0; i < scales.length; i++) {
+                ctx.save();
+                ctx.translate(50 + (i % 2) * 100, 50 + Math.floor(i / 2) * 100);
+                ctx.scale(scales[i][0], scales[i][1]);
+                
+                // Circle that will be scaled
+                ctx.beginPath();
+                ctx.arc(0, 0, 30, 0, 2 * Math.PI);
+                
+                ctx.lineWidth = 6;
+                ctx.lineJoin = 'miter';
+                ctx.globalAlpha = 0.7;
+                
+                helpers.setSWCanvasStroke(ctx, colors[i]);
+                ctx.stroke();
+                
+                // Add a cross inside to show scaling effects
+                ctx.beginPath();
+                ctx.moveTo(-20, 0);
+                ctx.lineTo(20, 0);
+                ctx.moveTo(0, -20);
+                ctx.lineTo(0, 20);
+                
+                ctx.lineWidth = 3;
+                ctx.stroke();
+                ctx.restore();
+            }
+            
+            return surface;
+        },
+        drawHTML5Canvas: function(canvas) {
+            const ctx = canvas.getContext('2d');
+            
+            // White background
+            helpers.setHTML5CanvasFill(ctx, 'white');
+            ctx.fillRect(0, 0, 200, 200);
+            
+            // Test different scaling effects on strokes
+            const scales = [[2, 1], [1, 2], [0.5, 2], [1.5, 1.5]];
+            const colors = ['red', 'blue', 'green', 'purple'];
+            
+            for (let i = 0; i < scales.length; i++) {
+                ctx.save();
+                ctx.translate(50 + (i % 2) * 100, 50 + Math.floor(i / 2) * 100);
+                ctx.scale(scales[i][0], scales[i][1]);
+                
+                // Circle that will be scaled
+                ctx.beginPath();
+                ctx.arc(0, 0, 30, 0, 2 * Math.PI);
+                
+                ctx.lineWidth = 6;
+                ctx.lineJoin = 'miter';
+                ctx.globalAlpha = 0.7;
+                
+                helpers.setHTML5CanvasStroke(ctx, colors[i]);
+                ctx.stroke();
+                
+                // Add a cross inside to show scaling effects
+                ctx.beginPath();
+                ctx.moveTo(-20, 0);
+                ctx.lineTo(20, 0);
+                ctx.moveTo(0, -20);
+                ctx.lineTo(0, 20);
+                
+                ctx.lineWidth = 3;
+                ctx.stroke();
+                ctx.restore();
+            }
+        }
+    };
+
+    // Test 45: Combined Transform + Clip + Stroke - Phase 4 Integration Test
+    visualTests['combined-transform-clip-stroke'] = {
+        name: 'Transform + Clip + Stroke',
+        width: 200, height: 200,
+        drawSWCanvas: function(SWCanvas) {
+            const surface = SWCanvas.Surface(200, 200);
+            const ctx = new SWCanvas.Context2D(surface);
+            
+            // White background
+            helpers.setSWCanvasFill(ctx, 'white');
+            ctx.fillRect(0, 0, 200, 200);
+            
+            ctx.save();
+            ctx.translate(100, 100);
+            ctx.rotate(Math.PI / 8); // Small rotation
+            
+            // Create clipping region: circle
+            ctx.beginPath();
+            ctx.arc(0, 0, 60, 0, 2 * Math.PI);
+            ctx.clip();
+            
+            // Now apply additional transform and stroke
+            ctx.save();
+            ctx.scale(1.5, 0.8);
+            ctx.rotate(Math.PI / 6);
+            
+            // Draw stroked shapes that will be clipped
+            ctx.beginPath();
+            ctx.moveTo(-80, -40);
+            ctx.lineTo(80, -40);
+            ctx.lineTo(80, 40);
+            ctx.lineTo(-80, 40);
+            ctx.closePath();
+            
+            ctx.lineWidth = 12;
+            ctx.lineJoin = 'round';
+            ctx.globalAlpha = 0.8;
+            helpers.setSWCanvasStroke(ctx, 'red');
+            ctx.stroke();
+            
+            // Add diagonal lines
+            ctx.beginPath();
+            ctx.moveTo(-60, -60);
+            ctx.lineTo(60, 60);
+            ctx.moveTo(-60, 60);
+            ctx.lineTo(60, -60);
+            
+            ctx.lineWidth = 6;
+            helpers.setSWCanvasStroke(ctx, 'blue');
+            ctx.stroke();
+            ctx.restore();
+            
+            ctx.restore();
+            return surface;
+        },
+        drawHTML5Canvas: function(canvas) {
+            const ctx = canvas.getContext('2d');
+            
+            // White background
+            helpers.setHTML5CanvasFill(ctx, 'white');
+            ctx.fillRect(0, 0, 200, 200);
+            
+            ctx.save();
+            ctx.translate(100, 100);
+            ctx.rotate(Math.PI / 8); // Small rotation
+            
+            // Create clipping region: circle
+            ctx.beginPath();
+            ctx.arc(0, 0, 60, 0, 2 * Math.PI);
+            ctx.clip();
+            
+            // Now apply additional transform and stroke
+            ctx.save();
+            ctx.scale(1.5, 0.8);
+            ctx.rotate(Math.PI / 6);
+            
+            // Draw stroked shapes that will be clipped
+            ctx.beginPath();
+            ctx.moveTo(-80, -40);
+            ctx.lineTo(80, -40);
+            ctx.lineTo(80, 40);
+            ctx.lineTo(-80, 40);
+            ctx.closePath();
+            
+            ctx.lineWidth = 12;
+            ctx.lineJoin = 'round';
+            ctx.globalAlpha = 0.8;
+            helpers.setHTML5CanvasStroke(ctx, 'red');
+            ctx.stroke();
+            
+            // Add diagonal lines
+            ctx.beginPath();
+            ctx.moveTo(-60, -60);
+            ctx.lineTo(60, 60);
+            ctx.moveTo(-60, 60);
+            ctx.lineTo(60, -60);
+            
+            ctx.lineWidth = 6;
+            helpers.setHTML5CanvasStroke(ctx, 'blue');
+            ctx.stroke();
+            ctx.restore();
+            
+            ctx.restore();
+        }
+    };
+
     const VisualTestRegistry = {
         getTests: function() { return visualTests; },
         getTest: function(name) { return visualTests[name]; },
