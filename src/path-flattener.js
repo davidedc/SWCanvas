@@ -8,6 +8,7 @@ function flattenPath(path2d) {
     let currentPoint = {x: 0, y: 0};
     let subpathStart = {x: 0, y: 0};
     
+    
     for (const cmd of path2d.commands) {
         switch (cmd.type) {
             case 'moveTo':

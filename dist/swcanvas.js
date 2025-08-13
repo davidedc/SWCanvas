@@ -245,6 +245,7 @@ function flattenPath(path2d) {
     let currentPoint = {x: 0, y: 0};
     let subpathStart = {x: 0, y: 0};
     
+    
     for (const cmd of path2d.commands) {
         switch (cmd.type) {
             case 'moveTo':
@@ -545,6 +546,7 @@ function fillPolygons(surface, polygons, color, fillRule, transform, clipPolygon
     const transformedPolygons = polygons.map(poly => 
         poly.map(point => transform.transformPoint(point))
     );
+    
     
     // Transform clip polygons if provided
     const transformedClipPolygons = clipPolygons ? clipPolygons.map(poly => 
@@ -1335,19 +1337,9 @@ Rasterizer.prototype.fill = function(path, rule) {
     
     // Flatten path to polygons
     const polygons = flattenPath(path);
-    console.log(`Rasterizer.fill: Found ${polygons.length} polygons from path`);
-    
     // Fill polygons with current transform and clipping
-    if (this.currentOp.clipPath) {
-        // With old-style path clipping - pass clip polygons for per-pixel testing
-        const clipPolygons = flattenPath(this.currentOp.clipPath);
-        console.log(`Calling fillPolygons with clipPath`);
-        fillPolygons(this.surface, polygons, fillColor, fillRule, this.currentOp.transform, clipPolygons, this.currentOp.clipMask);
-    } else {
-        // No path clipping - but may have stencil clipping
-        console.log(`Calling fillPolygons without clipPath`);
-        fillPolygons(this.surface, polygons, fillColor, fillRule, this.currentOp.transform, null, this.currentOp.clipMask);
-    }
+    // Use only the new stencil clipping system (clipMask), ignore old clipPath system
+    fillPolygons(this.surface, polygons, fillColor, fillRule, this.currentOp.transform, null, this.currentOp.clipMask);
 };
 
 Rasterizer.prototype.stroke = function(path, strokeProps) {

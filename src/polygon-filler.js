@@ -23,6 +23,7 @@ function fillPolygons(surface, polygons, color, fillRule, transform, clipPolygon
         poly.map(point => transform.transformPoint(point))
     );
     
+    
     // Transform clip polygons if provided
     const transformedClipPolygons = clipPolygons ? clipPolygons.map(poly => 
         poly.map(point => transform.transformPoint(point))
