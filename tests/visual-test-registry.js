@@ -5411,6 +5411,435 @@
         }
     };
 
+    // ===== PHASE 5: IMAGE RENDERING TESTS =====
+
+    // Helper function to create synthetic test images
+    function createTestImage(width, height, pattern) {
+        const image = {
+            width: width,
+            height: height,
+            data: new Uint8ClampedArray(width * height * 4)
+        };
+        
+        for (let y = 0; y < height; y++) {
+            for (let x = 0; x < width; x++) {
+                const i = (y * width + x) * 4;
+                
+                switch (pattern) {
+                    case 'checkerboard':
+                        const isEven = (x + y) % 2 === 0;
+                        image.data[i] = isEven ? 255 : 0;     // R
+                        image.data[i + 1] = isEven ? 0 : 255; // G  
+                        image.data[i + 2] = 0;                // B
+                        image.data[i + 3] = 255;              // A
+                        break;
+                        
+                    case 'gradient':
+                        image.data[i] = Math.floor((x / width) * 255);     // R
+                        image.data[i + 1] = Math.floor((y / height) * 255); // G
+                        image.data[i + 2] = 128;                           // B
+                        image.data[i + 3] = 255;                           // A
+                        break;
+                        
+                    case 'border':
+                        const isBorder = x === 0 || y === 0 || x === width - 1 || y === height - 1;
+                        image.data[i] = isBorder ? 255 : 100;     // R
+                        image.data[i + 1] = isBorder ? 255 : 150; // G
+                        image.data[i + 2] = isBorder ? 0 : 200;   // B
+                        image.data[i + 3] = 255;                  // A
+                        break;
+                        
+                    case 'alpha':
+                        image.data[i] = 255;                      // R
+                        image.data[i + 1] = 0;                    // G
+                        image.data[i + 2] = 0;                    // B
+                        image.data[i + 3] = Math.floor((x / width) * 255); // A gradient
+                        break;
+                }
+            }
+        }
+        
+        return image;
+    }
+    
+    // Helper function to create RGB test image (3 channels)
+    function createRGBTestImage(width, height) {
+        const image = {
+            width: width,
+            height: height,
+            data: new Uint8ClampedArray(width * height * 3) // RGB only
+        };
+        
+        for (let y = 0; y < height; y++) {
+            for (let x = 0; x < width; x++) {
+                const i = (y * width + x) * 3;
+                image.data[i] = x < width / 2 ? 255 : 0;     // R
+                image.data[i + 1] = y < height / 2 ? 255 : 0; // G
+                image.data[i + 2] = (x + y) % 2 ? 255 : 0;   // B
+            }
+        }
+        
+        return image;
+    }
+    
+    // Helper function to convert SWCanvas Surface to ImageLike
+    function surfaceToImageLike(surface) {
+        return {
+            width: surface.width,
+            height: surface.height,
+            data: surface.data // Already Uint8ClampedArray in RGBA format
+        };
+    }
+    
+    // Helper function to convert ImageLike to HTML5 Canvas ImageData
+    function imagelikeToImageData(imageLike, canvasCtx) {
+        const imageData = canvasCtx.createImageData(imageLike.width, imageLike.height);
+        
+        if (imageLike.data.length === imageLike.width * imageLike.height * 3) {
+            // Convert RGB to RGBA
+            for (let i = 0; i < imageLike.width * imageLike.height; i++) {
+                imageData.data[i*4] = imageLike.data[i*3];     // R
+                imageData.data[i*4+1] = imageLike.data[i*3+1]; // G  
+                imageData.data[i*4+2] = imageLike.data[i*3+2]; // B
+                imageData.data[i*4+3] = 255;                   // A
+            }
+        } else {
+            // Copy RGBA as-is
+            imageData.data.set(imageLike.data);
+        }
+        
+        return imageData;
+    }
+
+    // Test: Basic drawImage
+    visualTests['drawimage-basic'] = {
+        name: 'Basic drawImage positioning',
+        width: 200, height: 150,
+        drawSWCanvas: function(SWCanvas) {
+            const surface = SWCanvas.Surface(200, 150);
+            const ctx = new SWCanvas.Context2D(surface);
+            
+            // White background
+            helpers.setSWCanvasFill(ctx, 'white');
+            ctx.fillRect(0, 0, 200, 150);
+            
+            // Create test image
+            const testImage = createTestImage(20, 20, 'checkerboard');
+            
+            // Draw at different positions
+            ctx.drawImage(testImage, 10, 10);        // Basic position
+            ctx.drawImage(testImage, 50, 10);        // Right
+            ctx.drawImage(testImage, 10, 50);        // Below
+            ctx.drawImage(testImage, 50, 50);        // Diagonal
+            
+            return surface;
+        },
+        drawHTML5Canvas: function(html5Canvas) {
+            const ctx = html5Canvas.getContext('2d');
+            helpers.setHTML5CanvasFill(ctx, 'white');
+            ctx.fillRect(0, 0, 200, 150);
+            
+            // Create equivalent ImageData
+            const testImage = createTestImage(20, 20, 'checkerboard');
+            const imageData = imagelikeToImageData(testImage, ctx);
+            
+            // Draw at same positions
+            ctx.putImageData(imageData, 10, 10);
+            ctx.putImageData(imageData, 50, 10); 
+            ctx.putImageData(imageData, 10, 50);
+            ctx.putImageData(imageData, 50, 50);
+        }
+    };
+
+    // Test: drawImage scaling
+    visualTests['drawimage-scaling'] = {
+        name: 'drawImage with scaling',
+        width: 200, height: 150,
+        drawSWCanvas: function(SWCanvas) {
+            const surface = SWCanvas.Surface(200, 150);
+            const ctx = new SWCanvas.Context2D(surface);
+            
+            // White background
+            helpers.setSWCanvasFill(ctx, 'white');
+            ctx.fillRect(0, 0, 200, 150);
+            
+            // Create gradient test image
+            const testImage = createTestImage(10, 10, 'gradient');
+            
+            // Draw at original size
+            ctx.drawImage(testImage, 10, 10);
+            
+            // Draw scaled up 2x
+            ctx.drawImage(testImage, 30, 10, 20, 20);
+            
+            // Draw scaled up 3x
+            ctx.drawImage(testImage, 60, 10, 30, 30);
+            
+            // Draw scaled down
+            ctx.drawImage(testImage, 100, 10, 5, 5);
+            
+            // Draw with non-uniform scaling
+            ctx.drawImage(testImage, 10, 50, 40, 10);
+            
+            return surface;
+        },
+        drawHTML5Canvas: function(html5Canvas) {
+            const ctx = html5Canvas.getContext('2d');
+            helpers.setHTML5CanvasFill(ctx, 'white');
+            ctx.fillRect(0, 0, 200, 150);
+            
+            const testImage = createTestImage(10, 10, 'gradient');
+            const imageData = imagelikeToImageData(testImage, ctx);
+            
+            // Create a temporary canvas for scaling
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = 10;
+            tempCanvas.height = 10;
+            const tempCtx = tempCanvas.getContext('2d');
+            tempCtx.putImageData(imageData, 0, 0);
+            
+            // Draw at original size
+            ctx.drawImage(tempCanvas, 10, 10);
+            
+            // Draw scaled
+            ctx.drawImage(tempCanvas, 30, 10, 20, 20);
+            ctx.drawImage(tempCanvas, 60, 10, 30, 30);
+            ctx.drawImage(tempCanvas, 100, 10, 5, 5);
+            ctx.drawImage(tempCanvas, 10, 50, 40, 10);
+        }
+    };
+
+    // Test: RGB to RGBA conversion
+    visualTests['drawimage-rgb-conversion'] = {
+        name: 'RGB to RGBA auto-conversion',
+        width: 200, height: 150,
+        drawSWCanvas: function(SWCanvas) {
+            const surface = SWCanvas.Surface(200, 150);
+            const ctx = new SWCanvas.Context2D(surface);
+            
+            // White background
+            helpers.setSWCanvasFill(ctx, 'white');
+            ctx.fillRect(0, 0, 200, 150);
+            
+            // Create RGB test image (3 channels)
+            const rgbImage = createRGBTestImage(30, 30);
+            
+            // Draw RGB image - should auto-convert to RGBA
+            ctx.drawImage(rgbImage, 20, 20);
+            
+            // Create RGBA test image for comparison
+            const rgbaImage = createTestImage(30, 30, 'border');
+            ctx.drawImage(rgbaImage, 70, 20);
+            
+            return surface;
+        },
+        drawHTML5Canvas: function(html5Canvas) {
+            const ctx = html5Canvas.getContext('2d');
+            helpers.setHTML5CanvasFill(ctx, 'white');
+            ctx.fillRect(0, 0, 200, 150);
+            
+            // RGB image converted to ImageData
+            const rgbImage = createRGBTestImage(30, 30);
+            const rgbImageData = imagelikeToImageData(rgbImage, ctx);
+            ctx.putImageData(rgbImageData, 20, 20);
+            
+            // RGBA image
+            const rgbaImage = createTestImage(30, 30, 'border');
+            const rgbaImageData = imagelikeToImageData(rgbaImage, ctx);
+            ctx.putImageData(rgbaImageData, 70, 20);
+        }
+    };
+
+    // Test: drawImage with transforms
+    visualTests['drawimage-transforms'] = {
+        name: 'drawImage with transforms',
+        width: 200, height: 200,
+        drawSWCanvas: function(SWCanvas) {
+            const surface = SWCanvas.Surface(200, 200);
+            const ctx = new SWCanvas.Context2D(surface);
+            
+            // White background
+            helpers.setSWCanvasFill(ctx, 'white');
+            ctx.fillRect(0, 0, 200, 200);
+            
+            const testImage = createTestImage(20, 20, 'checkerboard');
+            
+            // Original
+            ctx.drawImage(testImage, 10, 10);
+            
+            // Translated
+            ctx.save();
+            ctx.translate(50, 50);
+            ctx.drawImage(testImage, 0, 0);
+            ctx.restore();
+            
+            // Scaled  
+            ctx.save();
+            ctx.translate(100, 100);
+            ctx.scale(1.5, 1.5);
+            ctx.drawImage(testImage, 0, 0);
+            ctx.restore();
+            
+            // Rotated
+            ctx.save();
+            ctx.translate(150, 150);
+            ctx.rotate(Math.PI / 4);
+            ctx.drawImage(testImage, -10, -10);
+            ctx.restore();
+            
+            return surface;
+        },
+        drawHTML5Canvas: function(html5Canvas) {
+            const ctx = html5Canvas.getContext('2d');
+            helpers.setHTML5CanvasFill(ctx, 'white');
+            ctx.fillRect(0, 0, 200, 200);
+            
+            const testImage = createTestImage(20, 20, 'checkerboard');
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = 20;
+            tempCanvas.height = 20;
+            const tempCtx = tempCanvas.getContext('2d');
+            tempCtx.putImageData(imagelikeToImageData(testImage, tempCtx), 0, 0);
+            
+            // Same transforms
+            ctx.drawImage(tempCanvas, 10, 10);
+            
+            ctx.save();
+            ctx.translate(50, 50);
+            ctx.drawImage(tempCanvas, 0, 0);
+            ctx.restore();
+            
+            ctx.save();
+            ctx.translate(100, 100);
+            ctx.scale(1.5, 1.5);
+            ctx.drawImage(tempCanvas, 0, 0);
+            ctx.restore();
+            
+            ctx.save();
+            ctx.translate(150, 150);
+            ctx.rotate(Math.PI / 4);
+            ctx.drawImage(tempCanvas, -10, -10);
+            ctx.restore();
+        }
+    };
+
+    // Test: drawImage with alpha and blending
+    visualTests['drawimage-alpha-blending'] = {
+        name: 'drawImage with alpha and blending',
+        width: 200, height: 150,
+        drawSWCanvas: function(SWCanvas) {
+            const surface = SWCanvas.Surface(200, 150);
+            const ctx = new SWCanvas.Context2D(surface);
+            
+            // Colored background
+            helpers.setSWCanvasFill(ctx, 'lightblue');
+            ctx.fillRect(0, 0, 200, 150);
+            
+            // Create alpha gradient image
+            const alphaImage = createTestImage(40, 40, 'alpha');
+            
+            // Draw with full alpha
+            ctx.drawImage(alphaImage, 20, 20);
+            
+            // Draw with global alpha
+            ctx.globalAlpha = 0.5;
+            ctx.drawImage(alphaImage, 80, 20);
+            ctx.globalAlpha = 1.0;
+            
+            // Draw overlapping for blending test
+            const solidImage = createTestImage(30, 30, 'checkerboard');
+            ctx.drawImage(solidImage, 120, 50);
+            ctx.drawImage(alphaImage, 130, 60);
+            
+            return surface;
+        },
+        drawHTML5Canvas: function(html5Canvas) {
+            const ctx = html5Canvas.getContext('2d');
+            helpers.setHTML5CanvasFill(ctx, 'lightblue');
+            ctx.fillRect(0, 0, 200, 150);
+            
+            const alphaImage = createTestImage(40, 40, 'alpha');
+            const alphaCanvas = document.createElement('canvas');
+            alphaCanvas.width = 40;
+            alphaCanvas.height = 40;
+            const alphaCtx = alphaCanvas.getContext('2d');
+            alphaCtx.putImageData(imagelikeToImageData(alphaImage, alphaCtx), 0, 0);
+            
+            ctx.drawImage(alphaCanvas, 20, 20);
+            
+            ctx.globalAlpha = 0.5;
+            ctx.drawImage(alphaCanvas, 80, 20);
+            ctx.globalAlpha = 1.0;
+            
+            const solidImage = createTestImage(30, 30, 'checkerboard');
+            const solidCanvas = document.createElement('canvas');
+            solidCanvas.width = 30;
+            solidCanvas.height = 30;
+            const solidCtx = solidCanvas.getContext('2d');
+            solidCtx.putImageData(imagelikeToImageData(solidImage, solidCtx), 0, 0);
+            
+            ctx.drawImage(solidCanvas, 120, 50);
+            ctx.drawImage(alphaCanvas, 130, 60);
+        }
+    };
+
+    // Test: Advanced drawImage using surface-to-ImageLike conversion
+    visualTests['drawimage-surface-conversion'] = {
+        name: 'drawImage using surface-to-ImageLike conversion',
+        width: 200, height: 150,
+        drawSWCanvas: function(SWCanvas) {
+            const surface = SWCanvas.Surface(200, 150);
+            const ctx = new SWCanvas.Context2D(surface);
+            
+            // White background
+            helpers.setSWCanvasFill(ctx, 'white');
+            ctx.fillRect(0, 0, 200, 150);
+            
+            // Create a source surface with some content
+            const sourceSurface = SWCanvas.Surface(40, 40);
+            const sourceCtx = new SWCanvas.Context2D(sourceSurface);
+            
+            // Draw complex content on source surface
+            helpers.setSWCanvasFill(sourceCtx, 'red');
+            sourceCtx.fillRect(0, 0, 40, 40);
+            helpers.setSWCanvasFill(sourceCtx, 'blue');
+            sourceCtx.fillRect(10, 10, 20, 20);
+            helpers.setSWCanvasFill(sourceCtx, 'yellow');
+            sourceCtx.fillRect(5, 5, 10, 10);
+            
+            // Convert surface to ImageLike and draw it
+            const imageData = surfaceToImageLike(sourceSurface);
+            ctx.drawImage(imageData, 20, 20);
+            ctx.drawImage(imageData, 80, 20, 20, 20); // Scaled down
+            ctx.drawImage(imageData, 120, 20, 60, 60); // Scaled up
+            
+            return surface;
+        },
+        drawHTML5Canvas: function(html5Canvas) {
+            const ctx = html5Canvas.getContext('2d');
+            helpers.setHTML5CanvasFill(ctx, 'white');
+            ctx.fillRect(0, 0, 200, 150);
+            
+            // Create equivalent content using temporary canvas
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = 40;
+            tempCanvas.height = 40;
+            const tempCtx = tempCanvas.getContext('2d');
+            
+            helpers.setHTML5CanvasFill(tempCtx, 'red');
+            tempCtx.fillRect(0, 0, 40, 40);
+            helpers.setHTML5CanvasFill(tempCtx, 'blue');
+            tempCtx.fillRect(10, 10, 20, 20);
+            helpers.setHTML5CanvasFill(tempCtx, 'yellow');
+            tempCtx.fillRect(5, 5, 10, 10);
+            
+            // Draw at same positions
+            ctx.drawImage(tempCanvas, 20, 20);
+            ctx.drawImage(tempCanvas, 80, 20, 20, 20); // Scaled down
+            ctx.drawImage(tempCanvas, 120, 20, 60, 60); // Scaled up
+        }
+    };
+
     const VisualTestRegistry = {
         getTests: function() { return visualTests; },
         getTest: function(name) { return visualTests[name]; },

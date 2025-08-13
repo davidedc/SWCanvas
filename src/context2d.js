@@ -504,3 +504,37 @@ Context2D.prototype._fillClipSpans = function(y, intersections, fillRule, clipBu
         }
     }
 };
+
+// Image rendering
+Context2D.prototype.drawImage = function(image, sx, sy, sw, sh, dx, dy, dw, dh) {
+    // Validate ImageLike object at API level
+    if (!image || typeof image !== 'object') {
+        throw new Error('First argument must be an ImageLike object');
+    }
+    
+    if (typeof image.width !== 'number' || typeof image.height !== 'number') {
+        throw new Error('ImageLike must have numeric width and height properties');
+    }
+    
+    if (!(image.data instanceof Uint8ClampedArray)) {
+        throw new Error('ImageLike data must be a Uint8ClampedArray');
+    }
+    
+    // Set up rasterizer operation
+    this.rasterizer.beginOp({
+        composite: this.globalCompositeOperation,
+        globalAlpha: this.globalAlpha,
+        transform: new Matrix([
+            this._transform.a, this._transform.b,
+            this._transform.c, this._transform.d, 
+            this._transform.e, this._transform.f
+        ]),
+        clipMask: this.clipMask
+    });
+    
+    // Delegate to rasterizer
+    this.rasterizer.drawImage.apply(this.rasterizer, arguments);
+    
+    // End rasterizer operation
+    this.rasterizer.endOp();
+};

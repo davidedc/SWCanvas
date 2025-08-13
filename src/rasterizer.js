@@ -5,6 +5,50 @@ function getBit(buffer, pixelIndex) {
     return (buffer[byteIndex] & (1 << bitIndex)) !== 0 ? 1 : 0;
 }
 
+// ImageLike interface validation and RGB→RGBA conversion
+function validateAndConvertImageLike(imageLike) {
+    if (!imageLike || typeof imageLike !== 'object') {
+        throw new Error('ImageLike must be an object');
+    }
+    
+    if (typeof imageLike.width !== 'number' || imageLike.width <= 0 || !Number.isInteger(imageLike.width)) {
+        throw new Error('ImageLike width must be a positive integer');
+    }
+    
+    if (typeof imageLike.height !== 'number' || imageLike.height <= 0 || !Number.isInteger(imageLike.height)) {
+        throw new Error('ImageLike height must be a positive integer');
+    }
+    
+    if (!(imageLike.data instanceof Uint8ClampedArray)) {
+        throw new Error('ImageLike data must be a Uint8ClampedArray');
+    }
+    
+    const expectedRGBLength = imageLike.width * imageLike.height * 3;
+    const expectedRGBALength = imageLike.width * imageLike.height * 4;
+    
+    if (imageLike.data.length === expectedRGBLength) {
+        // RGB to RGBA conversion - append alpha = 255 to each pixel
+        const rgbaData = new Uint8ClampedArray(expectedRGBALength);
+        for (let i = 0; i < imageLike.width * imageLike.height; i++) {
+            rgbaData[i * 4] = imageLike.data[i * 3];     // R
+            rgbaData[i * 4 + 1] = imageLike.data[i * 3 + 1]; // G
+            rgbaData[i * 4 + 2] = imageLike.data[i * 3 + 2]; // B
+            rgbaData[i * 4 + 3] = 255;                   // A = fully opaque
+        }
+        
+        return {
+            width: imageLike.width,
+            height: imageLike.height,
+            data: rgbaData
+        };
+    } else if (imageLike.data.length === expectedRGBALength) {
+        // Already RGBA - use as-is
+        return imageLike;
+    } else {
+        throw new Error(`ImageLike data length (${imageLike.data.length}) must match width*height*3 (${expectedRGBLength}) for RGB or width*height*4 (${expectedRGBALength}) for RGBA`);
+    }
+}
+
 function Rasterizer(surface) {
     this.surface = surface;
     this.currentOp = null;
@@ -178,5 +222,158 @@ Rasterizer.prototype.stroke = function(path, strokeProps) {
 };
 
 Rasterizer.prototype.drawImage = function(img, sx, sy, sw, sh, dx, dy, dw, dh) {
-    throw new Error('Image drawing not implemented in M1');
+    if (!this.currentOp) {
+        throw new Error('Must call beginOp before drawing operations');
+    }
+    
+    // Validate and convert ImageLike (handles RGB→RGBA conversion)
+    const imageData = validateAndConvertImageLike(img);
+    
+    // Handle different parameter combinations
+    let sourceX, sourceY, sourceWidth, sourceHeight;
+    let destX, destY, destWidth, destHeight;
+    
+    if (arguments.length === 3) {
+        // drawImage(image, dx, dy)
+        sourceX = 0;
+        sourceY = 0; 
+        sourceWidth = imageData.width;
+        sourceHeight = imageData.height;
+        destX = sx; // Actually dx
+        destY = sy; // Actually dy
+        destWidth = sourceWidth;
+        destHeight = sourceHeight;
+    } else if (arguments.length === 5) {
+        // drawImage(image, dx, dy, dw, dh)
+        sourceX = 0;
+        sourceY = 0;
+        sourceWidth = imageData.width;
+        sourceHeight = imageData.height;
+        destX = sx; // Actually dx
+        destY = sy; // Actually dy  
+        destWidth = sw; // Actually dw
+        destHeight = sh; // Actually dh
+    } else if (arguments.length === 9) {
+        // drawImage(image, sx, sy, sw, sh, dx, dy, dw, dh)
+        sourceX = sx;
+        sourceY = sy;
+        sourceWidth = sw;
+        sourceHeight = sh;
+        destX = dx;
+        destY = dy;
+        destWidth = dw;
+        destHeight = dh;
+    } else {
+        throw new Error('Invalid number of arguments for drawImage');
+    }
+    
+    // Validate source rectangle bounds
+    if (sourceX < 0 || sourceY < 0 || sourceX + sourceWidth > imageData.width || sourceY + sourceHeight > imageData.height) {
+        throw new Error('Source rectangle is outside image bounds');
+    }
+    
+    // Apply transform to destination rectangle corners  
+    const transform = this.currentOp.transform;
+    const topLeft = transform.transformPoint({x: destX, y: destY});
+    const topRight = transform.transformPoint({x: destX + destWidth, y: destY});
+    const bottomLeft = transform.transformPoint({x: destX, y: destY + destHeight});
+    const bottomRight = transform.transformPoint({x: destX + destWidth, y: destY + destHeight});
+    
+    // Find bounding box in device space
+    const minX = Math.max(0, Math.floor(Math.min(topLeft.x, topRight.x, bottomLeft.x, bottomRight.x)));
+    const maxX = Math.min(this.surface.width - 1, Math.ceil(Math.max(topLeft.x, topRight.x, bottomLeft.x, bottomRight.x)));
+    const minY = Math.max(0, Math.floor(Math.min(topLeft.y, topRight.y, bottomLeft.y, bottomRight.y)));
+    const maxY = Math.min(this.surface.height - 1, Math.ceil(Math.max(topLeft.y, topRight.y, bottomLeft.y, bottomRight.y)));
+    
+    // Get inverse transform for mapping device pixels back to source  
+    const inverseTransform = transform.invert();
+    
+    const globalAlpha = this.currentOp.globalAlpha;
+    
+    // Render each pixel in the bounding box
+    for (let deviceY = minY; deviceY <= maxY; deviceY++) {
+        for (let deviceX = minX; deviceX <= maxX; deviceX++) {
+            // Check stencil clipping
+            if (this.currentOp.clipMask && this._isPixelClipped(deviceX, deviceY)) {
+                continue;
+            }
+            
+            // Transform device pixel back to destination space
+            const destPoint = inverseTransform.transformPoint({x: deviceX, y: deviceY});
+            
+            // Check if we're inside the destination rectangle
+            if (destPoint.x < destX || destPoint.x >= destX + destWidth || 
+                destPoint.y < destY || destPoint.y >= destY + destHeight) {
+                continue;
+            }
+            
+            // Map destination coordinates to source coordinates
+            const sourceXf = sourceX + (destPoint.x - destX) / destWidth * sourceWidth;
+            const sourceYf = sourceY + (destPoint.y - destY) / destHeight * sourceHeight;
+            
+            // Nearest-neighbor sampling
+            const sourcePX = Math.floor(sourceXf);
+            const sourcePY = Math.floor(sourceYf);
+            
+            // Bounds check for source coordinates
+            if (sourcePX < 0 || sourcePY < 0 || sourcePX >= imageData.width || sourcePY >= imageData.height) {
+                continue;
+            }
+            
+            // Sample source pixel
+            const sourceOffset = (sourcePY * imageData.width + sourcePX) * 4;
+            const srcR = imageData.data[sourceOffset];
+            const srcG = imageData.data[sourceOffset + 1]; 
+            const srcB = imageData.data[sourceOffset + 2];
+            const srcA = imageData.data[sourceOffset + 3];
+            
+            // Apply global alpha
+            const effectiveAlpha = (srcA / 255) * globalAlpha;
+            const finalSrcA = Math.round(effectiveAlpha * 255);
+            
+            // Skip transparent pixels
+            if (finalSrcA === 0) continue;
+            
+            // Get destination pixel for blending
+            const destOffset = deviceY * this.surface.stride + deviceX * 4;
+            
+            if (this.currentOp.composite === 'copy' || finalSrcA === 255) {
+                // Direct copy (no blending needed)
+                const premultR = Math.round(srcR * effectiveAlpha);
+                const premultG = Math.round(srcG * effectiveAlpha);
+                const premultB = Math.round(srcB * effectiveAlpha);
+                
+                this.surface.data[destOffset] = premultR;
+                this.surface.data[destOffset + 1] = premultG;
+                this.surface.data[destOffset + 2] = premultB;
+                this.surface.data[destOffset + 3] = finalSrcA;
+            } else {
+                // Alpha blending (source-over)
+                const dstR = this.surface.data[destOffset];
+                const dstG = this.surface.data[destOffset + 1];
+                const dstB = this.surface.data[destOffset + 2];
+                const dstA = this.surface.data[destOffset + 3];
+                
+                const srcAlpha = effectiveAlpha;
+                const invSrcAlpha = 1 - srcAlpha;
+                const dstAlpha = dstA / 255;
+                
+                // Premultiplied source colors
+                const premultSrcR = srcR * srcAlpha;
+                const premultSrcG = srcG * srcAlpha; 
+                const premultSrcB = srcB * srcAlpha;
+                
+                // Blend with destination (assuming destination is already premultiplied)
+                const newR = Math.round(premultSrcR + dstR * invSrcAlpha);
+                const newG = Math.round(premultSrcG + dstG * invSrcAlpha);
+                const newB = Math.round(premultSrcB + dstB * invSrcAlpha);
+                const newA = Math.round(finalSrcA + dstA * invSrcAlpha);
+                
+                this.surface.data[destOffset] = newR;
+                this.surface.data[destOffset + 1] = newG;
+                this.surface.data[destOffset + 2] = newB;
+                this.surface.data[destOffset + 3] = newA;
+            }
+        }
+    }
 };
