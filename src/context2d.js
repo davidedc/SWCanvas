@@ -87,7 +87,7 @@ function createClipPixelWriter(tempClipBuffer, width, height) {
         const pixelIndex = y * width + x;
         const isInside = coverage > 0.5;
         setBit(tempClipBuffer, pixelIndex, isInside);
-    };
+        }
 }
 
 // Helper to check if a pixel should be clipped
@@ -97,35 +97,36 @@ function isPixelClipped(clipMask, x, y, width) {
     return getBit(clipMask, pixelIndex) === 0; // 0 means clipped out
 }
 
-function Context2D(surface) {
-    this.surface = surface;
-    this.rasterizer = new Rasterizer(surface);
-    
-    // State stack
-    this.stateStack = [];
-    
-    // Current state
-    this.globalAlpha = 1.0;
-    this.globalCompositeOperation = 'source-over';
-    this._transform = new Matrix();
-    this._fillStyle = [0, 0, 0, 255]; // Black, non-premultiplied
-    this._strokeStyle = [0, 0, 0, 255]; // Black, non-premultiplied
-    
-    // Stroke properties
-    this.lineWidth = 1.0;
-    this.lineJoin = 'miter';  // 'miter', 'round', 'bevel'
-    this.lineCap = 'butt';    // 'butt', 'round', 'square'
-    this.miterLimit = 10.0;
-    
-    // Internal path and clipping
-    this._currentPath = new Path2D();
-    
-    // Stencil-based clipping system (only clipping mechanism)
-    this._clipMask = null;  // Uint8Array with 1 bit per pixel for clipping
-}
+class Context2D {
+    constructor(surface) {
+        this.surface = surface;
+        this.rasterizer = new Rasterizer(surface);
+        
+        // State stack
+        this.stateStack = [];
+        
+        // Current state
+        this.globalAlpha = 1.0;
+        this.globalCompositeOperation = 'source-over';
+        this._transform = new Matrix();
+        this._fillStyle = [0, 0, 0, 255]; // Black, non-premultiplied
+        this._strokeStyle = [0, 0, 0, 255]; // Black, non-premultiplied
+        
+        // Stroke properties
+        this.lineWidth = 1.0;
+        this.lineJoin = 'miter';  // 'miter', 'round', 'bevel'
+        this.lineCap = 'butt';    // 'butt', 'round', 'square'
+        this.miterLimit = 10.0;
+        
+        // Internal path and clipping
+        this._currentPath = new Path2D();
+        
+        // Stencil-based clipping system (only clipping mechanism)
+        this._clipMask = null;  // Uint8Array with 1 bit per pixel for clipping
+    }
 
-// State management
-Context2D.prototype.save = function() {
+    // State management
+    save() {
     // Deep copy clipMask if it exists
     let clipMaskCopy = null;
     if (this._clipMask) {
@@ -145,9 +146,9 @@ Context2D.prototype.save = function() {
         lineCap: this.lineCap,
         miterLimit: this.miterLimit
     });
-};
+    }
 
-Context2D.prototype.restore = function() {
+    restore() {
     if (this.stateStack.length === 0) return;
     
     const state = this.stateStack.pop();
@@ -164,83 +165,83 @@ Context2D.prototype.restore = function() {
     this.lineJoin = state.lineJoin;
     this.lineCap = state.lineCap;
     this.miterLimit = state.miterLimit;
-};
+    }
 
-// Transform methods
-Context2D.prototype.transform = function(a, b, c, d, e, f) {
+    // Transform methods
+    transform(a, b, c, d, e, f) {
     const m = new Matrix([a, b, c, d, e, f]);
     this._transform = m.multiply(this._transform);
-};
+    }
 
-Context2D.prototype.setTransform = function(a, b, c, d, e, f) {
+    setTransform(a, b, c, d, e, f) {
     this._transform = new Matrix([a, b, c, d, e, f]);
-};
+    }
 
-Context2D.prototype.resetTransform = function() {
+    resetTransform() {
     this._transform = new Matrix();
-};
+    }
 
-// Convenience transform methods
-Context2D.prototype.translate = function(x, y) {
+    // Convenience transform methods
+    translate(x, y) {
     this._transform = new Matrix().translate(x, y).multiply(this._transform);
-};
+    }
 
-Context2D.prototype.scale = function(sx, sy) {
+    scale(sx, sy) {
     this._transform = new Matrix().scale(sx, sy).multiply(this._transform);
-};
+    }
 
-Context2D.prototype.rotate = function(angleInRadians) {
+    rotate(angleInRadians) {
     this._transform = new Matrix().rotate(angleInRadians).multiply(this._transform);
-};
+    }
 
-// Style setters (simplified for M1)
-Context2D.prototype.setFillStyle = function(r, g, b, a) {
+    // Style setters (simplified for M1)
+    setFillStyle(r, g, b, a) {
     a = a !== undefined ? a : 255;
     // Store colors in non-premultiplied form
     this._fillStyle = [r, g, b, a];
-};
+    }
 
-Context2D.prototype.setStrokeStyle = function(r, g, b, a) {
+    setStrokeStyle(r, g, b, a) {
     a = a !== undefined ? a : 255;
     // Store colors in non-premultiplied form  
     this._strokeStyle = [r, g, b, a];
-};
+    }
 
-// Path methods (delegated to internal path)
-Context2D.prototype.beginPath = function() {
+    // Path methods (delegated to internal path)
+    beginPath() {
     this._currentPath = new Path2D();
-};
+    }
 
-Context2D.prototype.closePath = function() {
+    closePath() {
     this._currentPath.closePath();
-};
+    }
 
-Context2D.prototype.moveTo = function(x, y) {
+    moveTo(x, y) {
     this._currentPath.moveTo(x, y);
-};
+    }
 
-Context2D.prototype.lineTo = function(x, y) {
+    lineTo(x, y) {
     this._currentPath.lineTo(x, y);
-};
+    }
 
-Context2D.prototype.rect = function(x, y, w, h) {
+    rect(x, y, w, h) {
     this._currentPath.rect(x, y, w, h);
-};
+    }
 
-Context2D.prototype.arc = function(x, y, radius, startAngle, endAngle, counterclockwise) {
+    arc(x, y, radius, startAngle, endAngle, counterclockwise) {
     this._currentPath.arc(x, y, radius, startAngle, endAngle, counterclockwise);
-};
+    }
 
-Context2D.prototype.quadraticCurveTo = function(cpx, cpy, x, y) {
+    quadraticCurveTo(cpx, cpy, x, y) {
     this._currentPath.quadraticCurveTo(cpx, cpy, x, y);
-};
+    }
 
-Context2D.prototype.bezierCurveTo = function(cp1x, cp1y, cp2x, cp2y, x, y) {
+    bezierCurveTo(cp1x, cp1y, cp2x, cp2y, x, y) {
     this._currentPath.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, x, y);
-};
+    }
 
-// Drawing methods - simplified for M1 (only rectangles)
-Context2D.prototype.fillRect = function(x, y, width, height) {
+    // Drawing methods - simplified for M1 (only rectangles)
+    fillRect(x, y, width, height) {
     this.rasterizer.beginOp({
         composite: this.globalCompositeOperation,
         globalAlpha: this.globalAlpha,
@@ -251,9 +252,9 @@ Context2D.prototype.fillRect = function(x, y, width, height) {
     
     this.rasterizer.fillRect(x, y, width, height, this._fillStyle);
     this.rasterizer.endOp();
-};
+    }
 
-Context2D.prototype.strokeRect = function(x, y, width, height) {
+    strokeRect(x, y, width, height) {
     // Create a rectangular path
     const rectPath = new Path2D();
     rectPath.rect(x, y, width, height);
@@ -276,9 +277,9 @@ Context2D.prototype.strokeRect = function(x, y, width, height) {
     });
     
     this.rasterizer.endOp();
-};
+    }
 
-Context2D.prototype.clearRect = function(x, y, width, height) {
+    clearRect(x, y, width, height) {
     this.rasterizer.beginOp({
         composite: 'copy',
         globalAlpha: 1.0,
@@ -287,10 +288,10 @@ Context2D.prototype.clearRect = function(x, y, width, height) {
     
     this.rasterizer.fillRect(x, y, width, height, [0, 0, 0, 0]); // Transparent
     this.rasterizer.endOp();
-};
+    }
 
-// M2: Path drawing methods
-Context2D.prototype.fill = function(path, rule) {
+    // M2: Path drawing methods
+    fill(path, rule) {
     let pathToFill, fillRule;
     
     // Handle different argument combinations:
@@ -331,9 +332,9 @@ Context2D.prototype.fill = function(path, rule) {
     
     this.rasterizer.fill(pathToFill, fillRule);
     this.rasterizer.endOp();
-};
+    }
 
-Context2D.prototype.stroke = function(path) {
+    stroke(path) {
     // Use specified path or current internal path
     const pathToStroke = path || this._currentPath;
     
@@ -353,7 +354,7 @@ Context2D.prototype.stroke = function(path) {
     });
     
     this.rasterizer.endOp();
-};
+    }
 
 /**
  * Enhanced clipping support with stencil buffer intersection
@@ -365,7 +366,7 @@ Context2D.prototype.stroke = function(path) {
  * @param {Path2D} path - Optional path to clip with (uses current path if not provided)
  * @param {string} rule - Fill rule: 'nonzero' (default) or 'evenodd'
  */
-Context2D.prototype.clip = function(path, rule) {
+    clip(path, rule) {
     // If no path provided, use current internal path
     const pathToClip = path || this._currentPath;
     const clipRule = rule || 'nonzero';
@@ -401,10 +402,10 @@ Context2D.prototype.clip = function(path, rule) {
         // First clip - use the temporary buffer as the new clip mask
         this._clipMask = tempClipBuffer;
     }
-};
+    }
 
-// Helper method to fill polygons directly to a clip buffer
-Context2D.prototype._fillPolygonsToClipBuffer = function(polygons, fillRule, clipBuffer) {
+    // Helper method to fill polygons directly to a clip buffer
+    _fillPolygonsToClipBuffer(polygons, fillRule, clipBuffer) {
     if (polygons.length === 0) return;
     
     const surface = this.surface;  // Need width/height for bounds
@@ -442,10 +443,10 @@ Context2D.prototype._fillPolygonsToClipBuffer = function(polygons, fillRule, cli
         // Fill spans based on winding rule
         this._fillClipSpans(y, intersections, fillRule, clipBuffer);
     }
-};
+    }
 
-// Helper method to find polygon intersections (copied from polygon-filler.js)
-Context2D.prototype._findPolygonIntersections = function(polygon, y, intersections) {
+    // Helper method to find polygon intersections (copied from polygon-filler.js)
+    _findPolygonIntersections(polygon, y, intersections) {
     for (let i = 0; i < polygon.length; i++) {
         const p1 = polygon[i];
         const p2 = polygon[(i + 1) % polygon.length];
@@ -468,10 +469,10 @@ Context2D.prototype._findPolygonIntersections = function(polygon, y, intersectio
             intersections.push({x: x, winding: winding});
         }
     }
-};
+    }
 
-// Helper method to fill clip spans (writes to clip buffer instead of surface)
-Context2D.prototype._fillClipSpans = function(y, intersections, fillRule, clipBuffer) {
+    // Helper method to fill clip spans (writes to clip buffer instead of surface)
+    _fillClipSpans(y, intersections, fillRule, clipBuffer) {
     if (intersections.length === 0) return;
     
     let windingNumber = 0;
@@ -503,10 +504,10 @@ Context2D.prototype._fillClipSpans = function(y, intersections, fillRule, clipBu
             }
         }
     }
-};
+    }
 
-// Image rendering
-Context2D.prototype.drawImage = function(image, sx, sy, sw, sh, dx, dy, dw, dh) {
+    // Image rendering
+    drawImage(image, sx, sy, sw, sh, dx, dy, dw, dh) {
     // Validate ImageLike object at API level
     if (!image || typeof image !== 'object') {
         throw new Error('First argument must be an ImageLike object');
@@ -537,4 +538,5 @@ Context2D.prototype.drawImage = function(image, sx, sy, sw, sh, dx, dy, dw, dh) 
     
     // End rasterizer operation
     this.rasterizer.endOp();
-};
+    }
+}
