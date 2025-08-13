@@ -14,20 +14,14 @@ function isPixelClipped(clipMask, x, y, width) {
     return getBit(clipMask, pixelIndex) === 0; // 0 means clipped out
 }
 
-// Fill polygons using scanline algorithm with specified winding rule
-function fillPolygons(surface, polygons, color, fillRule, transform, clipPolygons, clipMask) {
+// Fill polygons using scanline algorithm with specified winding rule and stencil clipping
+function fillPolygons(surface, polygons, color, fillRule, transform, clipMask) {
     if (polygons.length === 0) return;
     
     // Transform all polygon vertices
     const transformedPolygons = polygons.map(poly => 
         poly.map(point => transform.transformPoint(point))
     );
-    
-    
-    // Transform clip polygons if provided
-    const transformedClipPolygons = clipPolygons ? clipPolygons.map(poly => 
-        poly.map(point => transform.transformPoint(point))
-    ) : null;
     
     // Find bounding box
     let minY = Infinity, maxY = -Infinity;
@@ -55,7 +49,7 @@ function fillPolygons(surface, polygons, color, fillRule, transform, clipPolygon
         intersections.sort((a, b) => a.x - b.x);
         
         // Fill spans based on winding rule
-        fillScanlineSpans(surface, y, intersections, color, fillRule, transformedClipPolygons, clipMask);
+        fillScanlineSpans(surface, y, intersections, color, fillRule, clipMask);
     }
 }
 
@@ -86,7 +80,7 @@ function findPolygonIntersections(polygon, y, intersections) {
 }
 
 // Fill spans on a scanline based on winding rule
-function fillScanlineSpans(surface, y, intersections, color, fillRule, transformedClipPolygons, clipMask) {
+function fillScanlineSpans(surface, y, intersections, color, fillRule, clipMask) {
     if (intersections.length === 0) return;
     
     let windingNumber = 0;
@@ -113,16 +107,9 @@ function fillScanlineSpans(surface, y, intersections, color, fillRule, transform
             const endX = Math.min(surface.width - 1, Math.floor(nextIntersection.x));
             
             for (let x = startX; x <= endX; x++) {
-                // Check stencil buffer clipping first (faster)
+                // Check stencil buffer clipping
                 if (isPixelClipped(clipMask, x, y, surface.width)) {
                     continue; // Skip pixels clipped by stencil buffer
-                }
-                
-                // Check old-style clipping if clip polygons are provided
-                if (transformedClipPolygons && transformedClipPolygons.length > 0) {
-                    if (!pointInPolygons(x, y, transformedClipPolygons, 'nonzero')) {
-                        continue; // Skip pixels outside clip region
-                    }
                 }
                 
                 const offset = y * surface.stride + x * 4;
@@ -133,25 +120,15 @@ function fillScanlineSpans(surface, y, intersections, color, fillRule, transform
                 const srcB = color[2];
                 const srcA = color[3];
                 
-                // Debug which branch we're taking for orange area pixel
-                if (x === 90 && y === 100) {
-                    console.log(`Polygon filler at (90,100): color=[${srcR},${srcG},${srcB},${srcA}]`);
-                }
                 
                 if (srcA === 255) {
                     // Opaque source - simple copy
-                    if (x === 90 && y === 100) {
-                        console.log(`Taking opaque branch: srcA=${srcA}`);
-                    }
                     surface.data[offset] = srcR;
                     surface.data[offset + 1] = srcG;
                     surface.data[offset + 2] = srcB;
                     surface.data[offset + 3] = srcA;
                 } else if (srcA === 0) {
                     // Transparent source - no change
-                    if (x === 90 && y === 100) {
-                        console.log(`Taking transparent branch: srcA=${srcA}`);
-                    }
                     continue;
                 } else {
                     // Alpha blending required
@@ -168,11 +145,6 @@ function fillScanlineSpans(surface, y, intersections, color, fillRule, transform
                     const newB = Math.round(srcB * srcAlpha + dstB * invSrcA);
                     const newA = Math.round(srcA + dstA * invSrcA);
                     
-                    // Debug alpha blending for orange area pixel (90, 100)
-                    if (x === 90 && y === 100) {
-                        console.log(`Alpha blend: src=[${srcR},${srcG},${srcB},${srcA}] dst=[${dstR},${dstG},${dstB},${dstA}] -> [${newR},${newG},${newB},${newA}]`);
-                    }
-                    
                     surface.data[offset] = newR;
                     surface.data[offset + 1] = newG;
                     surface.data[offset + 2] = newB;
@@ -183,48 +155,3 @@ function fillScanlineSpans(surface, y, intersections, color, fillRule, transform
     }
 }
 
-// Test if a point is inside polygons using winding rule
-function pointInPolygons(x, y, polygons, fillRule) {
-    let windingNumber = 0;
-    
-    for (const polygon of polygons) {
-        windingNumber += pointInPolygon(x, y, polygon);
-    }
-    
-    if (fillRule === 'evenodd') {
-        return (windingNumber % 2) !== 0;
-    } else { // nonzero
-        return windingNumber !== 0;
-    }
-}
-
-// Calculate winding number for a point relative to a polygon
-function pointInPolygon(x, y, polygon) {
-    let winding = 0;
-    
-    for (let i = 0; i < polygon.length; i++) {
-        const p1 = polygon[i];
-        const p2 = polygon[(i + 1) % polygon.length];
-        
-        if (p1.y <= y) {
-            if (p2.y > y) { // Upward crossing
-                if (isLeft(p1, p2, {x, y}) > 0) {
-                    winding++;
-                }
-            }
-        } else {
-            if (p2.y <= y) { // Downward crossing
-                if (isLeft(p1, p2, {x, y}) < 0) {
-                    winding--;
-                }
-            }
-        }
-    }
-    
-    return winding;
-}
-
-// Test if point P2 is left of the line P0P1
-function isLeft(P0, P1, P2) {
-    return ((P1.x - P0.x) * (P2.y - P0.y) - (P2.x - P0.x) * (P1.y - P0.y));
-}

@@ -91,9 +91,8 @@ function Context2D(surface) {
     
     // Internal path and clipping
     this._currentPath = new Path2D();
-    this._clipPath = null;
     
-    // Stencil-based clipping system
+    // Stencil-based clipping system (only clipping mechanism)
     this._clipMask = null;  // Uint8Array with 1 bit per pixel for clipping
 }
 
@@ -112,7 +111,6 @@ Context2D.prototype.save = function() {
                               this._transform.d, this._transform.e, this._transform.f]),
         fillStyle: this._fillStyle.slice(),
         strokeStyle: this._strokeStyle.slice(),
-        clipPath: this._clipPath, // Note: shallow copy for M2, should be deep copy in full implementation
         clipMask: clipMaskCopy,   // Deep copy of stencil buffer
         lineWidth: this.lineWidth,
         lineJoin: this.lineJoin,
@@ -130,7 +128,6 @@ Context2D.prototype.restore = function() {
     this._transform = state.transform;
     this._fillStyle = state.fillStyle;
     this._strokeStyle = state.strokeStyle;
-    this._clipPath = state.clipPath;
     
     // Restore clipMask (may be null)
     this._clipMask = state.clipMask;
@@ -220,7 +217,6 @@ Context2D.prototype.fillRect = function(x, y, width, height) {
         composite: this.globalCompositeOperation,
         globalAlpha: this.globalAlpha,
         transform: this._transform,
-        clipPath: this._clipPath,
         clipMask: this._clipMask,
         fillStyle: this._fillStyle
     });
@@ -240,7 +236,6 @@ Context2D.prototype.strokeRect = function(x, y, width, height) {
         composite: this.globalCompositeOperation,
         globalAlpha: this.globalAlpha,
         transform: this._transform,
-        clipPath: this._clipPath,
         clipMask: this._clipMask,
         strokeStyle: this._strokeStyle
     });
@@ -268,7 +263,6 @@ Context2D.prototype.clearRect = function(x, y, width, height) {
 
 // M2: Path drawing methods
 Context2D.prototype.fill = function(path, rule) {
-    console.log(`Context2D.fill called with path=${!!path}, rule=${rule}`);
     let pathToFill, fillRule;
     
     // Handle different argument combinations:
@@ -303,7 +297,6 @@ Context2D.prototype.fill = function(path, rule) {
         composite: this.globalCompositeOperation,
         globalAlpha: this.globalAlpha,
         transform: this._transform,
-        clipPath: this._clipPath,
         clipMask: this._clipMask,
         fillStyle: this._fillStyle
     });
@@ -320,7 +313,6 @@ Context2D.prototype.stroke = function(path) {
         composite: this.globalCompositeOperation,
         globalAlpha: this.globalAlpha,
         transform: this._transform,
-        clipPath: this._clipPath,
         clipMask: this._clipMask,
         strokeStyle: this._strokeStyle
     });
@@ -372,9 +364,6 @@ Context2D.prototype.clip = function(path, rule) {
         // First clip - use the temporary buffer as the new clip mask
         this._clipMask = tempClipBuffer;
     }
-    
-    // For backward compatibility, also set the clipPath (legacy system)
-    this._clipPath = pathToClip;
 };
 
 // Helper method to fill polygons directly to a clip buffer

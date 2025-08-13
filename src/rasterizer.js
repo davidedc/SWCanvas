@@ -15,8 +15,7 @@ Rasterizer.prototype.beginOp = function(params) {
         composite: params.composite || 'source-over',
         globalAlpha: params.globalAlpha !== undefined ? params.globalAlpha : 1.0,
         transform: params.transform || new Matrix(),
-        clipPath: params.clipPath || null,
-        clipMask: params.clipMask || null,  // New stencil-based clipping
+        clipMask: params.clipMask || null,  // Stencil-based clipping (only clipping mechanism)
         fillStyle: params.fillStyle || null,
         strokeStyle: params.strokeStyle || null
     };
@@ -76,13 +75,8 @@ Rasterizer.prototype.fillRect = function(x, y, width, height, color) {
             {x: x, y: y + height}
         ];
         
-        // Use existing polygon filling system which handles transforms
-        if (this.currentOp.clipPath) {
-            const clipPolygons = flattenPath(this.currentOp.clipPath);
-            fillPolygons(this.surface, [rectPolygon], color, 'nonzero', this.currentOp.transform, clipPolygons, this.currentOp.clipMask);
-        } else {
-            fillPolygons(this.surface, [rectPolygon], color, 'nonzero', this.currentOp.transform, null, this.currentOp.clipMask);
-        }
+        // Use existing polygon filling system which handles transforms and stencil clipping
+        fillPolygons(this.surface, [rectPolygon], color, 'nonzero', this.currentOp.transform, this.currentOp.clipMask);
     }
 };
 
@@ -158,7 +152,7 @@ Rasterizer.prototype.fill = function(path, rule) {
     const polygons = flattenPath(path);
     // Fill polygons with current transform and clipping
     // Use only the new stencil clipping system (clipMask), ignore old clipPath system
-    fillPolygons(this.surface, polygons, fillColor, fillRule, this.currentOp.transform, null, this.currentOp.clipMask);
+    fillPolygons(this.surface, polygons, fillColor, fillRule, this.currentOp.transform, this.currentOp.clipMask);
 };
 
 Rasterizer.prototype.stroke = function(path, strokeProps) {
@@ -180,15 +174,8 @@ Rasterizer.prototype.stroke = function(path, strokeProps) {
     // Generate stroke polygons using geometric approach
     const strokePolygons = generateStrokePolygons(path, strokeProps);
     
-    // Fill stroke polygons with current transform and clipping
-    if (this.currentOp.clipPath) {
-        // With clipping - pass clip polygons for per-pixel testing
-        const clipPolygons = flattenPath(this.currentOp.clipPath);
-        fillPolygons(this.surface, strokePolygons, strokeColor, 'nonzero', this.currentOp.transform, clipPolygons, this.currentOp.clipMask);
-    } else {
-        // No clipping - but may have stencil clipping
-        fillPolygons(this.surface, strokePolygons, strokeColor, 'nonzero', this.currentOp.transform, null, this.currentOp.clipMask);
-    }
+    // Fill stroke polygons with current transform and stencil clipping
+    fillPolygons(this.surface, strokePolygons, strokeColor, 'nonzero', this.currentOp.transform, this.currentOp.clipMask);
 };
 
 Rasterizer.prototype.drawImage = function(img, sx, sy, sw, sh, dx, dy, dw, dh) {

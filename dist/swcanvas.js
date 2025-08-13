@@ -538,20 +538,14 @@ function isPixelClipped(clipMask, x, y, width) {
     return getBit(clipMask, pixelIndex) === 0; // 0 means clipped out
 }
 
-// Fill polygons using scanline algorithm with specified winding rule
-function fillPolygons(surface, polygons, color, fillRule, transform, clipPolygons, clipMask) {
+// Fill polygons using scanline algorithm with specified winding rule and stencil clipping
+function fillPolygons(surface, polygons, color, fillRule, transform, clipMask) {
     if (polygons.length === 0) return;
     
     // Transform all polygon vertices
     const transformedPolygons = polygons.map(poly => 
         poly.map(point => transform.transformPoint(point))
     );
-    
-    
-    // Transform clip polygons if provided
-    const transformedClipPolygons = clipPolygons ? clipPolygons.map(poly => 
-        poly.map(point => transform.transformPoint(point))
-    ) : null;
     
     // Find bounding box
     let minY = Infinity, maxY = -Infinity;
@@ -579,7 +573,7 @@ function fillPolygons(surface, polygons, color, fillRule, transform, clipPolygon
         intersections.sort((a, b) => a.x - b.x);
         
         // Fill spans based on winding rule
-        fillScanlineSpans(surface, y, intersections, color, fillRule, transformedClipPolygons, clipMask);
+        fillScanlineSpans(surface, y, intersections, color, fillRule, clipMask);
     }
 }
 
@@ -610,7 +604,7 @@ function findPolygonIntersections(polygon, y, intersections) {
 }
 
 // Fill spans on a scanline based on winding rule
-function fillScanlineSpans(surface, y, intersections, color, fillRule, transformedClipPolygons, clipMask) {
+function fillScanlineSpans(surface, y, intersections, color, fillRule, clipMask) {
     if (intersections.length === 0) return;
     
     let windingNumber = 0;
@@ -637,16 +631,9 @@ function fillScanlineSpans(surface, y, intersections, color, fillRule, transform
             const endX = Math.min(surface.width - 1, Math.floor(nextIntersection.x));
             
             for (let x = startX; x <= endX; x++) {
-                // Check stencil buffer clipping first (faster)
+                // Check stencil buffer clipping
                 if (isPixelClipped(clipMask, x, y, surface.width)) {
                     continue; // Skip pixels clipped by stencil buffer
-                }
-                
-                // Check old-style clipping if clip polygons are provided
-                if (transformedClipPolygons && transformedClipPolygons.length > 0) {
-                    if (!pointInPolygons(x, y, transformedClipPolygons, 'nonzero')) {
-                        continue; // Skip pixels outside clip region
-                    }
                 }
                 
                 const offset = y * surface.stride + x * 4;
@@ -657,25 +644,15 @@ function fillScanlineSpans(surface, y, intersections, color, fillRule, transform
                 const srcB = color[2];
                 const srcA = color[3];
                 
-                // Debug which branch we're taking for orange area pixel
-                if (x === 90 && y === 100) {
-                    console.log(`Polygon filler at (90,100): color=[${srcR},${srcG},${srcB},${srcA}]`);
-                }
                 
                 if (srcA === 255) {
                     // Opaque source - simple copy
-                    if (x === 90 && y === 100) {
-                        console.log(`Taking opaque branch: srcA=${srcA}`);
-                    }
                     surface.data[offset] = srcR;
                     surface.data[offset + 1] = srcG;
                     surface.data[offset + 2] = srcB;
                     surface.data[offset + 3] = srcA;
                 } else if (srcA === 0) {
                     // Transparent source - no change
-                    if (x === 90 && y === 100) {
-                        console.log(`Taking transparent branch: srcA=${srcA}`);
-                    }
                     continue;
                 } else {
                     // Alpha blending required
@@ -692,11 +669,6 @@ function fillScanlineSpans(surface, y, intersections, color, fillRule, transform
                     const newB = Math.round(srcB * srcAlpha + dstB * invSrcA);
                     const newA = Math.round(srcA + dstA * invSrcA);
                     
-                    // Debug alpha blending for orange area pixel (90, 100)
-                    if (x === 90 && y === 100) {
-                        console.log(`Alpha blend: src=[${srcR},${srcG},${srcB},${srcA}] dst=[${dstR},${dstG},${dstB},${dstA}] -> [${newR},${newG},${newB},${newA}]`);
-                    }
-                    
                     surface.data[offset] = newR;
                     surface.data[offset + 1] = newG;
                     surface.data[offset + 2] = newB;
@@ -707,51 +679,7 @@ function fillScanlineSpans(surface, y, intersections, color, fillRule, transform
     }
 }
 
-// Test if a point is inside polygons using winding rule
-function pointInPolygons(x, y, polygons, fillRule) {
-    let windingNumber = 0;
-    
-    for (const polygon of polygons) {
-        windingNumber += pointInPolygon(x, y, polygon);
-    }
-    
-    if (fillRule === 'evenodd') {
-        return (windingNumber % 2) !== 0;
-    } else { // nonzero
-        return windingNumber !== 0;
-    }
-}
 
-// Calculate winding number for a point relative to a polygon
-function pointInPolygon(x, y, polygon) {
-    let winding = 0;
-    
-    for (let i = 0; i < polygon.length; i++) {
-        const p1 = polygon[i];
-        const p2 = polygon[(i + 1) % polygon.length];
-        
-        if (p1.y <= y) {
-            if (p2.y > y) { // Upward crossing
-                if (isLeft(p1, p2, {x, y}) > 0) {
-                    winding++;
-                }
-            }
-        } else {
-            if (p2.y <= y) { // Downward crossing
-                if (isLeft(p1, p2, {x, y}) < 0) {
-                    winding--;
-                }
-            }
-        }
-    }
-    
-    return winding;
-}
-
-// Test if point P2 is left of the line P0P1
-function isLeft(P0, P1, P2) {
-    return ((P1.x - P0.x) * (P2.y - P0.y) - (P2.x - P0.x) * (P1.y - P0.y));
-}
 // Basic polygon clipping implementation
 // For M2, we implement simple clipping by intersection
 
@@ -1196,8 +1124,7 @@ Rasterizer.prototype.beginOp = function(params) {
         composite: params.composite || 'source-over',
         globalAlpha: params.globalAlpha !== undefined ? params.globalAlpha : 1.0,
         transform: params.transform || new Matrix(),
-        clipPath: params.clipPath || null,
-        clipMask: params.clipMask || null,  // New stencil-based clipping
+        clipMask: params.clipMask || null,  // Stencil-based clipping (only clipping mechanism)
         fillStyle: params.fillStyle || null,
         strokeStyle: params.strokeStyle || null
     };
@@ -1257,13 +1184,8 @@ Rasterizer.prototype.fillRect = function(x, y, width, height, color) {
             {x: x, y: y + height}
         ];
         
-        // Use existing polygon filling system which handles transforms
-        if (this.currentOp.clipPath) {
-            const clipPolygons = flattenPath(this.currentOp.clipPath);
-            fillPolygons(this.surface, [rectPolygon], color, 'nonzero', this.currentOp.transform, clipPolygons, this.currentOp.clipMask);
-        } else {
-            fillPolygons(this.surface, [rectPolygon], color, 'nonzero', this.currentOp.transform, null, this.currentOp.clipMask);
-        }
+        // Use existing polygon filling system which handles transforms and stencil clipping
+        fillPolygons(this.surface, [rectPolygon], color, 'nonzero', this.currentOp.transform, this.currentOp.clipMask);
     }
 };
 
@@ -1339,7 +1261,7 @@ Rasterizer.prototype.fill = function(path, rule) {
     const polygons = flattenPath(path);
     // Fill polygons with current transform and clipping
     // Use only the new stencil clipping system (clipMask), ignore old clipPath system
-    fillPolygons(this.surface, polygons, fillColor, fillRule, this.currentOp.transform, null, this.currentOp.clipMask);
+    fillPolygons(this.surface, polygons, fillColor, fillRule, this.currentOp.transform, this.currentOp.clipMask);
 };
 
 Rasterizer.prototype.stroke = function(path, strokeProps) {
@@ -1361,15 +1283,8 @@ Rasterizer.prototype.stroke = function(path, strokeProps) {
     // Generate stroke polygons using geometric approach
     const strokePolygons = generateStrokePolygons(path, strokeProps);
     
-    // Fill stroke polygons with current transform and clipping
-    if (this.currentOp.clipPath) {
-        // With clipping - pass clip polygons for per-pixel testing
-        const clipPolygons = flattenPath(this.currentOp.clipPath);
-        fillPolygons(this.surface, strokePolygons, strokeColor, 'nonzero', this.currentOp.transform, clipPolygons, this.currentOp.clipMask);
-    } else {
-        // No clipping - but may have stencil clipping
-        fillPolygons(this.surface, strokePolygons, strokeColor, 'nonzero', this.currentOp.transform, null, this.currentOp.clipMask);
-    }
+    // Fill stroke polygons with current transform and stencil clipping
+    fillPolygons(this.surface, strokePolygons, strokeColor, 'nonzero', this.currentOp.transform, this.currentOp.clipMask);
 };
 
 Rasterizer.prototype.drawImage = function(img, sx, sy, sw, sh, dx, dy, dw, dh) {
@@ -1468,9 +1383,8 @@ function Context2D(surface) {
     
     // Internal path and clipping
     this._currentPath = new Path2D();
-    this._clipPath = null;
     
-    // Stencil-based clipping system
+    // Stencil-based clipping system (only clipping mechanism)
     this._clipMask = null;  // Uint8Array with 1 bit per pixel for clipping
 }
 
@@ -1489,7 +1403,6 @@ Context2D.prototype.save = function() {
                               this._transform.d, this._transform.e, this._transform.f]),
         fillStyle: this._fillStyle.slice(),
         strokeStyle: this._strokeStyle.slice(),
-        clipPath: this._clipPath, // Note: shallow copy for M2, should be deep copy in full implementation
         clipMask: clipMaskCopy,   // Deep copy of stencil buffer
         lineWidth: this.lineWidth,
         lineJoin: this.lineJoin,
@@ -1507,7 +1420,6 @@ Context2D.prototype.restore = function() {
     this._transform = state.transform;
     this._fillStyle = state.fillStyle;
     this._strokeStyle = state.strokeStyle;
-    this._clipPath = state.clipPath;
     
     // Restore clipMask (may be null)
     this._clipMask = state.clipMask;
@@ -1597,7 +1509,6 @@ Context2D.prototype.fillRect = function(x, y, width, height) {
         composite: this.globalCompositeOperation,
         globalAlpha: this.globalAlpha,
         transform: this._transform,
-        clipPath: this._clipPath,
         clipMask: this._clipMask,
         fillStyle: this._fillStyle
     });
@@ -1617,7 +1528,6 @@ Context2D.prototype.strokeRect = function(x, y, width, height) {
         composite: this.globalCompositeOperation,
         globalAlpha: this.globalAlpha,
         transform: this._transform,
-        clipPath: this._clipPath,
         clipMask: this._clipMask,
         strokeStyle: this._strokeStyle
     });
@@ -1645,7 +1555,6 @@ Context2D.prototype.clearRect = function(x, y, width, height) {
 
 // M2: Path drawing methods
 Context2D.prototype.fill = function(path, rule) {
-    console.log(`Context2D.fill called with path=${!!path}, rule=${rule}`);
     let pathToFill, fillRule;
     
     // Handle different argument combinations:
@@ -1680,7 +1589,6 @@ Context2D.prototype.fill = function(path, rule) {
         composite: this.globalCompositeOperation,
         globalAlpha: this.globalAlpha,
         transform: this._transform,
-        clipPath: this._clipPath,
         clipMask: this._clipMask,
         fillStyle: this._fillStyle
     });
@@ -1697,7 +1605,6 @@ Context2D.prototype.stroke = function(path) {
         composite: this.globalCompositeOperation,
         globalAlpha: this.globalAlpha,
         transform: this._transform,
-        clipPath: this._clipPath,
         clipMask: this._clipMask,
         strokeStyle: this._strokeStyle
     });
@@ -1749,9 +1656,6 @@ Context2D.prototype.clip = function(path, rule) {
         // First clip - use the temporary buffer as the new clip mask
         this._clipMask = tempClipBuffer;
     }
-    
-    // For backward compatibility, also set the clipPath (legacy system)
-    this._clipPath = pathToClip;
 };
 
 // Helper method to fill polygons directly to a clip buffer
