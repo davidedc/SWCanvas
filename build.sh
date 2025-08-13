@@ -30,8 +30,6 @@ cat src/path-flattener.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
 cat src/polygon-filler.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
-cat src/polygon-clipper.js >> dist/swcanvas.js
-echo "" >> dist/swcanvas.js
 cat src/stroke-generator.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
 cat src/rasterizer.js >> dist/swcanvas.js

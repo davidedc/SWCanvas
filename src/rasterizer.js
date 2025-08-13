@@ -150,8 +150,7 @@ Rasterizer.prototype.fill = function(path, rule) {
     
     // Flatten path to polygons
     const polygons = flattenPath(path);
-    // Fill polygons with current transform and clipping
-    // Use only the new stencil clipping system (clipMask), ignore old clipPath system
+    // Fill polygons with current transform and stencil clipping
     fillPolygons(this.surface, polygons, fillColor, fillRule, this.currentOp.transform, this.currentOp.clipMask);
 };
 
