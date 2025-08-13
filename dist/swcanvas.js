@@ -1269,14 +1269,14 @@ Rasterizer.prototype.stroke = function(path, strokeProps) {
         throw new Error('Must call beginOp before drawing operations');
     }
     
-    // Apply global alpha to stroke color, then premultiply
+    // Apply global alpha to stroke color
     const color = this.currentOp.strokeStyle || [0, 0, 0, 255];
     const globalAlpha = this.currentOp.globalAlpha;
     const effectiveAlpha = (color[3] / 255) * globalAlpha;
     const srcA = Math.round(effectiveAlpha * 255);
-    const srcR = Math.round(color[0] * effectiveAlpha);
-    const srcG = Math.round(color[1] * effectiveAlpha);
-    const srcB = Math.round(color[2] * effectiveAlpha);
+    const srcR = color[0]; // Keep RGB non-premultiplied
+    const srcG = color[1];
+    const srcB = color[2];
     
     const strokeColor = [srcR, srcG, srcB, srcA];
     
