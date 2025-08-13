@@ -71,7 +71,8 @@ if (bounds.contains(center)) {
 
 // Transform operations
 ctx.save();
-ctx.setTransform(SWCanvas.Transform2D.rotation(Math.PI / 6));
+const rotTransform = SWCanvas.Transform2D.rotation(Math.PI / 6);
+ctx.setTransform(rotTransform.a, rotTransform.b, rotTransform.c, rotTransform.d, rotTransform.e, rotTransform.f);
 ctx.fillRect(50, 50, 100, 100);
 ctx.restore();
 </script>
@@ -263,13 +264,16 @@ const bmpData = SWCanvas.encodeBMP(surface);
 ```
 src/              # Source files (ES6 Classes)
 ├── Context2D.js     # Main drawing API (class)
-├── Surface.js       # Memory management (factory + class) 
+├── Surface.js       # Memory management (ES6 class) 
 ├── Matrix.js        # Transform mathematics (immutable class)
-├── Rasterizer.js    # Low-level rendering (prototype-based)
+├── Rasterizer.js    # Low-level rendering (ES6 class)
 ├── Color.js         # Immutable color handling (class)
-├── Geometry.js      # Point and Rectangle value objects (classes)
+├── Point.js         # Immutable 2D point operations (class)
+├── Rectangle.js     # Immutable rectangle operations (class)
 ├── StencilBuffer.js # 1-bit clipping buffer (class)
 ├── DrawingState.js  # State stack management (class)
+├── ClipMaskHelper.js # 1-bit stencil buffer utilities (static methods)
+├── ImageProcessor.js # ImageLike validation and conversion (static methods)
 ├── PolygonFiller.js # Scanline polygon filling (static methods)
 ├── StrokeGenerator.js # Stroke generation (static methods)
 ├── PathFlattener.js # Path to polygon conversion (static methods)
@@ -327,24 +331,25 @@ The build script (`build.sh`) concatenates source files in dependency order, fol
 
 **Phase 1: Foundation Classes**
 1. Color - Immutable color handling
-2. Geometry - Point and Rectangle value objects  
-3. Matrix - Transformation mathematics
-4. Surface - Memory buffer management
+2. Point - Immutable 2D point operations
+3. Rectangle - Immutable rectangle operations
+4. Matrix - Transformation mathematics
+5. Path2D - Path definitions
+6. Surface - Memory buffer management
 
-**Phase 2: Core Classes**
-5. StencilBuffer - 1-bit clipping system
-6. DrawingState - State management
-7. Path2D - Path definitions
-
-**Phase 3: Algorithm Classes** 
+**Phase 2: Service Classes**
+7. BitmapEncoder - BMP file encoding (static methods)
 8. PathFlattener - Path-to-polygon conversion (static methods)
 9. PolygonFiller - Scanline filling (static methods)
 10. StrokeGenerator - Stroke generation (static methods) 
-11. BitmapEncoder - BMP export (static methods)
+11. ClipMaskHelper - 1-bit stencil buffer utilities (static methods)
+12. ImageProcessor - ImageLike validation and conversion (static methods)
+13. StencilBuffer - 1-bit clipping buffer management (class)
 
-**Phase 4: High-Level Classes**
-12. Rasterizer - Rendering pipeline
-13. Context2D - Main drawing API
+**Phase 3: State and Rendering Classes**
+14. DrawingState - State stack management (class)
+15. Rasterizer - Rendering pipeline (class)
+16. Context2D - Main drawing API (class)
 
 ## License
 

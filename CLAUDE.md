@@ -20,7 +20,7 @@ This file provides Claude with essential context about the SWCanvas project for 
 src/Context2D.js         # Main API - implements Canvas 2D Context interface
 src/Rasterizer.js        # Low-level pixel operations and rendering pipeline (ES6 class)
 src/Surface.js           # Memory buffer management - RGBA pixel data (ES6 class)
-src/Transform2D.js       # Transform mathematics - immutable transformation matrix (ES6 class)
+src/Matrix.js           # Transform mathematics - immutable transformation matrix (ES6 class)
 src/Path2D.js           # Path definition and command recording (ES6 class)
 src/Color.js            # Immutable color handling with premultiplied alpha (ES6 class)
 src/Point.js            # Immutable 2D point operations (ES6 class)
