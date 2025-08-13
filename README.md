@@ -5,9 +5,11 @@ A deterministic 2D raster engine with Canvas-like API. SWCanvas provides pixel-p
 ## Features
 
 - **Deterministic Rendering**: Identical results across all platforms and browsers
-- **HTML5 Canvas Compatibility**: Drop-in replacement with familiar API
+- **HTML5 Canvas Compatibility**: Drop-in replacement with familiar API  
+- **Object-Oriented Design**: Clean ES6 classes following effective OO principles
 - **Memory Efficient Clipping**: Stencil-based clipping system with proper intersection support
-- **Comprehensive Test Coverage**: 52+ visual tests ensuring pixel-perfect accuracy
+- **Comprehensive Test Coverage**: 31 shared tests + 52 visual tests ensuring pixel-perfect accuracy
+- **Immutable Value Objects**: Point, Rectangle, Transform2D, Color prevent mutation bugs
 - **Cross-Platform**: Works in Node.js and browsers
 - **No Dependencies**: Pure JavaScript implementation
 
@@ -26,11 +28,22 @@ This generates `dist/swcanvas.js` containing the complete library.
 ```javascript
 const SWCanvas = require('./dist/swcanvas.js');
 
+// Create surface with immutable dimensions
 const surface = SWCanvas.Surface(800, 600);
 const ctx = new SWCanvas.Context2D(surface);
 
+// Use Canvas 2D API
 ctx.setFillStyle(255, 0, 0, 255); // Red
 ctx.fillRect(10, 10, 100, 50);
+
+// Advanced: Use OO classes directly
+const transform = SWCanvas.Transform2D.identity()
+    .translate(100, 100)
+    .rotate(Math.PI / 4);
+
+const point = new SWCanvas.Point(50, 75);
+const rect = new SWCanvas.Rectangle(0, 0, 200, 150);
+const color = new SWCanvas.Color(255, 128, 0, 200);
 
 // Export as BMP
 const bmpData = SWCanvas.encodeBMP(surface);
@@ -41,11 +54,26 @@ const bmpData = SWCanvas.encodeBMP(surface);
 ```html
 <script src="dist/swcanvas.js"></script>
 <script>
+// Create surface and context
 const surface = SWCanvas.Surface(800, 600);
 const ctx = new SWCanvas.Context2D(surface);
 
+// Standard Canvas 2D operations
 ctx.setFillStyle(255, 0, 0, 255); // Red
 ctx.fillRect(10, 10, 100, 50);
+
+// Use immutable geometry classes
+const center = new SWCanvas.Point(400, 300);
+const bounds = new SWCanvas.Rectangle(100, 100, 600, 400);
+if (bounds.contains(center)) {
+    console.log('Center is within bounds');
+}
+
+// Transform operations
+ctx.save();
+ctx.setTransform(SWCanvas.Transform2D.rotation(Math.PI / 6));
+ctx.fillRect(50, 50, 100, 100);
+ctx.restore();
 </script>
 ```
 
@@ -57,7 +85,7 @@ ctx.fillRect(10, 10, 100, 50);
 npm test
 ```
 
-This runs 31+ shared tests and generates 55+ visual test BMPs in `tests/output/`.
+This runs 31 shared tests and generates 52 visual test BMPs in `tests/output/`.
 
 ### Browser Tests
 
@@ -68,9 +96,9 @@ Open `examples/test.html` in a web browser for:
 
 ### Test Structure
 
-- **Shared Tests**: Core functionality tests that run in both Node.js and browsers
-- **Visual Tests**: 52+ comprehensive rendering tests with BMP output
-- **Browser Tests**: Interactive visual comparison tools
+- **Shared Tests** (31): Core functionality tests that run in both Node.js and browsers
+- **Visual Tests** (52): Comprehensive rendering tests with BMP output generation
+- **Browser Tests**: Interactive visual comparison tools with pixel-perfect validation
 
 See [tests/README.md](tests/README.md) for detailed test documentation.
 
@@ -122,6 +150,37 @@ ctx.drawImage(imagelike, sx, sy, sw, sh, dx, dy, dw, dh); // With source rectang
 ```javascript
 ctx.setFillStyle(r, g, b, a);    // 0-255 values
 ctx.setStrokeStyle(r, g, b, a);  // 0-255 values
+
+// Or use Color objects directly
+const color = new SWCanvas.Color(255, 128, 0, 200);
+ctx.setFillStyle(color.r, color.g, color.b, color.a);
+```
+
+### Object-Oriented Classes
+
+SWCanvas provides rich OO classes for advanced operations:
+
+```javascript
+// Immutable geometry classes
+const point = new SWCanvas.Point(100, 50);
+const rect = new SWCanvas.Rectangle(10, 20, 100, 80);
+const center = rect.center; // Returns Point(60, 60)
+
+// Immutable transformation matrix
+const transform = SWCanvas.Transform2D.identity()
+    .translate(100, 100)
+    .scale(2, 2)
+    .rotate(Math.PI / 4);
+
+// Apply to points
+const transformed = transform.transformPoint(point);
+
+// Utility classes
+const clipMask = SWCanvas.ClipMaskHelper.createClipMask(800, 600);
+const isClipped = SWCanvas.ClipMaskHelper.isPixelClipped(clipMask, 100, 200, 800);
+
+// Image processing utilities
+const validImage = SWCanvas.ImageProcessor.validateAndConvert(imageData);
 ```
 
 ### Image Rendering
