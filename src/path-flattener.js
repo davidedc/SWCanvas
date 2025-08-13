@@ -72,12 +72,21 @@ function flattenPath(path2d) {
                     cmd.counterclockwise
                 );
                 if (arcPoints.length > 0) {
-                    // Move to arc start if we're not already there
                     const arcStart = arcPoints[0];
-                    const distance = Math.sqrt((currentPoint.x - arcStart.x) ** 2 + (currentPoint.y - arcStart.y) ** 2);
-                    if (distance > 0.01) {  // Add line to arc start if not already there
+                    
+                    // If this is the first command in the subpath, start at arc start
+                    if (currentPoly.length === 0) {
                         currentPoly.push(arcStart);
+                        currentPoint = arcStart;
+                        subpathStart = arcStart;
+                    } else {
+                        // Move to arc start if we're not already there
+                        const distance = Math.sqrt((currentPoint.x - arcStart.x) ** 2 + (currentPoint.y - arcStart.y) ** 2);
+                        if (distance > 0.01) {  // Add line to arc start if not already there
+                            currentPoly.push(arcStart);
+                        }
                     }
+                    
                     // Add all arc points except the first
                     for (let i = 1; i < arcPoints.length; i++) {
                         currentPoly.push(arcPoints[i]);
