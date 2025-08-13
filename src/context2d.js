@@ -1,3 +1,74 @@
+// Bit manipulation helpers for 1-bit stencil buffer
+function getBit(buffer, pixelIndex) {
+    const byteIndex = Math.floor(pixelIndex / 8);
+    const bitIndex = pixelIndex % 8;
+    return (buffer[byteIndex] & (1 << bitIndex)) !== 0 ? 1 : 0;
+}
+
+function setBit(buffer, pixelIndex, value) {
+    const byteIndex = Math.floor(pixelIndex / 8);
+    const bitIndex = pixelIndex % 8;
+    if (value) {
+        buffer[byteIndex] |= (1 << bitIndex);
+    } else {
+        buffer[byteIndex] &= ~(1 << bitIndex);
+    }
+}
+
+function clearMask(buffer) {
+    buffer.fill(0);
+}
+
+function createClipMask(width, height) {
+    const numPixels = width * height;
+    const numBytes = Math.ceil(numPixels / 8);
+    const mask = new Uint8Array(numBytes);
+    // Initialize to all 1s (no clipping)
+    mask.fill(0xFF);
+    // Handle partial last byte if width*height is not divisible by 8
+    const remainderBits = numPixels % 8;
+    if (remainderBits !== 0) {
+        const lastByteIndex = numBytes - 1;
+        const lastByteMask = (1 << remainderBits) - 1;
+        mask[lastByteIndex] = lastByteMask;
+    }
+    return mask;
+}
+
+// Memory management helpers for Context2D
+function ensureClipMask(context) {
+    if (!context._clipMask) {
+        context._clipMask = createClipMask(context.surface.width, context.surface.height);
+    }
+    return context._clipMask;
+}
+
+function releaseClipMask(context) {
+    // For now, we don't auto-release clipMask to keep implementation simple
+    // In a full implementation, we might check if the mask is "all 1s" and release it
+    // context._clipMask = null;
+}
+
+// Phase B: Clip pixel writer for temporary clip buffer
+function createClipPixelWriter(tempClipBuffer, width, height) {
+    return function clipPixel(x, y, coverage) {
+        // Bounds checking
+        if (x < 0 || x >= width || y < 0 || y >= height) return;
+        
+        // Convert coverage to binary (1 bit): >0.5 means inside, <=0.5 means outside
+        const pixelIndex = y * width + x;
+        const isInside = coverage > 0.5;
+        setBit(tempClipBuffer, pixelIndex, isInside);
+    };
+}
+
+// Helper to check if a pixel should be clipped
+function isPixelClipped(clipMask, x, y, width) {
+    if (!clipMask) return false; // No clipping active
+    const pixelIndex = y * width + x;
+    return getBit(clipMask, pixelIndex) === 0; // 0 means clipped out
+}
+
 function Context2D(surface) {
     this.surface = surface;
     this.rasterizer = new Rasterizer(surface);
@@ -21,10 +92,19 @@ function Context2D(surface) {
     // Internal path and clipping
     this._currentPath = new Path2D();
     this._clipPath = null;
+    
+    // Stencil-based clipping system
+    this._clipMask = null;  // Uint8Array with 1 bit per pixel for clipping
 }
 
 // State management
 Context2D.prototype.save = function() {
+    // Deep copy clipMask if it exists
+    let clipMaskCopy = null;
+    if (this._clipMask) {
+        clipMaskCopy = new Uint8Array(this._clipMask);
+    }
+    
     this.stateStack.push({
         globalAlpha: this.globalAlpha,
         globalCompositeOperation: this.globalCompositeOperation,
@@ -33,6 +113,7 @@ Context2D.prototype.save = function() {
         fillStyle: this._fillStyle.slice(),
         strokeStyle: this._strokeStyle.slice(),
         clipPath: this._clipPath, // Note: shallow copy for M2, should be deep copy in full implementation
+        clipMask: clipMaskCopy,   // Deep copy of stencil buffer
         lineWidth: this.lineWidth,
         lineJoin: this.lineJoin,
         lineCap: this.lineCap,
@@ -50,6 +131,10 @@ Context2D.prototype.restore = function() {
     this._fillStyle = state.fillStyle;
     this._strokeStyle = state.strokeStyle;
     this._clipPath = state.clipPath;
+    
+    // Restore clipMask (may be null)
+    this._clipMask = state.clipMask;
+    
     this.lineWidth = state.lineWidth;
     this.lineJoin = state.lineJoin;
     this.lineCap = state.lineCap;
@@ -136,6 +221,7 @@ Context2D.prototype.fillRect = function(x, y, width, height) {
         globalAlpha: this.globalAlpha,
         transform: this._transform,
         clipPath: this._clipPath,
+        clipMask: this._clipMask,
         fillStyle: this._fillStyle
     });
     
@@ -155,6 +241,7 @@ Context2D.prototype.strokeRect = function(x, y, width, height) {
         globalAlpha: this.globalAlpha,
         transform: this._transform,
         clipPath: this._clipPath,
+        clipMask: this._clipMask,
         strokeStyle: this._strokeStyle
     });
     
@@ -216,6 +303,7 @@ Context2D.prototype.fill = function(path, rule) {
         globalAlpha: this.globalAlpha,
         transform: this._transform,
         clipPath: this._clipPath,
+        clipMask: this._clipMask,
         fillStyle: this._fillStyle
     });
     
@@ -232,6 +320,7 @@ Context2D.prototype.stroke = function(path) {
         globalAlpha: this.globalAlpha,
         transform: this._transform,
         clipPath: this._clipPath,
+        clipMask: this._clipMask,
         strokeStyle: this._strokeStyle
     });
     
@@ -245,13 +334,146 @@ Context2D.prototype.stroke = function(path) {
     this.rasterizer.endOp();
 };
 
-// M2: Clipping support
+// Enhanced clipping support with stencil buffer intersection
 Context2D.prototype.clip = function(path, rule) {
     // If no path provided, use current internal path
     const pathToClip = path || this._currentPath;
     const clipRule = rule || 'nonzero';
     
-    // For M2, we only support a single clip path (no clip stack)
-    // In a full implementation, this would intersect with existing clip
+    // Create temporary clip buffer to render this clip path
+    const tempClipBuffer = createClipMask(this.surface.width, this.surface.height);
+    clearMask(tempClipBuffer); // Start with all 0s (all clipped)
+    
+    // Create clip pixel writer that writes to the temporary buffer
+    const clipPixelWriter = createClipPixelWriter(tempClipBuffer, this.surface.width, this.surface.height);
+    
+    // Render the clip path to the temporary buffer using fill logic
+    // We need to temporarily set up a "fake" rendering operation
+    const originalFillStyle = this._fillStyle;
+    this._fillStyle = [255, 255, 255, 255]; // White (doesn't matter for clipping)
+    
+    // Flatten path and fill to temporary clip buffer
+    const polygons = flattenPath(pathToClip);
+    
+    // Use a modified version of fillPolygons that writes to our clip buffer
+    this._fillPolygonsToClipBuffer(polygons, clipRule, tempClipBuffer);
+    
+    // Restore original fill style
+    this._fillStyle = originalFillStyle;
+    
+    // Intersect with existing clip mask (if any)
+    if (this._clipMask) {
+        // AND operation: existing mask & new mask
+        for (let i = 0; i < tempClipBuffer.length; i++) {
+            this._clipMask[i] &= tempClipBuffer[i];
+        }
+    } else {
+        // First clip - use the temporary buffer as the new clip mask
+        this._clipMask = tempClipBuffer;
+    }
+    
+    // For backward compatibility, also set the clipPath (legacy system)
     this._clipPath = pathToClip;
+};
+
+// Helper method to fill polygons directly to a clip buffer
+Context2D.prototype._fillPolygonsToClipBuffer = function(polygons, fillRule, clipBuffer) {
+    if (polygons.length === 0) return;
+    
+    const surface = this.surface;  // Need width/height for bounds
+    
+    // Transform all polygon vertices
+    const transformedPolygons = polygons.map(poly => 
+        poly.map(point => this._transform.transformPoint(point))
+    );
+    
+    // Find bounding box
+    let minY = Infinity, maxY = -Infinity;
+    for (const poly of transformedPolygons) {
+        for (const point of poly) {
+            minY = Math.min(minY, point.y);
+            maxY = Math.max(maxY, point.y);
+        }
+    }
+    
+    // Clamp to surface bounds
+    minY = Math.max(0, Math.floor(minY));
+    maxY = Math.min(surface.height - 1, Math.ceil(maxY));
+    
+    // Process each scanline (similar to fillPolygons but writes to clip buffer)
+    for (let y = minY; y <= maxY; y++) {
+        const intersections = [];
+        
+        // Find all intersections with this scanline
+        for (const poly of transformedPolygons) {
+            this._findPolygonIntersections(poly, y + 0.5, intersections);
+        }
+        
+        // Sort intersections by x coordinate
+        intersections.sort((a, b) => a.x - b.x);
+        
+        // Fill spans based on winding rule
+        this._fillClipSpans(y, intersections, fillRule, clipBuffer);
+    }
+};
+
+// Helper method to find polygon intersections (copied from polygon-filler.js)
+Context2D.prototype._findPolygonIntersections = function(polygon, y, intersections) {
+    for (let i = 0; i < polygon.length; i++) {
+        const p1 = polygon[i];
+        const p2 = polygon[(i + 1) % polygon.length];
+        
+        // Skip horizontal edges
+        if (Math.abs(p1.y - p2.y) < 1e-10) continue;
+        
+        // Check if scanline crosses this edge
+        const minY = Math.min(p1.y, p2.y);
+        const maxY = Math.max(p1.y, p2.y);
+        
+        if (y >= minY && y < maxY) { // Note: < maxY to avoid double-counting vertices
+            // Calculate intersection point
+            const t = (y - p1.y) / (p2.y - p1.y);
+            const x = p1.x + t * (p2.x - p1.x);
+            
+            // Determine winding direction
+            const winding = p2.y > p1.y ? 1 : -1;
+            
+            intersections.push({x: x, winding: winding});
+        }
+    }
+};
+
+// Helper method to fill clip spans (writes to clip buffer instead of surface)
+Context2D.prototype._fillClipSpans = function(y, intersections, fillRule, clipBuffer) {
+    if (intersections.length === 0) return;
+    
+    let windingNumber = 0;
+    let inside = false;
+    
+    for (let i = 0; i < intersections.length; i++) {
+        const intersection = intersections[i];
+        const nextIntersection = intersections[i + 1];
+        
+        // Update winding number
+        windingNumber += intersection.winding;
+        
+        // Determine if we're inside based on fill rule
+        const wasInside = inside;
+        if (fillRule === 'evenodd') {
+            inside = (windingNumber % 2) !== 0;
+        } else { // nonzero
+            inside = windingNumber !== 0;
+        }
+        
+        // Fill span if we're inside
+        if (inside && nextIntersection) {
+            const startX = Math.max(0, Math.ceil(intersection.x));
+            const endX = Math.min(this.surface.width - 1, Math.floor(nextIntersection.x));
+            
+            for (let x = startX; x <= endX; x++) {
+                const pixelIndex = y * this.surface.width + x;
+                setBit(clipBuffer, pixelIndex, 1); // Set bit to 1 (inside clip region)
+            }
+        }
+    }
 };

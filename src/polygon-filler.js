@@ -1,8 +1,21 @@
 // Polygon filling implementation with nonzero and evenodd winding rules
 // Uses scanline algorithm for efficient aliased filling
 
+// Bit manipulation helpers for clipMask (duplicated from context2d.js for standalone use)
+function getBit(buffer, pixelIndex) {
+    const byteIndex = Math.floor(pixelIndex / 8);
+    const bitIndex = pixelIndex % 8;
+    return (buffer[byteIndex] & (1 << bitIndex)) !== 0 ? 1 : 0;
+}
+
+function isPixelClipped(clipMask, x, y, width) {
+    if (!clipMask) return false; // No clipping active
+    const pixelIndex = y * width + x;
+    return getBit(clipMask, pixelIndex) === 0; // 0 means clipped out
+}
+
 // Fill polygons using scanline algorithm with specified winding rule
-function fillPolygons(surface, polygons, color, fillRule, transform, clipPolygons) {
+function fillPolygons(surface, polygons, color, fillRule, transform, clipPolygons, clipMask) {
     if (polygons.length === 0) return;
     
     // Transform all polygon vertices
@@ -41,7 +54,7 @@ function fillPolygons(surface, polygons, color, fillRule, transform, clipPolygon
         intersections.sort((a, b) => a.x - b.x);
         
         // Fill spans based on winding rule
-        fillScanlineSpans(surface, y, intersections, color, fillRule, transformedClipPolygons);
+        fillScanlineSpans(surface, y, intersections, color, fillRule, transformedClipPolygons, clipMask);
     }
 }
 
@@ -72,7 +85,7 @@ function findPolygonIntersections(polygon, y, intersections) {
 }
 
 // Fill spans on a scanline based on winding rule
-function fillScanlineSpans(surface, y, intersections, color, fillRule, transformedClipPolygons) {
+function fillScanlineSpans(surface, y, intersections, color, fillRule, transformedClipPolygons, clipMask) {
     if (intersections.length === 0) return;
     
     let windingNumber = 0;
@@ -99,7 +112,12 @@ function fillScanlineSpans(surface, y, intersections, color, fillRule, transform
             const endX = Math.min(surface.width - 1, Math.floor(nextIntersection.x));
             
             for (let x = startX; x <= endX; x++) {
-                // Check clipping if clip polygons are provided
+                // Check stencil buffer clipping first (faster)
+                if (isPixelClipped(clipMask, x, y, surface.width)) {
+                    continue; // Skip pixels clipped by stencil buffer
+                }
+                
+                // Check old-style clipping if clip polygons are provided
                 if (transformedClipPolygons && transformedClipPolygons.length > 0) {
                     if (!pointInPolygons(x, y, transformedClipPolygons, 'nonzero')) {
                         continue; // Skip pixels outside clip region

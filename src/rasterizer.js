@@ -1,3 +1,10 @@
+// Helper function for clipMask bit checking (duplicated from context2d.js for standalone use)
+function getBit(buffer, pixelIndex) {
+    const byteIndex = Math.floor(pixelIndex / 8);
+    const bitIndex = pixelIndex % 8;
+    return (buffer[byteIndex] & (1 << bitIndex)) !== 0 ? 1 : 0;
+}
+
 function Rasterizer(surface) {
     this.surface = surface;
     this.currentOp = null;
@@ -9,6 +16,7 @@ Rasterizer.prototype.beginOp = function(params) {
         globalAlpha: params.globalAlpha !== undefined ? params.globalAlpha : 1.0,
         transform: params.transform || new Matrix(),
         clipPath: params.clipPath || null,
+        clipMask: params.clipMask || null,  // New stencil-based clipping
         fillStyle: params.fillStyle || null,
         strokeStyle: params.strokeStyle || null
     };
@@ -16,6 +24,13 @@ Rasterizer.prototype.beginOp = function(params) {
 
 Rasterizer.prototype.endOp = function() {
     this.currentOp = null;
+};
+
+// Helper method to check if a pixel should be clipped by stencil buffer
+Rasterizer.prototype._isPixelClipped = function(x, y) {
+    if (!this.currentOp.clipMask) return false; // No clipping active
+    const pixelIndex = y * this.surface.width + x;
+    return getBit(this.currentOp.clipMask, pixelIndex) === 0; // 0 means clipped out
 };
 
 // Simple solid rectangle fill for M1
@@ -64,9 +79,9 @@ Rasterizer.prototype.fillRect = function(x, y, width, height, color) {
         // Use existing polygon filling system which handles transforms
         if (this.currentOp.clipPath) {
             const clipPolygons = flattenPath(this.currentOp.clipPath);
-            fillPolygons(this.surface, [rectPolygon], color, 'nonzero', this.currentOp.transform, clipPolygons);
+            fillPolygons(this.surface, [rectPolygon], color, 'nonzero', this.currentOp.transform, clipPolygons, this.currentOp.clipMask);
         } else {
-            fillPolygons(this.surface, [rectPolygon], color, 'nonzero', this.currentOp.transform);
+            fillPolygons(this.surface, [rectPolygon], color, 'nonzero', this.currentOp.transform, null, this.currentOp.clipMask);
         }
     }
 };
@@ -88,6 +103,11 @@ Rasterizer.prototype._fillAxisAlignedRect = function(x, y, width, height, color)
         
         for (let px = x; px < x + width; px++) {
             if (px < 0 || px >= surface.width) continue;
+            
+            // Check stencil buffer clipping
+            if (this.currentOp.clipMask && this._isPixelClipped(px, py)) {
+                continue; // Skip pixels clipped by stencil buffer
+            }
             
             const offset = py * surface.stride + px * 4;
             
@@ -139,12 +159,12 @@ Rasterizer.prototype.fill = function(path, rule) {
     
     // Fill polygons with current transform and clipping
     if (this.currentOp.clipPath) {
-        // With clipping - pass clip polygons for per-pixel testing
+        // With old-style path clipping - pass clip polygons for per-pixel testing
         const clipPolygons = flattenPath(this.currentOp.clipPath);
-        fillPolygons(this.surface, polygons, fillColor, fillRule, this.currentOp.transform, clipPolygons);
+        fillPolygons(this.surface, polygons, fillColor, fillRule, this.currentOp.transform, clipPolygons, this.currentOp.clipMask);
     } else {
-        // No clipping - direct fill
-        fillPolygons(this.surface, polygons, fillColor, fillRule, this.currentOp.transform);
+        // No path clipping - but may have stencil clipping
+        fillPolygons(this.surface, polygons, fillColor, fillRule, this.currentOp.transform, null, this.currentOp.clipMask);
     }
 };
 
@@ -171,10 +191,10 @@ Rasterizer.prototype.stroke = function(path, strokeProps) {
     if (this.currentOp.clipPath) {
         // With clipping - pass clip polygons for per-pixel testing
         const clipPolygons = flattenPath(this.currentOp.clipPath);
-        fillPolygons(this.surface, strokePolygons, strokeColor, 'nonzero', this.currentOp.transform, clipPolygons);
+        fillPolygons(this.surface, strokePolygons, strokeColor, 'nonzero', this.currentOp.transform, clipPolygons, this.currentOp.clipMask);
     } else {
-        // No clipping - direct fill
-        fillPolygons(this.surface, strokePolygons, strokeColor, 'nonzero', this.currentOp.transform);
+        // No clipping - but may have stencil clipping
+        fillPolygons(this.surface, strokePolygons, strokeColor, 'nonzero', this.currentOp.transform, null, this.currentOp.clipMask);
     }
 };
 

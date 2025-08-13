@@ -3550,6 +3550,199 @@
         }
     };
 
+    // Test 34: Enhanced Clipping Intersection Test
+    visualTests['clip-intersection-enhanced'] = {
+        name: 'Enhanced Clipping Intersection Test',
+        width: 400, height: 300,
+        drawSWCanvas: function(SWCanvas) {
+            const surface = SWCanvas.Surface(400, 300);
+            const ctx = new SWCanvas.Context2D(surface);
+            
+            // White background
+            helpers.setSWCanvasFill(ctx, 'white');
+            ctx.fillRect(0, 0, 400, 300);
+            
+            // Test 1: Overlapping circles (top left)
+            ctx.save();
+            
+            // First clip: circle at (80, 60)
+            ctx.beginPath();
+            ctx.arc(80, 60, 30, 0, 2 * Math.PI);
+            ctx.clip();
+            
+            // Second clip: circle at (120, 60) - intersection
+            ctx.beginPath();
+            ctx.arc(120, 60, 30, 0, 2 * Math.PI);
+            ctx.clip();
+            
+            // Fill - should only appear in intersection
+            helpers.setSWCanvasFill(ctx, 'red');
+            ctx.fillRect(40, 30, 100, 60);
+            ctx.restore();
+            
+            // Test 2: Rectangle intersecting circle (top right)
+            ctx.save();
+            
+            // First clip: circle
+            ctx.beginPath();
+            ctx.arc(300, 60, 35, 0, 2 * Math.PI);
+            ctx.clip();
+            
+            // Second clip: rectangle
+            ctx.rect(270, 40, 60, 40);
+            ctx.clip();
+            
+            // Fill intersection
+            helpers.setSWCanvasFill(ctx, 'green');
+            ctx.fillRect(250, 20, 100, 80);
+            ctx.restore();
+            
+            // Test 3: Complex polygon intersection (bottom left)
+            ctx.save();
+            
+            // First clip: triangle
+            ctx.beginPath();
+            ctx.moveTo(100, 150);
+            ctx.lineTo(50, 220);
+            ctx.lineTo(150, 220);
+            ctx.closePath();
+            ctx.clip();
+            
+            // Second clip: diamond
+            ctx.beginPath();
+            ctx.moveTo(100, 180);
+            ctx.lineTo(130, 200);
+            ctx.lineTo(100, 220);
+            ctx.lineTo(70, 200);
+            ctx.closePath();
+            ctx.clip();
+            
+            // Fill intersection
+            helpers.setSWCanvasFill(ctx, 'blue');
+            ctx.fillRect(30, 130, 140, 120);
+            ctx.restore();
+            
+            // Test 4: Nested save/restore with multiple clips (bottom right)
+            ctx.save();
+            
+            // Outer clip: large rectangle
+            ctx.rect(220, 160, 120, 80);
+            ctx.clip();
+            
+            ctx.save();
+            // Inner clip: circle within rectangle
+            ctx.beginPath();
+            ctx.arc(280, 200, 25, 0, 2 * Math.PI);
+            ctx.clip();
+            
+            // Fill inner intersection
+            helpers.setSWCanvasFill(ctx, 'orange');
+            ctx.fillRect(200, 140, 160, 120);
+            
+            ctx.restore(); // Restore to just outer clip
+            
+            // Fill outer area (but not inner circle)
+            helpers.setSWCanvasFill(ctx, 'purple');
+            ctx.fillRect(210, 150, 140, 100);
+            
+            ctx.restore();
+            
+            return surface;
+        },
+        drawHTML5Canvas: function(canvas) {
+            const ctx = canvas.getContext('2d');
+            
+            // White background
+            helpers.setHTML5CanvasFill(ctx, 'white');
+            ctx.fillRect(0, 0, 400, 300);
+            
+            // Test 1: Overlapping circles (top left)
+            ctx.save();
+            
+            // First clip: circle at (80, 60)
+            ctx.beginPath();
+            ctx.arc(80, 60, 30, 0, 2 * Math.PI);
+            ctx.clip();
+            
+            // Second clip: circle at (120, 60) - intersection
+            ctx.beginPath();
+            ctx.arc(120, 60, 30, 0, 2 * Math.PI);
+            ctx.clip();
+            
+            // Fill - should only appear in intersection
+            helpers.setHTML5CanvasFill(ctx, 'red');
+            ctx.fillRect(40, 30, 100, 60);
+            ctx.restore();
+            
+            // Test 2: Rectangle intersecting circle (top right)
+            ctx.save();
+            
+            // First clip: circle
+            ctx.beginPath();
+            ctx.arc(300, 60, 35, 0, 2 * Math.PI);
+            ctx.clip();
+            
+            // Second clip: rectangle
+            ctx.rect(270, 40, 60, 40);
+            ctx.clip();
+            
+            // Fill intersection
+            helpers.setHTML5CanvasFill(ctx, 'green');
+            ctx.fillRect(250, 20, 100, 80);
+            ctx.restore();
+            
+            // Test 3: Complex polygon intersection (bottom left)
+            ctx.save();
+            
+            // First clip: triangle
+            ctx.beginPath();
+            ctx.moveTo(100, 150);
+            ctx.lineTo(50, 220);
+            ctx.lineTo(150, 220);
+            ctx.closePath();
+            ctx.clip();
+            
+            // Second clip: diamond
+            ctx.beginPath();
+            ctx.moveTo(100, 180);
+            ctx.lineTo(130, 200);
+            ctx.lineTo(100, 220);
+            ctx.lineTo(70, 200);
+            ctx.closePath();
+            ctx.clip();
+            
+            // Fill intersection
+            helpers.setHTML5CanvasFill(ctx, 'blue');
+            ctx.fillRect(30, 130, 140, 120);
+            ctx.restore();
+            
+            // Test 4: Nested save/restore with multiple clips (bottom right)
+            ctx.save();
+            
+            // Outer clip: large rectangle
+            ctx.rect(220, 160, 120, 80);
+            ctx.clip();
+            
+            ctx.save();
+            // Inner clip: circle within rectangle
+            ctx.beginPath();
+            ctx.arc(280, 200, 25, 0, 2 * Math.PI);
+            ctx.clip();
+            
+            // Fill inner intersection
+            helpers.setHTML5CanvasFill(ctx, 'orange');
+            ctx.fillRect(200, 140, 160, 120);
+            
+            ctx.restore(); // Restore to just outer clip
+            
+            // Fill outer area (but not inner circle)
+            helpers.setHTML5CanvasFill(ctx, 'purple');
+            ctx.fillRect(210, 150, 140, 100);
+            
+            ctx.restore();
+        }
+    };
+
     const VisualTestRegistry = {
         getTests: function() { return visualTests; },
         getTest: function(name) { return visualTests[name]; },
