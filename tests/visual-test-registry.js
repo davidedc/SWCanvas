@@ -4,6 +4,24 @@
 
 (function(global) {
     'use strict';
+    
+    // Load color system
+    let TestColorSystem;
+    let helpers;
+    
+    if (typeof require !== 'undefined') {
+        // Node.js
+        TestColorSystem = require('./test-colors.js');
+        helpers = TestColorSystem.helpers;
+    } else {
+        // Browser - should be loaded globally
+        TestColorSystem = global.TestColorSystem;
+        if (TestColorSystem) {
+            helpers = TestColorSystem.helpers;
+        } else {
+            throw new Error('TestColorSystem not loaded! Make sure test-colors.js is loaded before visual-test-registry.js');
+        }
+    }
 
     // Registry of visual tests
     const visualTests = {};
@@ -45,20 +63,20 @@
             const ctx = new SWCanvas.Context2D(surface);
             
             // Fill with red background
-            ctx.setFillStyle(255, 0, 0, 255);
+            helpers.setSWCanvasFill(ctx, 'red');
             ctx.fillRect(0, 0, 100, 100);
             
             // Blue square in center
-            ctx.setFillStyle(0, 0, 255, 255);
+            helpers.setSWCanvasFill(ctx, 'blue');
             ctx.fillRect(25, 25, 50, 50);
             
             return surface;
         },
         drawHTML5Canvas: function(html5Canvas) {
             const ctx = html5Canvas.getContext('2d');
-            ctx.fillStyle = 'red';
+            helpers.setHTML5CanvasFill(ctx, 'red');
             ctx.fillRect(0, 0, 100, 100);
-            ctx.fillStyle = 'blue';
+            helpers.setHTML5CanvasFill(ctx, 'blue');
             ctx.fillRect(25, 25, 50, 50);
         }
     };
@@ -72,20 +90,20 @@
             const ctx = new SWCanvas.Context2D(surface);
             
             // White background
-            ctx.setFillStyle(255, 255, 255, 255);
+            helpers.setSWCanvasFill(ctx, 'white');
             ctx.fillRect(0, 0, 200, 150);
             
             // Red rectangle (opaque)
-            ctx.setFillStyle(255, 0, 0, 255);
+            helpers.setSWCanvasFill(ctx, 'red');
             ctx.fillRect(20, 20, 80, 60);
             
             // Blue rectangle (opaque) with overlap
-            ctx.setFillStyle(0, 0, 255, 255);
+            helpers.setSWCanvasFill(ctx, 'blue');
             ctx.fillRect(60, 60, 80, 60);
             
             // Semi-transparent green rectangle
             ctx.globalAlpha = 0.5;
-            ctx.setFillStyle(0, 128, 0, 255);
+            helpers.setSWCanvasFill(ctx, 'green');
             ctx.fillRect(40, 40, 80, 60);
             ctx.globalAlpha = 1.0;
             
@@ -93,14 +111,14 @@
         },
         drawHTML5Canvas: function(html5Canvas) {
             const ctx = html5Canvas.getContext('2d');
-            ctx.fillStyle = 'white';
+            helpers.setHTML5CanvasFill(ctx, 'white');
             ctx.fillRect(0, 0, 200, 150);
-            ctx.fillStyle = 'red';
+            helpers.setHTML5CanvasFill(ctx, 'red');
             ctx.fillRect(20, 20, 80, 60);
-            ctx.fillStyle = 'blue';
+            helpers.setHTML5CanvasFill(ctx, 'blue');
             ctx.fillRect(60, 60, 80, 60);
             ctx.globalAlpha = 0.5;
-            ctx.fillStyle = 'green';
+            helpers.setHTML5CanvasFill(ctx, 'green');
             ctx.fillRect(40, 40, 80, 60);
             ctx.globalAlpha = 1.0;
         }
@@ -115,11 +133,11 @@
             const ctx = new SWCanvas.Context2D(surface);
             
             // White background
-            ctx.setFillStyle(255, 255, 255, 255);
+            helpers.setSWCanvasFill(ctx, 'white');
             ctx.fillRect(0, 0, 100, 100);
             
             // Draw red triangle using path
-            ctx.setFillStyle(255, 0, 0, 255);
+            helpers.setSWCanvasFill(ctx, 'red');
             ctx.beginPath();
             ctx.moveTo(50, 10);
             ctx.lineTo(80, 70);
@@ -131,9 +149,9 @@
         },
         drawHTML5Canvas: function(html5Canvas) {
             const ctx = html5Canvas.getContext('2d');
-            ctx.fillStyle = 'white';
+            helpers.setHTML5CanvasFill(ctx, 'white');
             ctx.fillRect(0, 0, 100, 100);
-            ctx.fillStyle = 'red';
+            helpers.setHTML5CanvasFill(ctx, 'red');
             ctx.beginPath();
             ctx.moveTo(50, 10);
             ctx.lineTo(80, 70);
@@ -152,11 +170,11 @@
             const ctx = new SWCanvas.Context2D(surface);
             
             // White background
-            ctx.setFillStyle(255, 255, 255, 255);
+            helpers.setSWCanvasFill(ctx, 'white');
             ctx.fillRect(0, 0, 100, 100);
             
             // Create overlapping rectangles (outer and inner)
-            ctx.setFillStyle(255, 0, 0, 255);
+            helpers.setSWCanvasFill(ctx, 'red');
             ctx.beginPath();
             // Outer rectangle
             ctx.rect(20, 20, 60, 60);
@@ -170,9 +188,9 @@
         },
         drawHTML5Canvas: function(html5Canvas) {
             const ctx = html5Canvas.getContext('2d');
-            ctx.fillStyle = 'white';
+            helpers.setHTML5CanvasFill(ctx, 'white');
             ctx.fillRect(0, 0, 100, 100);
-            ctx.fillStyle = 'red';
+            helpers.setHTML5CanvasFill(ctx, 'red');
             ctx.beginPath();
             ctx.rect(20, 20, 60, 60);
             ctx.rect(30, 30, 40, 40);
@@ -189,7 +207,7 @@
             const ctx = new SWCanvas.Context2D(surface);
             
             // White background
-            ctx.setFillStyle(255, 255, 255, 255);
+            helpers.setSWCanvasFill(ctx, 'white');
             ctx.fillRect(0, 0, 100, 100);
             
             // Set up circular clip path
@@ -198,19 +216,19 @@
             ctx.clip();
             
             // Fill a large red rectangle - should be clipped to circle
-            ctx.setFillStyle(255, 0, 0, 255);
+            helpers.setSWCanvasFill(ctx, 'red');
             ctx.fillRect(0, 0, 100, 100);
             
             return surface;
         },
         drawHTML5Canvas: function(html5Canvas) {
             const ctx = html5Canvas.getContext('2d');
-            ctx.fillStyle = 'white';
+            helpers.setHTML5CanvasFill(ctx, 'white');
             ctx.fillRect(0, 0, 100, 100);
             ctx.beginPath();
             ctx.arc(50, 50, 30, 0, 2 * Math.PI);
             ctx.clip();
-            ctx.fillStyle = 'red';
+            helpers.setHTML5CanvasFill(ctx, 'red');
             ctx.fillRect(0, 0, 100, 100);
         }
     };
@@ -224,11 +242,11 @@
             const ctx = new SWCanvas.Context2D(surface);
             
             // White background
-            ctx.setFillStyle(255, 255, 255, 255);
+            helpers.setSWCanvasFill(ctx, 'white');
             ctx.fillRect(0, 0, 100, 100);
             
             // Draw red line stroke
-            ctx.setStrokeStyle(255, 0, 0, 255);
+            helpers.setSWCanvasStroke(ctx, 'red');
             ctx.lineWidth = 5;
             ctx.beginPath();
             ctx.moveTo(10, 50);
@@ -239,9 +257,9 @@
         },
         drawHTML5Canvas: function(html5Canvas) {
             const ctx = html5Canvas.getContext('2d');
-            ctx.fillStyle = 'white';
+            helpers.setHTML5CanvasFill(ctx, 'white');
             ctx.fillRect(0, 0, 100, 100);
-            ctx.strokeStyle = 'red';
+            helpers.setHTML5CanvasStroke(ctx, 'red');
             ctx.lineWidth = 5;
             ctx.beginPath();
             ctx.moveTo(10, 50);
@@ -259,10 +277,10 @@
             const ctx = new SWCanvas.Context2D(surface);
             
             // White background
-            ctx.setFillStyle(255, 255, 255, 255);
+            helpers.setSWCanvasFill(ctx, 'white');
             ctx.fillRect(0, 0, 300, 100);
             
-            ctx.setStrokeStyle(0, 0, 255, 255);
+            helpers.setSWCanvasStroke(ctx, 'blue');
             ctx.lineWidth = 8;
             
             // Miter join
@@ -293,9 +311,9 @@
         },
         drawHTML5Canvas: function(html5Canvas) {
             const ctx = html5Canvas.getContext('2d');
-            ctx.fillStyle = 'white';
+            helpers.setHTML5CanvasFill(ctx, 'white');
             ctx.fillRect(0, 0, 300, 100);
-            ctx.strokeStyle = 'blue';
+            helpers.setHTML5CanvasStroke(ctx, 'blue');
             ctx.lineWidth = 8;
             
             // Miter join
@@ -333,11 +351,11 @@
             const ctx = new SWCanvas.Context2D(surface);
             
             // White background
-            ctx.setFillStyle(255, 255, 255, 255);
+            helpers.setSWCanvasFill(ctx, 'white');
             ctx.fillRect(0, 0, 150, 150);
             
             // Draw a curved path
-            ctx.setStrokeStyle(255, 165, 0, 255);
+            helpers.setSWCanvasStroke(ctx, 'orange');
             ctx.lineWidth = 4;
             ctx.lineJoin = 'round';
             ctx.lineCap = 'round';
@@ -353,9 +371,9 @@
         },
         drawHTML5Canvas: function(html5Canvas) {
             const ctx = html5Canvas.getContext('2d');
-            ctx.fillStyle = 'white';
+            helpers.setHTML5CanvasFill(ctx, 'white');
             ctx.fillRect(0, 0, 150, 150);
-            ctx.strokeStyle = 'orange';
+            helpers.setHTML5CanvasStroke(ctx, 'orange');
             ctx.lineWidth = 4;
             ctx.lineJoin = 'round';
             ctx.lineCap = 'round';
@@ -377,10 +395,10 @@
             const ctx = new SWCanvas.Context2D(surface);
             
             // White background
-            ctx.setFillStyle(255, 255, 255, 255);
+            helpers.setSWCanvasFill(ctx, 'white');
             ctx.fillRect(0, 0, 200, 100);
             
-            ctx.setStrokeStyle(255, 0, 255, 255);
+            helpers.setSWCanvasStroke(ctx, 'magenta');
             ctx.lineWidth = 6;
             ctx.lineJoin = 'miter';
             
@@ -406,10 +424,10 @@
             const ctx = html5Canvas.getContext('2d');
             
             // White background
-            ctx.fillStyle = 'white';
+            helpers.setHTML5CanvasFill(ctx, 'white');
             ctx.fillRect(0, 0, 200, 100);
             
-            ctx.strokeStyle = 'magenta';
+            helpers.setHTML5CanvasStroke(ctx, 'magenta');
             ctx.lineWidth = 6;
             ctx.lineJoin = 'miter';
             
@@ -440,10 +458,10 @@
             const ctx = new SWCanvas.Context2D(surface);
             
             // White background
-            ctx.setFillStyle(255, 255, 255, 255);
+            helpers.setSWCanvasFill(ctx, 'white');
             ctx.fillRect(0, 0, 100, 100);
             
-            ctx.setStrokeStyle(0, 0, 255, 255);
+            helpers.setSWCanvasStroke(ctx, 'blue');
             ctx.lineWidth = 6;
             ctx.lineJoin = 'miter';
             
@@ -469,10 +487,10 @@
             const ctx = html5Canvas.getContext('2d');
             
             // White background
-            ctx.fillStyle = 'white';
+            helpers.setHTML5CanvasFill(ctx, 'white');
             ctx.fillRect(0, 0, 100, 100);
             
-            ctx.strokeStyle = 'blue';
+            helpers.setHTML5CanvasStroke(ctx, 'blue');
             ctx.lineWidth = 6;
             ctx.lineJoin = 'miter';
             
@@ -505,42 +523,42 @@
             const ctx = new SWCanvas.Context2D(surface);
             
             // White background
-            ctx.setFillStyle(255, 255, 255, 255);
+            helpers.setSWCanvasFill(ctx, 'white');
             ctx.fillRect(0, 0, 200, 150);
             
             // Red square at origin
-            ctx.setFillStyle(255, 0, 0, 255);
+            helpers.setSWCanvasFill(ctx, 'red');
             ctx.fillRect(10, 10, 30, 30);
             
             // Translate and draw blue square
             ctx.translate(50, 20);
-            ctx.setFillStyle(0, 0, 255, 255);
+            helpers.setSWCanvasFill(ctx, 'blue');
             ctx.fillRect(10, 10, 30, 30);
             
             // Translate again and draw green square
             ctx.translate(60, 30);
-            ctx.setFillStyle(0, 128, 0, 255);
+            helpers.setSWCanvasFill(ctx, 'green');
             ctx.fillRect(10, 10, 30, 30);
             
             return surface;
         },
         drawHTML5Canvas: function(html5Canvas) {
             const ctx = html5Canvas.getContext('2d');
-            ctx.fillStyle = 'white';
+            helpers.setHTML5CanvasFill(ctx, 'white');
             ctx.fillRect(0, 0, 200, 150);
             
             // Red square at origin
-            ctx.fillStyle = 'red';
+            helpers.setHTML5CanvasFill(ctx, 'red');
             ctx.fillRect(10, 10, 30, 30);
             
             // Translate and draw blue square
             ctx.translate(50, 20);
-            ctx.fillStyle = 'blue';
+            helpers.setHTML5CanvasFill(ctx, 'blue');
             ctx.fillRect(10, 10, 30, 30);
             
             // Translate again and draw green square
             ctx.translate(60, 30);
-            ctx.fillStyle = 'green';
+            helpers.setHTML5CanvasFill(ctx, 'green');
             ctx.fillRect(10, 10, 30, 30);
         }
     };
@@ -554,48 +572,48 @@
             const ctx = new SWCanvas.Context2D(surface);
             
             // White background
-            ctx.setFillStyle(255, 255, 255, 255);
+            helpers.setSWCanvasFill(ctx, 'white');
             ctx.fillRect(0, 0, 200, 150);
             
             // Original size red square
-            ctx.setFillStyle(255, 0, 0, 255);
+            helpers.setSWCanvasFill(ctx, 'red');
             ctx.fillRect(10, 10, 20, 20);
             
             // Scale 2x and draw blue square
             ctx.translate(60, 10);
             ctx.scale(2, 2);
-            ctx.setFillStyle(0, 0, 255, 255);
+            helpers.setSWCanvasFill(ctx, 'blue');
             ctx.fillRect(0, 0, 20, 20);
             
             // Reset, scale 0.5x and draw green square
             ctx.resetTransform();
             ctx.translate(10, 60);
             ctx.scale(0.5, 0.5);
-            ctx.setFillStyle(0, 128, 0, 255);
+            helpers.setSWCanvasFill(ctx, 'green');
             ctx.fillRect(0, 0, 40, 40);
             
             return surface;
         },
         drawHTML5Canvas: function(html5Canvas) {
             const ctx = html5Canvas.getContext('2d');
-            ctx.fillStyle = 'white';
+            helpers.setHTML5CanvasFill(ctx, 'white');
             ctx.fillRect(0, 0, 200, 150);
             
             // Original size red square
-            ctx.fillStyle = 'red';
+            helpers.setHTML5CanvasFill(ctx, 'red');
             ctx.fillRect(10, 10, 20, 20);
             
             // Scale 2x and draw blue square
             ctx.translate(60, 10);
             ctx.scale(2, 2);
-            ctx.fillStyle = 'blue';
+            helpers.setHTML5CanvasFill(ctx, 'blue');
             ctx.fillRect(0, 0, 20, 20);
             
             // Reset, scale 0.5x and draw green square
             ctx.resetTransform();
             ctx.translate(10, 60);
             ctx.scale(0.5, 0.5);
-            ctx.fillStyle = 'green';
+            helpers.setHTML5CanvasFill(ctx, 'green');
             ctx.fillRect(0, 0, 40, 40);
         }
     };
@@ -609,48 +627,48 @@
             const ctx = new SWCanvas.Context2D(surface);
             
             // White background
-            ctx.setFillStyle(255, 255, 255, 255);
+            helpers.setSWCanvasFill(ctx, 'white');
             ctx.fillRect(0, 0, 200, 150);
             
             // Original red square
-            ctx.setFillStyle(255, 0, 0, 255);
+            helpers.setSWCanvasFill(ctx, 'red');
             ctx.fillRect(20, 20, 25, 25);
             
             // Rotate 45 degrees and draw blue square
             ctx.translate(100, 40);
             ctx.rotate(Math.PI / 4);
-            ctx.setFillStyle(0, 0, 255, 255);
+            helpers.setSWCanvasFill(ctx, 'blue');
             ctx.fillRect(-12, -12, 25, 25);
             
             // Reset, rotate 90 degrees and draw green square
             ctx.resetTransform();
             ctx.translate(60, 100);
             ctx.rotate(Math.PI / 2);
-            ctx.setFillStyle(0, 128, 0, 255);
+            helpers.setSWCanvasFill(ctx, 'green');
             ctx.fillRect(-12, -12, 25, 25);
             
             return surface;
         },
         drawHTML5Canvas: function(html5Canvas) {
             const ctx = html5Canvas.getContext('2d');
-            ctx.fillStyle = 'white';
+            helpers.setHTML5CanvasFill(ctx, 'white');
             ctx.fillRect(0, 0, 200, 150);
             
             // Original red square
-            ctx.fillStyle = 'red';
+            helpers.setHTML5CanvasFill(ctx, 'red');
             ctx.fillRect(20, 20, 25, 25);
             
             // Rotate 45 degrees and draw blue square
             ctx.translate(100, 40);
             ctx.rotate(Math.PI / 4);
-            ctx.fillStyle = 'blue';
+            helpers.setHTML5CanvasFill(ctx, 'blue');
             ctx.fillRect(-12, -12, 25, 25);
             
             // Reset, rotate 90 degrees and draw green square
             ctx.resetTransform();
             ctx.translate(60, 100);
             ctx.rotate(Math.PI / 2);
-            ctx.fillStyle = 'green';
+            helpers.setHTML5CanvasFill(ctx, 'green');
             ctx.fillRect(-12, -12, 25, 25);
         }
     };
@@ -664,50 +682,50 @@
             const ctx = new SWCanvas.Context2D(surface);
             
             // White background
-            ctx.setFillStyle(255, 255, 255, 255);
+            helpers.setSWCanvasFill(ctx, 'white');
             ctx.fillRect(0, 0, 250, 150);
             
             // Left side: Using transform() - accumulative
-            ctx.setFillStyle(255, 0, 0, 255);
+            helpers.setSWCanvasFill(ctx, 'red');
             ctx.transform(1, 0, 0, 1, 20, 20); // translate(20, 20)
             ctx.fillRect(0, 0, 20, 20);
             
             ctx.transform(2, 0, 0, 2, 0, 0); // scale(2, 2) - accumulative
-            ctx.setFillStyle(0, 128, 0, 255);
+            helpers.setSWCanvasFill(ctx, 'green');
             ctx.fillRect(15, 0, 15, 15);
             
             // Right side: Using setTransform() - absolute
             ctx.setTransform(1, 0, 0, 1, 150, 20); // absolute translate(150, 20)
-            ctx.setFillStyle(0, 0, 255, 255);
+            helpers.setSWCanvasFill(ctx, 'blue');
             ctx.fillRect(0, 0, 20, 20);
             
             ctx.setTransform(2, 0, 0, 2, 150, 60); // absolute scale + translate
-            ctx.setFillStyle(255, 0, 255, 255);
+            helpers.setSWCanvasFill(ctx, 'magenta');
             ctx.fillRect(0, 0, 15, 15);
             
             return surface;
         },
         drawHTML5Canvas: function(html5Canvas) {
             const ctx = html5Canvas.getContext('2d');
-            ctx.fillStyle = 'white';
+            helpers.setHTML5CanvasFill(ctx, 'white');
             ctx.fillRect(0, 0, 250, 150);
             
             // Left side: Using transform() - accumulative
-            ctx.fillStyle = 'red';
+            helpers.setHTML5CanvasFill(ctx, 'red');
             ctx.transform(1, 0, 0, 1, 20, 20);
             ctx.fillRect(0, 0, 20, 20);
             
             ctx.transform(2, 0, 0, 2, 0, 0);
-            ctx.fillStyle = 'green';
+            helpers.setHTML5CanvasFill(ctx, 'green');
             ctx.fillRect(15, 0, 15, 15);
             
             // Right side: Using setTransform() - absolute
             ctx.setTransform(1, 0, 0, 1, 150, 20);
-            ctx.fillStyle = 'blue';
+            helpers.setHTML5CanvasFill(ctx, 'blue');
             ctx.fillRect(0, 0, 20, 20);
             
             ctx.setTransform(2, 0, 0, 2, 150, 60);
-            ctx.fillStyle = 'magenta';
+            helpers.setHTML5CanvasFill(ctx, 'magenta');
             ctx.fillRect(0, 0, 15, 15);
         }
     };
@@ -721,7 +739,7 @@
             const ctx = new SWCanvas.Context2D(surface);
             
             // White background
-            ctx.setFillStyle(255, 255, 255, 255);
+            helpers.setSWCanvasFill(ctx, 'white');
             ctx.fillRect(0, 0, 200, 150);
             
             // Apply complex transform
@@ -730,25 +748,25 @@
             ctx.scale(1.5, 1.5);
             
             // Draw transformed red square
-            ctx.setFillStyle(255, 0, 0, 255);
+            helpers.setSWCanvasFill(ctx, 'red');
             ctx.fillRect(0, 0, 20, 20);
             
             // Reset transform and draw blue square at origin
             ctx.resetTransform();
-            ctx.setFillStyle(0, 0, 255, 255);
+            helpers.setSWCanvasFill(ctx, 'blue');
             ctx.fillRect(10, 80, 20, 20);
             
             // Apply new transform after reset
             ctx.translate(120, 50);
             ctx.scale(0.8, 0.8);
-            ctx.setFillStyle(0, 128, 0, 255);
+            helpers.setSWCanvasFill(ctx, 'green');
             ctx.fillRect(0, 0, 25, 25);
             
             return surface;
         },
         drawHTML5Canvas: function(html5Canvas) {
             const ctx = html5Canvas.getContext('2d');
-            ctx.fillStyle = 'white';
+            helpers.setHTML5CanvasFill(ctx, 'white');
             ctx.fillRect(0, 0, 200, 150);
             
             // Apply complex transform
@@ -757,18 +775,18 @@
             ctx.scale(1.5, 1.5);
             
             // Draw transformed red square
-            ctx.fillStyle = 'red';
+            helpers.setHTML5CanvasFill(ctx, 'red');
             ctx.fillRect(0, 0, 20, 20);
             
             // Reset transform and draw blue square at origin
             ctx.resetTransform();
-            ctx.fillStyle = 'blue';
+            helpers.setHTML5CanvasFill(ctx, 'blue');
             ctx.fillRect(10, 80, 20, 20);
             
             // Apply new transform after reset
             ctx.translate(120, 50);
             ctx.scale(0.8, 0.8);
-            ctx.fillStyle = 'green';
+            helpers.setHTML5CanvasFill(ctx, 'green');
             ctx.fillRect(0, 0, 25, 25);
         }
     };
@@ -782,7 +800,7 @@
             const ctx = new SWCanvas.Context2D(surface);
             
             // White background
-            ctx.setFillStyle(255, 255, 255, 255);
+            helpers.setSWCanvasFill(ctx, 'white');
             ctx.fillRect(0, 0, 200, 150);
             
             // Initial transform
@@ -790,7 +808,7 @@
             ctx.scale(1.2, 1.2);
             
             // Draw red square with initial transform
-            ctx.setFillStyle(255, 0, 0, 255);
+            helpers.setSWCanvasFill(ctx, 'red');
             ctx.fillRect(0, 0, 20, 20);
             
             // Save state, apply additional transform
@@ -799,20 +817,20 @@
             ctx.translate(40, 0);
             
             // Draw blue square with combined transforms
-            ctx.setFillStyle(0, 0, 255, 255);
+            helpers.setSWCanvasFill(ctx, 'blue');
             ctx.fillRect(0, 0, 15, 15);
             
             // Restore to saved state, draw green square
             ctx.restore();
             ctx.translate(0, 40);
-            ctx.setFillStyle(0, 128, 0, 255);
+            helpers.setSWCanvasFill(ctx, 'green');
             ctx.fillRect(0, 0, 18, 18);
             
             return surface;
         },
         drawHTML5Canvas: function(html5Canvas) {
             const ctx = html5Canvas.getContext('2d');
-            ctx.fillStyle = 'white';
+            helpers.setHTML5CanvasFill(ctx, 'white');
             ctx.fillRect(0, 0, 200, 150);
             
             // Initial transform
@@ -820,7 +838,7 @@
             ctx.scale(1.2, 1.2);
             
             // Draw red square with initial transform
-            ctx.fillStyle = 'red';
+            helpers.setHTML5CanvasFill(ctx, 'red');
             ctx.fillRect(0, 0, 20, 20);
             
             // Save state, apply additional transform
@@ -829,13 +847,13 @@
             ctx.translate(40, 0);
             
             // Draw blue square with combined transforms
-            ctx.fillStyle = 'blue';
+            helpers.setHTML5CanvasFill(ctx, 'blue');
             ctx.fillRect(0, 0, 15, 15);
             
             // Restore to saved state, draw green square
             ctx.restore();
             ctx.translate(0, 40);
-            ctx.fillStyle = 'green';
+            helpers.setHTML5CanvasFill(ctx, 'green');
             ctx.fillRect(0, 0, 18, 18);
         }
     };
@@ -849,7 +867,7 @@
             const ctx = new SWCanvas.Context2D(surface);
             
             // White background
-            ctx.setFillStyle(255, 255, 255, 255);
+            helpers.setSWCanvasFill(ctx, 'white');
             ctx.fillRect(0, 0, 200, 150);
             
             // Complex combined transform: translate + rotate + scale
@@ -859,12 +877,12 @@
             ctx.translate(-15, -10);
             
             // Draw transformed rectangle
-            ctx.setFillStyle(255, 165, 0, 255);
+            helpers.setSWCanvasFill(ctx, 'orange');
             ctx.fillRect(0, 0, 30, 20);
             
             // Draw border to show original position
             ctx.resetTransform();
-            ctx.setStrokeStyle(128, 128, 128, 255);
+            helpers.setSWCanvasStroke(ctx, 'gray');
             ctx.lineWidth = 1;
             ctx.strokeRect(85, 65, 30, 20);
             
@@ -872,7 +890,7 @@
         },
         drawHTML5Canvas: function(html5Canvas) {
             const ctx = html5Canvas.getContext('2d');
-            ctx.fillStyle = 'white';
+            helpers.setHTML5CanvasFill(ctx, 'white');
             ctx.fillRect(0, 0, 200, 150);
             
             // Complex combined transform: translate + rotate + scale
@@ -887,7 +905,7 @@
             
             // Draw border to show original position
             ctx.resetTransform();
-            ctx.strokeStyle = 'gray';
+            helpers.setHTML5CanvasStroke(ctx, 'gray');
             ctx.lineWidth = 1;
             ctx.strokeRect(85, 65, 30, 20);
         }
@@ -902,14 +920,14 @@
             const ctx = new SWCanvas.Context2D(surface);
             
             // White background
-            ctx.setFillStyle(255, 255, 255, 255);
+            helpers.setSWCanvasFill(ctx, 'white');
             ctx.fillRect(0, 0, 200, 150);
             
             // Square 1: Translate(40,40) THEN Scale(2,2) - Red
             ctx.save();
             ctx.translate(40, 40);
             ctx.scale(2, 2);
-            ctx.setFillStyle(255, 0, 0, 255);  // Red
+            helpers.setSWCanvasFill(ctx, 'red');
             ctx.fillRect(0, 0, 15, 15);
             ctx.restore();
             
@@ -917,7 +935,7 @@
             ctx.save();
             ctx.scale(2, 2);
             ctx.translate(60, 60);
-            ctx.setFillStyle(0, 0, 255, 255);  // Blue
+            helpers.setSWCanvasFill(ctx, 'blue');
             ctx.fillRect(0, 0, 15, 15);
             ctx.restore();
             
@@ -925,14 +943,14 @@
         },
         drawHTML5Canvas: function(html5Canvas) {
             const ctx = html5Canvas.getContext('2d');
-            ctx.fillStyle = 'white';
+            helpers.setHTML5CanvasFill(ctx, 'white');
             ctx.fillRect(0, 0, 200, 150);
             
             // Square 1: Translate(40,40) THEN Scale(2,2) - Red
             ctx.save();
             ctx.translate(40, 40);
             ctx.scale(2, 2);
-            ctx.fillStyle = 'red';
+            helpers.setHTML5CanvasFill(ctx, 'red');
             ctx.fillRect(0, 0, 15, 15);
             ctx.restore();
             
@@ -940,7 +958,7 @@
             ctx.save();
             ctx.scale(2, 2);
             ctx.translate(60, 60);
-            ctx.fillStyle = 'blue';
+            helpers.setHTML5CanvasFill(ctx, 'blue');
             ctx.fillRect(0, 0, 15, 15);
             ctx.restore();
         }
@@ -958,12 +976,12 @@
             const ctx = new SWCanvas.Context2D(surface);
             
             // White background
-            ctx.setFillStyle(255, 255, 255, 255);
+            helpers.setSWCanvasFill(ctx, 'white');
             ctx.fillRect(0, 0, 300, 200);
             
             // Draw a 5-pointed star (concave polygon)
             ctx.beginPath();
-            ctx.setFillStyle(255, 0, 0, 255); // Red
+            helpers.setSWCanvasFill(ctx, 'red');
             const centerX = 75, centerY = 75;
             const outerRadius = 40, innerRadius = 16;
             
@@ -984,7 +1002,7 @@
             
             // Draw an L-shape (concave polygon)
             ctx.beginPath();
-            ctx.setFillStyle(0, 0, 255, 255); // Blue
+            helpers.setSWCanvasFill(ctx, 'blue');
             ctx.moveTo(160, 40);
             ctx.lineTo(220, 40);
             ctx.lineTo(220, 70);
@@ -996,7 +1014,7 @@
             
             // Draw a more complex concave shape (arrow-like)
             ctx.beginPath();
-            ctx.setFillStyle(0, 128, 0, 255); // Green
+            helpers.setSWCanvasFill(ctx, 'green');
             ctx.moveTo(50, 140);
             ctx.lineTo(90, 140);
             ctx.lineTo(90, 130);
@@ -1011,12 +1029,12 @@
         },
         drawHTML5Canvas: function(html5Canvas) {
             const ctx = html5Canvas.getContext('2d');
-            ctx.fillStyle = 'white';
+            helpers.setHTML5CanvasFill(ctx, 'white');
             ctx.fillRect(0, 0, 300, 200);
             
             // Draw a 5-pointed star
             ctx.beginPath();
-            ctx.fillStyle = 'red';
+            helpers.setHTML5CanvasFill(ctx, 'red');
             const centerX = 75, centerY = 75;
             const outerRadius = 40, innerRadius = 16;
             
@@ -1037,7 +1055,7 @@
             
             // Draw an L-shape
             ctx.beginPath();
-            ctx.fillStyle = 'blue';
+            helpers.setHTML5CanvasFill(ctx, 'blue');
             ctx.moveTo(160, 40);
             ctx.lineTo(220, 40);
             ctx.lineTo(220, 70);
@@ -1049,7 +1067,7 @@
             
             // Draw arrow-like shape
             ctx.beginPath();
-            ctx.fillStyle = 'green';
+            helpers.setHTML5CanvasFill(ctx, 'green');
             ctx.moveTo(50, 140);
             ctx.lineTo(90, 140);
             ctx.lineTo(90, 130);
@@ -1071,12 +1089,12 @@
             const ctx = new SWCanvas.Context2D(surface);
             
             // White background
-            ctx.setFillStyle(255, 255, 255, 255);
+            helpers.setSWCanvasFill(ctx, 'white');
             ctx.fillRect(0, 0, 300, 200);
             
             // Self-intersecting bowtie shape
             ctx.beginPath();
-            ctx.setFillStyle(255, 0, 0, 255); // Red
+            helpers.setSWCanvasFill(ctx, 'red');
             ctx.moveTo(50, 50);
             ctx.lineTo(130, 50);
             ctx.lineTo(50, 100);
@@ -1086,7 +1104,7 @@
             
             // Figure-8 like self-intersection
             ctx.beginPath();
-            ctx.setFillStyle(0, 0, 255, 255); // Blue
+            helpers.setSWCanvasFill(ctx, 'blue');
             ctx.moveTo(180, 40);
             ctx.lineTo(220, 80);
             ctx.lineTo(260, 40);
@@ -1100,7 +1118,7 @@
             
             // Complex self-intersecting star-like shape
             ctx.beginPath();
-            ctx.setFillStyle(0, 128, 0, 255); // Green
+            helpers.setSWCanvasFill(ctx, 'green');
             ctx.moveTo(90, 140);
             ctx.lineTo(50, 180);
             ctx.lineTo(110, 160);
@@ -1116,12 +1134,12 @@
         },
         drawHTML5Canvas: function(html5Canvas) {
             const ctx = html5Canvas.getContext('2d');
-            ctx.fillStyle = 'white';
+            helpers.setHTML5CanvasFill(ctx, 'white');
             ctx.fillRect(0, 0, 300, 200);
             
             // Self-intersecting bowtie shape
             ctx.beginPath();
-            ctx.fillStyle = 'red';
+            helpers.setHTML5CanvasFill(ctx, 'red');
             ctx.moveTo(50, 50);
             ctx.lineTo(130, 50);
             ctx.lineTo(50, 100);
@@ -1131,7 +1149,7 @@
             
             // Figure-8 like self-intersection
             ctx.beginPath();
-            ctx.fillStyle = 'blue';
+            helpers.setHTML5CanvasFill(ctx, 'blue');
             ctx.moveTo(180, 40);
             ctx.lineTo(220, 80);
             ctx.lineTo(260, 40);
@@ -1145,7 +1163,7 @@
             
             // Complex self-intersecting star-like shape
             ctx.beginPath();
-            ctx.fillStyle = 'green';
+            helpers.setHTML5CanvasFill(ctx, 'green');
             ctx.moveTo(90, 140);
             ctx.lineTo(50, 180);
             ctx.lineTo(110, 160);
@@ -1168,12 +1186,12 @@
             const ctx = new SWCanvas.Context2D(surface);
             
             // White background
-            ctx.setFillStyle(255, 255, 255, 255);
+            helpers.setSWCanvasFill(ctx, 'white');
             ctx.fillRect(0, 0, 300, 200);
             
             // Outer rectangle with hole using even-odd rule
             ctx.beginPath();
-            ctx.setFillStyle(255, 0, 0, 255); // Red
+            helpers.setSWCanvasFill(ctx, 'red');
             // Outer rectangle
             ctx.rect(30, 30, 100, 80);
             // Inner hole (reverse winding for even-odd)
@@ -1182,7 +1200,7 @@
             
             // Nested squares with holes
             ctx.beginPath();
-            ctx.setFillStyle(0, 0, 255, 255); // Blue
+            helpers.setSWCanvasFill(ctx, 'blue');
             // Outermost square
             ctx.rect(160, 20, 120, 120);
             // Middle hole
@@ -1193,7 +1211,7 @@
             
             // Complex donut shape with inner hole
             ctx.beginPath();
-            ctx.setFillStyle(0, 128, 0, 255); // Green
+            helpers.setSWCanvasFill(ctx, 'green');
             // Outer circle approximated by octagon
             const cx = 100, cy = 170, outerR = 35, innerR = 15;
             for (let i = 0; i < 8; i++) {
@@ -1220,12 +1238,12 @@
         },
         drawHTML5Canvas: function(html5Canvas) {
             const ctx = html5Canvas.getContext('2d');
-            ctx.fillStyle = 'white';
+            helpers.setHTML5CanvasFill(ctx, 'white');
             ctx.fillRect(0, 0, 300, 200);
             
             // Outer rectangle with hole using even-odd rule
             ctx.beginPath();
-            ctx.fillStyle = 'red';
+            helpers.setHTML5CanvasFill(ctx, 'red');
             // Outer rectangle
             ctx.rect(30, 30, 100, 80);
             // Inner hole
@@ -1234,7 +1252,7 @@
             
             // Nested squares with holes
             ctx.beginPath();
-            ctx.fillStyle = 'blue';
+            helpers.setHTML5CanvasFill(ctx, 'blue');
             // Outermost square
             ctx.rect(160, 20, 120, 120);
             // Middle hole
@@ -1245,7 +1263,7 @@
             
             // Complex donut shape with inner hole
             ctx.beginPath();
-            ctx.fillStyle = 'green';
+            helpers.setHTML5CanvasFill(ctx, 'green');
             // Outer circle approximated by octagon
             const cx = 100, cy = 170, outerR = 35, innerR = 15;
             for (let i = 0; i < 8; i++) {
@@ -1279,12 +1297,12 @@
             const ctx = new SWCanvas.Context2D(surface);
             
             // White background
-            ctx.setFillStyle(255, 255, 255, 255);
+            helpers.setSWCanvasFill(ctx, 'white');
             ctx.fillRect(0, 0, 300, 200);
             
             // Multiple disconnected subpaths in one fill call
             ctx.beginPath();
-            ctx.setFillStyle(255, 0, 0, 255); // Red
+            helpers.setSWCanvasFill(ctx, 'red');
             
             // First subpath - triangle
             ctx.moveTo(40, 40);
@@ -1311,7 +1329,7 @@
             
             // Multiple subpaths with different fill rules
             ctx.beginPath();
-            ctx.setFillStyle(0, 0, 255, 255); // Blue
+            helpers.setSWCanvasFill(ctx, 'blue');
             
             // Outer shape
             ctx.moveTo(50, 120);
@@ -1338,7 +1356,7 @@
             
             // Mixed open and closed subpaths (only closed ones should fill)
             ctx.beginPath();
-            ctx.setFillStyle(0, 128, 0, 255); // Green
+            helpers.setSWCanvasFill(ctx, 'green');
             
             // Open subpath (should not fill)
             ctx.moveTo(200, 120);
@@ -1357,12 +1375,12 @@
         },
         drawHTML5Canvas: function(html5Canvas) {
             const ctx = html5Canvas.getContext('2d');
-            ctx.fillStyle = 'white';
+            helpers.setHTML5CanvasFill(ctx, 'white');
             ctx.fillRect(0, 0, 300, 200);
             
             // Multiple disconnected subpaths in one fill call
             ctx.beginPath();
-            ctx.fillStyle = 'red';
+            helpers.setHTML5CanvasFill(ctx, 'red');
             
             // First subpath - triangle
             ctx.moveTo(40, 40);
@@ -1389,7 +1407,7 @@
             
             // Multiple subpaths with different fill rules
             ctx.beginPath();
-            ctx.fillStyle = 'blue';
+            helpers.setHTML5CanvasFill(ctx, 'blue');
             
             // Outer shape
             ctx.moveTo(50, 120);
@@ -1416,7 +1434,7 @@
             
             // Mixed open and closed subpaths
             ctx.beginPath();
-            ctx.fillStyle = 'green';
+            helpers.setHTML5CanvasFill(ctx, 'green');
             
             // Open subpath
             ctx.moveTo(200, 120);
@@ -1442,12 +1460,12 @@
             const ctx = new SWCanvas.Context2D(surface);
             
             // White background
-            ctx.setFillStyle(255, 255, 255, 255);
+            helpers.setSWCanvasFill(ctx, 'white');
             ctx.fillRect(0, 0, 300, 200);
             
             // Simple curved shape with bezier curves
             ctx.beginPath();
-            ctx.setFillStyle(255, 0, 0, 255); // Red
+            helpers.setSWCanvasFill(ctx, 'red');
             ctx.moveTo(50, 50);
             ctx.bezierCurveTo(50, 20, 100, 20, 100, 50);
             ctx.bezierCurveTo(130, 50, 130, 100, 100, 100);
@@ -1458,7 +1476,7 @@
             
             // Heart-like shape using bezier curves
             ctx.beginPath();
-            ctx.setFillStyle(255, 0, 255, 255); // Magenta
+            helpers.setSWCanvasFill(ctx, 'magenta');
             ctx.moveTo(200, 80);
             // Left side of heart
             ctx.bezierCurveTo(200, 60, 180, 50, 170, 60);
@@ -1471,7 +1489,7 @@
             
             // Complex curved path with multiple bezier segments
             ctx.beginPath();
-            ctx.setFillStyle(0, 128, 255, 255); // Light blue
+            helpers.setSWCanvasFill(ctx, 'lightblue');
             ctx.moveTo(50, 160);
             ctx.bezierCurveTo(80, 140, 120, 140, 150, 160);
             ctx.bezierCurveTo(150, 180, 120, 200, 100, 180);
@@ -1481,7 +1499,7 @@
             
             // Leaf-like shape
             ctx.beginPath();
-            ctx.setFillStyle(0, 128, 0, 255); // Green
+            helpers.setSWCanvasFill(ctx, 'green');
             ctx.moveTo(220, 160);
             ctx.bezierCurveTo(240, 140, 260, 140, 270, 160);
             ctx.bezierCurveTo(270, 170, 260, 180, 250, 185);
@@ -1494,12 +1512,12 @@
         },
         drawHTML5Canvas: function(html5Canvas) {
             const ctx = html5Canvas.getContext('2d');
-            ctx.fillStyle = 'white';
+            helpers.setHTML5CanvasFill(ctx, 'white');
             ctx.fillRect(0, 0, 300, 200);
             
             // Simple curved shape with bezier curves
             ctx.beginPath();
-            ctx.fillStyle = 'red';
+            helpers.setHTML5CanvasFill(ctx, 'red');
             ctx.moveTo(50, 50);
             ctx.bezierCurveTo(50, 20, 100, 20, 100, 50);
             ctx.bezierCurveTo(130, 50, 130, 100, 100, 100);
@@ -1510,7 +1528,7 @@
             
             // Heart-like shape using bezier curves
             ctx.beginPath();
-            ctx.fillStyle = 'magenta';
+            helpers.setHTML5CanvasFill(ctx, 'magenta');
             ctx.moveTo(200, 80);
             // Left side of heart
             ctx.bezierCurveTo(200, 60, 180, 50, 170, 60);
@@ -1523,7 +1541,7 @@
             
             // Complex curved path with multiple bezier segments
             ctx.beginPath();
-            ctx.fillStyle = 'lightblue';
+            helpers.setHTML5CanvasFill(ctx, 'lightblue');
             ctx.moveTo(50, 160);
             ctx.bezierCurveTo(80, 140, 120, 140, 150, 160);
             ctx.bezierCurveTo(150, 180, 120, 200, 100, 180);
@@ -1533,7 +1551,7 @@
             
             // Leaf-like shape
             ctx.beginPath();
-            ctx.fillStyle = 'green';
+            helpers.setHTML5CanvasFill(ctx, 'green');
             ctx.moveTo(220, 160);
             ctx.bezierCurveTo(240, 140, 260, 140, 270, 160);
             ctx.bezierCurveTo(270, 170, 260, 180, 250, 185);
@@ -1553,12 +1571,12 @@
             const ctx = new SWCanvas.Context2D(surface);
             
             // White background
-            ctx.setFillStyle(255, 255, 255, 255);
+            helpers.setSWCanvasFill(ctx, 'white');
             ctx.fillRect(0, 0, 300, 200);
             
             // Simple curved shape with quadratic curves
             ctx.beginPath();
-            ctx.setFillStyle(255, 0, 0, 255); // Red
+            helpers.setSWCanvasFill(ctx, 'red');
             ctx.moveTo(50, 80);
             ctx.quadraticCurveTo(75, 40, 100, 80);
             ctx.quadraticCurveTo(100, 120, 50, 120);
@@ -1568,7 +1586,7 @@
             
             // Petal-like shapes
             ctx.beginPath();
-            ctx.setFillStyle(255, 0, 255, 255); // Magenta
+            helpers.setSWCanvasFill(ctx, 'magenta');
             ctx.moveTo(150, 60);
             ctx.quadraticCurveTo(180, 30, 210, 60);
             ctx.quadraticCurveTo(180, 90, 150, 60);
@@ -1584,7 +1602,7 @@
             
             // Wave-like shape
             ctx.beginPath();
-            ctx.setFillStyle(0, 0, 255, 255); // Blue
+            helpers.setSWCanvasFill(ctx, 'blue');
             ctx.moveTo(30, 150);
             ctx.quadraticCurveTo(60, 130, 90, 150);
             ctx.quadraticCurveTo(120, 170, 150, 150);
@@ -1597,12 +1615,12 @@
         },
         drawHTML5Canvas: function(html5Canvas) {
             const ctx = html5Canvas.getContext('2d');
-            ctx.fillStyle = 'white';
+            helpers.setHTML5CanvasFill(ctx, 'white');
             ctx.fillRect(0, 0, 300, 200);
             
             // Simple curved shape with quadratic curves
             ctx.beginPath();
-            ctx.fillStyle = 'red';
+            helpers.setHTML5CanvasFill(ctx, 'red');
             ctx.moveTo(50, 80);
             ctx.quadraticCurveTo(75, 40, 100, 80);
             ctx.quadraticCurveTo(100, 120, 50, 120);
@@ -1612,7 +1630,7 @@
             
             // Petal-like shapes
             ctx.beginPath();
-            ctx.fillStyle = 'magenta';
+            helpers.setHTML5CanvasFill(ctx, 'magenta');
             ctx.moveTo(150, 60);
             ctx.quadraticCurveTo(180, 30, 210, 60);
             ctx.quadraticCurveTo(180, 90, 150, 60);
@@ -1628,7 +1646,7 @@
             
             // Wave-like shape
             ctx.beginPath();
-            ctx.fillStyle = 'blue';
+            helpers.setHTML5CanvasFill(ctx, 'blue');
             ctx.moveTo(30, 150);
             ctx.quadraticCurveTo(60, 130, 90, 150);
             ctx.quadraticCurveTo(120, 170, 150, 150);
@@ -1648,26 +1666,26 @@
             const ctx = new SWCanvas.Context2D(surface);
             
             // White background
-            ctx.setFillStyle(255, 255, 255, 255);
+            helpers.setSWCanvasFill(ctx, 'white');
             ctx.fillRect(0, 0, 300, 200);
             
             // Full circle using arc
             ctx.beginPath();
-            ctx.setFillStyle(255, 0, 0, 255); // Red
+            helpers.setSWCanvasFill(ctx, 'red');
             ctx.arc(75, 75, 30, 0, 2 * Math.PI);
             ctx.closePath();
             ctx.fill();
             
             // Half circle (semicircle)
             ctx.beginPath();
-            ctx.setFillStyle(0, 255, 0, 255); // Green
+            helpers.setSWCanvasFill(ctx, 'green');
             ctx.arc(180, 75, 25, 0, Math.PI);
             ctx.closePath();
             ctx.fill();
             
             // Quarter circle (pie slice)
             ctx.beginPath();
-            ctx.setFillStyle(0, 0, 255, 255); // Blue
+            helpers.setSWCanvasFill(ctx, 'blue');
             ctx.moveTo(250, 75);
             ctx.arc(250, 75, 30, 0, Math.PI / 2);
             ctx.closePath();
@@ -1675,7 +1693,7 @@
             
             // Pac-Man like shape (3/4 circle)
             ctx.beginPath();
-            ctx.setFillStyle(255, 255, 0, 255); // Yellow
+            helpers.setSWCanvasFill(ctx, 'yellow');
             ctx.moveTo(75, 150);
             ctx.arc(75, 150, 30, Math.PI / 4, 7 * Math.PI / 4);
             ctx.closePath();
@@ -1683,7 +1701,7 @@
             
             // Crescent moon (overlapping circles)
             ctx.beginPath();
-            ctx.setFillStyle(0, 128, 255, 255); // Light blue
+            helpers.setSWCanvasFill(ctx, 'lightblue');
             ctx.arc(180, 150, 25, 0, 2 * Math.PI);
             ctx.arc(190, 150, 20, 0, 2 * Math.PI);
             ctx.fill('evenodd');
@@ -1692,26 +1710,26 @@
         },
         drawHTML5Canvas: function(html5Canvas) {
             const ctx = html5Canvas.getContext('2d');
-            ctx.fillStyle = 'white';
+            helpers.setHTML5CanvasFill(ctx, 'white');
             ctx.fillRect(0, 0, 300, 200);
             
             // Full circle using arc
             ctx.beginPath();
-            ctx.fillStyle = 'red';
+            helpers.setHTML5CanvasFill(ctx, 'red');
             ctx.arc(75, 75, 30, 0, 2 * Math.PI);
             ctx.closePath();
             ctx.fill();
             
             // Half circle (semicircle)
             ctx.beginPath();
-            ctx.fillStyle = 'green';
+            helpers.setHTML5CanvasFill(ctx, 'green');
             ctx.arc(180, 75, 25, 0, Math.PI);
             ctx.closePath();
             ctx.fill();
             
             // Quarter circle (pie slice)
             ctx.beginPath();
-            ctx.fillStyle = 'blue';
+            helpers.setHTML5CanvasFill(ctx, 'blue');
             ctx.moveTo(250, 75);
             ctx.arc(250, 75, 30, 0, Math.PI / 2);
             ctx.closePath();
@@ -1719,7 +1737,7 @@
             
             // Pac-Man like shape
             ctx.beginPath();
-            ctx.fillStyle = 'yellow';
+            helpers.setHTML5CanvasFill(ctx, 'yellow');
             ctx.moveTo(75, 150);
             ctx.arc(75, 150, 30, Math.PI / 4, 7 * Math.PI / 4);
             ctx.closePath();
@@ -1727,7 +1745,7 @@
             
             // Crescent moon
             ctx.beginPath();
-            ctx.fillStyle = 'lightblue';
+            helpers.setHTML5CanvasFill(ctx, 'lightblue');
             ctx.arc(180, 150, 25, 0, 2 * Math.PI);
             ctx.arc(190, 150, 20, 0, 2 * Math.PI);
             ctx.fill('evenodd');
@@ -1743,12 +1761,12 @@
             const ctx = new SWCanvas.Context2D(surface);
             
             // White background
-            ctx.setFillStyle(255, 255, 255, 255);
+            helpers.setSWCanvasFill(ctx, 'white');
             ctx.fillRect(0, 0, 300, 200);
             
             // Shape mixing lines and curves
             ctx.beginPath();
-            ctx.setFillStyle(255, 0, 0, 255); // Red
+            helpers.setSWCanvasFill(ctx, 'red');
             ctx.moveTo(50, 50);
             ctx.lineTo(100, 40);
             ctx.quadraticCurveTo(120, 60, 100, 80);
@@ -1760,7 +1778,7 @@
             
             // House with curved roof
             ctx.beginPath();
-            ctx.setFillStyle(0, 128, 255, 255); // Light blue
+            helpers.setSWCanvasFill(ctx, 'lightblue');
             ctx.moveTo(150, 120);
             ctx.lineTo(150, 80);
             ctx.quadraticCurveTo(175, 60, 200, 80);
@@ -1770,7 +1788,7 @@
             
             // Flower-like shape
             ctx.beginPath();
-            ctx.setFillStyle(255, 0, 255, 255); // Magenta
+            helpers.setSWCanvasFill(ctx, 'magenta');
             ctx.moveTo(250, 80);
             // Petal 1
             ctx.quadraticCurveTo(270, 60, 280, 80);
@@ -1788,7 +1806,7 @@
             
             // Wave with straight segments
             ctx.beginPath();
-            ctx.setFillStyle(0, 128, 0, 255); // Green
+            helpers.setSWCanvasFill(ctx, 'green');
             ctx.moveTo(30, 160);
             ctx.lineTo(60, 160);
             ctx.quadraticCurveTo(75, 140, 90, 160);
@@ -1804,12 +1822,12 @@
         },
         drawHTML5Canvas: function(html5Canvas) {
             const ctx = html5Canvas.getContext('2d');
-            ctx.fillStyle = 'white';
+            helpers.setHTML5CanvasFill(ctx, 'white');
             ctx.fillRect(0, 0, 300, 200);
             
             // Shape mixing lines and curves
             ctx.beginPath();
-            ctx.fillStyle = 'red';
+            helpers.setHTML5CanvasFill(ctx, 'red');
             ctx.moveTo(50, 50);
             ctx.lineTo(100, 40);
             ctx.quadraticCurveTo(120, 60, 100, 80);
@@ -1821,7 +1839,7 @@
             
             // House with curved roof
             ctx.beginPath();
-            ctx.fillStyle = 'lightblue';
+            helpers.setHTML5CanvasFill(ctx, 'lightblue');
             ctx.moveTo(150, 120);
             ctx.lineTo(150, 80);
             ctx.quadraticCurveTo(175, 60, 200, 80);
@@ -1831,7 +1849,7 @@
             
             // Flower-like shape
             ctx.beginPath();
-            ctx.fillStyle = 'magenta';
+            helpers.setHTML5CanvasFill(ctx, 'magenta');
             ctx.moveTo(250, 80);
             // Petal 1
             ctx.quadraticCurveTo(270, 60, 280, 80);
@@ -1849,7 +1867,7 @@
             
             // Wave with straight segments
             ctx.beginPath();
-            ctx.fillStyle = 'green';
+            helpers.setHTML5CanvasFill(ctx, 'green');
             ctx.moveTo(30, 160);
             ctx.lineTo(60, 160);
             ctx.quadraticCurveTo(75, 140, 90, 160);
@@ -1872,12 +1890,12 @@
             const ctx = new SWCanvas.Context2D(surface);
             
             // White background
-            ctx.setFillStyle(255, 255, 255, 255);
+            helpers.setSWCanvasFill(ctx, 'white');
             ctx.fillRect(0, 0, 400, 200);
             
             // Left side: nonzero fill rule
             ctx.beginPath();
-            ctx.setFillStyle(255, 0, 0, 255); // Red
+            helpers.setSWCanvasFill(ctx, 'red');
             
             // Outer rectangle
             ctx.rect(20, 20, 160, 80);
@@ -1889,7 +1907,7 @@
             
             // Right side: evenodd fill rule
             ctx.beginPath();
-            ctx.setFillStyle(0, 0, 255, 255); // Blue
+            helpers.setSWCanvasFill(ctx, 'blue');
             
             // Same shapes, different fill rule
             ctx.rect(220, 20, 160, 80);
@@ -1900,7 +1918,7 @@
             
             // Complex overlapping shapes - nonzero
             ctx.beginPath();
-            ctx.setFillStyle(0, 128, 0, 255); // Green
+            helpers.setSWCanvasFill(ctx, 'green');
             
             // Star with overlapping triangles
             const cx = 100, cy = 150;
@@ -1928,7 +1946,7 @@
             
             // Same complex shape - evenodd
             ctx.beginPath();
-            ctx.setFillStyle(255, 0, 255, 255); // Magenta
+            helpers.setSWCanvasFill(ctx, 'magenta');
             
             const cx2 = 300, cy2 = 150;
             // Outer points
@@ -1957,12 +1975,12 @@
         },
         drawHTML5Canvas: function(html5Canvas) {
             const ctx = html5Canvas.getContext('2d');
-            ctx.fillStyle = 'white';
+            helpers.setHTML5CanvasFill(ctx, 'white');
             ctx.fillRect(0, 0, 400, 200);
             
             // Left side: nonzero fill rule
             ctx.beginPath();
-            ctx.fillStyle = 'red';
+            helpers.setHTML5CanvasFill(ctx, 'red');
             
             // Outer rectangle
             ctx.rect(20, 20, 160, 80);
@@ -1973,7 +1991,7 @@
             
             // Right side: evenodd fill rule
             ctx.beginPath();
-            ctx.fillStyle = 'blue';
+            helpers.setHTML5CanvasFill(ctx, 'blue');
             
             ctx.rect(220, 20, 160, 80);
             ctx.rect(260, 40, 80, 40);
@@ -1982,7 +2000,7 @@
             
             // Complex overlapping shapes - nonzero
             ctx.beginPath();
-            ctx.fillStyle = 'green';
+            helpers.setHTML5CanvasFill(ctx, 'green');
             
             const cx = 100, cy = 150;
             // Outer points
@@ -2009,7 +2027,7 @@
             
             // Same complex shape - evenodd
             ctx.beginPath();
-            ctx.fillStyle = 'magenta';
+            helpers.setHTML5CanvasFill(ctx, 'magenta');
             
             const cx2 = 300, cy2 = 150;
             // Outer points
