@@ -18,11 +18,11 @@ cat > dist/swcanvas.js << 'EOF'
 EOF
 
 # Concatenate source files in dependency order
-cat src/matrix.js >> dist/swcanvas.js
+cat src/Matrix.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
-cat src/path2d.js >> dist/swcanvas.js  
+cat src/Path2D.js >> dist/swcanvas.js  
 echo "" >> dist/swcanvas.js
-cat src/surface.js >> dist/swcanvas.js
+cat src/Surface.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
 cat src/bmp.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js

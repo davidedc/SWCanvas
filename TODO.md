@@ -91,45 +91,51 @@
 - Full transform system now matches HTML5 Canvas exactly
 
 ## Next Action  
-🎯 **Phase 5: Image Rendering Implementation** 
+🎯 **Phase 6: ES6 Class Migration** 
 
-Implementing `drawImage` functionality with nearest-neighbor sampling and ImageLike interface.
+Migrate from constructor functions to ES6 classes with individual CamelCase files, maintaining global concatenation build system.
 
-### Implementation Plan
+### Migration Plan
 
-**Phase 5A: Core ImageLike Infrastructure**
-- [ ] Define ImageLike interface: `{ width, height, data: Uint8ClampedArray }`
-- [ ] Implement RGB→RGBA auto-conversion (3-channel → 4-channel with alpha=255)
-- [ ] Add ImageLike validation and error handling
+**Migration Order (Dependency-First):**
+1. [ ] **Matrix.js** - Foundation class, no dependencies
+2. [ ] **Surface.js** - Foundation class, no dependencies  
+3. [ ] **Path2D.js** - Depends on Matrix
+4. [ ] **Rasterizer.js** - Depends on Surface, Matrix
+5. [ ] **Context2D.js** - Depends on all above classes
 
-**Phase 5B: Rasterizer Implementation**  
-- [ ] Implement drawImage with nearest-neighbor sampling in rasterizer.js
-- [ ] Handle transforms, clipping, and globalAlpha integration
-- [ ] Ensure proper alpha blending with existing pixels
+**Per-Class Migration Steps:**
+- Convert `function ClassName()` to `class ClassName`
+- Convert `ClassName.prototype.method` to class methods
+- Create new `src/ClassName.js` file (CamelCase)
+- Update `build.sh` file reference
+- Run full test suite (31 shared + 52 visual tests)
+- Remove old file after validation
 
-**Phase 5C: Context2D API Integration**
-- [ ] Add drawImage method to Context2D API with parameter validation
-- [ ] Support multiple drawImage signatures (basic position, scaling, source rectangles)
+**File Structure Changes:**
+```
+src/matrix.js      → src/Matrix.js      (class Matrix)
+src/surface.js     → src/Surface.js     (class Surface)
+src/path2d.js      → src/Path2D.js      (class Path2D)
+src/rasterizer.js  → src/Rasterizer.js  (class Rasterizer)
+src/context2d.js   → src/Context2D.js   (class Context2D)
+```
 
-**Phase 5D: Testing Strategy**
-- [ ] Create synthetic ImageLike test objects (programmatic patterns)
-- [ ] Test RGB vs RGBA ImageLike handling with 3-channel conversion
-- [ ] Add surface-to-ImageLike conversion utility for advanced testing
-- [ ] Create browser compatibility via ImageData conversion for HTML5 Canvas comparisons
-- [ ] Test drawImage with scaling, transforms, clipping, and alpha blending scenarios
+**Key Constraints:**
+- NO imports/exports - maintain global concatenation build
+- NO API changes - same public interface
+- Classes remain globally available after concatenation
+- One migration at a time for stability
 
-**Phase 5E: Documentation**
-- [ ] Add drawImage documentation and API examples to README.md
-- [ ] Update CLAUDE.md with drawImage implementation details
+**Timeline:** ~5 hours total (30min-2hrs per class)
 
-### Testing Approach
-Using synthetic ImageLike objects and surface-to-ImageLike conversion for deterministic, cross-platform testing without external image dependencies.
-
-**Previous Achievement: Phase 4 COMPLETED!** ✅
-- ✅ Coverage-Based Clipping System FULLY IMPLEMENTED & TESTED
-- ✅ All integration tests completed (fill, stroke, clip, transform combinations)  
-- ✅ Stencil-only clipping system migration completed
-- ✅ 55 comprehensive visual tests implemented and passing
+**Previous Achievement: Phase 5 COMPLETED!** ✅  
+- ✅ Image Rendering Implementation FULLY COMPLETED
+- ✅ ImageLike interface with RGB→RGBA auto-conversion
+- ✅ drawImage with nearest-neighbor sampling, transforms, clipping  
+- ✅ 6 comprehensive drawImage visual tests added
+- ✅ 52 total visual tests implemented and passing
+- ✅ Complete documentation and API examples
 
 ### Completed Achievements
 - **✅ Coverage-Based Clipping**: 1-bit stencil buffer system implemented
