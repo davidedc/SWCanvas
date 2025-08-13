@@ -17,18 +17,14 @@ The main testing interface with comprehensive visual comparisons between HTML5 C
 - **Interactive Tests**: Real-time drawing comparisons
 - **BMP Download**: Download SWCanvas results as BMP files
 
-**Test Coverage:**
-- Basic rectangle fills
-- Alpha blending with premultiplied sRGB
-- Path filling (triangles, even-odd winding rule)
-- Clipping with circular paths
-- Stroke rendering:
-  - Basic line strokes
-  - Different join types (miter, bevel, round)
-  - Different cap types (butt, square, round)  
-  - Variable line widths
-  - Curved paths with quadratic Bézier curves
-  - Miter limit behavior
+**Test Coverage (55+ Visual Tests):**
+- **Phase 1**: Basic transformations (translate, scale, rotate, matrix operations)
+- **Phase 2**: Advanced path filling (curves, self-intersecting, fill rules, multiple subpaths)
+- **Phase 3**: Stencil-based clipping (rectangular, polygon, curved, intersection, nesting)
+- **Phase 4**: Combined features (transform+fill+stroke+clip integration tests)
+- **Stroke rendering**: Line styles, joins, caps, widths, curved paths, miter limits
+- **Alpha blending**: Premultiplied sRGB, transparency, composition modes
+- **Debug tests**: Specific rendering issue analysis and pixel-level validation
 
 ### test-simple.html
 A minimal test showing basic rectangle rendering comparison.
@@ -37,7 +33,10 @@ A minimal test showing basic rectangle rendering comparison.
 Browser-specific visual test functions and utilities.
 
 ### ../tests/visual-test-registry.js
-**Shared visual test registry** - contains the drawing logic used by both Node.js and browser tests to ensure identical test behavior and eliminate code duplication.
+**Shared visual test registry** - contains 55+ comprehensive drawing tests used by both Node.js and browser tests to ensure identical test behavior and eliminate code duplication.
+
+### ../tests/test-colors.js  
+**CSS-RGB color mapping system** - ensures perfect color consistency between HTML5 Canvas CSS colors and SWCanvas RGB values.
 
 ## Usage
 

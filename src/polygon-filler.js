@@ -8,13 +8,35 @@ function getBit(buffer, pixelIndex) {
     return (buffer[byteIndex] & (1 << bitIndex)) !== 0 ? 1 : 0;
 }
 
+/**
+ * Check if a pixel is clipped by the stencil buffer
+ * 
+ * @param {Uint8Array} clipMask - 1-bit stencil buffer (null if no clipping)
+ * @param {number} x - Pixel x coordinate
+ * @param {number} y - Pixel y coordinate  
+ * @param {number} width - Surface width for indexing
+ * @returns {boolean} True if pixel should be clipped (not rendered)
+ */
 function isPixelClipped(clipMask, x, y, width) {
     if (!clipMask) return false; // No clipping active
     const pixelIndex = y * width + x;
     return getBit(clipMask, pixelIndex) === 0; // 0 means clipped out
 }
 
-// Fill polygons using scanline algorithm with specified winding rule and stencil clipping
+/**
+ * Fill polygons using scanline algorithm with stencil-based clipping
+ * 
+ * Renders polygons to the surface using a scanline approach with proper
+ * winding rule evaluation. Integrates with the stencil clipping system
+ * for memory-efficient clipping support.
+ * 
+ * @param {Surface} surface - Target surface to render to
+ * @param {Array} polygons - Array of polygons (each polygon is array of {x,y} points)  
+ * @param {Array} color - RGBA color [r,g,b,a] (0-255, non-premultiplied)
+ * @param {string} fillRule - 'nonzero' or 'evenodd' winding rule
+ * @param {Matrix} transform - Transformation matrix to apply to polygons
+ * @param {Uint8Array} clipMask - Optional 1-bit stencil buffer for clipping
+ */
 function fillPolygons(surface, polygons, color, fillRule, transform, clipMask) {
     if (polygons.length === 0) return;
     

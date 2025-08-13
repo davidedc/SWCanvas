@@ -38,13 +38,13 @@ Rasterizer.prototype.fillRect = function(x, y, width, height, color) {
         throw new Error('Must call beginOp before drawing operations');
     }
     
-    // If there's clipping, convert the rectangle to a path and use path filling
-    if (this.currentOp.clipPath) {
+    // If there's stencil clipping, convert the rectangle to a path and use path filling
+    if (this.currentOp.clipMask) {
         // Create a path for the rectangle
         const rectPath = new Path2D();
         rectPath.rect(x, y, width, height);
         
-        // Use the existing path filling logic which handles clipping properly
+        // Use the existing path filling logic which handles stencil clipping properly
         this.fill(rectPath, 'nonzero');
         return;
     }

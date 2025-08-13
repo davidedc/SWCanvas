@@ -532,13 +532,35 @@ function getBit(buffer, pixelIndex) {
     return (buffer[byteIndex] & (1 << bitIndex)) !== 0 ? 1 : 0;
 }
 
+/**
+ * Check if a pixel is clipped by the stencil buffer
+ * 
+ * @param {Uint8Array} clipMask - 1-bit stencil buffer (null if no clipping)
+ * @param {number} x - Pixel x coordinate
+ * @param {number} y - Pixel y coordinate  
+ * @param {number} width - Surface width for indexing
+ * @returns {boolean} True if pixel should be clipped (not rendered)
+ */
 function isPixelClipped(clipMask, x, y, width) {
     if (!clipMask) return false; // No clipping active
     const pixelIndex = y * width + x;
     return getBit(clipMask, pixelIndex) === 0; // 0 means clipped out
 }
 
-// Fill polygons using scanline algorithm with specified winding rule and stencil clipping
+/**
+ * Fill polygons using scanline algorithm with stencil-based clipping
+ * 
+ * Renders polygons to the surface using a scanline approach with proper
+ * winding rule evaluation. Integrates with the stencil clipping system
+ * for memory-efficient clipping support.
+ * 
+ * @param {Surface} surface - Target surface to render to
+ * @param {Array} polygons - Array of polygons (each polygon is array of {x,y} points)  
+ * @param {Array} color - RGBA color [r,g,b,a] (0-255, non-premultiplied)
+ * @param {string} fillRule - 'nonzero' or 'evenodd' winding rule
+ * @param {Matrix} transform - Transformation matrix to apply to polygons
+ * @param {Uint8Array} clipMask - Optional 1-bit stencil buffer for clipping
+ */
 function fillPolygons(surface, polygons, color, fillRule, transform, clipMask) {
     if (polygons.length === 0) return;
     
@@ -680,8 +702,16 @@ function fillScanlineSpans(surface, y, intersections, color, fillRule, clipMask)
 }
 
 
-// Basic polygon clipping implementation
-// For M2, we implement simple clipping by intersection
+/**
+ * LEGACY: Basic polygon clipping implementation (NOT CURRENTLY USED)
+ * 
+ * This file contains the old path-based polygon clipping system that was
+ * replaced by the stencil-based clipping system in context2d.js. The stencil
+ * system provides better performance, memory efficiency, and HTML5 Canvas
+ * compatibility. This code is kept for reference purposes.
+ * 
+ * Current clipping system: See context2d.js - stencil-based 1-bit clipping
+ */
 
 // Clip subject polygons by clip polygons 
 function clipPolygonsByPolygons(subjectPolygons, clipPolygons, clipRule) {
@@ -1147,13 +1177,13 @@ Rasterizer.prototype.fillRect = function(x, y, width, height, color) {
         throw new Error('Must call beginOp before drawing operations');
     }
     
-    // If there's clipping, convert the rectangle to a path and use path filling
-    if (this.currentOp.clipPath) {
+    // If there's stencil clipping, convert the rectangle to a path and use path filling
+    if (this.currentOp.clipMask) {
         // Create a path for the rectangle
         const rectPath = new Path2D();
         rectPath.rect(x, y, width, height);
         
-        // Use the existing path filling logic which handles clipping properly
+        // Use the existing path filling logic which handles stencil clipping properly
         this.fill(rectPath, 'nonzero');
         return;
     }
@@ -1290,6 +1320,25 @@ Rasterizer.prototype.stroke = function(path, strokeProps) {
 Rasterizer.prototype.drawImage = function(img, sx, sy, sw, sh, dx, dy, dw, dh) {
     throw new Error('Image drawing not implemented in M1');
 };
+/**
+ * STENCIL-BASED CLIPPING SYSTEM
+ * 
+ * SWCanvas uses a 1-bit stencil buffer approach for memory-efficient clipping with
+ * proper intersection semantics. This system matches HTML5 Canvas behavior exactly.
+ * 
+ * Memory Layout:
+ * - Each pixel is represented by 1 bit (1 = visible, 0 = clipped)
+ * - Bits are packed into Uint8Array (8 pixels per byte)
+ * - Memory usage: width × height ÷ 8 bytes (87.5% reduction vs full coverage)
+ * - Lazy allocation: only created when first clip() operation is performed
+ * 
+ * Clipping Operations:
+ * 1. First clip: Creates stencil buffer, renders clip path with 1s where path covers
+ * 2. Subsequent clips: Renders to temp buffer, ANDs with existing stencil buffer  
+ * 3. Intersection semantics: Only pixels covered by ALL clips have bit = 1
+ * 4. Save/restore: Stencil buffer is deep-copied during save() and restored
+ */
+
 // Bit manipulation helpers for 1-bit stencil buffer
 function getBit(buffer, pixelIndex) {
     const byteIndex = Math.floor(pixelIndex / 8);
@@ -1311,6 +1360,13 @@ function clearMask(buffer) {
     buffer.fill(0);
 }
 
+/**
+ * Create a new 1-bit stencil buffer initialized to "no clipping" (all 1s)
+ * 
+ * @param {number} width - Surface width in pixels
+ * @param {number} height - Surface height in pixels  
+ * @returns {Uint8Array} Stencil buffer with 1 bit per pixel, packed into bytes
+ */
 function createClipMask(width, height) {
     const numPixels = width * height;
     const numBytes = Math.ceil(numPixels / 8);
@@ -1327,7 +1383,9 @@ function createClipMask(width, height) {
     return mask;
 }
 
-// Memory management helpers for Context2D
+/**
+ * Memory management helpers for Context2D stencil clipping
+ */
 function ensureClipMask(context) {
     if (!context._clipMask) {
         context._clipMask = createClipMask(context.surface.width, context.surface.height);
@@ -1619,7 +1677,16 @@ Context2D.prototype.stroke = function(path) {
     this.rasterizer.endOp();
 };
 
-// Enhanced clipping support with stencil buffer intersection
+/**
+ * Enhanced clipping support with stencil buffer intersection
+ * 
+ * Implements HTML5 Canvas-compatible clipping with proper intersection semantics.
+ * Each clip() operation creates a new clip region that intersects with any existing
+ * clipping regions.
+ * 
+ * @param {Path2D} path - Optional path to clip with (uses current path if not provided)
+ * @param {string} rule - Fill rule: 'nonzero' (default) or 'evenodd'
+ */
 Context2D.prototype.clip = function(path, rule) {
     // If no path provided, use current internal path
     const pathToClip = path || this._currentPath;

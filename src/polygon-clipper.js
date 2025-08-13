@@ -1,5 +1,13 @@
-// Basic polygon clipping implementation
-// For M2, we implement simple clipping by intersection
+/**
+ * LEGACY: Basic polygon clipping implementation (NOT CURRENTLY USED)
+ * 
+ * This file contains the old path-based polygon clipping system that was
+ * replaced by the stencil-based clipping system in context2d.js. The stencil
+ * system provides better performance, memory efficiency, and HTML5 Canvas
+ * compatibility. This code is kept for reference purposes.
+ * 
+ * Current clipping system: See context2d.js - stencil-based 1-bit clipping
+ */
 
 // Clip subject polygons by clip polygons 
 function clipPolygonsByPolygons(subjectPolygons, clipPolygons, clipRule) {

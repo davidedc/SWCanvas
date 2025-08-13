@@ -1,3 +1,22 @@
+/**
+ * STENCIL-BASED CLIPPING SYSTEM
+ * 
+ * SWCanvas uses a 1-bit stencil buffer approach for memory-efficient clipping with
+ * proper intersection semantics. This system matches HTML5 Canvas behavior exactly.
+ * 
+ * Memory Layout:
+ * - Each pixel is represented by 1 bit (1 = visible, 0 = clipped)
+ * - Bits are packed into Uint8Array (8 pixels per byte)
+ * - Memory usage: width × height ÷ 8 bytes (87.5% reduction vs full coverage)
+ * - Lazy allocation: only created when first clip() operation is performed
+ * 
+ * Clipping Operations:
+ * 1. First clip: Creates stencil buffer, renders clip path with 1s where path covers
+ * 2. Subsequent clips: Renders to temp buffer, ANDs with existing stencil buffer  
+ * 3. Intersection semantics: Only pixels covered by ALL clips have bit = 1
+ * 4. Save/restore: Stencil buffer is deep-copied during save() and restored
+ */
+
 // Bit manipulation helpers for 1-bit stencil buffer
 function getBit(buffer, pixelIndex) {
     const byteIndex = Math.floor(pixelIndex / 8);
@@ -19,6 +38,13 @@ function clearMask(buffer) {
     buffer.fill(0);
 }
 
+/**
+ * Create a new 1-bit stencil buffer initialized to "no clipping" (all 1s)
+ * 
+ * @param {number} width - Surface width in pixels
+ * @param {number} height - Surface height in pixels  
+ * @returns {Uint8Array} Stencil buffer with 1 bit per pixel, packed into bytes
+ */
 function createClipMask(width, height) {
     const numPixels = width * height;
     const numBytes = Math.ceil(numPixels / 8);
@@ -35,7 +61,9 @@ function createClipMask(width, height) {
     return mask;
 }
 
-// Memory management helpers for Context2D
+/**
+ * Memory management helpers for Context2D stencil clipping
+ */
 function ensureClipMask(context) {
     if (!context._clipMask) {
         context._clipMask = createClipMask(context.surface.width, context.surface.height);
@@ -327,7 +355,16 @@ Context2D.prototype.stroke = function(path) {
     this.rasterizer.endOp();
 };
 
-// Enhanced clipping support with stencil buffer intersection
+/**
+ * Enhanced clipping support with stencil buffer intersection
+ * 
+ * Implements HTML5 Canvas-compatible clipping with proper intersection semantics.
+ * Each clip() operation creates a new clip region that intersects with any existing
+ * clipping regions.
+ * 
+ * @param {Path2D} path - Optional path to clip with (uses current path if not provided)
+ * @param {string} rule - Fill rule: 'nonzero' (default) or 'evenodd'
+ */
 Context2D.prototype.clip = function(path, rule) {
     // If no path provided, use current internal path
     const pathToClip = path || this._currentPath;
