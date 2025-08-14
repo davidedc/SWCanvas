@@ -12,7 +12,7 @@ This file provides Claude with essential context about the SWCanvas project for 
 - **Canvas-compatible**: Familiar HTML5 Canvas 2D API with sub-pixel stroke support
 - **Memory efficient**: 1-bit stencil clipping, optimized algorithms
 - **Sub-pixel accurate**: Thin strokes render with proportional opacity (no anti-aliasing)
-- **Well-tested**: 31 shared tests + 56 visual tests with pixel-perfect validation
+- **Well-tested**: 32 shared tests + 58 visual tests with pixel-perfect validation
 
 ## Architecture (Object-Oriented Design)
 
@@ -21,7 +21,7 @@ This file provides Claude with essential context about the SWCanvas project for 
 src/Context2D.js         # Main API - implements Canvas 2D Context interface
 src/Rasterizer.js        # Low-level pixel operations and rendering pipeline (ES6 class)
 src/Surface.js           # Memory buffer management - RGBA pixel data (ES6 class)
-src/Matrix.js           # Transform mathematics - immutable transformation matrix (ES6 class)
+src/Transform2D.js       # Transform mathematics - immutable transformation matrix (ES6 class)
 src/Path2D.js           # Path definition and command recording (ES6 class)
 src/Color.js            # Immutable color handling with premultiplied alpha (ES6 class)
 src/Point.js            # Immutable 2D point operations (ES6 class)
@@ -30,9 +30,8 @@ src/PolygonFiller.js    # Scanline polygon filling with stencil clipping (static
 src/PathFlattener.js    # Converts paths to polygons (static methods)
 src/StrokeGenerator.js  # Geometric stroke path generation (static methods)
 src/BitmapEncoder.js    # BMP file format encoding (static methods)
-src/ClipMaskHelper.js   # 1-bit stencil buffer manipulation utilities (static methods)
+src/ClipMask.js         # 1-bit stencil buffer clipping implementation (ES6 class)
 src/ImageProcessor.js   # ImageLike validation and format conversion (static methods)
-src/StencilBuffer.js    # 1-bit clipping buffer management (ES6 class)
 src/DrawingState.js     # Context state stack management (ES6 class)
 ```
 
@@ -40,10 +39,10 @@ src/DrawingState.js     # Context state stack management (ES6 class)
 
 #### Stencil-Based Clipping System
 - Uses 1-bit per pixel stencil buffer (memory efficient)
-- **ClipMaskHelper class**: Encapsulates all bit manipulation operations
+- **ClipMask class**: Encapsulates all bit manipulation operations
 - Supports proper clip intersections with AND operations
 - Handles nested clipping via save/restore stack
-- Static utility methods for creating, manipulating, and checking stencil buffers
+- Instance methods for creating, manipulating, and checking stencil buffers
 
 #### Color System (Object-Oriented Design)
 - **Color class**: Immutable color handling with premultiplied alpha internally
@@ -87,7 +86,7 @@ npm run build          # or ./build.sh
 npm test              # or node tests/run-tests.js
 
 # Check test status
-ls -la tests/output/  # Should see 55+ BMP files after test run
+ls -la tests/output/  # Should see 58+ BMP files after test run
 ```
 
 ### Development Workflow
@@ -109,8 +108,8 @@ node -e "console.log(require('./tests/shared-test-suite.js'))"
 ## Test System Architecture
 
 ### Three Test Layers
-1. **Shared Tests** (`tests/shared-test-suite.js`) - 31 core functionality tests
-2. **Visual Tests** (`tests/visual-test-registry.js`) - 52 rendering tests  
+1. **Shared Tests** (`tests/shared-test-suite.js`) - 32 core functionality tests
+2. **Visual Tests** (`tests/visual-test-registry.js`) - 58 rendering tests  
 3. **Browser Tests** (`examples/test.html`) - Interactive comparisons
 
 ### Test Execution
@@ -138,7 +137,7 @@ node -e "console.log(require('./tests/shared-test-suite.js'))"
 
 ### Utility Classes
 - **SWCanvas.BitmapEncoder**: Static methods for BMP file encoding
-- **SWCanvas.ClipMaskHelper**: Static utilities for stencil buffer manipulation
+- **SWCanvas.ClipMask**: ES6 class for stencil buffer manipulation
 - **SWCanvas.ImageProcessor**: Static methods for ImageLike validation and conversion
 
 ### Legacy Aliases
@@ -189,7 +188,7 @@ const color = new SWCanvas.Color(255, 0, 0, 128); // Semi-transparent red
 const premult = color.toPremultiplied();
 
 // Utility operations
-const clipMask = SWCanvas.ClipMaskHelper.createClipMask(400, 300);
+const clipMask = new SWCanvas.ClipMask(400, 300);
 const imageData = SWCanvas.ImageProcessor.validateAndConvert(rgbImage);
 
 // Sub-pixel stroke rendering
@@ -266,9 +265,15 @@ widths.forEach((width, i) => {
   ctx.lineTo(150, y);
   ctx.stroke();
   
-  // Check if stroke rendered
-  const offset = y * surface.stride + 100 * 4;
-  const hasStroke = surface.data[offset] !== 255 || surface.data[offset + 1] !== 255 || surface.data[offset + 2] !== 255;
+  // Check if stroke rendered (strokes may render at y-1 due to pixel grid alignment)
+  let hasStroke = false;
+  for (let checkY = y - 1; checkY <= y + 1; checkY++) {
+    const offset = checkY * surface.stride + 100 * 4;
+    if (surface.data[offset] !== 255 || surface.data[offset + 1] !== 255 || surface.data[offset + 2] !== 255) {
+      hasStroke = true;
+      break;
+    }
+  }
   console.log(\`\${width}px stroke at y=\${y}: \${hasStroke ? 'VISIBLE' : 'not visible'}\`);
 });
 "
@@ -344,7 +349,7 @@ These scripts are invaluable for:
 - **Static Utility Classes**: ClipMaskHelper, ImageProcessor, BitmapEncoder for stateless operations
 - **Proper Encapsulation**: Private fields, parameter validation, and clear public APIs
 - **Single Responsibility**: Each class has one focused purpose with clean boundaries
-- **Comprehensive Testing**: All 31 shared tests + 56 visual tests passing with pixel-perfect accuracy
+- **Comprehensive Testing**: All 32 shared tests + 58 visual tests passing with pixel-perfect accuracy
 
 ### Key Design Patterns Applied
 - **Value Object Pattern**: Point, Rectangle, Transform2D, Color are immutable with proper equals()
@@ -355,7 +360,7 @@ These scripts are invaluable for:
 - **Memory Efficiency**: 1-bit stencil clipping, immutable objects prevent accidental mutation
 
 ### Test Results Status
-- **Node.js**: All 31 shared tests passing, 56 visual BMPs generated successfully  
+- **Node.js**: All 32 shared tests passing, 58 visual BMPs generated successfully  
 - **Browser**: Proper SWCanvas global export, all classes available for use
 - **Cross-platform**: Identical behavior verified between Node.js and browser environments
 - **Deterministic**: Same input produces identical output across all platforms
@@ -377,7 +382,7 @@ These scripts are invaluable for:
 ### OO Development Patterns
 - **Use proper classes**: Prefer `new SWCanvas.Point(x, y)` over plain objects
 - **Leverage immutability**: Transform2D, Point, Rectangle, Color are immutable - use their methods
-- **Static utilities**: Use ClipMaskHelper for bit operations, ImageProcessor for format conversion
+- **Static utilities**: Use ClipMask class for bit operations, ImageProcessor for format conversion
 - **Factory methods**: Use Transform2D.identity(), .translation(), etc. for common transformations
 - **Validation**: All classes validate input parameters with descriptive error messages
 - **Composition**: Classes work together rather than through inheritance hierarchies
