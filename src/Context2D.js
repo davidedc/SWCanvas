@@ -470,7 +470,7 @@ class Context2D {
             this._transform.c, this._transform.d, 
             this._transform.e, this._transform.f
         ]),
-        clipMask: this.clipMask
+        clipMask: this._clipMask
     });
     
     // Delegate to rasterizer

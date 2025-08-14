@@ -42,13 +42,6 @@ class Transform2D {
         Object.freeze(this);
     }
 
-    /**
-     * Create identity transform
-     * @returns {Transform2D} Identity transformation
-     */
-    static identity() {
-        return new Transform2D();
-    }
     
     /**
      * Create translation transform

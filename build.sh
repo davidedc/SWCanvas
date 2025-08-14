@@ -47,8 +47,6 @@ cat src/ImageProcessor.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
 
 # Phase 3: State and rendering classes (depend on services)
-cat src/DrawingState.js >> dist/swcanvas.js
-echo "" >> dist/swcanvas.js
 cat src/Rasterizer.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
 cat src/Context2D.js >> dist/swcanvas.js
@@ -96,7 +94,6 @@ if (typeof window !== 'undefined') {
         
         // Internal classes (exposed for extensibility)
         Rasterizer: Rasterizer,
-        DrawingState: DrawingState,
         PathFlattener: PathFlattener,
         PolygonFiller: PolygonFiller,
         StrokeGenerator: StrokeGenerator
@@ -122,7 +119,6 @@ if (typeof window !== 'undefined') {
         
         // Internal classes (exposed for extensibility)
         Rasterizer: Rasterizer,
-        DrawingState: DrawingState,
         PathFlattener: PathFlattener,
         PolygonFiller: PolygonFiller,
         StrokeGenerator: StrokeGenerator

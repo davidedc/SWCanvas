@@ -37,23 +37,6 @@ class Color {
         }
     }
     
-    /**
-     * Create Color from non-premultiplied RGBA array
-     * @param {number[]} rgba - [r, g, b, a] array (0-255 each)
-     * @returns {Color} New Color instance
-     */
-    static fromRGBA(rgba) {
-        return new Color(rgba[0], rgba[1], rgba[2], rgba[3], false);
-    }
-    
-    /**
-     * Create Color from premultiplied RGBA array
-     * @param {number[]} rgba - [r, g, b, a] array (0-255 each, RGB premultiplied)
-     * @returns {Color} New Color instance
-     */
-    static fromPremultipliedRGBA(rgba) {
-        return new Color(rgba[0], rgba[1], rgba[2], rgba[3], true);
-    }
     
     /**
      * Create transparent black color
@@ -63,21 +46,6 @@ class Color {
         return new Color(0, 0, 0, 0);
     }
     
-    /**
-     * Create opaque black color
-     * @returns {Color} Black color
-     */
-    static black() {
-        return new Color(0, 0, 0, 255);
-    }
-    
-    /**
-     * Create opaque white color
-     * @returns {Color} White color
-     */
-    static white() {
-        return new Color(255, 255, 255, 255);
-    }
     
     // Getters for premultiplied components (internal storage format)
     get premultipliedR() { return this._r; }

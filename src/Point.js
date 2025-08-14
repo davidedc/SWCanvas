@@ -42,30 +42,6 @@ class Point {
         return new Point(obj.x, obj.y);
     }
     
-    /**
-     * Create origin point (0, 0)
-     * @returns {Point} Origin point
-     */
-    static origin() {
-        return new Point(0, 0);
-    }
-    
-    /**
-     * Create array of points from coordinate array
-     * @param {number[]} coords - Array of alternating x,y coordinates
-     * @returns {Point[]} Array of Point instances
-     */
-    static fromArray(coords) {
-        if (!Array.isArray(coords) || coords.length % 2 !== 0) {
-            throw new Error('Coordinates array must have even length');
-        }
-        
-        const points = [];
-        for (let i = 0; i < coords.length; i += 2) {
-            points.push(new Point(coords[i], coords[i + 1]));
-        }
-        return points;
-    }
     
     /**
      * Calculate distance to another point
@@ -82,18 +58,6 @@ class Point {
         return Math.sqrt(dx * dx + dy * dy);
     }
     
-    /**
-     * Calculate Manhattan distance to another point
-     * @param {Point} other - Other point
-     * @returns {number} Manhattan distance
-     */
-    manhattanDistanceTo(other) {
-        if (!(other instanceof Point)) {
-            throw new Error('Argument must be a Point instance');
-        }
-        
-        return Math.abs(this._x - other._x) + Math.abs(this._y - other._y);
-    }
     
     /**
      * Add vector to this point (immutable)
