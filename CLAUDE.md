@@ -190,6 +190,122 @@ const imageData = SWCanvas.ImageProcessor.validateAndConvert(rgbImage);
 4. Check pixel values manually if needed
 5. Use git to compare before/after BMPs
 
+#### Quick Node.js Analysis Scripts
+Use one-liner Node.js scripts for rapid debugging and pixel-level analysis:
+
+**Pixel Inspection Example:**
+```bash
+node -e "
+const SWCanvas = require('./dist/swcanvas.js');
+const surface = SWCanvas.Surface(100, 100);
+const ctx = new SWCanvas.Context2D(surface);
+
+// Test your drawing operations
+ctx.setStrokeStyle(255, 0, 0, 255);
+ctx.lineWidth = 0.5;
+ctx.beginPath();
+ctx.moveTo(50, 50);
+ctx.lineTo(80, 50);
+ctx.stroke();
+
+// Analyze specific pixels
+for (let x = 45; x <= 85; x += 5) {
+  const offset = 50 * surface.stride + x * 4;
+  const r = surface.data[offset];
+  const g = surface.data[offset + 1];
+  const b = surface.data[offset + 2];
+  if (r !== 255 || g !== 255 || b !== 255) {
+    console.log(\`Pixel at (\${x},50): R=\${r}, G=\${g}, B=\${b}\`);
+  }
+}
+"
+```
+
+**Stroke Width Analysis Example:**
+```bash
+node -e "
+const SWCanvas = require('./dist/swcanvas.js');
+const surface = SWCanvas.Surface(200, 100);
+const ctx = new SWCanvas.Context2D(surface);
+
+// White background
+ctx.setFillStyle(255, 255, 255, 255);
+ctx.fillRect(0, 0, 200, 100);
+
+// Test different stroke widths
+const widths = [0, 0.1, 0.5, 1.0];
+widths.forEach((width, i) => {
+  const y = 20 + i * 15;
+  ctx.setStrokeStyle(0, 0, 255, 255);
+  ctx.lineWidth = width;
+  ctx.beginPath();
+  ctx.moveTo(50, y);
+  ctx.lineTo(150, y);
+  ctx.stroke();
+  
+  // Check if stroke rendered
+  const offset = y * surface.stride + 100 * 4;
+  const hasStroke = surface.data[offset] !== 255 || surface.data[offset + 1] !== 255 || surface.data[offset + 2] !== 255;
+  console.log(\`\${width}px stroke at y=\${y}: \${hasStroke ? 'VISIBLE' : 'not visible'}\`);
+});
+"
+```
+
+**Behavior Comparison Example:**
+```bash
+node -e "
+const SWCanvas = require('./dist/swcanvas.js');
+
+console.log('=== FEATURE ANALYSIS ===');
+const surface = SWCanvas.Surface(100, 100);
+const ctx = new SWCanvas.Context2D(surface);
+
+// Test specific behavior
+ctx.setFillStyle(255, 255, 255, 255);
+ctx.fillRect(0, 0, 100, 100);
+
+try {
+  ctx.lineWidth = 0;  // Test edge case
+  ctx.setStrokeStyle(255, 0, 0, 255);
+  ctx.beginPath();
+  ctx.moveTo(20, 50);
+  ctx.lineTo(80, 50);
+  ctx.stroke();
+  console.log('✓ Zero-width stroke accepted');
+} catch (e) {
+  console.log('✗ Zero-width stroke rejected:', e.message);
+}
+"
+```
+
+**Visual Comparison with File Output:**
+```bash
+node -e "
+const SWCanvas = require('./dist/swcanvas.js');
+const fs = require('fs');
+
+// Create test image
+const surface = SWCanvas.Surface(100, 100);
+const ctx = new SWCanvas.Context2D(surface);
+
+// Your drawing code here
+ctx.setFillStyle(255, 0, 0, 255);
+ctx.fillRect(25, 25, 50, 50);
+
+// Save for visual inspection
+const bmpData = SWCanvas.BitmapEncoder.encode(surface);
+fs.writeFileSync('debug-output.bmp', Buffer.from(bmpData));
+console.log('Saved debug image: debug-output.bmp');
+"
+```
+
+These scripts are invaluable for:
+- Quick pixel-level validation
+- Testing edge cases and behavior differences
+- Analyzing sub-pixel rendering effects
+- Comparing stroke and fill operations
+- Debugging coordinate transformations
+
 ### Making API Changes (OO Structure)
 1. Update `src/Context2D.js` for public API changes
 2. Update `src/Rasterizer.js` for rendering pipeline changes
