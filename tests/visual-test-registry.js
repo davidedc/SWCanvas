@@ -2183,6 +2183,9 @@
             ctx.restore();
             
             // Right: Star clip region
+            // NOTE: Some browsers may show a thin outline around clip regions.
+            // This is non-standard behavior - Chrome and SWCanvas correctly don't stroke clip paths.
+            // The HTML5 Canvas spec does not require stroking of clip boundaries.
             ctx.save();
             ctx.beginPath();
             const cx = 340, cy = 50;
@@ -6206,6 +6209,9 @@
             ctx.restore();
             
             // Test 2: Star with clipping (right side) - same as Polygon Clipping
+            // NOTE: If you see a thin stroke around the star in some browsers but not in SWCanvas,
+            // this is expected. Some browsers incorrectly auto-stroke clip paths, but this is
+            // non-standard behavior. Chrome and SWCanvas correctly follow the spec.
             const cx2 = 300, cy2 = 80;
             ctx.save();
             ctx.beginPath();

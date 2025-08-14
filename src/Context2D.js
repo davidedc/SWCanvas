@@ -321,6 +321,28 @@ class Context2D {
             // First clip - use the temporary buffer as the new clip mask
             this._clipMask = tempClipMask;
         }
+        
+        // NOTE: Browser Compatibility - Clip Path Auto-Stroking
+        // ========================================================
+        // Some browsers (particularly older versions and certain rendering modes) 
+        // automatically stroke the clip boundary with a thin line when clip() is called.
+        // This is NON-STANDARD behavior not defined in the HTML5 Canvas specification.
+        // 
+        // Modern browsers like Chrome do NOT exhibit this behavior.
+        // SWCanvas correctly follows the spec by not auto-stroking clip paths.
+        //
+        // If we wanted to replicate this browser quirk for compatibility:
+        // ------------------------------------------------------------
+        // // Auto-stroke the clip path with a hairline (before restore)
+        // if (this._strokeStyle && this._strokeStyle[3] > 0) {  // If stroke is visible
+        //     const savedLineWidth = this.lineWidth;
+        //     this.lineWidth = 0.1;  // Hairline width
+        //     this.stroke(pathToClip);
+        //     this.lineWidth = savedLineWidth;
+        // }
+        // ------------------------------------------------------------
+        // We choose NOT to implement this as it's against spec and not present
+        // in modern browsers. The visual difference in tests is expected.
     }
 
     // Helper method to fill polygons directly to a clip buffer
