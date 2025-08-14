@@ -5840,6 +5840,705 @@
         }
     };
 
+    // Test: Sub-pixel stroke rendering comparison
+    visualTests['subpixel-strokes'] = {
+        name: 'Sub-pixel Stroke Rendering',
+        description: 'Test various sub-pixel stroke widths to compare rendering differences',
+        width: 600,
+        height: 400,
+        
+        drawSWCanvas: function(SWCanvas) {
+            const surface = SWCanvas.Surface(600, 400);
+            const ctx = new SWCanvas.Context2D(surface);
+            
+            // White background
+            helpers.setSWCanvasFill(ctx, 'white');
+            ctx.fillRect(0, 0, 600, 400);
+            
+            // Test different stroke widths
+            const strokeWidths = [0.1, 0.25, 0.5, 0.75, 1.0, 1.5, 2.0];
+            const colors = ['red', 'blue', 'green', 'purple', 'orange', 'brown', 'pink'];
+            
+            // Horizontal lines
+            for (let i = 0; i < strokeWidths.length; i++) {
+                helpers.setSWCanvasStroke(ctx, colors[i]);
+                ctx.lineWidth = strokeWidths[i];
+                ctx.beginPath();
+                ctx.moveTo(50, 50 + i * 30);
+                ctx.lineTo(200, 50 + i * 30);
+                ctx.stroke();
+                
+                // Label the width
+                helpers.setSWCanvasFill(ctx, 'black');
+                // Note: SWCanvas doesn't have fillText, so we'll use a small rect to indicate
+                ctx.fillRect(20, 45 + i * 30, 2, strokeWidths[i] * 10 + 2);
+            }
+            
+            // Vertical lines
+            for (let i = 0; i < strokeWidths.length; i++) {
+                helpers.setSWCanvasStroke(ctx, colors[i]);
+                ctx.lineWidth = strokeWidths[i];
+                ctx.beginPath();
+                ctx.moveTo(250 + i * 30, 50);
+                ctx.lineTo(250 + i * 30, 200);
+                ctx.stroke();
+            }
+            
+            // Diagonal lines
+            for (let i = 0; i < strokeWidths.length; i++) {
+                helpers.setSWCanvasStroke(ctx, colors[i]);
+                ctx.lineWidth = strokeWidths[i];
+                ctx.beginPath();
+                ctx.moveTo(50 + i * 25, 250);
+                ctx.lineTo(150 + i * 25, 350);
+                ctx.stroke();
+            }
+            
+            // Rectangles
+            for (let i = 0; i < strokeWidths.length; i++) {
+                helpers.setSWCanvasStroke(ctx, colors[i]);
+                ctx.lineWidth = strokeWidths[i];
+                ctx.beginPath();
+                ctx.rect(300 + (i % 4) * 60, 250 + Math.floor(i / 4) * 60, 40, 40);
+                ctx.stroke();
+            }
+            
+            // Circles
+            for (let i = 0; i < strokeWidths.length; i++) {
+                helpers.setSWCanvasStroke(ctx, colors[i]);
+                ctx.lineWidth = strokeWidths[i];
+                ctx.beginPath();
+                ctx.arc(500, 70 + i * 40, 15, 0, 2 * Math.PI);
+                ctx.stroke();
+            }
+            
+            return surface;
+        },
+        
+        drawHTML5Canvas: function(html5Canvas) {
+            const ctx = html5Canvas.getContext('2d');
+            
+            // White background
+            helpers.setHTML5CanvasFill(ctx, 'white');
+            ctx.fillRect(0, 0, 600, 400);
+            
+            // Test different stroke widths
+            const strokeWidths = [0.1, 0.25, 0.5, 0.75, 1.0, 1.5, 2.0];
+            const colors = ['red', 'blue', 'green', 'purple', 'orange', 'brown', 'pink'];
+            
+            // Horizontal lines
+            for (let i = 0; i < strokeWidths.length; i++) {
+                helpers.setHTML5CanvasStroke(ctx, colors[i]);
+                ctx.lineWidth = strokeWidths[i];
+                ctx.beginPath();
+                ctx.moveTo(50, 50 + i * 30);
+                ctx.lineTo(200, 50 + i * 30);
+                ctx.stroke();
+                
+                // Label the width with text
+                helpers.setHTML5CanvasFill(ctx, 'black');
+                ctx.font = '10px Arial';
+                ctx.fillText(strokeWidths[i].toString(), 10, 55 + i * 30);
+            }
+            
+            // Vertical lines
+            for (let i = 0; i < strokeWidths.length; i++) {
+                helpers.setHTML5CanvasStroke(ctx, colors[i]);
+                ctx.lineWidth = strokeWidths[i];
+                ctx.beginPath();
+                ctx.moveTo(250 + i * 30, 50);
+                ctx.lineTo(250 + i * 30, 200);
+                ctx.stroke();
+            }
+            
+            // Diagonal lines
+            for (let i = 0; i < strokeWidths.length; i++) {
+                helpers.setHTML5CanvasStroke(ctx, colors[i]);
+                ctx.lineWidth = strokeWidths[i];
+                ctx.beginPath();
+                ctx.moveTo(50 + i * 25, 250);
+                ctx.lineTo(150 + i * 25, 350);
+                ctx.stroke();
+            }
+            
+            // Rectangles
+            for (let i = 0; i < strokeWidths.length; i++) {
+                helpers.setHTML5CanvasStroke(ctx, colors[i]);
+                ctx.lineWidth = strokeWidths[i];
+                ctx.beginPath();
+                ctx.rect(300 + (i % 4) * 60, 250 + Math.floor(i / 4) * 60, 40, 40);
+                ctx.stroke();
+            }
+            
+            // Circles
+            for (let i = 0; i < strokeWidths.length; i++) {
+                helpers.setHTML5CanvasStroke(ctx, colors[i]);
+                ctx.lineWidth = strokeWidths[i];
+                ctx.beginPath();
+                ctx.arc(500, 70 + i * 40, 15, 0, 2 * Math.PI);
+                ctx.stroke();
+            }
+        }
+    };
+
+    // Test: Stroke edge cases
+    visualTests['stroke-edge-cases'] = {
+        name: 'Stroke Edge Cases',
+        description: 'Test edge cases for stroke rendering: zero-width, transforms, clipping',
+        width: 500,
+        height: 300,
+        
+        drawSWCanvas: function(SWCanvas) {
+            const surface = SWCanvas.Surface(500, 300);
+            const ctx = new SWCanvas.Context2D(surface);
+            
+            // White background
+            helpers.setSWCanvasFill(ctx, 'white');
+            ctx.fillRect(0, 0, 500, 300);
+            
+            // Test 1: Zero-width stroke (should not render)
+            try {
+                helpers.setSWCanvasStroke(ctx, 'red');
+                ctx.lineWidth = 0;
+                ctx.beginPath();
+                ctx.moveTo(50, 50);
+                ctx.lineTo(150, 50);
+                ctx.stroke();
+            } catch (e) {
+                // SWCanvas throws error for zero-width strokes - this is expected behavior
+                console.log('SWCanvas correctly rejects zero-width strokes:', e.message);
+            }
+            
+            // Test 2: Very thin strokes
+            const thinWidths = [0.01, 0.1, 0.2, 0.3, 0.4];
+            for (let i = 0; i < thinWidths.length; i++) {
+                helpers.setSWCanvasStroke(ctx, 'blue');
+                ctx.lineWidth = thinWidths[i];
+                ctx.beginPath();
+                ctx.moveTo(50, 80 + i * 20);
+                ctx.lineTo(150, 80 + i * 20);
+                ctx.stroke();
+            }
+            
+            // Test 3: Strokes with scale transform (should scale the width)
+            ctx.save();
+            ctx.scale(0.5, 0.5);
+            helpers.setSWCanvasStroke(ctx, 'green');
+            ctx.lineWidth = 2.0;
+            ctx.beginPath();
+            ctx.moveTo(400, 100); // Will be at (200, 50) after scale
+            ctx.lineTo(600, 100); // Will be at (300, 50) after scale
+            ctx.stroke();
+            ctx.restore();
+            
+            // Test 4: Strokes with clipping
+            ctx.save();
+            ctx.beginPath();
+            ctx.rect(250, 50, 100, 80);
+            ctx.clip();
+            
+            helpers.setSWCanvasStroke(ctx, 'purple');
+            ctx.lineWidth = 3.0;
+            ctx.beginPath();
+            ctx.moveTo(200, 90);
+            ctx.lineTo(400, 90);
+            ctx.stroke();
+            ctx.restore();
+            
+            // Test 5: Circles with very thin strokes
+            const circleWidths = [0.1, 0.3, 0.5, 1.0, 2.0];
+            for (let i = 0; i < circleWidths.length; i++) {
+                helpers.setSWCanvasStroke(ctx, 'orange');
+                ctx.lineWidth = circleWidths[i];
+                ctx.beginPath();
+                ctx.arc(80 + i * 60, 200, 20, 0, 2 * Math.PI);
+                ctx.stroke();
+            }
+            
+            // Test 6: Single pixel positioned strokes (integer vs fractional positions)
+            helpers.setSWCanvasStroke(ctx, 'black');
+            ctx.lineWidth = 1.0;
+            
+            // Integer position
+            ctx.beginPath();
+            ctx.moveTo(50, 250);
+            ctx.lineTo(100, 250);
+            ctx.stroke();
+            
+            // Half-pixel position
+            ctx.beginPath();
+            ctx.moveTo(50.5, 260);
+            ctx.lineTo(100.5, 260);
+            ctx.stroke();
+            
+            // Quarter-pixel position
+            ctx.beginPath();
+            ctx.moveTo(50.25, 270);
+            ctx.lineTo(100.25, 270);
+            ctx.stroke();
+            
+            return surface;
+        },
+        
+        drawHTML5Canvas: function(html5Canvas) {
+            const ctx = html5Canvas.getContext('2d');
+            
+            // White background
+            helpers.setHTML5CanvasFill(ctx, 'white');
+            ctx.fillRect(0, 0, 500, 300);
+            
+            // Test 1: Zero-width stroke (should not render)
+            helpers.setHTML5CanvasStroke(ctx, 'red');
+            ctx.lineWidth = 0;
+            ctx.beginPath();
+            ctx.moveTo(50, 50);
+            ctx.lineTo(150, 50);
+            ctx.stroke();
+            
+            // Test 2: Very thin strokes
+            const thinWidths = [0.01, 0.1, 0.2, 0.3, 0.4];
+            for (let i = 0; i < thinWidths.length; i++) {
+                helpers.setHTML5CanvasStroke(ctx, 'blue');
+                ctx.lineWidth = thinWidths[i];
+                ctx.beginPath();
+                ctx.moveTo(50, 80 + i * 20);
+                ctx.lineTo(150, 80 + i * 20);
+                ctx.stroke();
+            }
+            
+            // Test 3: Strokes with scale transform
+            ctx.save();
+            ctx.scale(0.5, 0.5);
+            helpers.setHTML5CanvasStroke(ctx, 'green');
+            ctx.lineWidth = 2.0;
+            ctx.beginPath();
+            ctx.moveTo(400, 100);
+            ctx.lineTo(600, 100);
+            ctx.stroke();
+            ctx.restore();
+            
+            // Test 4: Strokes with clipping
+            ctx.save();
+            ctx.beginPath();
+            ctx.rect(250, 50, 100, 80);
+            ctx.clip();
+            
+            helpers.setHTML5CanvasStroke(ctx, 'purple');
+            ctx.lineWidth = 3.0;
+            ctx.beginPath();
+            ctx.moveTo(200, 90);
+            ctx.lineTo(400, 90);
+            ctx.stroke();
+            ctx.restore();
+            
+            // Test 5: Circles with very thin strokes
+            const circleWidths = [0.1, 0.3, 0.5, 1.0, 2.0];
+            for (let i = 0; i < circleWidths.length; i++) {
+                helpers.setHTML5CanvasStroke(ctx, 'orange');
+                ctx.lineWidth = circleWidths[i];
+                ctx.beginPath();
+                ctx.arc(80 + i * 60, 200, 20, 0, 2 * Math.PI);
+                ctx.stroke();
+            }
+            
+            // Test 6: Single pixel positioned strokes
+            helpers.setHTML5CanvasStroke(ctx, 'black');
+            ctx.lineWidth = 1.0;
+            
+            // Integer position
+            ctx.beginPath();
+            ctx.moveTo(50, 250);
+            ctx.lineTo(100, 250);
+            ctx.stroke();
+            
+            // Half-pixel position
+            ctx.beginPath();
+            ctx.moveTo(50.5, 260);
+            ctx.lineTo(100.5, 260);
+            ctx.stroke();
+            
+            // Quarter-pixel position
+            ctx.beginPath();
+            ctx.moveTo(50.25, 270);
+            ctx.lineTo(100.25, 270);
+            ctx.stroke();
+        }
+    };
+
+    // Test: Clipped path strokes (recreates Polygon Clipping star issue)
+    visualTests['clipped-path-strokes'] = {
+        name: 'Clipped Path Strokes',
+        description: 'Test stroke rendering on clipped paths (recreates star from Polygon Clipping)',
+        width: 400,
+        height: 300,
+        
+        drawSWCanvas: function(SWCanvas) {
+            const surface = SWCanvas.Surface(400, 300);
+            const ctx = new SWCanvas.Context2D(surface);
+            
+            // White background
+            helpers.setSWCanvasFill(ctx, 'white');
+            ctx.fillRect(0, 0, 400, 300);
+            
+            // Test 1: Star without clipping (left side)
+            const cx1 = 100, cy1 = 80;
+            ctx.save();
+            ctx.beginPath();
+            // Create star path (same as in Polygon Clipping test)
+            for (let i = 0; i < 5; i++) {
+                const angle = (i * 2 * Math.PI) / 5 - Math.PI / 2;
+                const x = cx1 + Math.cos(angle) * 30;
+                const y = cy1 + Math.sin(angle) * 30;
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+                
+                // Inner points
+                const innerAngle = angle + Math.PI / 5;
+                const ix = cx1 + Math.cos(innerAngle) * 12;
+                const iy = cy1 + Math.sin(innerAngle) * 12;
+                ctx.lineTo(ix, iy);
+            }
+            ctx.closePath();
+            
+            // Fill the star
+            helpers.setSWCanvasFill(ctx, 'lightblue');
+            ctx.fill();
+            
+            // Stroke the star with different widths
+            helpers.setSWCanvasStroke(ctx, 'red');
+            ctx.lineWidth = 0.5;
+            ctx.stroke();
+            ctx.restore();
+            
+            // Test 2: Star with clipping (right side) - same as Polygon Clipping
+            const cx2 = 300, cy2 = 80;
+            ctx.save();
+            ctx.beginPath();
+            for (let i = 0; i < 5; i++) {
+                const angle = (i * 2 * Math.PI) / 5 - Math.PI / 2;
+                const x = cx2 + Math.cos(angle) * 30;
+                const y = cy2 + Math.sin(angle) * 30;
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+                
+                const innerAngle = angle + Math.PI / 5;
+                const ix = cx2 + Math.cos(innerAngle) * 12;
+                const iy = cy2 + Math.sin(innerAngle) * 12;
+                ctx.lineTo(ix, iy);
+            }
+            ctx.closePath();
+            ctx.clip(); // Use as clipping region
+            
+            // Fill rectangles (like in original test)
+            helpers.setSWCanvasFill(ctx, 'purple');
+            ctx.fillRect(260, 40, 80, 80);
+            helpers.setSWCanvasFill(ctx, 'yellow');
+            ctx.fillRect(280, 60, 40, 40);
+            ctx.restore();
+            
+            // Test 3: Compare stroke widths
+            const strokeWidths = [0.25, 0.5, 1.0, 2.0];
+            for (let j = 0; j < strokeWidths.length; j++) {
+                const cx = 50 + j * 80;
+                const cy = 200;
+                
+                ctx.save();
+                ctx.beginPath();
+                for (let i = 0; i < 5; i++) {
+                    const angle = (i * 2 * Math.PI) / 5 - Math.PI / 2;
+                    const x = cx + Math.cos(angle) * 25;
+                    const y = cy + Math.sin(angle) * 25;
+                    if (i === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                    
+                    const innerAngle = angle + Math.PI / 5;
+                    const ix = cx + Math.cos(innerAngle) * 10;
+                    const iy = cy + Math.sin(innerAngle) * 10;
+                    ctx.lineTo(ix, iy);
+                }
+                ctx.closePath();
+                
+                // Fill
+                helpers.setSWCanvasFill(ctx, 'lightgray');
+                ctx.fill();
+                
+                // Stroke with different widths
+                helpers.setSWCanvasStroke(ctx, 'blue');
+                ctx.lineWidth = strokeWidths[j];
+                ctx.stroke();
+                ctx.restore();
+            }
+            
+            return surface;
+        },
+        
+        drawHTML5Canvas: function(html5Canvas) {
+            const ctx = html5Canvas.getContext('2d');
+            
+            // White background
+            helpers.setHTML5CanvasFill(ctx, 'white');
+            ctx.fillRect(0, 0, 400, 300);
+            
+            // Test 1: Star without clipping (left side)
+            const cx1 = 100, cy1 = 80;
+            ctx.save();
+            ctx.beginPath();
+            for (let i = 0; i < 5; i++) {
+                const angle = (i * 2 * Math.PI) / 5 - Math.PI / 2;
+                const x = cx1 + Math.cos(angle) * 30;
+                const y = cy1 + Math.sin(angle) * 30;
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+                
+                const innerAngle = angle + Math.PI / 5;
+                const ix = cx1 + Math.cos(innerAngle) * 12;
+                const iy = cy1 + Math.sin(innerAngle) * 12;
+                ctx.lineTo(ix, iy);
+            }
+            ctx.closePath();
+            
+            // Fill the star
+            helpers.setHTML5CanvasFill(ctx, 'lightblue');
+            ctx.fill();
+            
+            // Stroke the star
+            helpers.setHTML5CanvasStroke(ctx, 'red');
+            ctx.lineWidth = 0.5;
+            ctx.stroke();
+            ctx.restore();
+            
+            // Test 2: Star with clipping (right side)
+            const cx2 = 300, cy2 = 80;
+            ctx.save();
+            ctx.beginPath();
+            for (let i = 0; i < 5; i++) {
+                const angle = (i * 2 * Math.PI) / 5 - Math.PI / 2;
+                const x = cx2 + Math.cos(angle) * 30;
+                const y = cy2 + Math.sin(angle) * 30;
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+                
+                const innerAngle = angle + Math.PI / 5;
+                const ix = cx2 + Math.cos(innerAngle) * 12;
+                const iy = cy2 + Math.sin(innerAngle) * 12;
+                ctx.lineTo(ix, iy);
+            }
+            ctx.closePath();
+            ctx.clip();
+            
+            helpers.setHTML5CanvasFill(ctx, 'purple');
+            ctx.fillRect(260, 40, 80, 80);
+            helpers.setHTML5CanvasFill(ctx, 'yellow');
+            ctx.fillRect(280, 60, 40, 40);
+            ctx.restore();
+            
+            // Test 3: Compare stroke widths
+            const strokeWidths = [0.25, 0.5, 1.0, 2.0];
+            for (let j = 0; j < strokeWidths.length; j++) {
+                const cx = 50 + j * 80;
+                const cy = 200;
+                
+                ctx.save();
+                ctx.beginPath();
+                for (let i = 0; i < 5; i++) {
+                    const angle = (i * 2 * Math.PI) / 5 - Math.PI / 2;
+                    const x = cx + Math.cos(angle) * 25;
+                    const y = cy + Math.sin(angle) * 25;
+                    if (i === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                    
+                    const innerAngle = angle + Math.PI / 5;
+                    const ix = cx + Math.cos(innerAngle) * 10;
+                    const iy = cy + Math.sin(innerAngle) * 10;
+                    ctx.lineTo(ix, iy);
+                }
+                ctx.closePath();
+                
+                // Fill
+                helpers.setHTML5CanvasFill(ctx, 'lightgray');
+                ctx.fill();
+                
+                // Stroke with different widths
+                helpers.setHTML5CanvasStroke(ctx, 'blue');
+                ctx.lineWidth = strokeWidths[j];
+                ctx.stroke();
+                ctx.restore();
+            }
+        }
+    };
+
+    // Test: Stroke pixel analysis
+    visualTests['stroke-pixel-analysis'] = {
+        name: 'Stroke Pixel Analysis',
+        description: 'Detailed pixel-level analysis of stroke rendering for debugging',
+        width: 300,
+        height: 200,
+        
+        drawSWCanvas: function(SWCanvas) {
+            const surface = SWCanvas.Surface(300, 200);
+            const ctx = new SWCanvas.Context2D(surface);
+            
+            // White background
+            helpers.setSWCanvasFill(ctx, 'white');
+            ctx.fillRect(0, 0, 300, 200);
+            
+            // Test 1: Single pixel stroke at integer coordinates
+            helpers.setSWCanvasStroke(ctx, 'red');
+            ctx.lineWidth = 1.0;
+            ctx.beginPath();
+            ctx.moveTo(50, 50);
+            ctx.lineTo(100, 50);
+            ctx.stroke();
+            
+            // Test 2: Sub-pixel stroke widths at integer coordinates
+            const subPixelWidths = [0.1, 0.25, 0.5, 0.75];
+            for (let i = 0; i < subPixelWidths.length; i++) {
+                helpers.setSWCanvasStroke(ctx, 'blue');
+                ctx.lineWidth = subPixelWidths[i];
+                ctx.beginPath();
+                ctx.moveTo(50, 70 + i * 10);
+                ctx.lineTo(100, 70 + i * 10);
+                ctx.stroke();
+            }
+            
+            // Test 3: 1-pixel stroke at fractional coordinates
+            helpers.setSWCanvasStroke(ctx, 'green');
+            ctx.lineWidth = 1.0;
+            ctx.beginPath();
+            ctx.moveTo(50.5, 120);
+            ctx.lineTo(100.5, 120);
+            ctx.stroke();
+            
+            // Test 4: Sub-pixel strokes at fractional coordinates
+            for (let i = 0; i < subPixelWidths.length; i++) {
+                helpers.setSWCanvasStroke(ctx, 'purple');
+                ctx.lineWidth = subPixelWidths[i];
+                ctx.beginPath();
+                ctx.moveTo(50.5, 130 + i * 10);
+                ctx.lineTo(100.5, 130 + i * 10);
+                ctx.stroke();
+            }
+            
+            // Test 5: Very thin vertical lines
+            const xPositions = [150, 160, 170, 180, 190];
+            const thinWidths = [0.1, 0.2, 0.3, 0.5, 1.0];
+            for (let i = 0; i < xPositions.length; i++) {
+                helpers.setSWCanvasStroke(ctx, 'orange');
+                ctx.lineWidth = thinWidths[i];
+                ctx.beginPath();
+                ctx.moveTo(xPositions[i], 50);
+                ctx.lineTo(xPositions[i], 120);
+                ctx.stroke();
+            }
+            
+            // Test 6: Diagonal lines with thin strokes
+            for (let i = 0; i < 3; i++) {
+                helpers.setSWCanvasStroke(ctx, 'brown');
+                ctx.lineWidth = 0.25 + i * 0.25;
+                ctx.beginPath();
+                ctx.moveTo(220, 50 + i * 20);
+                ctx.lineTo(270, 100 + i * 20);
+                ctx.stroke();
+            }
+            
+            // Sample and log pixel values for debugging
+            console.log('SWCanvas stroke pixel analysis:');
+            const pixelAt50_50 = surface.data[(50 * surface.stride) + (50 * 4)];
+            console.log(`  Pixel at (50,50) - Red stroke 1px: R=${pixelAt50_50} (should be 255 if rendered)`);
+            
+            const pixelAt50_70 = surface.data[(50 * surface.stride) + (70 * 4)];
+            console.log(`  Pixel at (50,70) - Blue stroke 0.1px: R=${surface.data[(70 * surface.stride) + (50 * 4)]}`);
+            
+            const pixelAt50_75 = surface.data[(75 * surface.stride) + (50 * 4) + 2];
+            console.log(`  Pixel at (50,75) - Blue stroke 0.5px: B=${pixelAt50_75}`);
+            
+            return surface;
+        },
+        
+        drawHTML5Canvas: function(html5Canvas) {
+            const ctx = html5Canvas.getContext('2d');
+            
+            // White background
+            helpers.setHTML5CanvasFill(ctx, 'white');
+            ctx.fillRect(0, 0, 300, 200);
+            
+            // Test 1: Single pixel stroke at integer coordinates
+            helpers.setHTML5CanvasStroke(ctx, 'red');
+            ctx.lineWidth = 1.0;
+            ctx.beginPath();
+            ctx.moveTo(50, 50);
+            ctx.lineTo(100, 50);
+            ctx.stroke();
+            
+            // Test 2: Sub-pixel stroke widths at integer coordinates
+            const subPixelWidths = [0.1, 0.25, 0.5, 0.75];
+            for (let i = 0; i < subPixelWidths.length; i++) {
+                helpers.setHTML5CanvasStroke(ctx, 'blue');
+                ctx.lineWidth = subPixelWidths[i];
+                ctx.beginPath();
+                ctx.moveTo(50, 70 + i * 10);
+                ctx.lineTo(100, 70 + i * 10);
+                ctx.stroke();
+            }
+            
+            // Test 3: 1-pixel stroke at fractional coordinates
+            helpers.setHTML5CanvasStroke(ctx, 'green');
+            ctx.lineWidth = 1.0;
+            ctx.beginPath();
+            ctx.moveTo(50.5, 120);
+            ctx.lineTo(100.5, 120);
+            ctx.stroke();
+            
+            // Test 4: Sub-pixel strokes at fractional coordinates
+            for (let i = 0; i < subPixelWidths.length; i++) {
+                helpers.setHTML5CanvasStroke(ctx, 'purple');
+                ctx.lineWidth = subPixelWidths[i];
+                ctx.beginPath();
+                ctx.moveTo(50.5, 130 + i * 10);
+                ctx.lineTo(100.5, 130 + i * 10);
+                ctx.stroke();
+            }
+            
+            // Test 5: Very thin vertical lines
+            const xPositions = [150, 160, 170, 180, 190];
+            const thinWidths = [0.1, 0.2, 0.3, 0.5, 1.0];
+            for (let i = 0; i < xPositions.length; i++) {
+                helpers.setHTML5CanvasStroke(ctx, 'orange');
+                ctx.lineWidth = thinWidths[i];
+                ctx.beginPath();
+                ctx.moveTo(xPositions[i], 50);
+                ctx.lineTo(xPositions[i], 120);
+                ctx.stroke();
+            }
+            
+            // Test 6: Diagonal lines with thin strokes
+            for (let i = 0; i < 3; i++) {
+                helpers.setHTML5CanvasStroke(ctx, 'brown');
+                ctx.lineWidth = 0.25 + i * 0.25;
+                ctx.beginPath();
+                ctx.moveTo(220, 50 + i * 20);
+                ctx.lineTo(270, 100 + i * 20);
+                ctx.stroke();
+            }
+            
+            // Sample pixel values from HTML5 Canvas for comparison
+            try {
+                const imageData = ctx.getImageData(0, 0, 300, 200);
+                console.log('HTML5Canvas stroke pixel analysis:');
+                const redPixel = imageData.data[(50 * 300 + 50) * 4];
+                console.log(`  Pixel at (50,50) - Red stroke 1px: R=${redPixel}`);
+                
+                const bluePixel70 = imageData.data[(70 * 300 + 50) * 4 + 2];
+                console.log(`  Pixel at (50,70) - Blue stroke 0.1px: B=${bluePixel70}`);
+                
+                const bluePixel75 = imageData.data[(75 * 300 + 50) * 4 + 2];
+                console.log(`  Pixel at (50,75) - Blue stroke 0.5px: B=${bluePixel75}`);
+            } catch (e) {
+                console.log('Could not sample HTML5Canvas pixels (security restriction)');
+            }
+        }
+    };
+
     const VisualTestRegistry = {
         getTests: function() { return visualTests; },
         getTest: function(name) { return visualTests[name]; },
