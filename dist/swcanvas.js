@@ -2535,8 +2535,8 @@ class StrokeGenerator {
         
         const validated = { ...defaults, ...props };
         
-        if (validated.lineWidth <= 0) {
-            throw new Error('lineWidth must be positive');
+        if (validated.lineWidth < 0) {
+            throw new Error('lineWidth must not be negative');
         }
         
         const validJoins = ['miter', 'round', 'bevel'];
@@ -4277,13 +4277,26 @@ class Rasterizer {
         const colorData = this._currentOp.strokeStyle || [0, 0, 0, 255];
         const color = Array.isArray(colorData) ? 
             new Color(colorData[0], colorData[1], colorData[2], colorData[3]) : colorData;
-        const strokeColor = color.withGlobalAlpha(this._currentOp.globalAlpha);
+        let finalStrokeColor = color.withGlobalAlpha(this._currentOp.globalAlpha);
+        
+        // Sub-pixel stroke rendering: apply opacity adjustment for strokes <= 1px
+        let adjustedStrokeProps = strokeProps;
+        if (strokeProps.lineWidth <= 1.0) {
+            // Zero-width strokes: render at full opacity like HTML5Canvas (browsers render at minimum visible width)
+            // Sub-pixel strokes: render with proportional opacity
+            const subPixelOpacity = strokeProps.lineWidth === 0 ? 1.0 : strokeProps.lineWidth; // 0px = 100% opacity, 0.5px = 50% opacity
+            const adjustedAlpha = Math.round(finalStrokeColor.a * subPixelOpacity);
+            finalStrokeColor = new Color(finalStrokeColor.r, finalStrokeColor.g, finalStrokeColor.b, adjustedAlpha, finalStrokeColor.premultiplied);
+            
+            // Render all sub-pixel strokes (including zero-width) at 1px width with adjusted opacity
+            adjustedStrokeProps = { ...strokeProps, lineWidth: 1.0 };
+        }
         
         // Generate stroke polygons using geometric approach
-        const strokePolygons = StrokeGenerator.generateStrokePolygons(path, strokeProps);
+        const strokePolygons = StrokeGenerator.generateStrokePolygons(path, adjustedStrokeProps);
         
         // Fill stroke polygons with current transform and stencil clipping
-        PolygonFiller.fillPolygons(this._surface, strokePolygons, strokeColor, 'nonzero', this._currentOp.transform, this._currentOp.clipMask);
+        PolygonFiller.fillPolygons(this._surface, strokePolygons, finalStrokeColor, 'nonzero', this._currentOp.transform, this._currentOp.clipMask);
     }
 
     /**
