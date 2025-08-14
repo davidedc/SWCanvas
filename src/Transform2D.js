@@ -4,7 +4,7 @@
  * Represents a 2D affine transformation matrix using homogeneous coordinates.
  * Immutable value object following Joshua Bloch's effective design principles.
  * 
- * Matrix format (2x3 affine transformation):
+ * Transform2D format (2x3 affine transformation):
  * | a  c  e |   | x |   | ax + cy + e |
  * | b  d  f | × | y | = | bx + dy + f |
  * | 0  0  1 |   | 1 |   |      1      |
@@ -198,7 +198,7 @@ class Transform2D {
     
     /**
      * Get transformation determinant
-     * @returns {number} Matrix determinant
+     * @returns {number} Transform2D determinant
      */
     get determinant() {
         return this.a * this.d - this.b * this.c;
@@ -222,12 +222,10 @@ class Transform2D {
 
     /**
      * String representation for debugging
-     * @returns {string} Matrix description
+     * @returns {string} Transform2D description
      */
     toString() {
         return `Transform2D([${this.a}, ${this.b}, ${this.c}, ${this.d}, ${this.e}, ${this.f}])`;
     }
 }
 
-// Legacy alias for backward compatibility
-const Matrix = Transform2D;

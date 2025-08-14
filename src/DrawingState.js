@@ -36,14 +36,14 @@ class DrawingState {
         return {
             globalAlpha: 1.0,
             globalCompositeOperation: 'source-over',
-            transform: new Matrix(),
+            transform: new Transform2D(),
             fillStyle: new Color(0, 0, 0, 255), // Black
             strokeStyle: new Color(0, 0, 0, 255), // Black
             lineWidth: 1.0,
             lineJoin: 'miter',
             lineCap: 'butt',
             miterLimit: 10.0,
-            stencilBuffer: null // Lazy-allocated
+            clipMask: null // Lazy-allocated
         };
     }
     
@@ -57,7 +57,7 @@ class DrawingState {
     get lineJoin() { return this._currentState.lineJoin; }
     get lineCap() { return this._currentState.lineCap; }
     get miterLimit() { return this._currentState.miterLimit; }
-    get stencilBuffer() { return this._currentState.stencilBuffer; }
+    get clipMask() { return this._currentState.clipMask; }
     
     // Setters with validation
     set globalAlpha(value) {
@@ -76,8 +76,8 @@ class DrawingState {
     }
     
     set transform(value) {
-        if (!(value instanceof Matrix)) {
-            throw new Error('transform must be a Matrix instance');
+        if (!(value instanceof Transform2D)) {
+            throw new Error('transform must be a Transform2D instance');
         }
         this._currentState.transform = value;
     }
@@ -135,7 +135,7 @@ class DrawingState {
         const snapshot = {
             globalAlpha: this._currentState.globalAlpha,
             globalCompositeOperation: this._currentState.globalCompositeOperation,
-            transform: new Matrix([
+            transform: new Transform2D([
                 this._currentState.transform.a, this._currentState.transform.b,
                 this._currentState.transform.c, this._currentState.transform.d,
                 this._currentState.transform.e, this._currentState.transform.f
@@ -146,8 +146,8 @@ class DrawingState {
             lineJoin: this._currentState.lineJoin,
             lineCap: this._currentState.lineCap,
             miterLimit: this._currentState.miterLimit,
-            stencilBuffer: this._currentState.stencilBuffer ? 
-                          this._currentState.stencilBuffer.clone() : null
+            clipMask: this._currentState.clipMask ? 
+                     this._currentState.clipMask.clone() : null
         };
         
         this._stateStack.push(snapshot);
@@ -180,36 +180,36 @@ class DrawingState {
     
     /**
      * Apply transform matrix to current transform
-     * @param {number} a - Matrix a component
-     * @param {number} b - Matrix b component
-     * @param {number} c - Matrix c component
-     * @param {number} d - Matrix d component
-     * @param {number} e - Matrix e component
-     * @param {number} f - Matrix f component
+     * @param {number} a - Transform2D a component
+     * @param {number} b - Transform2D b component
+     * @param {number} c - Transform2D c component
+     * @param {number} d - Transform2D d component
+     * @param {number} e - Transform2D e component
+     * @param {number} f - Transform2D f component
      */
     transform(a, b, c, d, e, f) {
-        const m = new Matrix([a, b, c, d, e, f]);
+        const m = new Transform2D([a, b, c, d, e, f]);
         this._currentState.transform = m.multiply(this._currentState.transform);
     }
     
     /**
      * Set transform matrix (replaces current transform)
-     * @param {number} a - Matrix a component
-     * @param {number} b - Matrix b component
-     * @param {number} c - Matrix c component
-     * @param {number} d - Matrix d component
-     * @param {number} e - Matrix e component
-     * @param {number} f - Matrix f component
+     * @param {number} a - Transform2D a component
+     * @param {number} b - Transform2D b component
+     * @param {number} c - Transform2D c component
+     * @param {number} d - Transform2D d component
+     * @param {number} e - Transform2D e component
+     * @param {number} f - Transform2D f component
      */
     setTransform(a, b, c, d, e, f) {
-        this._currentState.transform = new Matrix([a, b, c, d, e, f]);
+        this._currentState.transform = new Transform2D([a, b, c, d, e, f]);
     }
     
     /**
      * Reset transform to identity matrix
      */
     resetTransform() {
-        this._currentState.transform = new Matrix();
+        this._currentState.transform = new Transform2D();
     }
     
     /**
@@ -218,7 +218,7 @@ class DrawingState {
      * @param {number} y - Y offset
      */
     translate(x, y) {
-        this._currentState.transform = new Matrix().translate(x, y).multiply(this._currentState.transform);
+        this._currentState.transform = new Transform2D().translate(x, y).multiply(this._currentState.transform);
     }
     
     /**
@@ -227,7 +227,7 @@ class DrawingState {
      * @param {number} sy - Y scale factor
      */
     scale(sx, sy) {
-        this._currentState.transform = new Matrix().scale(sx, sy).multiply(this._currentState.transform);
+        this._currentState.transform = new Transform2D().scale(sx, sy).multiply(this._currentState.transform);
     }
     
     /**
@@ -235,7 +235,7 @@ class DrawingState {
      * @param {number} angleInRadians - Rotation angle in radians
      */
     rotate(angleInRadians) {
-        this._currentState.transform = new Matrix().rotate(angleInRadians).multiply(this._currentState.transform);
+        this._currentState.transform = new Transform2D().rotate(angleInRadians).multiply(this._currentState.transform);
     }
     
     /**
@@ -274,19 +274,18 @@ class DrawingState {
      * @param {string} fillRule - Fill rule ('nonzero' or 'evenodd')
      */
     applyClip(path, fillRule = 'nonzero') {
-        // Lazy-allocate stencil buffer
-        if (!this._currentState.stencilBuffer) {
-            this._currentState.stencilBuffer = new StencilBuffer(
+        // Lazy-allocate clip mask
+        if (!this._currentState.clipMask) {
+            this._currentState.clipMask = new ClipMask(
                 this._surfaceWidth, 
                 this._surfaceHeight
             );
         }
         
-        this._currentState.stencilBuffer.applyClip(
-            path, 
-            fillRule, 
-            this._currentState.transform
-        );
+        // Note: applyClip method needs to be implemented in ClipMask or handled differently
+        // For now, this will need to be refactored to use the path rendering approach
+        // from Context2D's clip() method
+        throw new Error('DrawingState clipping needs to be refactored to use ClipMask');
     }
     
     /**
@@ -296,10 +295,10 @@ class DrawingState {
      * @returns {boolean} True if pixel is clipped
      */
     isPixelClipped(x, y) {
-        if (!this._currentState.stencilBuffer) {
+        if (!this._currentState.clipMask) {
             return false; // No clipping active
         }
-        return this._currentState.stencilBuffer.isPixelClipped(x, y);
+        return this._currentState.clipMask.isPixelClipped(x, y);
     }
     
     /**
@@ -340,8 +339,7 @@ class DrawingState {
             composite: this._currentState.globalCompositeOperation,
             globalAlpha: this._currentState.globalAlpha,
             transform: this._currentState.transform,
-            clipMask: this._currentState.stencilBuffer ? 
-                     this._currentState.stencilBuffer.getRawBuffer() : null
+            clipMask: this._currentState.clipMask
         };
     }
     
@@ -358,8 +356,8 @@ class DrawingState {
      * @returns {string} State description
      */
     toString() {
-        const clipInfo = this._currentState.stencilBuffer ? 
-                        this._currentState.stencilBuffer.toString() : 'no clipping';
+        const clipInfo = this._currentState.clipMask ? 
+                        this._currentState.clipMask.toString() : 'no clipping';
         return `DrawingState(alpha=${this._currentState.globalAlpha}, stack=${this._stateStack.length}, ${clipInfo})`;
     }
 }

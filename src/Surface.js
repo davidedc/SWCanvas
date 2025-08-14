@@ -5,7 +5,7 @@
  * Following Joshua Bloch's principle of proper class design with validation,
  * clear error messages, and immutable properties where sensible.
  */
-class SurfaceClass {
+class Surface {
     /**
      * Create a Surface
      * @param {number} width - Surface width in pixels
@@ -43,10 +43,10 @@ class SurfaceClass {
     
     /**
      * Create a copy of this surface
-     * @returns {SurfaceClass} New surface with copied data
+     * @returns {Surface} New surface with copied data
      */
     clone() {
-        const clone = new SurfaceClass(this.width, this.height);
+        const clone = new Surface(this.width, this.height);
         clone.data.set(this.data);
         return clone;
     }
@@ -131,15 +131,4 @@ class SurfaceClass {
     }
 }
 
-// Factory function that can be called with or without 'new' (maintains backward compatibility)
-function Surface(width, height) {
-    return new SurfaceClass(width, height);
-}
 
-// Copy all prototype methods from SurfaceClass to Surface for proper inheritance-like behavior
-Object.setPrototypeOf(Surface.prototype, SurfaceClass.prototype);
-
-// Keep legacy factory function for backward compatibility
-function createSurface(width, height) {
-    return new SurfaceClass(width, height);
-}

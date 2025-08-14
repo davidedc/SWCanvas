@@ -16,7 +16,7 @@ class BitmapEncoder {
      * @param {Surface} surface - Surface to encode
      * @returns {ArrayBuffer} BMP file data
      */
-    static encodeBMP(surface) {
+    static encode(surface) {
         if (!surface || typeof surface !== 'object') {
             throw new Error('Surface must be a valid Surface object');
         }
@@ -284,7 +284,3 @@ class BitmapEncoder {
 BitmapEncoder.BMP_HEADER_SIZE = 54; // 14 bytes file header + 40 bytes info header
 BitmapEncoder.MAX_DIMENSION = 65535; // Reasonable maximum to prevent memory issues
 
-// Legacy function for backward compatibility
-function encodeBMP(surface) {
-    return BitmapEncoder.encodeBMP(surface);
-}

@@ -17,85 +17,6 @@
  * 4. Save/restore: Stencil buffer is deep-copied during save() and restored
  */
 
-// Bit manipulation helpers for 1-bit stencil buffer
-function getBit(buffer, pixelIndex) {
-    const byteIndex = Math.floor(pixelIndex / 8);
-    const bitIndex = pixelIndex % 8;
-    return (buffer[byteIndex] & (1 << bitIndex)) !== 0 ? 1 : 0;
-}
-
-function setBit(buffer, pixelIndex, value) {
-    const byteIndex = Math.floor(pixelIndex / 8);
-    const bitIndex = pixelIndex % 8;
-    if (value) {
-        buffer[byteIndex] |= (1 << bitIndex);
-    } else {
-        buffer[byteIndex] &= ~(1 << bitIndex);
-    }
-}
-
-function clearMask(buffer) {
-    buffer.fill(0);
-}
-
-/**
- * Create a new 1-bit stencil buffer initialized to "no clipping" (all 1s)
- * 
- * @param {number} width - Surface width in pixels
- * @param {number} height - Surface height in pixels  
- * @returns {Uint8Array} Stencil buffer with 1 bit per pixel, packed into bytes
- */
-function createClipMask(width, height) {
-    const numPixels = width * height;
-    const numBytes = Math.ceil(numPixels / 8);
-    const mask = new Uint8Array(numBytes);
-    // Initialize to all 1s (no clipping)
-    mask.fill(0xFF);
-    // Handle partial last byte if width*height is not divisible by 8
-    const remainderBits = numPixels % 8;
-    if (remainderBits !== 0) {
-        const lastByteIndex = numBytes - 1;
-        const lastByteMask = (1 << remainderBits) - 1;
-        mask[lastByteIndex] = lastByteMask;
-    }
-    return mask;
-}
-
-/**
- * Memory management helpers for Context2D stencil clipping
- */
-function ensureClipMask(context) {
-    if (!context._clipMask) {
-        context._clipMask = createClipMask(context.surface.width, context.surface.height);
-    }
-    return context._clipMask;
-}
-
-function releaseClipMask(context) {
-    // For now, we don't auto-release clipMask to keep implementation simple
-    // In a full implementation, we might check if the mask is "all 1s" and release it
-    // context._clipMask = null;
-}
-
-// Phase B: Clip pixel writer for temporary clip buffer
-function createClipPixelWriter(tempClipBuffer, width, height) {
-    return function clipPixel(x, y, coverage) {
-        // Bounds checking
-        if (x < 0 || x >= width || y < 0 || y >= height) return;
-        
-        // Convert coverage to binary (1 bit): >0.5 means inside, <=0.5 means outside
-        const pixelIndex = y * width + x;
-        const isInside = coverage > 0.5;
-        setBit(tempClipBuffer, pixelIndex, isInside);
-        }
-}
-
-// Helper to check if a pixel should be clipped
-function isPixelClipped(clipMask, x, y, width) {
-    if (!clipMask) return false; // No clipping active
-    const pixelIndex = y * width + x;
-    return getBit(clipMask, pixelIndex) === 0; // 0 means clipped out
-}
 
 class Context2D {
     constructor(surface) {
@@ -108,7 +29,7 @@ class Context2D {
         // Current state
         this.globalAlpha = 1.0;
         this.globalCompositeOperation = 'source-over';
-        this._transform = new Matrix();
+        this._transform = new Transform2D();
         this._fillStyle = [0, 0, 0, 255]; // Black, non-premultiplied
         this._strokeStyle = [0, 0, 0, 255]; // Black, non-premultiplied
         
@@ -122,30 +43,30 @@ class Context2D {
         this._currentPath = new Path2D();
         
         // Stencil-based clipping system (only clipping mechanism)
-        this._clipMask = null;  // Uint8Array with 1 bit per pixel for clipping
+        this._clipMask = null;  // ClipMask instance for 1-bit per pixel clipping
     }
 
     // State management
     save() {
-    // Deep copy clipMask if it exists
-    let clipMaskCopy = null;
-    if (this._clipMask) {
-        clipMaskCopy = new Uint8Array(this._clipMask);
-    }
-    
-    this.stateStack.push({
-        globalAlpha: this.globalAlpha,
-        globalCompositeOperation: this.globalCompositeOperation,
-        transform: new Matrix([this._transform.a, this._transform.b, this._transform.c, 
-                              this._transform.d, this._transform.e, this._transform.f]),
-        fillStyle: this._fillStyle.slice(),
-        strokeStyle: this._strokeStyle.slice(),
-        clipMask: clipMaskCopy,   // Deep copy of stencil buffer
-        lineWidth: this.lineWidth,
-        lineJoin: this.lineJoin,
-        lineCap: this.lineCap,
-        miterLimit: this.miterLimit
-    });
+        // Deep copy clipMask if it exists
+        let clipMaskCopy = null;
+        if (this._clipMask) {
+            clipMaskCopy = this._clipMask.clone();
+        }
+        
+        this.stateStack.push({
+            globalAlpha: this.globalAlpha,
+            globalCompositeOperation: this.globalCompositeOperation,
+            transform: new Transform2D([this._transform.a, this._transform.b, this._transform.c, 
+                                  this._transform.d, this._transform.e, this._transform.f]),
+            fillStyle: this._fillStyle.slice(),
+            strokeStyle: this._strokeStyle.slice(),
+            clipMask: clipMaskCopy,   // Deep copy of clip mask
+            lineWidth: this.lineWidth,
+            lineJoin: this.lineJoin,
+            lineCap: this.lineCap,
+            miterLimit: this.miterLimit
+        });
     }
 
     restore() {
@@ -169,29 +90,29 @@ class Context2D {
 
     // Transform methods
     transform(a, b, c, d, e, f) {
-    const m = new Matrix([a, b, c, d, e, f]);
+    const m = new Transform2D([a, b, c, d, e, f]);
     this._transform = m.multiply(this._transform);
     }
 
     setTransform(a, b, c, d, e, f) {
-    this._transform = new Matrix([a, b, c, d, e, f]);
+    this._transform = new Transform2D([a, b, c, d, e, f]);
     }
 
     resetTransform() {
-    this._transform = new Matrix();
+    this._transform = new Transform2D();
     }
 
     // Convenience transform methods
     translate(x, y) {
-    this._transform = new Matrix().translate(x, y).multiply(this._transform);
+    this._transform = new Transform2D().translate(x, y).multiply(this._transform);
     }
 
     scale(sx, sy) {
-    this._transform = new Matrix().scale(sx, sy).multiply(this._transform);
+    this._transform = new Transform2D().scale(sx, sy).multiply(this._transform);
     }
 
     rotate(angleInRadians) {
-    this._transform = new Matrix().rotate(angleInRadians).multiply(this._transform);
+    this._transform = new Transform2D().rotate(angleInRadians).multiply(this._transform);
     }
 
     // Style setters (simplified for M1)
@@ -367,41 +288,39 @@ class Context2D {
  * @param {string} rule - Fill rule: 'nonzero' (default) or 'evenodd'
  */
     clip(path, rule) {
-    // If no path provided, use current internal path
-    const pathToClip = path || this._currentPath;
-    const clipRule = rule || 'nonzero';
-    
-    // Create temporary clip buffer to render this clip path
-    const tempClipBuffer = createClipMask(this.surface.width, this.surface.height);
-    clearMask(tempClipBuffer); // Start with all 0s (all clipped)
-    
-    // Create clip pixel writer that writes to the temporary buffer
-    const clipPixelWriter = createClipPixelWriter(tempClipBuffer, this.surface.width, this.surface.height);
-    
-    // Render the clip path to the temporary buffer using fill logic
-    // We need to temporarily set up a "fake" rendering operation
-    const originalFillStyle = this._fillStyle;
-    this._fillStyle = [255, 255, 255, 255]; // White (doesn't matter for clipping)
-    
-    // Flatten path and fill to temporary clip buffer
-    const polygons = PathFlattener.flattenPath(pathToClip);
-    
-    // Use a modified version of fillPolygons that writes to our clip buffer
-    this._fillPolygonsToClipBuffer(polygons, clipRule, tempClipBuffer);
-    
-    // Restore original fill style
-    this._fillStyle = originalFillStyle;
-    
-    // Intersect with existing clip mask (if any)
-    if (this._clipMask) {
-        // AND operation: existing mask & new mask
-        for (let i = 0; i < tempClipBuffer.length; i++) {
-            this._clipMask[i] &= tempClipBuffer[i];
+        // If no path provided, use current internal path
+        const pathToClip = path || this._currentPath;
+        const clipRule = rule || 'nonzero';
+        
+        // Create temporary clip mask to render this clip path
+        const tempClipMask = new ClipMask(this.surface.width, this.surface.height);
+        tempClipMask.clipAll(); // Start with all pixels clipped
+        
+        // Create clip pixel writer that writes to the temporary buffer
+        const clipPixelWriter = tempClipMask.createPixelWriter();
+        
+        // Render the clip path to the temporary buffer using fill logic
+        // We need to temporarily set up a "fake" rendering operation
+        const originalFillStyle = this._fillStyle;
+        this._fillStyle = [255, 255, 255, 255]; // White (doesn't matter for clipping)
+        
+        // Flatten path and fill to temporary clip buffer
+        const polygons = PathFlattener.flattenPath(pathToClip);
+        
+        // Use a modified version of fillPolygons that writes to our clip buffer
+        this._fillPolygonsToClipBuffer(polygons, clipRule, tempClipMask);
+        
+        // Restore original fill style
+        this._fillStyle = originalFillStyle;
+        
+        // Intersect with existing clip mask (if any)
+        if (this._clipMask) {
+            // AND operation: existing mask & new mask
+            this._clipMask.intersectWith(tempClipMask);
+        } else {
+            // First clip - use the temporary buffer as the new clip mask
+            this._clipMask = tempClipMask;
         }
-    } else {
-        // First clip - use the temporary buffer as the new clip mask
-        this._clipMask = tempClipBuffer;
-    }
     }
 
     // Helper method to fill polygons directly to a clip buffer
@@ -473,37 +392,36 @@ class Context2D {
 
     // Helper method to fill clip spans (writes to clip buffer instead of surface)
     _fillClipSpans(y, intersections, fillRule, clipBuffer) {
-    if (intersections.length === 0) return;
-    
-    let windingNumber = 0;
-    let inside = false;
-    
-    for (let i = 0; i < intersections.length; i++) {
-        const intersection = intersections[i];
-        const nextIntersection = intersections[i + 1];
+        if (intersections.length === 0) return;
         
-        // Update winding number
-        windingNumber += intersection.winding;
+        let windingNumber = 0;
+        let inside = false;
         
-        // Determine if we're inside based on fill rule
-        const wasInside = inside;
-        if (fillRule === 'evenodd') {
-            inside = (windingNumber % 2) !== 0;
-        } else { // nonzero
-            inside = windingNumber !== 0;
-        }
-        
-        // Fill span if we're inside
-        if (inside && nextIntersection) {
-            const startX = Math.max(0, Math.ceil(intersection.x));
-            const endX = Math.min(this.surface.width - 1, Math.floor(nextIntersection.x));
+        for (let i = 0; i < intersections.length; i++) {
+            const intersection = intersections[i];
+            const nextIntersection = intersections[i + 1];
             
-            for (let x = startX; x <= endX; x++) {
-                const pixelIndex = y * this.surface.width + x;
-                setBit(clipBuffer, pixelIndex, 1); // Set bit to 1 (inside clip region)
+            // Update winding number
+            windingNumber += intersection.winding;
+            
+            // Determine if we're inside based on fill rule
+            const wasInside = inside;
+            if (fillRule === 'evenodd') {
+                inside = (windingNumber % 2) !== 0;
+            } else { // nonzero
+                inside = windingNumber !== 0;
+            }
+            
+            // Fill span if we're inside
+            if (inside && nextIntersection) {
+                const startX = Math.max(0, Math.ceil(intersection.x));
+                const endX = Math.min(this.surface.width - 1, Math.floor(nextIntersection.x));
+                
+                for (let x = startX; x <= endX; x++) {
+                    clipBuffer.setPixel(x, y, true); // Set pixel to visible (inside clip region)
+                }
             }
         }
-    }
     }
 
     // Image rendering
@@ -525,7 +443,7 @@ class Context2D {
     this.rasterizer.beginOp({
         composite: this.globalCompositeOperation,
         globalAlpha: this.globalAlpha,
-        transform: new Matrix([
+        transform: new Transform2D([
             this._transform.a, this._transform.b,
             this._transform.c, this._transform.d, 
             this._transform.e, this._transform.f

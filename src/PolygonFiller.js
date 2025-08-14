@@ -17,7 +17,7 @@ class PolygonFiller {
      * @param {Array} polygons - Array of polygons (each polygon is array of {x,y} points)  
      * @param {Color} color - Color to fill with
      * @param {string} fillRule - 'nonzero' or 'evenodd' winding rule
-     * @param {Matrix} transform - Transformation matrix to apply to polygons
+     * @param {Transform2D} transform - Transformation matrix to apply to polygons
      * @param {Uint8Array|null} clipMask - Optional 1-bit stencil buffer for clipping
      */
     static fillPolygons(surface, polygons, color, fillRule, transform, clipMask) {
@@ -130,7 +130,7 @@ class PolygonFiller {
      * @param {Array} intersections - Sorted intersections with winding info
      * @param {Color} color - Fill color
      * @param {string} fillRule - 'evenodd' or 'nonzero'
-     * @param {Uint8Array|null} clipMask - Stencil clipping mask
+     * @param {ClipMask|null} clipMask - Stencil clipping mask
      * @private
      */
     static _fillSpans(surface, y, intersections, color, fillRule, clipMask) {
@@ -172,13 +172,13 @@ class PolygonFiller {
      * @param {number} startX - Start X coordinate (inclusive)
      * @param {number} endX - End X coordinate (inclusive)
      * @param {Color} color - Fill color (with alpha)
-     * @param {Uint8Array|null} clipMask - Stencil clipping mask
+     * @param {ClipMask|null} clipMask - Stencil clipping mask
      * @private
      */
     static _fillPixelSpan(surface, y, startX, endX, color, clipMask) {
         for (let x = startX; x <= endX; x++) {
             // Check stencil buffer clipping
-            if (PolygonFiller._isPixelClipped(clipMask, x, y, surface.width)) {
+            if (clipMask && clipMask.isPixelClipped(x, y)) {
                 continue; // Skip pixels clipped by stencil buffer
             }
             
@@ -187,24 +187,6 @@ class PolygonFiller {
         }
     }
     
-    /**
-     * Check if a pixel is clipped by the stencil buffer
-     * @param {Uint8Array|null} clipMask - 1-bit stencil buffer
-     * @param {number} x - Pixel x coordinate
-     * @param {number} y - Pixel y coordinate  
-     * @param {number} width - Surface width for indexing
-     * @returns {boolean} True if pixel should be clipped
-     * @private
-     */
-    static _isPixelClipped(clipMask, x, y, width) {
-        if (!clipMask) return false; // No clipping active
-        
-        const pixelIndex = y * width + x;
-        const byteIndex = Math.floor(pixelIndex / 8);
-        const bitIndex = pixelIndex % 8;
-        
-        return (clipMask[byteIndex] & (1 << bitIndex)) === 0; // 0 means clipped out
-    }
     
     /**
      * Blend a color into a surface pixel using proper alpha compositing

@@ -79,8 +79,8 @@ class Rasterizer {
             throw new Error('Invalid composite operation. Supported: source-over, copy');
         }
         
-        if (params.transform && !(params.transform instanceof Transform2D) && !(params.transform instanceof Matrix)) {
-            throw new Error('transform must be a Transform2D or Matrix instance');
+        if (params.transform && !(params.transform instanceof Transform2D)) {
+            throw new Error('transform must be a Transform2D instance');
         }
     }
 
@@ -103,8 +103,7 @@ class Rasterizer {
      */
     _isPixelClipped(x, y) {
         if (!this._currentOp?.clipMask) return false; // No clipping active
-        const pixelIndex = y * this._surface.width + x;
-        return Rasterizer._getBit(this._currentOp.clipMask, pixelIndex) === 0; // 0 means clipped out
+        return this._currentOp.clipMask.isPixelClipped(x, y);
     }
 
     /**
@@ -431,13 +430,4 @@ class Rasterizer {
         }
     }
 
-    /**
-     * Static helper method to get bit from clip mask
-     * @param {Uint8Array} buffer - Stencil buffer
-     * @param {number} pixelIndex - Pixel index
-     * @returns {number} Bit value (0 or 1)
-     */
-    static _getBit(buffer, pixelIndex) {
-        return ClipMaskHelper.getBit(buffer, pixelIndex);
-    }
 }
