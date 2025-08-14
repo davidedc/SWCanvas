@@ -40,23 +40,6 @@ class Color {
         }
     }
     
-    /**
-     * Create Color from non-premultiplied RGBA array
-     * @param {number[]} rgba - [r, g, b, a] array (0-255 each)
-     * @returns {Color} New Color instance
-     */
-    static fromRGBA(rgba) {
-        return new Color(rgba[0], rgba[1], rgba[2], rgba[3], false);
-    }
-    
-    /**
-     * Create Color from premultiplied RGBA array
-     * @param {number[]} rgba - [r, g, b, a] array (0-255 each, RGB premultiplied)
-     * @returns {Color} New Color instance
-     */
-    static fromPremultipliedRGBA(rgba) {
-        return new Color(rgba[0], rgba[1], rgba[2], rgba[3], true);
-    }
     
     /**
      * Create transparent black color
@@ -66,21 +49,6 @@ class Color {
         return new Color(0, 0, 0, 0);
     }
     
-    /**
-     * Create opaque black color
-     * @returns {Color} Black color
-     */
-    static black() {
-        return new Color(0, 0, 0, 255);
-    }
-    
-    /**
-     * Create opaque white color
-     * @returns {Color} White color
-     */
-    static white() {
-        return new Color(255, 255, 255, 255);
-    }
     
     // Getters for premultiplied components (internal storage format)
     get premultipliedR() { return this._r; }
@@ -276,30 +244,6 @@ class Point {
         return new Point(obj.x, obj.y);
     }
     
-    /**
-     * Create origin point (0, 0)
-     * @returns {Point} Origin point
-     */
-    static origin() {
-        return new Point(0, 0);
-    }
-    
-    /**
-     * Create array of points from coordinate array
-     * @param {number[]} coords - Array of alternating x,y coordinates
-     * @returns {Point[]} Array of Point instances
-     */
-    static fromArray(coords) {
-        if (!Array.isArray(coords) || coords.length % 2 !== 0) {
-            throw new Error('Coordinates array must have even length');
-        }
-        
-        const points = [];
-        for (let i = 0; i < coords.length; i += 2) {
-            points.push(new Point(coords[i], coords[i + 1]));
-        }
-        return points;
-    }
     
     /**
      * Calculate distance to another point
@@ -316,18 +260,6 @@ class Point {
         return Math.sqrt(dx * dx + dy * dy);
     }
     
-    /**
-     * Calculate Manhattan distance to another point
-     * @param {Point} other - Other point
-     * @returns {number} Manhattan distance
-     */
-    manhattanDistanceTo(other) {
-        if (!(other instanceof Point)) {
-            throw new Error('Argument must be a Point instance');
-        }
-        
-        return Math.abs(this._x - other._x) + Math.abs(this._y - other._y);
-    }
     
     /**
      * Add vector to this point (immutable)
@@ -632,47 +564,6 @@ class Rectangle {
     get bottom() { return this._y + this._height; }
     
     /**
-     * Create rectangle from two corner points
-     * @param {Point} topLeft - Top-left corner
-     * @param {Point} bottomRight - Bottom-right corner
-     * @returns {Rectangle} New Rectangle
-     */
-    static fromCorners(topLeft, bottomRight) {
-        if (!(topLeft instanceof Point) || !(bottomRight instanceof Point)) {
-            throw new Error('Arguments must be Point instances');
-        }
-        
-        const width = bottomRight.x - topLeft.x;
-        const height = bottomRight.y - topLeft.y;
-        
-        if (width < 0 || height < 0) {
-            throw new Error('Bottom-right corner must be below and to the right of top-left corner');
-        }
-        
-        return new Rectangle(topLeft.x, topLeft.y, width, height);
-    }
-    
-    /**
-     * Create rectangle from center point and dimensions
-     * @param {Point} center - Center point
-     * @param {number} width - Rectangle width
-     * @param {number} height - Rectangle height
-     * @returns {Rectangle} New Rectangle
-     */
-    static fromCenter(center, width, height) {
-        if (!(center instanceof Point)) {
-            throw new Error('Center must be a Point instance');
-        }
-        
-        return new Rectangle(
-            center.x - width / 2,
-            center.y - height / 2,
-            width,
-            height
-        );
-    }
-    
-    /**
      * Create rectangle that bounds a set of points
      * @param {Point[]} points - Array of points
      * @returns {Rectangle} Bounding rectangle
@@ -704,22 +595,6 @@ class Rectangle {
         }
         
         return new Rectangle(minX, minY, maxX - minX, maxY - minY);
-    }
-    
-    /**
-     * Create empty rectangle
-     * @returns {Rectangle} Empty rectangle at origin
-     */
-    static empty() {
-        return new Rectangle(0, 0, 0, 0);
-    }
-    
-    /**
-     * Create unit rectangle (0, 0, 1, 1)
-     * @returns {Rectangle} Unit rectangle
-     */
-    static unit() {
-        return new Rectangle(0, 0, 1, 1);
     }
     
     /**
@@ -763,267 +638,6 @@ class Rectangle {
      */
     get isSquare() {
         return this._width === this._height && this._width > 0;
-    }
-    
-    /**
-     * Check if point is inside rectangle
-     * @param {Point} point - Point to test
-     * @returns {boolean} True if point is inside
-     */
-    contains(point) {
-        if (!(point instanceof Point)) {
-            throw new Error('Argument must be a Point instance');
-        }
-        
-        return point.x >= this._x && point.x < this._x + this._width &&
-               point.y >= this._y && point.y < this._y + this._height;
-    }
-    
-    /**
-     * Check if point is inside rectangle (inclusive of edges)
-     * @param {Point} point - Point to test
-     * @returns {boolean} True if point is inside or on edge
-     */
-    containsInclusive(point) {
-        if (!(point instanceof Point)) {
-            throw new Error('Argument must be a Point instance');
-        }
-        
-        return point.x >= this._x && point.x <= this._x + this._width &&
-               point.y >= this._y && point.y <= this._y + this._height;
-    }
-    
-    /**
-     * Check if another rectangle is completely inside this rectangle
-     * @param {Rectangle} other - Rectangle to test
-     * @returns {boolean} True if other is completely inside
-     */
-    containsRectangle(other) {
-        if (!(other instanceof Rectangle)) {
-            throw new Error('Argument must be a Rectangle instance');
-        }
-        
-        return other._x >= this._x &&
-               other._y >= this._y &&
-               other._x + other._width <= this._x + this._width &&
-               other._y + other._height <= this._y + this._height;
-    }
-    
-    /**
-     * Check if this rectangle intersects with another
-     * @param {Rectangle} other - Other rectangle
-     * @returns {boolean} True if rectangles intersect
-     */
-    intersects(other) {
-        if (!(other instanceof Rectangle)) {
-            throw new Error('Argument must be a Rectangle instance');
-        }
-        
-        return !(other._x >= this._x + this._width ||
-                other._x + other._width <= this._x ||
-                other._y >= this._y + this._height ||
-                other._y + other._height <= this._y);
-    }
-    
-    /**
-     * Calculate intersection with another rectangle (immutable)
-     * @param {Rectangle} other - Other rectangle
-     * @returns {Rectangle|null} Intersection rectangle or null if no intersection
-     */
-    intersection(other) {
-        if (!(other instanceof Rectangle)) {
-            throw new Error('Argument must be a Rectangle instance');
-        }
-        
-        const left = Math.max(this._x, other._x);
-        const top = Math.max(this._y, other._y);
-        const right = Math.min(this._x + this._width, other._x + other._width);
-        const bottom = Math.min(this._y + this._height, other._y + other._height);
-        
-        if (left >= right || top >= bottom) {
-            return null; // No intersection
-        }
-        
-        return new Rectangle(left, top, right - left, bottom - top);
-    }
-    
-    /**
-     * Calculate union with another rectangle (immutable)
-     * @param {Rectangle} other - Other rectangle
-     * @returns {Rectangle} Union rectangle
-     */
-    union(other) {
-        if (!(other instanceof Rectangle)) {
-            throw new Error('Argument must be a Rectangle instance');
-        }
-        
-        const left = Math.min(this._x, other._x);
-        const top = Math.min(this._y, other._y);
-        const right = Math.max(this._x + this._width, other._x + other._width);
-        const bottom = Math.max(this._y + this._height, other._y + other._height);
-        
-        return new Rectangle(left, top, right - left, bottom - top);
-    }
-    
-    /**
-     * Translate rectangle by offset (immutable)
-     * @param {number} dx - X offset
-     * @param {number} dy - Y offset
-     * @returns {Rectangle} New translated rectangle
-     */
-    translate(dx, dy) {
-        if (typeof dx !== 'number' || typeof dy !== 'number') {
-            throw new Error('Translation offsets must be numbers');
-        }
-        
-        return new Rectangle(this._x + dx, this._y + dy, this._width, this._height);
-    }
-    
-    /**
-     * Translate rectangle by point (immutable)
-     * @param {Point} offset - Translation offset
-     * @returns {Rectangle} New translated rectangle
-     */
-    translateBy(offset) {
-        if (!(offset instanceof Point)) {
-            throw new Error('Offset must be a Point instance');
-        }
-        
-        return this.translate(offset.x, offset.y);
-    }
-    
-    /**
-     * Scale rectangle by factors (immutable)
-     * @param {number} sx - X scale factor
-     * @param {number} sy - Y scale factor
-     * @returns {Rectangle} New scaled rectangle
-     */
-    scale(sx, sy = sx) {
-        if (typeof sx !== 'number' || typeof sy !== 'number') {
-            throw new Error('Scale factors must be numbers');
-        }
-        
-        return new Rectangle(
-            this._x * sx,
-            this._y * sy,
-            this._width * sx,
-            this._height * sy
-        );
-    }
-    
-    /**
-     * Expand rectangle by margin (immutable)
-     * @param {number} margin - Margin to add on all sides
-     * @returns {Rectangle} New expanded rectangle
-     */
-    expand(margin) {
-        if (typeof margin !== 'number') {
-            throw new Error('Margin must be a number');
-        }
-        
-        return new Rectangle(
-            this._x - margin,
-            this._y - margin,
-            this._width + 2 * margin,
-            this._height + 2 * margin
-        );
-    }
-    
-    /**
-     * Expand rectangle by different margins on each side (immutable)
-     * @param {number} left - Left margin
-     * @param {number} top - Top margin
-     * @param {number} right - Right margin
-     * @param {number} bottom - Bottom margin
-     * @returns {Rectangle} New expanded rectangle
-     */
-    expandBy(left, top, right, bottom) {
-        return new Rectangle(
-            this._x - left,
-            this._y - top,
-            this._width + left + right,
-            this._height + top + bottom
-        );
-    }
-    
-    /**
-     * Clamp rectangle to fit within bounds (immutable)
-     * @param {Rectangle} bounds - Bounding rectangle
-     * @returns {Rectangle} New clamped rectangle
-     */
-    clamp(bounds) {
-        if (!(bounds instanceof Rectangle)) {
-            throw new Error('Bounds must be a Rectangle instance');
-        }
-        
-        const left = Math.max(this._x, bounds._x);
-        const top = Math.max(this._y, bounds._y);
-        const right = Math.min(this._x + this._width, bounds._x + bounds._width);
-        const bottom = Math.min(this._y + this._height, bounds._y + bounds._height);
-        
-        return new Rectangle(
-            left,
-            top,
-            Math.max(0, right - left),
-            Math.max(0, bottom - top)
-        );
-    }
-    
-    /**
-     * Get corner points
-     * @returns {Object} {topLeft, topRight, bottomLeft, bottomRight}
-     */
-    get corners() {
-        return {
-            topLeft: new Point(this._x, this._y),
-            topRight: new Point(this._x + this._width, this._y),
-            bottomLeft: new Point(this._x, this._y + this._height),
-            bottomRight: new Point(this._x + this._width, this._y + this._height)
-        };
-    }
-    
-    /**
-     * Get all four corner points as array
-     * @returns {Point[]} Array of corner points
-     */
-    getCornerPoints() {
-        const c = this.corners;
-        return [c.topLeft, c.topRight, c.bottomRight, c.bottomLeft];
-    }
-    
-    /**
-     * Convert to object
-     * @returns {Object} {x, y, width, height} object
-     */
-    toObject() {
-        return {
-            x: this._x,
-            y: this._y,
-            width: this._width,
-            height: this._height
-        };
-    }
-    
-    /**
-     * Convert to array
-     * @returns {number[]} [x, y, width, height] array
-     */
-    toArray() {
-        return [this._x, this._y, this._width, this._height];
-    }
-    
-    /**
-     * Check equality with another rectangle
-     * @param {Rectangle} other - Other rectangle
-     * @param {number} tolerance - Tolerance for floating point comparison
-     * @returns {boolean} True if rectangles are equal within tolerance
-     */
-    equals(other, tolerance = 1e-10) {
-        return other instanceof Rectangle &&
-               Math.abs(this._x - other._x) < tolerance &&
-               Math.abs(this._y - other._y) < tolerance &&
-               Math.abs(this._width - other._width) < tolerance &&
-               Math.abs(this._height - other._height) < tolerance;
     }
     
     /**
@@ -1078,13 +692,6 @@ class Transform2D {
         Object.freeze(this);
     }
 
-    /**
-     * Create identity transform
-     * @returns {Transform2D} Identity transformation
-     */
-    static identity() {
-        return new Transform2D();
-    }
     
     /**
      * Create translation transform
@@ -3649,369 +3256,6 @@ class ImageProcessor {
     }
 }
 /**
- * DrawingState class for SWCanvas
- * 
- * Encapsulates drawing state management with save/restore stack functionality.
- * Extracted from Context2D to follow Single Responsibility Principle and
- * improve testability of state management logic.
- * 
- * Following Joshua Bloch's principles:
- * - Small, focused class with clear responsibility
- * - Immutable state snapshots
- * - Fail-fast validation
- */
-class DrawingState {
-    /**
-     * Create a DrawingState manager
-     * @param {number} surfaceWidth - Surface width for stencil buffer sizing
-     * @param {number} surfaceHeight - Surface height for stencil buffer sizing
-     */
-    constructor(surfaceWidth, surfaceHeight) {
-        this._surfaceWidth = surfaceWidth;
-        this._surfaceHeight = surfaceHeight;
-        
-        // State stack for save/restore
-        this._stateStack = [];
-        
-        // Current state (mutable)
-        this._currentState = this._createDefaultState();
-    }
-    
-    /**
-     * Create default drawing state
-     * @returns {Object} Default state object
-     * @private
-     */
-    _createDefaultState() {
-        return {
-            globalAlpha: 1.0,
-            globalCompositeOperation: 'source-over',
-            transform: new Transform2D(),
-            fillStyle: new Color(0, 0, 0, 255), // Black
-            strokeStyle: new Color(0, 0, 0, 255), // Black
-            lineWidth: 1.0,
-            lineJoin: 'miter',
-            lineCap: 'butt',
-            miterLimit: 10.0,
-            clipMask: null // Lazy-allocated
-        };
-    }
-    
-    // Getters for current state
-    get globalAlpha() { return this._currentState.globalAlpha; }
-    get globalCompositeOperation() { return this._currentState.globalCompositeOperation; }
-    get transform() { return this._currentState.transform; }
-    get fillStyle() { return this._currentState.fillStyle; }
-    get strokeStyle() { return this._currentState.strokeStyle; }
-    get lineWidth() { return this._currentState.lineWidth; }
-    get lineJoin() { return this._currentState.lineJoin; }
-    get lineCap() { return this._currentState.lineCap; }
-    get miterLimit() { return this._currentState.miterLimit; }
-    get clipMask() { return this._currentState.clipMask; }
-    
-    // Setters with validation
-    set globalAlpha(value) {
-        if (typeof value !== 'number' || value < 0 || value > 1) {
-            throw new Error('globalAlpha must be a number between 0 and 1');
-        }
-        this._currentState.globalAlpha = value;
-    }
-    
-    set globalCompositeOperation(value) {
-        const validModes = ['source-over', 'copy'];
-        if (!validModes.includes(value)) {
-            throw new Error(`Invalid composite operation: ${value}. Valid values: ${validModes.join(', ')}`);
-        }
-        this._currentState.globalCompositeOperation = value;
-    }
-    
-    set transform(value) {
-        if (!(value instanceof Transform2D)) {
-            throw new Error('transform must be a Transform2D instance');
-        }
-        this._currentState.transform = value;
-    }
-    
-    set fillStyle(value) {
-        if (!(value instanceof Color)) {
-            throw new Error('fillStyle must be a Color instance');
-        }
-        this._currentState.fillStyle = value;
-    }
-    
-    set strokeStyle(value) {
-        if (!(value instanceof Color)) {
-            throw new Error('strokeStyle must be a Color instance');
-        }
-        this._currentState.strokeStyle = value;
-    }
-    
-    set lineWidth(value) {
-        if (typeof value !== 'number' || value <= 0) {
-            throw new Error('lineWidth must be a positive number');
-        }
-        this._currentState.lineWidth = value;
-    }
-    
-    set lineJoin(value) {
-        const validJoins = ['miter', 'round', 'bevel'];
-        if (!validJoins.includes(value)) {
-            throw new Error(`Invalid line join: ${value}. Valid values: ${validJoins.join(', ')}`);
-        }
-        this._currentState.lineJoin = value;
-    }
-    
-    set lineCap(value) {
-        const validCaps = ['butt', 'round', 'square'];
-        if (!validCaps.includes(value)) {
-            throw new Error(`Invalid line cap: ${value}. Valid values: ${validCaps.join(', ')}`);
-        }
-        this._currentState.lineCap = value;
-    }
-    
-    set miterLimit(value) {
-        if (typeof value !== 'number' || value <= 0) {
-            throw new Error('miterLimit must be a positive number');
-        }
-        this._currentState.miterLimit = value;
-    }
-    
-    /**
-     * Save current state to stack
-     * Creates immutable snapshot of current state
-     */
-    save() {
-        // Create deep copy of current state
-        const snapshot = {
-            globalAlpha: this._currentState.globalAlpha,
-            globalCompositeOperation: this._currentState.globalCompositeOperation,
-            transform: new Transform2D([
-                this._currentState.transform.a, this._currentState.transform.b,
-                this._currentState.transform.c, this._currentState.transform.d,
-                this._currentState.transform.e, this._currentState.transform.f
-            ]),
-            fillStyle: this._currentState.fillStyle, // Color is immutable
-            strokeStyle: this._currentState.strokeStyle, // Color is immutable
-            lineWidth: this._currentState.lineWidth,
-            lineJoin: this._currentState.lineJoin,
-            lineCap: this._currentState.lineCap,
-            miterLimit: this._currentState.miterLimit,
-            clipMask: this._currentState.clipMask ? 
-                     this._currentState.clipMask.clone() : null
-        };
-        
-        this._stateStack.push(snapshot);
-    }
-    
-    /**
-     * Restore state from stack
-     * @returns {boolean} True if state was restored, false if stack was empty
-     */
-    restore() {
-        if (this._stateStack.length === 0) {
-            return false;
-        }
-        
-        this._currentState = this._stateStack.pop();
-        return true;
-    }
-    
-    /**
-     * Get current stack depth (for debugging)
-     * @returns {number} Number of saved states
-     */
-    get stackDepth() {
-        return this._stateStack.length;
-    }
-    
-    /**
-     * Transform operations (convenience methods that update current transform)
-     */
-    
-    /**
-     * Apply transform matrix to current transform
-     * @param {number} a - Transform2D a component
-     * @param {number} b - Transform2D b component
-     * @param {number} c - Transform2D c component
-     * @param {number} d - Transform2D d component
-     * @param {number} e - Transform2D e component
-     * @param {number} f - Transform2D f component
-     */
-    transform(a, b, c, d, e, f) {
-        const m = new Transform2D([a, b, c, d, e, f]);
-        this._currentState.transform = m.multiply(this._currentState.transform);
-    }
-    
-    /**
-     * Set transform matrix (replaces current transform)
-     * @param {number} a - Transform2D a component
-     * @param {number} b - Transform2D b component
-     * @param {number} c - Transform2D c component
-     * @param {number} d - Transform2D d component
-     * @param {number} e - Transform2D e component
-     * @param {number} f - Transform2D f component
-     */
-    setTransform(a, b, c, d, e, f) {
-        this._currentState.transform = new Transform2D([a, b, c, d, e, f]);
-    }
-    
-    /**
-     * Reset transform to identity matrix
-     */
-    resetTransform() {
-        this._currentState.transform = new Transform2D();
-    }
-    
-    /**
-     * Translate coordinate system
-     * @param {number} x - X offset
-     * @param {number} y - Y offset
-     */
-    translate(x, y) {
-        this._currentState.transform = new Transform2D().translate(x, y).multiply(this._currentState.transform);
-    }
-    
-    /**
-     * Scale coordinate system
-     * @param {number} sx - X scale factor
-     * @param {number} sy - Y scale factor
-     */
-    scale(sx, sy) {
-        this._currentState.transform = new Transform2D().scale(sx, sy).multiply(this._currentState.transform);
-    }
-    
-    /**
-     * Rotate coordinate system
-     * @param {number} angleInRadians - Rotation angle in radians
-     */
-    rotate(angleInRadians) {
-        this._currentState.transform = new Transform2D().rotate(angleInRadians).multiply(this._currentState.transform);
-    }
-    
-    /**
-     * Color style management with type safety
-     */
-    
-    /**
-     * Set fill style from RGBA values
-     * @param {number} r - Red (0-255)
-     * @param {number} g - Green (0-255)
-     * @param {number} b - Blue (0-255)
-     * @param {number} a - Alpha (0-255)
-     */
-    setFillStyleRGBA(r, g, b, a = 255) {
-        this._currentState.fillStyle = new Color(r, g, b, a);
-    }
-    
-    /**
-     * Set stroke style from RGBA values
-     * @param {number} r - Red (0-255)
-     * @param {number} g - Green (0-255)
-     * @param {number} b - Blue (0-255)
-     * @param {number} a - Alpha (0-255)
-     */
-    setStrokeStyleRGBA(r, g, b, a = 255) {
-        this._currentState.strokeStyle = new Color(r, g, b, a);
-    }
-    
-    /**
-     * Clipping management
-     */
-    
-    /**
-     * Apply a clipping path
-     * @param {Path2D} path - Path to clip with
-     * @param {string} fillRule - Fill rule ('nonzero' or 'evenodd')
-     */
-    applyClip(path, fillRule = 'nonzero') {
-        // Lazy-allocate clip mask
-        if (!this._currentState.clipMask) {
-            this._currentState.clipMask = new ClipMask(
-                this._surfaceWidth, 
-                this._surfaceHeight
-            );
-        }
-        
-        // Note: applyClip method needs to be implemented in ClipMask or handled differently
-        // For now, this will need to be refactored to use the path rendering approach
-        // from Context2D's clip() method
-        throw new Error('DrawingState clipping needs to be refactored to use ClipMask');
-    }
-    
-    /**
-     * Check if a pixel is clipped
-     * @param {number} x - Pixel x coordinate
-     * @param {number} y - Pixel y coordinate
-     * @returns {boolean} True if pixel is clipped
-     */
-    isPixelClipped(x, y) {
-        if (!this._currentState.clipMask) {
-            return false; // No clipping active
-        }
-        return this._currentState.clipMask.isPixelClipped(x, y);
-    }
-    
-    /**
-     * Get current effective fill color with global alpha applied
-     * @returns {Color} Fill color with global alpha
-     */
-    getEffectiveFillColor() {
-        return this._currentState.fillStyle.withGlobalAlpha(this._currentState.globalAlpha);
-    }
-    
-    /**
-     * Get current effective stroke color with global alpha applied
-     * @returns {Color} Stroke color with global alpha
-     */
-    getEffectiveStrokeColor() {
-        return this._currentState.strokeStyle.withGlobalAlpha(this._currentState.globalAlpha);
-    }
-    
-    /**
-     * Get stroke properties object for stroke generator
-     * @returns {Object} Stroke properties
-     */
-    getStrokeProperties() {
-        return {
-            lineWidth: this._currentState.lineWidth,
-            lineJoin: this._currentState.lineJoin,
-            lineCap: this._currentState.lineCap,
-            miterLimit: this._currentState.miterLimit
-        };
-    }
-    
-    /**
-     * Get rasterizer parameters for current state
-     * @returns {Object} Parameters for Rasterizer.beginOp()
-     */
-    getRasterizerParams() {
-        return {
-            composite: this._currentState.globalCompositeOperation,
-            globalAlpha: this._currentState.globalAlpha,
-            transform: this._currentState.transform,
-            clipMask: this._currentState.clipMask
-        };
-    }
-    
-    /**
-     * Reset all state to defaults (useful for testing)
-     */
-    reset() {
-        this._stateStack = [];
-        this._currentState = this._createDefaultState();
-    }
-    
-    /**
-     * String representation for debugging
-     * @returns {string} State description
-     */
-    toString() {
-        const clipInfo = this._currentState.clipMask ? 
-                        this._currentState.clipMask.toString() : 'no clipping';
-        return `DrawingState(alpha=${this._currentState.globalAlpha}, stack=${this._stateStack.length}, ${clipInfo})`;
-    }
-}
-/**
  * Rasterizer class for SWCanvas
  * 
  * Handles low-level pixel operations and rendering pipeline.
@@ -4929,7 +4173,7 @@ class Context2D {
             this._transform.c, this._transform.d, 
             this._transform.e, this._transform.f
         ]),
-        clipMask: this.clipMask
+        clipMask: this._clipMask
     });
     
     // Delegate to rasterizer
@@ -4975,7 +4219,6 @@ if (typeof window !== 'undefined') {
         
         // Internal classes (exposed for extensibility)
         Rasterizer: Rasterizer,
-        DrawingState: DrawingState,
         PathFlattener: PathFlattener,
         PolygonFiller: PolygonFiller,
         StrokeGenerator: StrokeGenerator
@@ -5001,7 +4244,6 @@ if (typeof window !== 'undefined') {
         
         // Internal classes (exposed for extensibility)
         Rasterizer: Rasterizer,
-        DrawingState: DrawingState,
         PathFlattener: PathFlattener,
         PolygonFiller: PolygonFiller,
         StrokeGenerator: StrokeGenerator
