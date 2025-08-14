@@ -264,13 +264,24 @@ class Rasterizer {
         const colorData = this._currentOp.strokeStyle || [0, 0, 0, 255];
         const color = Array.isArray(colorData) ? 
             new Color(colorData[0], colorData[1], colorData[2], colorData[3]) : colorData;
-        const strokeColor = color.withGlobalAlpha(this._currentOp.globalAlpha);
+        let finalStrokeColor = color.withGlobalAlpha(this._currentOp.globalAlpha);
+        
+        // Sub-pixel stroke rendering: apply opacity adjustment for strokes < 1px
+        let adjustedStrokeProps = strokeProps;
+        if (strokeProps.lineWidth < 1.0 && strokeProps.lineWidth > 0) {
+            const subPixelOpacity = strokeProps.lineWidth; // 0.5px = 50% opacity
+            const adjustedAlpha = Math.round(finalStrokeColor.a * subPixelOpacity);
+            finalStrokeColor = new Color(finalStrokeColor.r, finalStrokeColor.g, finalStrokeColor.b, adjustedAlpha, finalStrokeColor.premultiplied);
+            
+            // Render sub-pixel strokes at minimum 1px width with adjusted opacity
+            adjustedStrokeProps = { ...strokeProps, lineWidth: 1.0 };
+        }
         
         // Generate stroke polygons using geometric approach
-        const strokePolygons = StrokeGenerator.generateStrokePolygons(path, strokeProps);
+        const strokePolygons = StrokeGenerator.generateStrokePolygons(path, adjustedStrokeProps);
         
         // Fill stroke polygons with current transform and stencil clipping
-        PolygonFiller.fillPolygons(this._surface, strokePolygons, strokeColor, 'nonzero', this._currentOp.transform, this._currentOp.clipMask);
+        PolygonFiller.fillPolygons(this._surface, strokePolygons, finalStrokeColor, 'nonzero', this._currentOp.transform, this._currentOp.clipMask);
     }
 
     /**
