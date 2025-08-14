@@ -9,9 +9,10 @@ This file provides Claude with essential context about the SWCanvas project for 
 ### Key Characteristics
 - **Deterministic**: Same input → same output on any platform
 - **Cross-platform**: Works identically in Node.js and browsers  
-- **Canvas-compatible**: Familiar HTML5 Canvas 2D API
+- **Canvas-compatible**: Familiar HTML5 Canvas 2D API with sub-pixel stroke support
 - **Memory efficient**: 1-bit stencil clipping, optimized algorithms
-- **Well-tested**: 31 shared tests + 52 visual tests with pixel-perfect validation
+- **Sub-pixel accurate**: Thin strokes render with proportional opacity (no anti-aliasing)
+- **Well-tested**: 31 shared tests + 56 visual tests with pixel-perfect validation
 
 ## Architecture (Object-Oriented Design)
 
@@ -65,6 +66,15 @@ src/DrawingState.js     # Context state stack management (ES6 class)
 - **Rectangle class**: Immutable rectangles with geometric operations (union, intersection, bounds checking)
 - Both classes follow value object pattern with proper equals() methods
 - Extensive mathematical operations for geometric computations
+
+#### Sub-pixel Stroke System
+- **Deterministic sub-pixel rendering**: Strokes thinner than 1px render with proportional opacity
+- **Zero-width stroke handling**: `lineWidth = 0` renders at full opacity (matches HTML5Canvas behavior)
+- **Opacity-based thinning**: 0.5px stroke = 1px stroke at 50% opacity (no anti-aliasing)
+- **Implementation location**: `Rasterizer.js:270-280` applies opacity adjustment before stroke generation
+- **Formula**: `subPixelOpacity = lineWidth === 0 ? 1.0 : lineWidth`
+- **Visual consistency**: Maintains deterministic pixel-perfect output across platforms
+- **Browser compatibility**: Matches modern HTML5Canvas behavior for edge cases
 
 ## Build & Test Commands
 
@@ -181,6 +191,19 @@ const premult = color.toPremultiplied();
 // Utility operations
 const clipMask = SWCanvas.ClipMaskHelper.createClipMask(400, 300);
 const imageData = SWCanvas.ImageProcessor.validateAndConvert(rgbImage);
+
+// Sub-pixel stroke rendering
+const ctx = new SWCanvas.Context2D(surface);
+ctx.setStrokeStyle(255, 0, 0, 255); // Red stroke
+ctx.lineWidth = 0.5;  // Renders as 1px stroke at 50% opacity
+ctx.beginPath();
+ctx.moveTo(10, 10);
+ctx.lineTo(100, 10);
+ctx.stroke();
+
+// Zero-width strokes (renders at full opacity for HTML5Canvas compatibility)
+ctx.lineWidth = 0;    // Renders as 1px stroke at 100% opacity
+ctx.stroke();
 ```
 
 ### Debugging Rendering Issues
@@ -321,7 +344,7 @@ These scripts are invaluable for:
 - **Static Utility Classes**: ClipMaskHelper, ImageProcessor, BitmapEncoder for stateless operations
 - **Proper Encapsulation**: Private fields, parameter validation, and clear public APIs
 - **Single Responsibility**: Each class has one focused purpose with clean boundaries
-- **Comprehensive Testing**: All 31 shared tests + 52 visual tests passing with pixel-perfect accuracy
+- **Comprehensive Testing**: All 31 shared tests + 56 visual tests passing with pixel-perfect accuracy
 
 ### Key Design Patterns Applied
 - **Value Object Pattern**: Point, Rectangle, Transform2D, Color are immutable with proper equals()
@@ -332,7 +355,7 @@ These scripts are invaluable for:
 - **Memory Efficiency**: 1-bit stencil clipping, immutable objects prevent accidental mutation
 
 ### Test Results Status
-- **Node.js**: All 31 shared tests passing, 52 visual BMPs generated successfully  
+- **Node.js**: All 31 shared tests passing, 56 visual BMPs generated successfully  
 - **Browser**: Proper SWCanvas global export, all classes available for use
 - **Cross-platform**: Identical behavior verified between Node.js and browser environments
 - **Deterministic**: Same input produces identical output across all platforms
