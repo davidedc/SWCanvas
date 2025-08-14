@@ -54,8 +54,8 @@ class StrokeGenerator {
         
         const validated = { ...defaults, ...props };
         
-        if (validated.lineWidth <= 0) {
-            throw new Error('lineWidth must be positive');
+        if (validated.lineWidth < 0) {
+            throw new Error('lineWidth must not be negative');
         }
         
         const validJoins = ['miter', 'round', 'bevel'];

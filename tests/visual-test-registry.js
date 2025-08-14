@@ -5996,18 +5996,13 @@
             helpers.setSWCanvasFill(ctx, 'white');
             ctx.fillRect(0, 0, 500, 300);
             
-            // Test 1: Zero-width stroke (should not render)
-            try {
-                helpers.setSWCanvasStroke(ctx, 'red');
-                ctx.lineWidth = 0;
-                ctx.beginPath();
-                ctx.moveTo(50, 50);
-                ctx.lineTo(150, 50);
-                ctx.stroke();
-            } catch (e) {
-                // SWCanvas throws error for zero-width strokes - this is expected behavior
-                console.log('SWCanvas correctly rejects zero-width strokes:', e.message);
-            }
+            // Test 1: Zero-width stroke (should render as very faint line to match HTML5Canvas)
+            helpers.setSWCanvasStroke(ctx, 'red');
+            ctx.lineWidth = 0;
+            ctx.beginPath();
+            ctx.moveTo(50, 50);
+            ctx.lineTo(150, 50);
+            ctx.stroke();
             
             // Test 2: Very thin strokes
             const thinWidths = [0.01, 0.1, 0.2, 0.3, 0.4];
