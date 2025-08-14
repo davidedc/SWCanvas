@@ -32,7 +32,6 @@ src/StrokeGenerator.js  # Geometric stroke path generation (static methods)
 src/BitmapEncoder.js    # BMP file format encoding (static methods)
 src/ClipMask.js         # 1-bit stencil buffer clipping implementation (ES6 class)
 src/ImageProcessor.js   # ImageLike validation and format conversion (static methods)
-src/DrawingState.js     # Context state stack management (ES6 class)
 ```
 
 ### Key Systems
@@ -137,8 +136,10 @@ node -e "console.log(require('./tests/shared-test-suite.js'))"
 
 ### Utility Classes
 - **SWCanvas.BitmapEncoder**: Static methods for BMP file encoding
-- **SWCanvas.ClipMask**: ES6 class for stencil buffer manipulation
+- **SWCanvas.ClipMask**: ES6 class for stencil buffer manipulation  
 - **SWCanvas.ImageProcessor**: Static methods for ImageLike validation and conversion
+
+*Note: Some advanced geometric utility methods have been removed for simplicity. Core functionality remains intact.*
 
 ### Legacy Aliases
 - **SWCanvas.Matrix**: Alias for Transform2D (backward compatibility)
@@ -172,8 +173,8 @@ visualTests['new-test-name'] = {
 // Create surface with enhanced validation
 const surface = SWCanvas.Surface(400, 300);
 
-// Use immutable Transform2D with factory methods
-const transform = SWCanvas.Transform2D.identity()
+// Use immutable Transform2D with constructor and method chaining
+const transform = new SWCanvas.Transform2D()
     .translate(100, 50)
     .scale(2, 2)
     .rotate(Math.PI / 4);
@@ -352,9 +353,9 @@ These scripts are invaluable for:
 - **Comprehensive Testing**: All 32 shared tests + 58 visual tests passing with pixel-perfect accuracy
 
 ### Key Design Patterns Applied
-- **Value Object Pattern**: Point, Rectangle, Transform2D, Color are immutable with proper equals()
-- **Factory Methods**: Transform2D.identity(), .translation(), .scaling(), .rotation()
-- **Static Utility Classes**: ClipMaskHelper, ImageProcessor for pure functions
+- **Value Object Pattern**: Point, Rectangle, Transform2D, Color are immutable
+- **Factory Methods**: Transform2D.translation(), .scaling(), .rotation() for common transforms
+- **Static Utility Classes**: BitmapEncoder, ImageProcessor for pure functions
 - **Composition over Inheritance**: Classes use other classes rather than extending
 - **Defensive Programming**: Comprehensive validation with descriptive error messages
 - **Memory Efficiency**: 1-bit stencil clipping, immutable objects prevent accidental mutation
@@ -383,7 +384,7 @@ These scripts are invaluable for:
 - **Use proper classes**: Prefer `new SWCanvas.Point(x, y)` over plain objects
 - **Leverage immutability**: Transform2D, Point, Rectangle, Color are immutable - use their methods
 - **Static utilities**: Use ClipMask class for bit operations, ImageProcessor for format conversion
-- **Factory methods**: Use Transform2D.identity(), .translation(), etc. for common transformations
+- **Factory methods**: Use Transform2D constructor and .translation(), .scaling(), .rotation() for common transformations
 - **Validation**: All classes validate input parameters with descriptive error messages
 - **Composition**: Classes work together rather than through inheritance hierarchies
 - **Encapsulation**: Use public APIs, private methods marked with underscore prefix
