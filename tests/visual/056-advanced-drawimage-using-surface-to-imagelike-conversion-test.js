@@ -1,7 +1,7 @@
-// Test 52: Advanced drawImage using surface-to-ImageLike conversion
+// Test 56: Advanced drawImage using surface-to-ImageLike conversion
 // This file will be concatenated into the main visual test suite
 
-// Test 52: Advanced drawImage using surface-to-ImageLike conversion
+// Test 56: Advanced drawImage using surface-to-ImageLike conversion
 registerVisualTest('drawimage-surface-conversion', {
     name: 'drawImage using surface-to-ImageLike conversion',
     width: 200, height: 150,

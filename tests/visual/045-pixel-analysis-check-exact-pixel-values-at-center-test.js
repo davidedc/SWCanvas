@@ -1,7 +1,7 @@
-// Test 42: Pixel Analysis - Check exact pixel values at center
+// Test 45: Pixel Analysis - Check exact pixel values at center
 // This file will be concatenated into the main visual test suite
 
-// Test 42: Pixel Analysis - Check exact pixel values at center
+// Test 45: Pixel Analysis - Check exact pixel values at center
 registerVisualTest('pixel-analysis', {
     name: 'Pixel Analysis Test',
     width: 200, height: 200,

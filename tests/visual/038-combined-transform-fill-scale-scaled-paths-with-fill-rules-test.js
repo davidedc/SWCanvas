@@ -1,7 +1,7 @@
-// Test 37: Combined Transform + Fill + Scale - Scaled paths with fill rules
+// Test 38: Combined Transform + Fill + Scale - Scaled paths with fill rules
 // This file will be concatenated into the main visual test suite
 
-// Test 37: Combined Transform + Fill + Scale - Scaled paths with fill rules
+// Test 38: Combined Transform + Fill + Scale - Scaled paths with fill rules
 registerVisualTest('combined-transform-fill-scale', {
     name: 'Scaled paths with fill rules',
     width: 400, height: 300,

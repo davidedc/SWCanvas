@@ -1,7 +1,7 @@
-// Test 49: RGB to RGBA conversion
+// Test 53: RGB to RGBA conversion
 // This file will be concatenated into the main visual test suite
 
-// Test 49: RGB to RGBA conversion
+// Test 53: RGB to RGBA conversion
 registerVisualTest('drawimage-rgb-conversion', {
     name: 'RGB to RGBA auto-conversion',
     width: 200, height: 150,

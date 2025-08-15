@@ -1,7 +1,7 @@
-// Test 43: Debug Star Path Generation - Isolated star path test
+// Test 47: Debug Star Path Generation - Isolated star path test
 // This file will be concatenated into the main visual test suite
 
-// Test 43: Debug Star Path Generation - Isolated star path test
+// Test 47: Debug Star Path Generation - Isolated star path test
 registerVisualTest('debug-star-path', {
     name: 'Debug Star Path Generation',
     width: 200, height: 200,

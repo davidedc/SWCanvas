@@ -1,7 +1,7 @@
-// Test 38: Combined Transform + Clip + Fill - Critical stencil buffer test
+// Test 39: Combined Transform + Clip + Fill - Critical stencil buffer test
 // This file will be concatenated into the main visual test suite
 
-// Test 38: Combined Transform + Clip + Fill - Critical stencil buffer test
+// Test 39: Combined Transform + Clip + Fill - Critical stencil buffer test
 registerVisualTest('combined-transform-clip-fill', {
     name: 'Transform + Clip + Fill',
     width: 400, height: 300,

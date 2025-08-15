@@ -1,7 +1,7 @@
-// Test 40: Debug Alpha Blending Issue - Multiple nested clips with varying alpha
+// Test 43: Debug Alpha Blending Issue - Multiple nested clips with varying alpha
 // This file will be concatenated into the main visual test suite
 
-// Test 40: Debug Alpha Blending Issue - Multiple nested clips with varying alpha
+// Test 43: Debug Alpha Blending Issue - Multiple nested clips with varying alpha
 registerVisualTest('debug-alpha-blending', {
     name: 'Debug Alpha Blending Issue',
     width: 200, height: 200,

@@ -1,7 +1,7 @@
-// Test 47: Basic drawImage
+// Test 51: Basic drawImage
 // This file will be concatenated into the main visual test suite
 
-// Test 47: Basic drawImage
+// Test 51: Basic drawImage
 registerVisualTest('drawimage-basic', {
     name: 'Basic drawImage positioning',
     width: 200, height: 150,

@@ -1,7 +1,7 @@
-// Test 55: Clipped path strokes (recreates Polygon Clipping star issue)
+// Test 59: Clipped path strokes (recreates Polygon Clipping star issue)
 // This file will be concatenated into the main visual test suite
 
-// Test 55: Clipped path strokes (recreates Polygon Clipping star issue)
+// Test 59: Clipped path strokes (recreates Polygon Clipping star issue)
 registerVisualTest('clipped-path-strokes', {
     name: 'Clipped Path Strokes',
     width: 400,

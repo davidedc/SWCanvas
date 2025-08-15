@@ -1,7 +1,7 @@
-// Test 41: Debug Star Shape Issue - Complex clip path with transforms
+// Test 46: Debug Star Shape Issue - Complex clip path with transforms
 // This file will be concatenated into the main visual test suite
 
-// Test 41: Debug Star Shape Issue - Complex clip path with transforms
+// Test 46: Debug Star Shape Issue - Complex clip path with transforms
 registerVisualTest('debug-star-shape', {
     name: 'Debug Star Shape Issue',
     width: 200, height: 200,
