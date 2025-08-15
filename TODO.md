@@ -60,7 +60,7 @@
 
 ## Implementation Notes
 - All tests must work in both Node.js and browser environments
-- Each test goes in `visual-test-registry.js` 
+- Each test goes in `visual-rendering-tests.js` 
 - Tests appear in "Visual Test Comparisons" section of test.html
 - Include both SWCanvas and HTML5 Canvas implementations
 - Generate golden BMP images for visual validation
@@ -84,8 +84,8 @@
 - Fixed matrix multiplication order to match HTML5 Canvas
 - Fixed color consistency issues (green, orange)
 - Added rotated rectangle support via polygon conversion
-- Added 6 new transformation tests to shared-test-suite.js
-- Added 7 new visual tests to visual-test-registry.js  
+- Added 6 new transformation tests to core-functionality-tests.js
+- Added 7 new visual tests to visual-rendering-tests.js  
 - All tests work in both Node.js and browser environments
 - Visual comparisons available in test.html
 - Full transform system now matches HTML5 Canvas exactly
@@ -224,7 +224,7 @@ Begin Phase 4: Combined Feature Tests (Integration)
 
 ## Recently Completed Implementation
 ✅ **Phase 3: Advanced Clipping Tests - COMPLETE**
-- Added 7 comprehensive clipping tests to visual-test-registry.js
+- Added 7 comprehensive clipping tests to visual-rendering-tests.js
 - Tests cover rectangular, polygon, curved, self-intersecting, nested, save/restore, and intersection clipping
 - All clipping tests work with both simple and complex shapes
 - Proper save/restore state management testing
@@ -236,7 +236,7 @@ Begin Phase 4: Combined Feature Tests (Integration)
 - Advanced clipping system now thoroughly tested
 
 ✅ **Phase 2: Advanced Path Filling Tests - COMPLETE**
-- Added 9 comprehensive path filling tests to visual-test-registry.js
+- Added 9 comprehensive path filling tests to visual-rendering-tests.js
 - Tests cover concave polygons, self-intersecting paths, nested holes
 - Multiple subpath handling, bezier curves, quadratic curves
 - Arc/ellipse filling, mixed linear+curve paths, complex fill rules

@@ -153,19 +153,19 @@
     </div>
 
     <div class="test-section">
-        <h2>Shared Test Suite</h2>
-        <p>These are the same tests that run in Node.js, now running in the browser:</p>
+        <h2>Core Functionality Tests</h2>
+        <p>These are the same core functionality tests that run in Node.js, now running in the browser:</p>
         <div class="controls">
-            <button onclick="runSharedTests()">Run Shared Test Suite</button>
+            <button onclick="runSharedTests()">Run Core Functionality Tests</button>
         </div>
         <div id="shared-test-output" class="test-output" style="display: none;"></div>
     </div>
 
     <div class="test-section">
-        <h2>Visual Test Comparisons</h2>
-        <p>Side-by-side comparison of HTML5 Canvas vs SWCanvas for all test cases:</p>
+        <h2>Visual Rendering Tests</h2>
+        <p>Side-by-side comparison of HTML5 Canvas vs SWCanvas for all visual rendering test cases:</p>
         <div class="controls">
-            <button onclick="runVisualComparison()">Run All Visual Comparisons</button>
+            <button onclick="runVisualComparison()">Run All Visual Rendering Tests</button>
             <button onclick="downloadAllBMPs()">Download All BMPs</button>
         </div>
         <div id="visual-comparisons"></div>
@@ -210,8 +210,8 @@
     </div>
 
     <script src="../dist/swcanvas.js"></script>
-    <script src="../tests/visual-test-registry.js"></script>
-    <script src="../tests/shared-test-suite.js"></script>
+    <script src="../tests/visual-rendering-tests.js"></script>
+    <script src="../tests/core-functionality-tests.js"></script>
     <script src="browser-visual-tests.js"></script>
     <script>
         let browserVisualTests;
@@ -236,7 +236,7 @@
             };
 
             try {
-                const results = SharedTestSuite.runSharedTests(SWCanvas);
+                const results = CoreFunctionalityTests.runSharedTests(SWCanvas);
                 
                 // Restore console.log
                 console.log = originalLog;
@@ -263,11 +263,11 @@
             container.innerHTML = '<p>Running visual comparisons...</p>';
             
             // Get all visual tests from registry
-            const visualTests = VisualTestRegistry.getTests();
+            const visualTests = VisualRenderingTests.getTests();
             const testNames = Object.keys(visualTests);
             
             if (testNames.length === 0) {
-                container.innerHTML = '<p>No visual tests found in registry.</p>';
+                container.innerHTML = '<p>No visual tests found in test suite.</p>';
                 return;
             }
             
@@ -315,7 +315,7 @@
                     // Draw SWCanvas version using unified API
                     const swCanvasForDrawing = SWCanvas.createCanvas(testConfig.width, testConfig.height);
                     testConfig.draw(swCanvasForDrawing);
-                    VisualTestRegistry.renderSWCanvasToHTML5(swCanvasForDrawing._coreSurface, swCanvas);
+                    VisualRenderingTests.renderSWCanvasToHTML5(swCanvasForDrawing._coreSurface, swCanvas);
                 } else {
                     // Fall back to legacy separate functions
                     if (testConfig.drawHTML5Canvas) {
@@ -323,7 +323,7 @@
                     }
                     if (testConfig.drawSWCanvas) {
                         const surface = testConfig.drawSWCanvas(SWCanvas);
-                        VisualTestRegistry.renderSWCanvasToHTML5(surface, swCanvas);
+                        VisualRenderingTests.renderSWCanvasToHTML5(surface, swCanvas);
                     }
                 }
                 

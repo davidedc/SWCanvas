@@ -3637,7 +3637,7 @@
         },
     });
 
-    const VisualTestRegistry = {
+    const VisualRenderingTests = {
         getTests: function() { return visualTests; },
         getTest: function(name) { return visualTests[name]; },
         renderSWCanvasToHTML5: renderSWCanvasToHTML5,
@@ -3660,10 +3660,10 @@
     // Universal module definition (UMD) pattern
     if (typeof module !== 'undefined' && module.exports) {
         // Node.js
-        module.exports = VisualTestRegistry;
+        module.exports = VisualRenderingTests;
     } else {
         // Browser
-        global.VisualTestRegistry = VisualTestRegistry;
+        global.VisualRenderingTests = VisualRenderingTests;
     }
 
 })(typeof window !== 'undefined' ? window : global);

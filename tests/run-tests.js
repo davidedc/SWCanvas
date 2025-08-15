@@ -1,16 +1,16 @@
 #!/usr/bin/env node
 
-// Node.js test runner using the shared test suite
+// Node.js test runner using the core functionality tests
 
-const SharedTestSuite = require('./shared-test-suite.js');
+const CoreFunctionalityTests = require('./core-functionality-tests.js');
 
-// Load SWCanvas and Visual Test Registry
+// Load SWCanvas and Visual Rendering Tests
 const SWCanvas = require('../dist/swcanvas.js');
-const VisualTestRegistry = require('./visual-test-registry.js');
+const VisualRenderingTests = require('./visual-rendering-tests.js');
 
 console.log('Running SWCanvas Tests in Node.js...\n');
 
-// Helper function to save BMP files (same as in shared-test-suite.js)
+// Helper function to save BMP files (same as in core-functionality-tests.js)
 function saveBMP(surface, filename, description, SWCanvasRef) {
     try {
         const bmpData = SWCanvasRef.encodeBMP(surface);
@@ -34,13 +34,13 @@ function saveBMP(surface, filename, description, SWCanvasRef) {
 }
 
 try {
-    // Run the shared test suite
-    const results = SharedTestSuite.runSharedTests(SWCanvas);
+    // Run the core functionality test suite
+    const results = CoreFunctionalityTests.runSharedTests(SWCanvas);
     
     console.log(`\nGenerating Visual Test BMPs...\n`);
     
     // Generate BMPs for all visual tests
-    const visualTests = VisualTestRegistry.getTests();
+    const visualTests = VisualRenderingTests.getTests();
     const visualTestNames = Object.keys(visualTests);
     
     visualTestNames.forEach(testName => {

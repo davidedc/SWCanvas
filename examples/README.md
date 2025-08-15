@@ -4,7 +4,7 @@ This directory contains browser-based examples and visual comparison tools for S
 
 ## Architecture
 
-The testing system uses a **shared visual test registry** (`../tests/visual-test-registry.js`) to avoid code duplication between Node.js and browser tests. Each visual test defines drawing operations that work identically on both SWCanvas and HTML5 Canvas.
+The testing system uses a **visual rendering test suite** (`../tests/visual-rendering-tests.js`) to avoid code duplication between Node.js and browser tests. Each visual test defines drawing operations that work identically on both SWCanvas and HTML5 Canvas.
 
 ## Files
 
@@ -32,7 +32,7 @@ A minimal test showing basic rectangle rendering comparison.
 ### browser-visual-tests.js
 Browser-specific visual test functions and utilities.
 
-### ../tests/visual-test-registry.js
+### ../tests/visual-rendering-tests.js
 **Shared visual test registry** - contains 55+ comprehensive drawing tests used by both Node.js and browser tests to ensure identical test behavior and eliminate code duplication. All tests use the `registerVisualTest()` helper for automatic backward compatibility.
 
 

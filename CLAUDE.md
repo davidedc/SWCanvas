@@ -177,20 +177,64 @@ npm test
 open examples/test.html
 
 # 5. Check specific test output if needed
-node -e "console.log(require('./tests/shared-test-suite.js'))"
+node -e "console.log(require('./tests/core-functionality-tests.js'))"
 ```
 
 ## Test System Architecture
 
-### Three Test Layers
-1. **Shared Tests** (`tests/shared-test-suite.js`) - 32 core functionality tests
-2. **Visual Tests** (`tests/visual-test-registry.js`) - 58 rendering tests  
-3. **Browser Tests** (`examples/test.html`) - Interactive comparisons
+SWCanvas uses a **dual test architecture** with two complementary test suites that verify different aspects of the rendering engine:
+
+### Core Functionality Tests (`core-functionality-tests.js`)
+**Purpose**: Programmatic verification with pass/fail assertions
+- **Type**: Unit tests with `assertEquals()` and `assertThrows()` assertions  
+- **Focus**: API correctness, error handling, data validation, mathematical accuracy
+- **Output**: Console logs with ✓ pass/✗ fail status + assertion details
+- **Environment**: Runs identically in both Node.js and browser
+- **Examples**: Surface creation validation, matrix math correctness, transform operations accuracy, Path2D command recording
+
+### Visual Rendering Tests (`visual-rendering-tests.js`)  
+**Purpose**: Visual verification with pixel-perfect BMP output
+- **Type**: Visual tests that generate images for comparison
+- **Focus**: Rendering accuracy, pixel-perfect output, visual consistency
+- **Output**: BMP files for Node.js, side-by-side visual comparison in browser
+- **Environment**: Generates BMPs in Node.js, visual comparison in browser
+- **Examples**: Complex path filling, stroke rendering with caps/joins, advanced clipping operations, combined transform+clip+fill scenarios
+
+### Architectural Relationship
+The test architecture demonstrates **intentional complementary redundancy**:
+
+1. **Dual Verification**: 8 overlapping tests provide both programmatic AND visual validation
+2. **Smart Delegation**: Core tests delegate to visual tests when available, with fallback implementations
+3. **Cross-Platform**: Node.js gets programmatic verification, browser gets visual comparison
+4. **Comprehensive Coverage**: 31 programmatic tests + 56 visual tests = thorough validation
+
+**Example of Complementary Testing**:
+```javascript
+// core-functionality-tests.js
+test('Create and save a simple test image', () => {
+    // Tries to use visual test first for consistency
+    if (typeof VisualRenderingTests !== 'undefined') {
+        const visualTest = VisualRenderingTests.getTest('simple-test');
+        const surface = visualTest.drawSWCanvas(SWCanvas);
+        saveBMP(surface, 'test-output.bmp', 'test image', SWCanvas);
+        // ✓ Programmatic validation + BMP generation
+    } else {
+        // Fallback inline test code
+    }
+});
+
+// visual-rendering-tests.js
+registerVisualTest('simple-test', {
+    draw: function(canvas) {
+        // Same drawing operations, generates pixel-perfect BMPs
+    }
+});
+```
 
 ### Test Execution
-- **Node.js**: `npm test` runs shared tests + generates BMP files
-- **Browser**: Open `examples/test.html` for visual comparisons
-- **Both use same test definitions** - no code duplication
+- **Node.js**: `npm test` runs core tests + generates 56 BMP files  
+- **Browser**: Open `examples/test.html` for interactive visual comparisons
+- **Both environments**: Use same test definitions - no code duplication
 
 ### Key Test Categories
 - **Phase 1**: Basic transforms (translate/scale/rotate)

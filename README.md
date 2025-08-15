@@ -281,8 +281,8 @@ src/              # Source files (ES6 Classes)
 └── Path2D.js        # Path definition (class)
 
 tests/            # Test suite
-├── shared-test-suite.js    # Core functionality tests
-├── visual-test-registry.js # 52+ visual tests
+├── core-functionality-tests.js # Core functionality tests
+├── visual-rendering-tests.js    # 52+ visual tests
 └── run-tests.js            # Node.js test runner
 
 examples/         # Browser examples
@@ -292,13 +292,37 @@ dist/             # Built library
 └── swcanvas.js      # Concatenated distribution file
 ```
 
+## Test Architecture
+
+SWCanvas uses a **dual test system** with two complementary test suites:
+
+### Core Functionality Tests (`core-functionality-tests.js`)
+**Purpose**: Programmatic API verification  
+- **31 tests** with pass/fail assertions (`assertEquals`, `assertThrows`)
+- **Focus**: API correctness, error handling, mathematical accuracy
+- **Output**: Console ✓/✗ with detailed assertion results
+- **Examples**: Surface creation, matrix operations, state management
+
+### Visual Rendering Tests (`visual-rendering-tests.js`)  
+**Purpose**: Pixel-perfect visual verification
+- **56 tests** that generate BMP images for comparison
+- **Focus**: Rendering accuracy, visual consistency across platforms  
+- **Output**: BMP files (Node.js) + side-by-side comparison (browser)
+- **Examples**: Path filling, stroke rendering, clipping, transforms
+
+### Why Two Test Types?
+1. **Complementary Verification**: Same functionality tested programmatically AND visually
+2. **Cross-Platform Validation**: Ensures identical behavior in Node.js and browsers
+3. **Smart Delegation**: Core tests use visual tests when available for consistency
+4. **Comprehensive Coverage**: Mathematical correctness + pixel-perfect output
+
 ### Adding New Tests
 
 #### For Core Functionality
-Add to `tests/shared-test-suite.js` - automatically runs in both Node.js and browsers.
+Add to `tests/core-functionality-tests.js` - automatically runs in both Node.js and browsers.
 
 #### For Visual Rendering  
-Add to `tests/visual-test-registry.js` using the `registerVisualTest` helper:
+Add to `tests/visual-rendering-tests.js` using the `registerVisualTest` helper:
 
 ```javascript
 registerVisualTest('my-new-test', {
@@ -356,7 +380,7 @@ MIT License - see LICENSE file for details.
 1. **Build**: `npm run build`
 2. **Test**: `npm test` 
 3. **Visual Test**: Open `examples/test.html` in browser
-4. **Add Tests**: Follow patterns in `tests/visual-test-registry.js`
+4. **Add Tests**: Follow patterns in `tests/visual-rendering-tests.js`
 5. **Verify**: Ensure identical results in both Node.js and browser
 
 The comprehensive test suite ensures any changes maintain pixel-perfect compatibility with HTML5 Canvas.

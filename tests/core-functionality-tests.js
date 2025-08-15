@@ -206,8 +206,8 @@
         // Integration test: Create a simple image
         test('Create and save a simple test image', () => {
             // Use visual test registry if available, otherwise fall back to inline test
-            if (typeof VisualTestRegistry !== 'undefined') {
-                const visualTest = VisualTestRegistry.getTest('simple-test');
+            if (typeof VisualRenderingTests !== 'undefined') {
+                const visualTest = VisualRenderingTests.getTest('simple-test');
                 if (visualTest) {
                     const surface = visualTest.drawSWCanvas(SWCanvas);
                     saveBMP(surface, 'test-output.bmp', 'test image', SWCanvas);
@@ -234,8 +234,8 @@
         // Alpha blending test
         test('Alpha blending test - semi-transparent rectangles', () => {
             // Use visual test registry if available
-            if (typeof VisualTestRegistry !== 'undefined') {
-                const visualTest = VisualTestRegistry.getTest('alpha-test');
+            if (typeof VisualRenderingTests !== 'undefined') {
+                const visualTest = VisualRenderingTests.getTest('alpha-test');
                 if (visualTest) {
                     const surface = visualTest.drawSWCanvas(SWCanvas);
                     
@@ -675,8 +675,8 @@
         // ===== PHASE 1: BASIC TRANSFORMATION TESTS =====
 
         test('Basic transform - translate operations', () => {
-            if (typeof VisualTestRegistry !== 'undefined') {
-                const visualTest = VisualTestRegistry.getTest('transform-basic-translate');
+            if (typeof VisualRenderingTests !== 'undefined') {
+                const visualTest = VisualRenderingTests.getTest('transform-basic-translate');
                 if (visualTest) {
                     const surface = visualTest.drawSWCanvas(SWCanvas);
                     saveBMP(surface, 'transform-basic-translate.bmp', 'basic translate test', SWCanvas);
@@ -712,8 +712,8 @@
         });
 
         test('Basic transform - scale operations', () => {
-            if (typeof VisualTestRegistry !== 'undefined') {
-                const visualTest = VisualTestRegistry.getTest('transform-basic-scale');
+            if (typeof VisualRenderingTests !== 'undefined') {
+                const visualTest = VisualRenderingTests.getTest('transform-basic-scale');
                 if (visualTest) {
                     const surface = visualTest.drawSWCanvas(SWCanvas);
                     saveBMP(surface, 'transform-basic-scale.bmp', 'basic scale test', SWCanvas);
@@ -749,8 +749,8 @@
         });
 
         test('Basic transform - rotate operations', () => {
-            if (typeof VisualTestRegistry !== 'undefined') {
-                const visualTest = VisualTestRegistry.getTest('transform-basic-rotate');
+            if (typeof VisualRenderingTests !== 'undefined') {
+                const visualTest = VisualRenderingTests.getTest('transform-basic-rotate');
                 if (visualTest) {
                     const surface = visualTest.drawSWCanvas(SWCanvas);
                     saveBMP(surface, 'transform-basic-rotate.bmp', 'basic rotate test', SWCanvas);
@@ -786,8 +786,8 @@
         });
 
         test('setTransform vs transform behavior', () => {
-            if (typeof VisualTestRegistry !== 'undefined') {
-                const visualTest = VisualTestRegistry.getTest('transform-setTransform-vs-transform');
+            if (typeof VisualRenderingTests !== 'undefined') {
+                const visualTest = VisualRenderingTests.getTest('transform-setTransform-vs-transform');
                 if (visualTest) {
                     const surface = visualTest.drawSWCanvas(SWCanvas);
                     saveBMP(surface, 'transform-setTransform-vs-transform.bmp', 'setTransform vs transform test', SWCanvas);
@@ -821,8 +821,8 @@
         });
 
         test('resetTransform functionality', () => {
-            if (typeof VisualTestRegistry !== 'undefined') {
-                const visualTest = VisualTestRegistry.getTest('transform-resetTransform');
+            if (typeof VisualRenderingTests !== 'undefined') {
+                const visualTest = VisualRenderingTests.getTest('transform-resetTransform');
                 if (visualTest) {
                     const surface = visualTest.drawSWCanvas(SWCanvas);
                     saveBMP(surface, 'transform-resetTransform.bmp', 'resetTransform test', SWCanvas);
@@ -851,8 +851,8 @@
         });
 
         test('Transform matrix order dependency (A*B ≠ B*A)', () => {
-            if (typeof VisualTestRegistry !== 'undefined') {
-                const visualTest = VisualTestRegistry.getTest('transform-matrix-order');
+            if (typeof VisualRenderingTests !== 'undefined') {
+                const visualTest = VisualRenderingTests.getTest('transform-matrix-order');
                 if (visualTest) {
                     const surface = visualTest.drawSWCanvas(SWCanvas);
                     saveBMP(surface, 'transform-matrix-order.bmp', 'transform matrix order test', SWCanvas);
@@ -941,7 +941,7 @@
     }
 
     // Export for both Node.js and browser
-    const SharedTestSuite = {
+    const CoreFunctionalityTests = {
         runSharedTests: runSharedTests,
         test: test,
         assertEquals: assertEquals,
@@ -953,10 +953,10 @@
     // Universal module definition (UMD) pattern
     if (typeof module !== 'undefined' && module.exports) {
         // Node.js
-        module.exports = SharedTestSuite;
+        module.exports = CoreFunctionalityTests;
     } else {
         // Browser
-        global.SharedTestSuite = SharedTestSuite;
+        global.CoreFunctionalityTests = CoreFunctionalityTests;
     }
 
 })(typeof window !== 'undefined' ? window : global);

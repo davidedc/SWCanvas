@@ -6,8 +6,8 @@ This directory contains the comprehensive test infrastructure for SWCanvas, with
 
 ```
 tests/
-├── shared-test-suite.js          # Common test logic (runs in both environments)
-├── visual-test-registry.js       # 55+ comprehensive visual tests
+├── core-functionality-tests.js   # Common test logic (runs in both environments)
+├── visual-rendering-tests.js      # 55+ comprehensive visual tests
 ├── run-tests.js                  # Node.js test runner + BMP generator
 ├── output/                       # Generated BMP test images (55+ files)
 └── README.md                     # This file
@@ -35,25 +35,109 @@ node tests/run-tests.js
 2. Click "Run Shared Test Suite" to run the same tests as Node.js
 3. Use the visual comparison tools to test rendering accuracy
 
-## Test Categories
+## Dual Test Architecture
 
-### Shared Tests (`shared-test-suite.js`)
-Core functionality tests that run identically in both Node.js and browser:
-- ✅ Surface creation and validation
-- ✅ Matrix mathematics (multiply, transform, invert)  
-- ✅ Path2D command recording
-- ✅ Context2D state management
-- ✅ Rectangle filling and alpha blending
-- ✅ BMP file generation
-- ✅ Pixel-perfect alpha blending validation
+SWCanvas uses a **complementary dual test system** where two test suites verify different aspects of the same functionality:
 
-### Visual Tests (`visual-test-registry.js`)
-Comprehensive visual rendering tests (55+ tests):
-- ✅ **Phase 1**: Basic transformations (translate, scale, rotate)
-- ✅ **Phase 2**: Advanced path filling (curves, self-intersecting, fill rules)
-- ✅ **Phase 3**: Stencil-based clipping system (intersection, nesting)
-- ✅ **Phase 4**: Combined features (transform+fill+stroke+clip integration)
-- ✅ Debug and analysis tests for specific rendering issues
+### Core Functionality Tests (`core-functionality-tests.js`)
+**Purpose**: Programmatic API verification with pass/fail assertions
+
+**Characteristics**:
+- **31 unit tests** using `assertEquals()`, `assertThrows()` assertions
+- **Output**: Console logs with ✓ pass/✗ fail status + detailed error messages
+- **Environment**: Runs identically in both Node.js and browser
+- **Focus**: API correctness, error handling, data validation, mathematical accuracy
+
+**Test Types**:
+- ✅ **API Validation**: Surface creation, dimension validation, error handling
+- ✅ **Mathematical Correctness**: Matrix operations, coordinate transformations
+- ✅ **State Management**: Context save/restore, property persistence  
+- ✅ **Data Structures**: Path2D command recording, parameter validation
+- ✅ **Integration Points**: BMP generation, cross-platform consistency
+
+**Example Test**:
+```javascript
+test('Surface creation with valid dimensions', () => {
+    const surface = SWCanvas.Surface(400, 300);
+    assertEquals(surface.width, 400);
+    assertEquals(surface.height, 300);
+    // ✓ Programmatic validation with assertions
+});
+```
+
+### Visual Rendering Tests (`visual-rendering-tests.js`)  
+**Purpose**: Pixel-perfect visual verification with BMP image output
+
+**Characteristics**:
+- **56 visual tests** that generate actual rendered images
+- **Output**: BMP files (Node.js) + side-by-side comparison (browser)
+- **Environment**: BMP generation in Node.js, visual comparison in browser
+- **Focus**: Rendering accuracy, visual consistency, pixel-perfect output
+
+**Test Categories**:
+- ✅ **Phase 1**: Basic transformations (translate, scale, rotate) - 8 tests
+- ✅ **Phase 2**: Advanced path filling (curves, self-intersecting, fill rules) - 9 tests  
+- ✅ **Phase 3**: Stencil-based clipping system (intersection, nesting) - 8 tests
+- ✅ **Phase 4**: Combined features (transform+clip+fill+stroke integration) - 7 tests
+- ✅ **Phase 5**: Image operations (drawImage with transforms and alpha) - 6 tests
+- ✅ **Stroke Rendering**: Line styles, caps, joins, sub-pixel accuracy - 6 tests
+- ✅ **Debug & Analysis**: Specific rendering issue investigation - 6 tests
+
+**Example Test**:
+```javascript
+registerVisualTest('alpha-blending', {
+    name: 'Alpha blending test - semi-transparent rectangles',
+    width: 200, height: 150,
+    draw: function(canvas) {
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = 'red';
+        ctx.fillRect(20, 20, 80, 60);
+        ctx.globalAlpha = 0.5;
+        ctx.fillStyle = 'green';  
+        ctx.fillRect(40, 40, 80, 60);
+        // → Generates BMP for pixel-perfect verification
+    }
+});
+```
+
+### Architectural Relationship: Intentional Complementary Redundancy
+
+**Smart Delegation Pattern**:
+```javascript
+// core-functionality-tests.js
+test('Alpha blending test - semi-transparent rectangles', () => {
+    // 1. Try to delegate to visual test for consistency
+    if (typeof VisualRenderingTests !== 'undefined') {
+        const visualTest = VisualRenderingTests.getTest('alpha-test');
+        if (visualTest) {
+            const surface = visualTest.drawSWCanvas(SWCanvas);
+            saveBMP(surface, 'alpha-test.bmp', 'alpha test', SWCanvas);
+            
+            // 2. Add programmatic validation on top of visual test
+            const pixel = getPixelAt(surface, 60, 50); // Green over red area
+            assertEquals(pixel.r, 127); // Verify alpha blending math
+            return; // ✓ Both visual AND programmatic verification
+        }
+    }
+    
+    // 3. Fallback inline test if visual test unavailable
+    // ... inline drawing and assertion code
+});
+```
+
+**Why This Architecture Works**:
+
+1. **Dual Verification**: 8 overlapping tests get BOTH programmatic validation AND visual verification
+2. **Fallback Safety**: Core tests work even when visual tests are unavailable  
+3. **Cross-Platform Consistency**: Node.js validates math, browser validates visual output
+4. **No Code Duplication**: Visual tests define drawing once, used by both test types
+5. **Comprehensive Coverage**: Mathematical correctness + pixel-perfect rendering validation
+
+**Benefits of Complementary Testing**:
+- **Catch More Bugs**: Logic errors caught by assertions, rendering errors caught by visual comparison
+- **Platform Validation**: Ensures identical behavior across Node.js and browser environments
+- **Regression Prevention**: Any change must pass both programmatic AND visual validation
+- **Development Confidence**: Developers can trust that changes maintain both correctness AND visual fidelity
 
 ### Browser-Only Tests (`browser-visual-tests.js`)
 Interactive tests requiring DOM and visual comparison:
@@ -73,10 +157,10 @@ Interactive tests requiring DOM and visual comparison:
 ## Adding New Tests
 
 ### For Core Functionality
-Add tests to `shared-test-suite.js` - they will automatically run in both environments.
+Add tests to `core-functionality-tests.js` - they will automatically run in both environments.
 
 ### For Visual Rendering Tests
-Add tests to `visual-test-registry.js` using the established pattern:
+Add tests to `visual-rendering-tests.js` using the established pattern:
 - Both SWCanvas and HTML5 Canvas implementations
 - Consistent naming convention (`category-specific-description`)
 - Use standard HTML5 Canvas API (`ctx.fillStyle`, `ctx.strokeStyle`)
