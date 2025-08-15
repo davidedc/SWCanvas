@@ -55,9 +55,34 @@
         ctx.putImageData(imageData, 0, 0);
     }
 
+    // Helper function to register visual tests with automatic backward compatibility
+    function registerVisualTest(testId, config) {
+        if (!config.draw || typeof config.draw !== 'function') {
+            throw new Error(`Visual test '${testId}' must have a 'draw' function`);
+        }
+        
+        // Add backward compatibility functions if they don't already exist
+        if (!config.drawSWCanvas) {
+            config.drawSWCanvas = function(SWCanvas) {
+                const canvas = SWCanvas.createCanvas(config.width, config.height);
+                config.draw(canvas);
+                return canvas._coreSurface;
+            };
+        }
+        
+        if (!config.drawHTML5Canvas) {
+            config.drawHTML5Canvas = function(html5Canvas) {
+                config.draw(html5Canvas);
+            };
+        }
+        
+        // Register the enhanced test
+        visualTests[testId] = config;
+    }
+
 
     // Test 1: Simple Rectangle Test
-    visualTests['simple-test'] = {
+    registerVisualTest('simple-test', {
         name: 'Create and save a simple test image',
         width: 100, height: 100,
         // Unified drawing function that works with both canvas types
@@ -71,20 +96,11 @@
             // Blue square in center
             ctx.fillStyle = 'blue';
             ctx.fillRect(25, 25, 50, 50);
-        },
-        // Backward compatibility functions
-        drawSWCanvas: function(SWCanvas) {
-            const canvas = SWCanvas.createCanvas(100, 100);
-            this.draw(canvas);
-            return canvas._coreSurface;
-        },
-        drawHTML5Canvas: function(html5Canvas) {
-            this.draw(html5Canvas);
         }
-    };
+    });
 
     // Test 2: Alpha Blending Test  
-    visualTests['alpha-test'] = {
+    registerVisualTest('alpha-test', {
         name: 'Alpha blending test - semi-transparent rectangles',
         width: 200, height: 150,
         // Unified drawing function
@@ -108,20 +124,11 @@
             ctx.fillStyle = 'green';
             ctx.fillRect(40, 40, 80, 60);
             ctx.globalAlpha = 1.0;
-        },
-        // Backward compatibility functions
-        drawSWCanvas: function(SWCanvas) {
-            const canvas = SWCanvas.createCanvas(200, 150);
-            this.draw(canvas);
-            return canvas._coreSurface;
-        },
-        drawHTML5Canvas: function(html5Canvas) {
-            this.draw(html5Canvas);
         }
-    };
+    });
 
     // Test 3: Triangle Path
-    visualTests['triangle-test'] = {
+    registerVisualTest('triangle-test', {
         name: 'Path filling - simple triangle',
         width: 100, height: 100,
         // Unified drawing function
@@ -140,20 +147,11 @@
             ctx.lineTo(20, 70);
             ctx.closePath();
             ctx.fill();
-        },
-        // Backward compatibility functions
-        drawSWCanvas: function(SWCanvas) {
-            const canvas = SWCanvas.createCanvas(100, 100);
-            this.draw(canvas);
-            return canvas._coreSurface;
-        },
-        drawHTML5Canvas: function(html5Canvas) {
-            this.draw(html5Canvas);
         }
-    };
+    });
 
     // Test 4: Even-Odd Path  
-    visualTests['evenodd-test'] = {
+    registerVisualTest('evenodd-test', {
         name: 'Path filling - evenodd vs nonzero',
         width: 100, height: 100,
         // Unified drawing function
@@ -174,20 +172,11 @@
             
             // Fill with evenodd rule - should create a "hole"
             ctx.fill('evenodd');
-        },
-        // Backward compatibility functions
-        drawSWCanvas: function(SWCanvas) {
-            const canvas = SWCanvas.createCanvas(100, 100);
-            this.draw(canvas);
-            return canvas._coreSurface;
-        },
-        drawHTML5Canvas: function(html5Canvas) {
-            this.draw(html5Canvas);
         }
-    };
+    });
 
     // Test 5: Basic Clipping
-    visualTests['clipping-test'] = {
+    registerVisualTest('clipping-test', {
         name: 'Basic clipping test',
         width: 100, height: 100,
         // Unified drawing function
@@ -206,20 +195,11 @@
             // Fill a large red rectangle - should be clipped to circle
             ctx.fillStyle = 'red';
             ctx.fillRect(0, 0, 100, 100);
-        },
-        // Backward compatibility functions
-        drawSWCanvas: function(SWCanvas) {
-            const canvas = SWCanvas.createCanvas(100, 100);
-            this.draw(canvas);
-            return canvas._coreSurface;
-        },
-        drawHTML5Canvas: function(html5Canvas) {
-            this.draw(html5Canvas);
         }
-    };
+    });
 
     // Test 6: Basic Stroke
-    visualTests['stroke-basic-line'] = {
+    registerVisualTest('stroke-basic-line', {
         name: 'Basic stroke - simple line',
         width: 100, height: 100,
         // Unified drawing function
@@ -236,20 +216,11 @@
             ctx.moveTo(10, 50);
             ctx.lineTo(90, 50);
             ctx.stroke();
-        },
-        // Backward compatibility functions
-        drawSWCanvas: function(SWCanvas) {
-            const canvas = SWCanvas.createCanvas(100, 100);
-            this.draw(canvas);
-            return canvas._coreSurface;
-        },
-        drawHTML5Canvas: function(html5Canvas) {
-            this.draw(html5Canvas);
         }
-    };
+    });
 
     // Test 7: Stroke Joins
-    visualTests['stroke-joins'] = {
+    registerVisualTest('stroke-joins', {
         name: 'Stroke joins - miter, bevel, round',
         width: 300, height: 100,
         // Unified drawing function
@@ -286,20 +257,11 @@
             ctx.lineTo(250, 50);
             ctx.lineTo(280, 20);
             ctx.stroke();
-        },
-        // Backward compatibility functions
-        drawSWCanvas: function(SWCanvas) {
-            const canvas = SWCanvas.createCanvas(300, 100);
-            this.draw(canvas);
-            return canvas._coreSurface;
-        },
-        drawHTML5Canvas: function(html5Canvas) {
-            this.draw(html5Canvas);
         }
-    };
+    });
 
     // Test 8: Stroke Curves  
-    visualTests['stroke-curves'] = {
+    registerVisualTest('stroke-curves', {
         name: 'Complex path stroke with curves',
         width: 150, height: 150,
         // Unified drawing function
@@ -321,23 +283,14 @@
             ctx.quadraticCurveTo(100, 100, 50, 120);
             ctx.lineTo(20, 100);
             ctx.stroke();
-        },
-        // Backward compatibility functions
-        drawSWCanvas: function(SWCanvas) {
-            const canvas = SWCanvas.createCanvas(150, 150);
-            this.draw(canvas);
-            return canvas._coreSurface;
-        },
-        drawHTML5Canvas: function(html5Canvas) {
-            this.draw(html5Canvas);
         }
-    };
+    });
 
     // Test 9: Stroke Miter Limit (Original Test)
-    visualTests['stroke-miter-limit'] = {
+    // Test 9: Stroke Miter Limit (Original Test)
+    registerVisualTest('stroke-miter-limit', {
         name: 'Miter limit test',
         width: 200, height: 100,
-        // Unified drawing function
         draw: function(canvas) {
             const ctx = canvas.getContext('2d');
             
@@ -365,22 +318,13 @@
             ctx.lineTo(160, 20);
             ctx.stroke();
         },
-        // Backward compatibility functions
-        drawSWCanvas: function(SWCanvas) {
-            const canvas = SWCanvas.createCanvas(200, 100);
-            this.draw(canvas);
-            return canvas._coreSurface;
-        },
-        drawHTML5Canvas: function(html5Canvas) {
-            this.draw(html5Canvas);
-        }
-    };
+    });
 
     // Test 10: Miter Limit Basic Functionality
-    visualTests['miter-limits-basic'] = {
+    // Test 10: Miter Limit Basic Functionality
+    registerVisualTest('miter-limits-basic', {
         name: 'Miter limit property and basic functionality',
         width: 100, height: 100,
-        // Unified drawing function
         draw: function(canvas) {
             const ctx = canvas.getContext('2d');
             // White background
@@ -407,24 +351,15 @@
                 ctx.stroke();
             }
         },
-        // Backward compatibility functions
-        drawSWCanvas: function(SWCanvas) {
-            const canvas = SWCanvas.createCanvas(100, 100);
-            this.draw(canvas);
-            return canvas._coreSurface;
-        },
-        drawHTML5Canvas: function(html5Canvas) {
-            this.draw(html5Canvas);
-        }
-    };
+    });
 
     // ===== PHASE 1: BASIC TRANSFORMATION TESTS =====
 
     // Test 11: Basic Translation
-    visualTests['transform-basic-translate'] = {
+    // Test 11: Basic Translation
+    registerVisualTest('transform-basic-translate', {
         name: 'Basic translation operations',
         width: 200, height: 150,
-        // Unified drawing function
         draw: function(canvas) {
             const ctx = canvas.getContext('2d');
             ctx.fillStyle = 'white';
@@ -444,22 +379,13 @@
             ctx.fillStyle = 'green';
             ctx.fillRect(10, 10, 30, 30);
         },
-        // Backward compatibility functions
-        drawSWCanvas: function(SWCanvas) {
-            const canvas = SWCanvas.createCanvas(200, 150);
-            this.draw(canvas);
-            return canvas._coreSurface;
-        },
-        drawHTML5Canvas: function(html5Canvas) {
-            this.draw(html5Canvas);
-        }
-    };
+    });
 
     // Test 12: Basic Scaling
-    visualTests['transform-basic-scale'] = {
+    // Test 12: Basic Scaling
+    registerVisualTest('transform-basic-scale', {
         name: 'Basic scaling operations',
         width: 200, height: 150,
-        // Unified drawing function
         draw: function(canvas) {
             const ctx = canvas.getContext('2d');
             // White background
@@ -483,22 +409,13 @@
             ctx.fillStyle = 'green';
             ctx.fillRect(0, 0, 40, 40);
         },
-        // Backward compatibility functions
-        drawSWCanvas: function(SWCanvas) {
-            const canvas = SWCanvas.createCanvas(200, 150);
-            this.draw(canvas);
-            return canvas._coreSurface;
-        },
-        drawHTML5Canvas: function(html5Canvas) {
-            this.draw(html5Canvas);
-        }
-    };
+    });
 
     // Test 13: Basic Rotation
-    visualTests['transform-basic-rotate'] = {
+    // Test 13: Basic Rotation
+    registerVisualTest('transform-basic-rotate', {
         name: 'Basic rotation operations',
         width: 200, height: 150,
-        // Unified drawing function
         draw: function(canvas) {
             const ctx = canvas.getContext('2d');
             ctx.fillStyle = 'white';
@@ -521,22 +438,13 @@
             ctx.fillStyle = 'green';
             ctx.fillRect(-12, -12, 25, 25);
         },
-        // Backward compatibility functions
-        drawSWCanvas: function(SWCanvas) {
-            const canvas = SWCanvas.createCanvas(200, 150);
-            this.draw(canvas);
-            return canvas._coreSurface;
-        },
-        drawHTML5Canvas: function(html5Canvas) {
-            this.draw(html5Canvas);
-        }
-    };
+    });
 
     // Test 14: setTransform vs transform behavior
-    visualTests['transform-setTransform-vs-transform'] = {
+    // Test 14: setTransform vs transform behavior
+    registerVisualTest('transform-setTransform-vs-transform', {
         name: 'setTransform vs transform behavior comparison',
         width: 250, height: 150,
-        // Unified drawing function
         draw: function(canvas) {
             const ctx = canvas.getContext('2d');
             // White background
@@ -561,22 +469,13 @@
             ctx.fillStyle = 'magenta';
             ctx.fillRect(0, 0, 15, 15);
         },
-        // Backward compatibility functions
-        drawSWCanvas: function(SWCanvas) {
-            const canvas = SWCanvas.createCanvas(250, 150);
-            this.draw(canvas);
-            return canvas._coreSurface;
-        },
-        drawHTML5Canvas: function(html5Canvas) {
-            this.draw(html5Canvas);
-        }
-    };
+    });
 
     // Test 15: resetTransform functionality
-    visualTests['transform-resetTransform'] = {
+    // Test 15: resetTransform functionality
+    registerVisualTest('transform-resetTransform', {
         name: 'resetTransform functionality',
         width: 200, height: 150,
-        // Unified drawing function
         draw: function(canvas) {
             const ctx = canvas.getContext('2d');
             ctx.fillStyle = 'white';
@@ -602,22 +501,13 @@
             ctx.fillStyle = 'green';
             ctx.fillRect(0, 0, 25, 25);
         },
-        // Backward compatibility functions
-        drawSWCanvas: function(SWCanvas) {
-            const canvas = SWCanvas.createCanvas(200, 150);
-            this.draw(canvas);
-            return canvas._coreSurface;
-        },
-        drawHTML5Canvas: function(html5Canvas) {
-            this.draw(html5Canvas);
-        }
-    };
+    });
 
     // Test 16: Transform state save/restore
-    visualTests['transform-state-save-restore'] = {
+    // Test 16: Transform state save/restore
+    registerVisualTest('transform-state-save-restore', {
         name: 'Transform with save/restore stack',
         width: 200, height: 150,
-        // Unified drawing function
         draw: function(canvas) {
             const ctx = canvas.getContext('2d');
             // White background
@@ -647,22 +537,13 @@
             ctx.fillStyle = 'green';
             ctx.fillRect(0, 0, 18, 18);
         },
-        // Backward compatibility functions
-        drawSWCanvas: function(SWCanvas) {
-            const canvas = SWCanvas.createCanvas(200, 150);
-            this.draw(canvas);
-            return canvas._coreSurface;
-        },
-        drawHTML5Canvas: function(html5Canvas) {
-            this.draw(html5Canvas);
-        }
-    };
+    });
 
     // Test 17: Combined transform operations
-    visualTests['transform-combined-operations'] = {
+    // Test 17: Combined transform operations
+    registerVisualTest('transform-combined-operations', {
         name: 'Multiple transforms combined',
         width: 200, height: 150,
-        // Unified drawing function
         draw: function(canvas) {
             const ctx = canvas.getContext('2d');
             ctx.fillStyle = 'white';
@@ -684,22 +565,13 @@
             ctx.lineWidth = 1;
             ctx.strokeRect(85, 65, 30, 20);
         },
-        // Backward compatibility functions
-        drawSWCanvas: function(SWCanvas) {
-            const canvas = SWCanvas.createCanvas(200, 150);
-            this.draw(canvas);
-            return canvas._coreSurface;
-        },
-        drawHTML5Canvas: function(html5Canvas) {
-            this.draw(html5Canvas);
-        }
-    };
+    });
 
     // Test 18: Transform matrix order dependency (A*B ≠ B*A)
-    visualTests['transform-matrix-order'] = {
+    // Test 18: Transform matrix order dependency (A*B ≠ B*A)
+    registerVisualTest('transform-matrix-order', {
         name: 'Transform order dependency (A*B ≠ B*A)',
         width: 200, height: 150,
-        // Unified drawing function
         draw: function(canvas) {
             const ctx = canvas.getContext('2d');
             // White background
@@ -722,25 +594,16 @@
             ctx.fillRect(0, 0, 15, 15);
             ctx.restore();
         },
-        // Backward compatibility functions
-        drawSWCanvas: function(SWCanvas) {
-            const canvas = SWCanvas.createCanvas(200, 150);
-            this.draw(canvas);
-            return canvas._coreSurface;
-        },
-        drawHTML5Canvas: function(html5Canvas) {
-            this.draw(html5Canvas);
-        }
-    };
+    });
 
     // Export for both Node.js and browser
     // Phase 2: Advanced Path Filling Tests
 
     // Test: fill-concave-polygons - Star shapes and L-shapes
-    visualTests['fill-concave-polygons'] = {
+    // Test: fill-concave-polygons - Star shapes and L-shapes
+    registerVisualTest('fill-concave-polygons', {
         name: 'Concave polygon filling (star and L-shape)',
         width: 300, height: 200,
-        // Unified drawing function
         draw: function(canvas) {
             const ctx = canvas.getContext('2d');
             ctx.fillStyle = 'white';
@@ -792,22 +655,13 @@
             ctx.closePath();
             ctx.fill();
         },
-        // Backward compatibility functions
-        drawSWCanvas: function(SWCanvas) {
-            const canvas = SWCanvas.createCanvas(300, 200);
-            this.draw(canvas);
-            return canvas._coreSurface;
-        },
-        drawHTML5Canvas: function(html5Canvas) {
-            this.draw(html5Canvas);
-        }
-    };
+    });
 
     // Test: fill-self-intersecting - Self-intersecting paths
-    visualTests['fill-self-intersecting'] = {
+    // Test: fill-self-intersecting - Self-intersecting paths
+    registerVisualTest('fill-self-intersecting', {
         name: 'Self-intersecting path filling',
         width: 300, height: 200,
-        // Unified drawing function
         draw: function(canvas) {
             const ctx = canvas.getContext('2d');
             // White background
@@ -852,22 +706,13 @@
             ctx.closePath();
             ctx.fill();
         },
-        // Backward compatibility functions
-        drawSWCanvas: function(SWCanvas) {
-            const canvas = SWCanvas.createCanvas(300, 200);
-            this.draw(canvas);
-            return canvas._coreSurface;
-        },
-        drawHTML5Canvas: function(html5Canvas) {
-            this.draw(html5Canvas);
-        }
-    };
+    });
 
     // Test: fill-nested-holes - Paths with holes
-    visualTests['fill-nested-holes'] = {
+    // Test: fill-nested-holes - Paths with holes
+    registerVisualTest('fill-nested-holes', {
         name: 'Path filling with nested holes',
         width: 300, height: 200,
-        // Unified drawing function
         draw: function(canvas) {
             const ctx = canvas.getContext('2d');
             ctx.fillStyle = 'white';
@@ -918,22 +763,13 @@
             ctx.closePath();
             ctx.fill('evenodd');
         },
-        // Backward compatibility functions
-        drawSWCanvas: function(SWCanvas) {
-            const canvas = SWCanvas.createCanvas(300, 200);
-            this.draw(canvas);
-            return canvas._coreSurface;
-        },
-        drawHTML5Canvas: function(html5Canvas) {
-            this.draw(html5Canvas);
-        }
-    };
+    });
 
     // Test: fill-multiple-subpaths - Multiple subpath handling
-    visualTests['fill-multiple-subpaths'] = {
+    // Test: fill-multiple-subpaths - Multiple subpath handling
+    registerVisualTest('fill-multiple-subpaths', {
         name: 'Multiple subpath handling',
         width: 300, height: 200,
-        // Unified drawing function
         draw: function(canvas) {
             const ctx = canvas.getContext('2d');
             // White background
@@ -1011,22 +847,13 @@
             
             ctx.fill();
         },
-        // Backward compatibility functions
-        drawSWCanvas: function(SWCanvas) {
-            const canvas = SWCanvas.createCanvas(300, 200);
-            this.draw(canvas);
-            return canvas._coreSurface;
-        },
-        drawHTML5Canvas: function(html5Canvas) {
-            this.draw(html5Canvas);
-        }
-    };
+    });
 
     // Test: fill-bezier-curves - Cubic bezier curve filling
-    visualTests['fill-bezier-curves'] = {
+    // Test: fill-bezier-curves - Cubic bezier curve filling
+    registerVisualTest('fill-bezier-curves', {
         name: 'Cubic bezier curve filling',
         width: 300, height: 200,
-        // Unified drawing function
         draw: function(canvas) {
             const ctx = canvas.getContext('2d');
             ctx.fillStyle = 'white';
@@ -1077,22 +904,13 @@
             ctx.closePath();
             ctx.fill();
         },
-        // Backward compatibility functions
-        drawSWCanvas: function(SWCanvas) {
-            const canvas = SWCanvas.createCanvas(300, 200);
-            this.draw(canvas);
-            return canvas._coreSurface;
-        },
-        drawHTML5Canvas: function(html5Canvas) {
-            this.draw(html5Canvas);
-        }
-    };
+    });
 
     // Test: fill-quadratic-curves - Quadratic curve filling
-    visualTests['fill-quadratic-curves'] = {
+    // Test: fill-quadratic-curves - Quadratic curve filling
+    registerVisualTest('fill-quadratic-curves', {
         name: 'Quadratic curve filling',
         width: 300, height: 200,
-        // Unified drawing function
         draw: function(canvas) {
             const ctx = canvas.getContext('2d');
             // White background
@@ -1136,22 +954,13 @@
             ctx.closePath();
             ctx.fill();
         },
-        // Backward compatibility functions
-        drawSWCanvas: function(SWCanvas) {
-            const canvas = SWCanvas.createCanvas(300, 200);
-            this.draw(canvas);
-            return canvas._coreSurface;
-        },
-        drawHTML5Canvas: function(html5Canvas) {
-            this.draw(html5Canvas);
-        }
-    };
+    });
 
     // Test: fill-arcs-ellipses - Arc and ellipse filling
-    visualTests['fill-arcs-ellipses'] = {
+    // Test: fill-arcs-ellipses - Arc and ellipse filling
+    registerVisualTest('fill-arcs-ellipses', {
         name: 'Arc and ellipse filling',
         width: 300, height: 200,
-        // Unified drawing function
         draw: function(canvas) {
             const ctx = canvas.getContext('2d');
             ctx.fillStyle = 'white';
@@ -1194,22 +1003,13 @@
             ctx.arc(190, 150, 20, 0, 2 * Math.PI);
             ctx.fill('evenodd');
         },
-        // Backward compatibility functions
-        drawSWCanvas: function(SWCanvas) {
-            const canvas = SWCanvas.createCanvas(300, 200);
-            this.draw(canvas);
-            return canvas._coreSurface;
-        },
-        drawHTML5Canvas: function(html5Canvas) {
-            this.draw(html5Canvas);
-        }
-    };
+    });
 
     // Test: fill-mixed-paths - Linear + curve combinations
-    visualTests['fill-mixed-paths'] = {
+    // Test: fill-mixed-paths - Linear + curve combinations
+    registerVisualTest('fill-mixed-paths', {
         name: 'Mixed linear and curve paths',
         width: 300, height: 200,
-        // Unified drawing function
         draw: function(canvas) {
             const ctx = canvas.getContext('2d');
             // White background
@@ -1270,22 +1070,13 @@
             ctx.closePath();
             ctx.fill();
         },
-        // Backward compatibility functions
-        drawSWCanvas: function(SWCanvas) {
-            const canvas = SWCanvas.createCanvas(300, 200);
-            this.draw(canvas);
-            return canvas._coreSurface;
-        },
-        drawHTML5Canvas: function(html5Canvas) {
-            this.draw(html5Canvas);
-        }
-    };
+    });
 
     // Test: fill-rule-complex - Complex even-odd vs nonzero comparisons
-    visualTests['fill-rule-complex'] = {
+    // Test: fill-rule-complex - Complex even-odd vs nonzero comparisons
+    registerVisualTest('fill-rule-complex', {
         name: 'Complex fill rule comparisons (even-odd vs nonzero)',
         width: 400, height: 200,
-        // Unified drawing function that works with both canvas types
         draw: function(canvas) {
             const ctx = canvas.getContext('2d');
             ctx.fillStyle = 'white';
@@ -1369,27 +1160,16 @@
             
             ctx.fill('evenodd');
         },
-        // Backward compatibility functions
-        drawSWCanvas: function(SWCanvas) {
-            const canvas = SWCanvas.createCanvas(400, 200);
-            this.draw(canvas);
-            return canvas._coreSurface;
-        },
-        drawHTML5Canvas: function(html5Canvas) {
-            this.draw(html5Canvas);
-        }
-    };
+    });
 
     // Phase 3: Advanced Clipping Tests
 
     // Test 1: Basic rectangular clip regions
-    visualTests['clip-rectangular'] = {
+    // Test 1: Basic rectangular clip regions
+    registerVisualTest('clip-rectangular', {
         name: 'Basic Rectangular Clipping',
-        description: 'Test rectangular clipping regions with simple shapes',
         width: 400,
         height: 200,
-        
-        // Unified drawing function
         draw: function(canvas) {
             const ctx = canvas.getContext('2d');
             // No need for clearRect with SWCanvas as it starts clean
@@ -1426,26 +1206,14 @@
             ctx.fillRect(40, 140, 60, 50);
             ctx.restore();
         },
-        
-        // Backward compatibility functions
-        drawSWCanvas: function(SWCanvas) {
-            const canvas = SWCanvas.createCanvas(400, 200);
-            this.draw(canvas);
-            return canvas._coreSurface;
-        },
-        drawHTML5Canvas: function(html5Canvas) {
-            this.draw(html5Canvas);
-        }
-    };
+    });
 
     // Test 2: Polygon clip shapes
-    visualTests['clip-polygon'] = {
+    // Test 2: Polygon clip shapes
+    registerVisualTest('clip-polygon', {
         name: 'Polygon Clipping',
-        description: 'Test clipping with polygon shapes - triangles and complex polygons',
         width: 400,
         height: 200,
-        
-        // Unified drawing function
         draw: function(canvas) {
             const ctx = canvas.getContext('2d');
             
@@ -1532,25 +1300,14 @@
             ctx.fillRect(160, 120, 80, 20);
             ctx.restore();
         },
-        // Backward compatibility functions
-        drawSWCanvas: function(SWCanvas) {
-            const canvas = SWCanvas.createCanvas(400, 200);
-            this.draw(canvas);
-            return canvas._coreSurface;
-        },
-        
-        drawHTML5Canvas: function(html5Canvas) {
-            this.draw(html5Canvas);
-        }
-    };
+    });
 
     // Test 3: Arc/ellipse clip regions
-    visualTests['clip-curved'] = {
+    // Test 3: Arc/ellipse clip regions
+    registerVisualTest('clip-curved', {
         name: 'Curved Clipping',
-        description: 'Test clipping with arcs and elliptical shapes',
         width: 400,
         height: 250,
-        // Unified drawing function that works with both canvas types
         draw: function(canvas) {
             const ctx = canvas.getContext('2d');
             
@@ -1620,24 +1377,14 @@
             ctx.fillRect(280, 170, 70, 30);
             ctx.restore();
         },
-        // Backward compatibility functions
-        drawSWCanvas: function(SWCanvas) {
-            const canvas = SWCanvas.createCanvas(400, 250);
-            this.draw(canvas);
-            return canvas._coreSurface;
-        },
-        drawHTML5Canvas: function(html5Canvas) {
-            this.draw(html5Canvas);
-        }
-    };
+    });
 
     // Test 4: Self-intersecting clip paths
-    visualTests['clip-self-intersecting'] = {
+    // Test 4: Self-intersecting clip paths
+    registerVisualTest('clip-self-intersecting', {
         name: 'Self-Intersecting Clipping',
-        description: 'Test clipping with self-intersecting paths and complex winding',
         width: 400,
         height: 200,
-        // Unified drawing function that works with both canvas types
         draw: function(canvas) {
             const ctx = canvas.getContext('2d');
             
@@ -1737,24 +1484,14 @@
             ctx.fillRect(270, 130, 60, 40);
             ctx.restore();
         },
-        // Backward compatibility functions
-        drawSWCanvas: function(SWCanvas) {
-            const canvas = SWCanvas.createCanvas(400, 200);
-            this.draw(canvas);
-            return canvas._coreSurface;
-        },
-        drawHTML5Canvas: function(html5Canvas) {
-            this.draw(html5Canvas);
-        }
-    };
+    });
 
     // Test 5: Multiple nested clips
-    visualTests['clip-stack-nested'] = {
+    // Test 5: Multiple nested clips
+    registerVisualTest('clip-stack-nested', {
         name: 'Nested Clipping Stack',
-        description: 'Test multiple nested clip regions with proper stack behavior',
         width: 400,
         height: 250,
-        
         draw: function(canvas) {
             const ctx = canvas.getContext('2d');
             
@@ -1925,24 +1662,14 @@
             ctx.fillRect(-15, -35, 30, 15);
             ctx.restore();
         },
-        
-        drawSWCanvas: function(SWCanvas) {
-            const canvas = SWCanvas.createCanvas(this.width, this.height);
-            this.draw(canvas);
-            return canvas._coreSurface;
-        },
-        drawHTML5Canvas: function(html5Canvas) {
-            this.draw(html5Canvas);
-        }
-    };
+    });
 
     // Test 6: Clip with save/restore behavior
-    visualTests['clip-save-restore'] = {
+    // Test 6: Clip with save/restore behavior
+    registerVisualTest('clip-save-restore', {
         name: 'Clipping Save/Restore',
-        description: 'Test proper clipping behavior with save/restore state management',
         width: 400,
         height: 200,
-        
         draw: function(canvas) {
             const ctx = canvas.getContext('2d');
             
@@ -2099,24 +1826,14 @@
             ctx.strokeRect(225, 125, 70, 15);
             ctx.restore();
         },
-        
-        drawSWCanvas: function(SWCanvas) {
-            const canvas = SWCanvas.createCanvas(this.width, this.height);
-            this.draw(canvas);
-            return canvas._coreSurface;
-        },
-        drawHTML5Canvas: function(html5Canvas) {
-            this.draw(html5Canvas);
-        }
-    };
+    });
 
     // Test 7: Basic clipping regions  
-    visualTests['clip-intersection'] = {
+    // Test 7: Basic clipping regions  
+    registerVisualTest('clip-intersection', {
         name: 'Basic Clipping Regions',
-        description: 'Test various single clipping regions with different shapes',
         width: 400,
         height: 200,
-        
         draw: function(canvas) {
             const ctx = canvas.getContext('2d');
             
@@ -2203,22 +1920,13 @@
             ctx.fillRect(290, 110, 80, 80);
             ctx.restore();
         },
-        
-        drawSWCanvas: function(SWCanvas) {
-            const canvas = SWCanvas.createCanvas(this.width, this.height);
-            this.draw(canvas);
-            return canvas._coreSurface;
-        },
-        drawHTML5Canvas: function(html5Canvas) {
-            this.draw(html5Canvas);
-        }
-    };
+    });
 
     // Test 34: Enhanced Clipping Intersection Test
-    visualTests['clip-intersection-enhanced'] = {
+    // Test 34: Enhanced Clipping Intersection Test
+    registerVisualTest('clip-intersection-enhanced', {
         name: 'Enhanced Clipping Intersection Test',
         width: 400, height: 300,
-        // Unified drawing function
         draw: function(canvas) {
             const ctx = canvas.getContext('2d');
             // White background
@@ -2310,19 +2018,11 @@
             
             ctx.restore();
         },
-        // Backward compatibility functions
-        drawSWCanvas: function(SWCanvas) {
-            const canvas = SWCanvas.createCanvas(400, 300);
-            this.draw(canvas);
-            return canvas._coreSurface;
-        },
-        drawHTML5Canvas: function(html5Canvas) {
-            this.draw(html5Canvas);
-        }
-    };
+    });
 
     // Test 35: Combined Transform + Fill + Rotate - Rotated complex polygons
-    visualTests['combined-transform-fill-rotate'] = {
+    // Test 35: Combined Transform + Fill + Rotate - Rotated complex polygons
+    registerVisualTest('combined-transform-fill-rotate', {
         name: 'Rotated complex polygons',
         width: 400, height: 300,
         draw: function(canvas) {
@@ -2410,19 +2110,11 @@
             ctx.fill();
             ctx.restore();
         },
-        // Backward compatibility functions
-        drawSWCanvas: function(SWCanvas) {
-            const canvas = SWCanvas.createCanvas(400, 300);
-            this.draw(canvas);
-            return canvas._coreSurface;
-        },
-        drawHTML5Canvas: function(html5Canvas) {
-            this.draw(html5Canvas);
-        }
-    };
+    });
 
     // Test 36: Combined Transform + Fill + Scale - Scaled paths with fill rules
-    visualTests['combined-transform-fill-scale'] = {
+    // Test 36: Combined Transform + Fill + Scale - Scaled paths with fill rules
+    registerVisualTest('combined-transform-fill-scale', {
         name: 'Scaled paths with fill rules',
         width: 400, height: 300,
         draw: function(canvas) {
@@ -2522,19 +2214,11 @@
             ctx.fill();
             ctx.restore();
         },
-        // Backward compatibility functions
-        drawSWCanvas: function(SWCanvas) {
-            const canvas = SWCanvas.createCanvas(400, 300);
-            this.draw(canvas);
-            return canvas._coreSurface;
-        },
-        drawHTML5Canvas: function(html5Canvas) {
-            this.draw(html5Canvas);
-        }
-    };
+    });
 
     // Test 37: Combined Transform + Clip + Fill - Critical stencil buffer test
-    visualTests['combined-transform-clip-fill'] = {
+    // Test 37: Combined Transform + Clip + Fill - Critical stencil buffer test
+    registerVisualTest('combined-transform-clip-fill', {
         name: 'Transform + Clip + Fill',
         width: 400, height: 300,
         draw: function(canvas) {
@@ -2666,19 +2350,11 @@
             ctx.restore();
             ctx.restore();
         },
-        // Backward compatibility functions
-        drawSWCanvas: function(SWCanvas) {
-            const canvas = SWCanvas.createCanvas(400, 300);
-            this.draw(canvas);
-            return canvas._coreSurface;
-        },
-        drawHTML5Canvas: function(html5Canvas) {
-            this.draw(html5Canvas);
-        }
-    };
+    });
 
     // Test 38: Combined All Features + GlobalAlpha - Ultimate comprehensive test
-    visualTests['combined-all-features'] = {
+    // Test 38: Combined All Features + GlobalAlpha - Ultimate comprehensive test
+    registerVisualTest('combined-all-features', {
         name: 'All features + globalAlpha',
         width: 400, height: 300,
         draw: function(canvas) {
@@ -2834,19 +2510,11 @@
             ctx.restore();
             ctx.restore();
         },
-        // Backward compatibility functions
-        drawSWCanvas: function(SWCanvas) {
-            const canvas = SWCanvas.createCanvas(400, 300);
-            this.draw(canvas);
-            return canvas._coreSurface;
-        },
-        drawHTML5Canvas: function(html5Canvas) {
-            this.draw(html5Canvas);
-        }
-    };
+    });
 
     // Test 39: Debug Alpha Blending Issue - Multiple nested clips with varying alpha
-    visualTests['debug-alpha-blending'] = {
+    // Test 39: Debug Alpha Blending Issue - Multiple nested clips with varying alpha
+    registerVisualTest('debug-alpha-blending', {
         name: 'Debug Alpha Blending Issue',
         width: 200, height: 200,
         draw: function(canvas) {
@@ -2920,19 +2588,11 @@
                 console.log(`HTML5Canvas clipped center: R=${r}, G=${g}, B=${b}, A=${a}`);
             }
         },
-        // Backward compatibility functions
-        drawSWCanvas: function(SWCanvas) {
-            const canvas = SWCanvas.createCanvas(200, 200);
-            this.draw(canvas);
-            return canvas._coreSurface;
-        },
-        drawHTML5Canvas: function(html5Canvas) {
-            this.draw(html5Canvas);
-        }
-    };
+    });
 
     // Test 40: Debug Star Shape Issue - Complex clip path with transforms
-    visualTests['debug-star-shape'] = {
+    // Test 40: Debug Star Shape Issue - Complex clip path with transforms
+    registerVisualTest('debug-star-shape', {
         name: 'Debug Star Shape Issue',
         width: 200, height: 200,
         draw: function(canvas) {
@@ -2993,19 +2653,11 @@
             ctx.restore();
             ctx.restore();
         },
-        // Backward compatibility functions
-        drawSWCanvas: function(SWCanvas) {
-            const canvas = SWCanvas.createCanvas(200, 200);
-            this.draw(canvas);
-            return canvas._coreSurface;
-        },
-        drawHTML5Canvas: function(html5Canvas) {
-            this.draw(html5Canvas);
-        }
-    };
+    });
 
     // Test 41: Pixel Analysis - Check exact pixel values at center
-    visualTests['pixel-analysis'] = {
+    // Test 41: Pixel Analysis - Check exact pixel values at center
+    registerVisualTest('pixel-analysis', {
         name: 'Pixel Analysis Test',
         width: 200, height: 200,
         draw: function(canvas) {
@@ -3050,19 +2702,11 @@
                 console.log(`HTML5Canvas center pixel: R=${r}, G=${g}, B=${b}, A=${a}`);
             }
         },
-        // Backward compatibility functions
-        drawSWCanvas: function(SWCanvas) {
-            const canvas = SWCanvas.createCanvas(200, 200);
-            this.draw(canvas);
-            return canvas._coreSurface;
-        },
-        drawHTML5Canvas: function(html5Canvas) {
-            this.draw(html5Canvas);
-        }
-    };
+    });
 
     // Test 42: Debug Star Path Generation - Isolated star path test
-    visualTests['debug-star-path'] = {
+    // Test 42: Debug Star Path Generation - Isolated star path test
+    registerVisualTest('debug-star-path', {
         name: 'Debug Star Path Generation',
         width: 200, height: 200,
         draw: function(canvas) {
@@ -3109,19 +2753,11 @@
             ctx.fill();
             ctx.restore();
         },
-        // Backward compatibility functions
-        drawSWCanvas: function(SWCanvas) {
-            const canvas = SWCanvas.createCanvas(200, 200);
-            this.draw(canvas);
-            return canvas._coreSurface;
-        },
-        drawHTML5Canvas: function(html5Canvas) {
-            this.draw(html5Canvas);
-        }
-    };
+    });
 
     // Test 43: Combined Transform + Stroke + Rotate - Phase 4 Integration Test
-    visualTests['combined-transform-stroke-rotate'] = {
+    // Test 43: Combined Transform + Stroke + Rotate - Phase 4 Integration Test
+    registerVisualTest('combined-transform-stroke-rotate', {
         name: 'Rotated Stroke Joins',
         width: 200, height: 200,
         draw: function(canvas) {
@@ -3175,19 +2811,11 @@
             
             ctx.restore();
         },
-        // Backward compatibility functions
-        drawSWCanvas: function(SWCanvas) {
-            const canvas = SWCanvas.createCanvas(200, 200);
-            this.draw(canvas);
-            return canvas._coreSurface;
-        },
-        drawHTML5Canvas: function(html5Canvas) {
-            this.draw(html5Canvas);
-        }
-    };
+    });
 
     // Test 44: Combined Transform + Stroke + Scale - Phase 4 Integration Test
-    visualTests['combined-transform-stroke-scale'] = {
+    // Test 44: Combined Transform + Stroke + Scale - Phase 4 Integration Test
+    registerVisualTest('combined-transform-stroke-scale', {
         name: 'Scaled Stroke Behavior',
         width: 200, height: 200,
         draw: function(canvas) {
@@ -3229,19 +2857,11 @@
                 ctx.restore();
             }
         },
-        // Backward compatibility functions
-        drawSWCanvas: function(SWCanvas) {
-            const canvas = SWCanvas.createCanvas(200, 200);
-            this.draw(canvas);
-            return canvas._coreSurface;
-        },
-        drawHTML5Canvas: function(html5Canvas) {
-            this.draw(html5Canvas);
-        }
-    };
+    });
 
     // Test 45: Combined Transform + Clip + Stroke - Phase 4 Integration Test
-    visualTests['combined-transform-clip-stroke'] = {
+    // Test 45: Combined Transform + Clip + Stroke - Phase 4 Integration Test
+    registerVisualTest('combined-transform-clip-stroke', {
         name: 'Transform + Clip + Stroke',
         width: 200, height: 200,
         draw: function(canvas) {
@@ -3293,16 +2913,7 @@
             
             ctx.restore();
         },
-        // Backward compatibility functions
-        drawSWCanvas: function(SWCanvas) {
-            const canvas = SWCanvas.createCanvas(200, 200);
-            this.draw(canvas);
-            return canvas._coreSurface;
-        },
-        drawHTML5Canvas: function(html5Canvas) {
-            this.draw(html5Canvas);
-        }
-    };
+    });
 
     // ===== PHASE 5: IMAGE RENDERING TESTS =====
 
@@ -3426,10 +3037,10 @@
     }
 
     // Test: Basic drawImage
-    visualTests['drawimage-basic'] = {
+    // Test: Basic drawImage
+    registerVisualTest('drawimage-basic', {
         name: 'Basic drawImage positioning',
         width: 200, height: 150,
-        // Unified drawing function
         draw: function(canvas) {
             const ctx = canvas.getContext('2d');
             // White background
@@ -3445,22 +3056,13 @@
             ctx.drawImage(testImage, 10, 50);        // Below
             ctx.drawImage(testImage, 50, 50);        // Diagonal
         },
-        // Backward compatibility functions
-        drawSWCanvas: function(SWCanvas) {
-            const canvas = SWCanvas.createCanvas(200, 150);
-            this.draw(canvas);
-            return canvas._coreSurface;
-        },
-        drawHTML5Canvas: function(html5Canvas) {
-            this.draw(html5Canvas);
-        }
-    };
+    });
 
     // Test: drawImage scaling
-    visualTests['drawimage-scaling'] = {
+    // Test: drawImage scaling
+    registerVisualTest('drawimage-scaling', {
         name: 'drawImage with scaling',
         width: 200, height: 150,
-        // Unified drawing function
         draw: function(canvas) {
             const ctx = canvas.getContext('2d');
             ctx.fillStyle = 'white';
@@ -3484,22 +3086,13 @@
             // Draw with non-uniform scaling
             ctx.drawImage(testImage, 10, 50, 40, 10);
         },
-        // Backward compatibility functions
-        drawSWCanvas: function(SWCanvas) {
-            const canvas = SWCanvas.createCanvas(200, 150);
-            this.draw(canvas);
-            return canvas._coreSurface;
-        },
-        drawHTML5Canvas: function(html5Canvas) {
-            this.draw(html5Canvas);
-        }
-    };
+    });
 
     // Test: RGB to RGBA conversion
-    visualTests['drawimage-rgb-conversion'] = {
+    // Test: RGB to RGBA conversion
+    registerVisualTest('drawimage-rgb-conversion', {
         name: 'RGB to RGBA auto-conversion',
         width: 200, height: 150,
-        // Unified drawing function
         draw: function(canvas) {
             const ctx = canvas.getContext('2d');
             // White background
@@ -3516,19 +3109,11 @@
             const rgbaImage = createCompatibleImage(30, 30, 'border', ctx);
             ctx.drawImage(rgbaImage, 70, 20);
         },
-        // Backward compatibility functions
-        drawSWCanvas: function(SWCanvas) {
-            const canvas = SWCanvas.createCanvas(200, 150);
-            this.draw(canvas);
-            return canvas._coreSurface;
-        },
-        drawHTML5Canvas: function(html5Canvas) {
-            this.draw(html5Canvas);
-        }
-    };
+    });
 
     // Test: drawImage with transforms
-    visualTests['drawimage-transforms'] = {
+    // Test: drawImage with transforms
+    registerVisualTest('drawimage-transforms', {
         name: 'drawImage with transforms',
         width: 200, height: 200,
         draw: function(canvas) {
@@ -3564,22 +3149,13 @@
             ctx.drawImage(testImage, -10, -10);
             ctx.restore();
         },
-        // Backward compatibility functions
-        drawSWCanvas: function(SWCanvas) {
-            const canvas = SWCanvas.createCanvas(200, 200);
-            this.draw(canvas);
-            return canvas._coreSurface;
-        },
-        drawHTML5Canvas: function(html5Canvas) {
-            this.draw(html5Canvas);
-        }
-    };
+    });
 
     // Test: drawImage with alpha and blending
-    visualTests['drawimage-alpha-blending'] = {
+    // Test: drawImage with alpha and blending
+    registerVisualTest('drawimage-alpha-blending', {
         name: 'drawImage with alpha and blending',
         width: 200, height: 150,
-        // Unified drawing function
         draw: function(canvas) {
             const ctx = canvas.getContext('2d');
             // Colored background
@@ -3602,19 +3178,11 @@
             ctx.drawImage(solidImage, 120, 50);
             ctx.drawImage(alphaImage, 130, 60);
         },
-        // Backward compatibility functions
-        drawSWCanvas: function(SWCanvas) {
-            const canvas = SWCanvas.createCanvas(200, 150);
-            this.draw(canvas);
-            return canvas._coreSurface;
-        },
-        drawHTML5Canvas: function(html5Canvas) {
-            this.draw(html5Canvas);
-        }
-    };
+    });
 
     // Test: Advanced drawImage using surface-to-ImageLike conversion
-    visualTests['drawimage-surface-conversion'] = {
+    // Test: Advanced drawImage using surface-to-ImageLike conversion
+    registerVisualTest('drawimage-surface-conversion', {
         name: 'drawImage using surface-to-ImageLike conversion',
         width: 200, height: 150,
         draw: function(canvas) {
@@ -3686,24 +3254,14 @@
             ctx.drawImage(sourceImage, 80, 20, 20, 20);   // Scaled down
             ctx.drawImage(sourceImage, 120, 20, 60, 60);  // Scaled up
         },
-        // Backward compatibility functions
-        drawSWCanvas: function(SWCanvas) {
-            const canvas = SWCanvas.createCanvas(200, 150);
-            this.draw(canvas);
-            return canvas._coreSurface;
-        },
-        drawHTML5Canvas: function(html5Canvas) {
-            this.draw(html5Canvas);
-        }
-    };
+    });
 
     // Test: Sub-pixel stroke rendering comparison
-    visualTests['subpixel-strokes'] = {
+    // Test: Sub-pixel stroke rendering comparison
+    registerVisualTest('subpixel-strokes', {
         name: 'Sub-pixel Stroke Rendering',
-        description: 'Test various sub-pixel stroke widths to compare rendering differences',
         width: 600,
         height: 400,
-        
         draw: function(canvas) {
             const ctx = canvas.getContext('2d');
             
@@ -3774,89 +3332,14 @@
                 ctx.stroke();
             }
         },
-        
-        drawHTML5Canvas: function(html5Canvas) {
-            const ctx = html5Canvas.getContext('2d');
-            
-            // White background
-            ctx.fillStyle = 'white';
-            ctx.fillRect(0, 0, 600, 400);
-            
-            // Test different stroke widths
-            const strokeWidths = [0.1, 0.25, 0.5, 0.75, 1.0, 1.5, 2.0];
-            const colors = ['red', 'blue', 'green', 'purple', 'orange', 'brown', 'pink'];
-            
-            // Horizontal lines
-            for (let i = 0; i < strokeWidths.length; i++) {
-                ctx.strokeStyle = colors[i];
-                ctx.lineWidth = strokeWidths[i];
-                ctx.beginPath();
-                ctx.moveTo(50, 50 + i * 30);
-                ctx.lineTo(200, 50 + i * 30);
-                ctx.stroke();
-                
-                // Label the width with text
-                ctx.fillStyle = 'black';
-                ctx.font = '10px Arial';
-                ctx.fillText(strokeWidths[i].toString(), 10, 55 + i * 30);
-            }
-            
-            // Vertical lines
-            for (let i = 0; i < strokeWidths.length; i++) {
-                ctx.strokeStyle = colors[i];
-                ctx.lineWidth = strokeWidths[i];
-                ctx.beginPath();
-                ctx.moveTo(250 + i * 30, 50);
-                ctx.lineTo(250 + i * 30, 200);
-                ctx.stroke();
-            }
-            
-            // Diagonal lines
-            for (let i = 0; i < strokeWidths.length; i++) {
-                ctx.strokeStyle = colors[i];
-                ctx.lineWidth = strokeWidths[i];
-                ctx.beginPath();
-                ctx.moveTo(50 + i * 25, 250);
-                ctx.lineTo(150 + i * 25, 350);
-                ctx.stroke();
-            }
-            
-            // Rectangles
-            for (let i = 0; i < strokeWidths.length; i++) {
-                ctx.strokeStyle = colors[i];
-                ctx.lineWidth = strokeWidths[i];
-                ctx.beginPath();
-                ctx.rect(300 + (i % 4) * 60, 250 + Math.floor(i / 4) * 60, 40, 40);
-                ctx.stroke();
-            }
-            
-            // Circles
-            for (let i = 0; i < strokeWidths.length; i++) {
-                ctx.strokeStyle = colors[i];
-                ctx.lineWidth = strokeWidths[i];
-                ctx.beginPath();
-                ctx.arc(500, 70 + i * 40, 15, 0, 2 * Math.PI);
-                ctx.stroke();
-            }
-        },
-        // Backward compatibility functions
-        drawSWCanvas: function(SWCanvas) {
-            const canvas = SWCanvas.createCanvas(600, 400);
-            this.draw(canvas);
-            return canvas._coreSurface;
-        },
-        drawHTML5Canvas: function(html5Canvas) {
-            this.draw(html5Canvas);
-        }
-    };
+    });
 
     // Test: Stroke edge cases
-    visualTests['stroke-edge-cases'] = {
+    // Test: Stroke edge cases
+    registerVisualTest('stroke-edge-cases', {
         name: 'Stroke Edge Cases',
-        description: 'Test edge cases for stroke rendering: zero-width, transforms, clipping',
         width: 500,
         height: 300,
-        
         draw: function(canvas) {
             const ctx = canvas.getContext('2d');
             
@@ -3940,24 +3423,14 @@
             ctx.lineTo(100.25, 270);
             ctx.stroke();
         },
-        // Backward compatibility functions
-        drawSWCanvas: function(SWCanvas) {
-            const canvas = SWCanvas.createCanvas(500, 300);
-            this.draw(canvas);
-            return canvas._coreSurface;
-        },
-        drawHTML5Canvas: function(html5Canvas) {
-            this.draw(html5Canvas);
-        }
-    };
+    });
 
     // Test: Clipped path strokes (recreates Polygon Clipping star issue)
-    visualTests['clipped-path-strokes'] = {
+    // Test: Clipped path strokes (recreates Polygon Clipping star issue)
+    registerVisualTest('clipped-path-strokes', {
         name: 'Clipped Path Strokes',
-        description: 'Test stroke rendering on clipped paths (recreates star from Polygon Clipping)',
         width: 400,
         height: 300,
-        
         draw: function(canvas) {
             const ctx = canvas.getContext('2d');
             
@@ -4057,24 +3530,14 @@
                 ctx.restore();
             }
         },
-        // Backward compatibility functions
-        drawSWCanvas: function(SWCanvas) {
-            const canvas = SWCanvas.createCanvas(400, 300);
-            this.draw(canvas);
-            return canvas._coreSurface;
-        },
-        drawHTML5Canvas: function(html5Canvas) {
-            this.draw(html5Canvas);
-        }
-    };
+    });
 
     // Test: Stroke pixel analysis
-    visualTests['stroke-pixel-analysis'] = {
+    // Test: Stroke pixel analysis
+    registerVisualTest('stroke-pixel-analysis', {
         name: 'Stroke Pixel Analysis',
-        description: 'Detailed pixel-level analysis of stroke rendering for debugging',
         width: 300,
         height: 200,
-        
         draw: function(canvas) {
             const ctx = canvas.getContext('2d');
             
@@ -4172,16 +3635,7 @@
                 }
             }
         },
-        // Backward compatibility functions
-        drawSWCanvas: function(SWCanvas) {
-            const canvas = SWCanvas.createCanvas(300, 200);
-            this.draw(canvas);
-            return canvas._coreSurface;
-        },
-        drawHTML5Canvas: function(html5Canvas) {
-            this.draw(html5Canvas);
-        }
-    };
+    });
 
     const VisualTestRegistry = {
         getTests: function() { return visualTests; },
