@@ -87,6 +87,7 @@
         log('Running SWCanvas Shared Test Suite...\n');
 
         // Surface tests
+        // Test 001
         test('Surface creation with valid dimensions', () => {
             const surface = SWCanvas.Surface(100, 50);
             assertEquals(surface.width, 100);
@@ -95,17 +96,20 @@
             assertEquals(surface.data.length, 20000); // 400 * 50
         });
 
+        // Test 002
         test('Surface creation with invalid dimensions throws', () => {
             assertThrows(() => SWCanvas.Surface(0, 100), 'positive');
             assertThrows(() => SWCanvas.Surface(100, 0), 'positive');
             assertThrows(() => SWCanvas.Surface(-10, 100), 'positive');
         });
 
+        // Test 003
         test('Surface creation with too large dimensions throws', () => {
             assertThrows(() => SWCanvas.Surface(20000, 20000), 'SurfaceTooLarge');
         });
 
         // Matrix tests
+        // Test 004
         test('Matrix identity creation', () => {
             const m = new SWCanvas.Matrix();
             assertEquals(m.a, 1);
@@ -116,6 +120,7 @@
             assertEquals(m.f, 0);
         });
 
+        // Test 005
         test('Matrix creation with initial values', () => {
             const m = new SWCanvas.Matrix([2, 3, 4, 5, 6, 7]);
             assertEquals(m.a, 2);
@@ -126,6 +131,7 @@
             assertEquals(m.f, 7);
         });
 
+        // Test 006
         test('Matrix multiplication', () => {
             const m1 = new SWCanvas.Matrix([2, 0, 0, 2, 10, 20]);
             const m2 = new SWCanvas.Matrix([1, 0, 0, 1, 5, 5]);
@@ -136,6 +142,7 @@
             assertEquals(result.f, 25); // 20 + 5*2
         });
 
+        // Test 007
         test('Matrix translate', () => {
             const m = new SWCanvas.Matrix();
             const result = m.translate(10, 20);
@@ -143,6 +150,7 @@
             assertEquals(result.f, 20);
         });
 
+        // Test 008
         test('Matrix scale', () => {
             const m = new SWCanvas.Matrix();
             const result = m.scale(2, 3);
@@ -150,6 +158,7 @@
             assertEquals(result.d, 3);
         });
 
+        // Test 009
         test('Matrix transform point', () => {
             const m = new SWCanvas.Matrix([2, 0, 0, 2, 10, 20]);
             const point = m.transformPoint({x: 5, y: 10});
@@ -158,6 +167,7 @@
         });
 
         // Path2D tests
+        // Test 010
         test('Path2D command recording', () => {
             const path = new SWCanvas.Path2D();
             path.moveTo(10, 20);
@@ -172,6 +182,7 @@
             assertEquals(path.commands[2].type, 'closePath');
         });
 
+        // Test 011
         test('Path2D rect convenience method', () => {
             const path = new SWCanvas.Path2D();
             path.rect(10, 20, 100, 50);
@@ -183,6 +194,7 @@
         });
 
         // Context2D basic tests
+        // Test 012
         test('Context2D creation', () => {
             const surface = SWCanvas.Surface(100, 100);
             const ctx = new SWCanvas.Context2D(surface);
@@ -190,6 +202,7 @@
             assertEquals(ctx.globalCompositeOperation, 'source-over');
         });
 
+        // Test 013
         test('Context2D state save/restore', () => {
             const surface = SWCanvas.Surface(100, 100);
             const ctx = new SWCanvas.Context2D(surface);
@@ -204,6 +217,7 @@
         });
 
         // Integration test: Create a simple image
+        // Test 014
         test('Create and save a simple test image', () => {
             // Use visual test registry if available, otherwise fall back to inline test
             if (typeof VisualRenderingTests !== 'undefined') {
@@ -232,6 +246,7 @@
         });
 
         // Alpha blending test
+        // Test 015
         test('Alpha blending test - semi-transparent rectangles', () => {
             // Use visual test registry if available
             if (typeof VisualRenderingTests !== 'undefined') {
@@ -335,6 +350,7 @@
         });
 
         // M2: Path filling tests
+        // Test 016
         test('Path filling - simple triangle', () => {
             const surface = SWCanvas.Surface(100, 100);
             const ctx = new SWCanvas.Context2D(surface);
@@ -368,6 +384,7 @@
             saveBMP(surface, 'triangle-test.bmp', 'triangle path test', SWCanvas);
         });
 
+        // Test 017
         test('Path filling - evenodd vs nonzero', () => {
             const surface = SWCanvas.Surface(100, 100);
             const ctx = new SWCanvas.Context2D(surface);
@@ -400,6 +417,7 @@
             saveBMP(surface, 'evenodd-test.bmp', 'evenodd fill test', SWCanvas);
         });
 
+        // Test 018
         test('Basic clipping test', () => {
             const surface = SWCanvas.Surface(100, 100);
             const ctx = new SWCanvas.Context2D(surface);
@@ -431,6 +449,7 @@
         });
 
         // M3: Stroke tests
+        // Test 019
         test('Basic stroke - simple line', () => {
             const surface = SWCanvas.Surface(100, 100);
             const ctx = new SWCanvas.Context2D(surface);
@@ -459,6 +478,7 @@
             saveBMP(surface, 'stroke-basic-line.bmp', 'basic stroke line', SWCanvas);
         });
 
+        // Test 020
         test('Stroke joins - miter, bevel, round', () => {
             const surface = SWCanvas.Surface(300, 100);
             const ctx = new SWCanvas.Context2D(surface);
@@ -497,6 +517,7 @@
             saveBMP(surface, 'stroke-joins.bmp', 'stroke joins test', SWCanvas);
         });
 
+        // Test 021
         test('Stroke caps - butt, square, round', () => {
             const surface = SWCanvas.Surface(300, 150);
             const ctx = new SWCanvas.Context2D(surface);
@@ -532,6 +553,7 @@
             saveBMP(surface, 'stroke-caps.bmp', 'stroke caps test', SWCanvas);
         });
 
+        // Test 022
         test('Stroke with different line widths', () => {
             const surface = SWCanvas.Surface(200, 150);
             const ctx = new SWCanvas.Context2D(surface);
@@ -555,6 +577,7 @@
             saveBMP(surface, 'stroke-widths.bmp', 'stroke widths test', SWCanvas);
         });
 
+        // Test 023
         test('Complex path stroke with curves', () => {
             const surface = SWCanvas.Surface(150, 150);
             const ctx = new SWCanvas.Context2D(surface);
@@ -579,6 +602,7 @@
             saveBMP(surface, 'stroke-curves.bmp', 'stroke curves test', SWCanvas);
         });
 
+        // Test 024
         test('Miter limit test', () => {
             const surface = SWCanvas.Surface(200, 100);
             const ctx = new SWCanvas.Context2D(surface);
@@ -610,6 +634,7 @@
             saveBMP(surface, 'stroke-miter-limit.bmp', 'stroke miter limit test', SWCanvas);
         });
 
+        // Test 025
         test('Miter limit property and basic functionality', () => {
             // Test that miterLimit property works and doesn't cause crashes
             
@@ -674,6 +699,7 @@
 
         // ===== PHASE 1: BASIC TRANSFORMATION TESTS =====
 
+        // Test 026
         test('Basic transform - translate operations', () => {
             if (typeof VisualRenderingTests !== 'undefined') {
                 const visualTest = VisualRenderingTests.getTest('transform-basic-translate');
@@ -711,6 +737,7 @@
             }
         });
 
+        // Test 027
         test('Basic transform - scale operations', () => {
             if (typeof VisualRenderingTests !== 'undefined') {
                 const visualTest = VisualRenderingTests.getTest('transform-basic-scale');
@@ -748,6 +775,7 @@
             }
         });
 
+        // Test 028
         test('Basic transform - rotate operations', () => {
             if (typeof VisualRenderingTests !== 'undefined') {
                 const visualTest = VisualRenderingTests.getTest('transform-basic-rotate');
@@ -785,6 +813,7 @@
             }
         });
 
+        // Test 029
         test('setTransform vs transform behavior', () => {
             if (typeof VisualRenderingTests !== 'undefined') {
                 const visualTest = VisualRenderingTests.getTest('transform-setTransform-vs-transform');
@@ -820,6 +849,7 @@
             if (surface.data[blueArea + 2] < 200) throw new Error('Absolute setTransform not working');
         });
 
+        // Test 030
         test('resetTransform functionality', () => {
             if (typeof VisualRenderingTests !== 'undefined') {
                 const visualTest = VisualRenderingTests.getTest('transform-resetTransform');
@@ -850,6 +880,7 @@
             }
         });
 
+        // Test 031
         test('Transform matrix order dependency (A*B ≠ B*A)', () => {
             if (typeof VisualRenderingTests !== 'undefined') {
                 const visualTest = VisualRenderingTests.getTest('transform-matrix-order');

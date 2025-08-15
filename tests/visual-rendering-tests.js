@@ -287,7 +287,6 @@
     });
 
     // Test 9: Stroke Miter Limit (Original Test)
-    // Test 9: Stroke Miter Limit (Original Test)
     registerVisualTest('stroke-miter-limit', {
         name: 'Miter limit test',
         width: 200, height: 100,
@@ -320,7 +319,6 @@
         },
     });
 
-    // Test 10: Miter Limit Basic Functionality
     // Test 10: Miter Limit Basic Functionality
     registerVisualTest('miter-limits-basic', {
         name: 'Miter limit property and basic functionality',
@@ -356,7 +354,6 @@
     // ===== PHASE 1: BASIC TRANSFORMATION TESTS =====
 
     // Test 11: Basic Translation
-    // Test 11: Basic Translation
     registerVisualTest('transform-basic-translate', {
         name: 'Basic translation operations',
         width: 200, height: 150,
@@ -381,7 +378,6 @@
         },
     });
 
-    // Test 12: Basic Scaling
     // Test 12: Basic Scaling
     registerVisualTest('transform-basic-scale', {
         name: 'Basic scaling operations',
@@ -412,7 +408,6 @@
     });
 
     // Test 13: Basic Rotation
-    // Test 13: Basic Rotation
     registerVisualTest('transform-basic-rotate', {
         name: 'Basic rotation operations',
         width: 200, height: 150,
@@ -440,7 +435,6 @@
         },
     });
 
-    // Test 14: setTransform vs transform behavior
     // Test 14: setTransform vs transform behavior
     registerVisualTest('transform-setTransform-vs-transform', {
         name: 'setTransform vs transform behavior comparison',
@@ -472,7 +466,6 @@
     });
 
     // Test 15: resetTransform functionality
-    // Test 15: resetTransform functionality
     registerVisualTest('transform-resetTransform', {
         name: 'resetTransform functionality',
         width: 200, height: 150,
@@ -503,7 +496,6 @@
         },
     });
 
-    // Test 16: Transform state save/restore
     // Test 16: Transform state save/restore
     registerVisualTest('transform-state-save-restore', {
         name: 'Transform with save/restore stack',
@@ -540,7 +532,6 @@
     });
 
     // Test 17: Combined transform operations
-    // Test 17: Combined transform operations
     registerVisualTest('transform-combined-operations', {
         name: 'Multiple transforms combined',
         width: 200, height: 150,
@@ -567,7 +558,6 @@
         },
     });
 
-    // Test 18: Transform matrix order dependency (A*B ≠ B*A)
     // Test 18: Transform matrix order dependency (A*B ≠ B*A)
     registerVisualTest('transform-matrix-order', {
         name: 'Transform order dependency (A*B ≠ B*A)',
@@ -599,8 +589,7 @@
     // Export for both Node.js and browser
     // Phase 2: Advanced Path Filling Tests
 
-    // Test: fill-concave-polygons - Star shapes and L-shapes
-    // Test: fill-concave-polygons - Star shapes and L-shapes
+    // Test 19: fill-concave-polygons - Star shapes and L-shapes
     registerVisualTest('fill-concave-polygons', {
         name: 'Concave polygon filling (star and L-shape)',
         width: 300, height: 200,
@@ -657,8 +646,7 @@
         },
     });
 
-    // Test: fill-self-intersecting - Self-intersecting paths
-    // Test: fill-self-intersecting - Self-intersecting paths
+    // Test 20: fill-self-intersecting - Self-intersecting paths
     registerVisualTest('fill-self-intersecting', {
         name: 'Self-intersecting path filling',
         width: 300, height: 200,
@@ -708,8 +696,7 @@
         },
     });
 
-    // Test: fill-nested-holes - Paths with holes
-    // Test: fill-nested-holes - Paths with holes
+    // Test 21: fill-nested-holes - Paths with holes
     registerVisualTest('fill-nested-holes', {
         name: 'Path filling with nested holes',
         width: 300, height: 200,
@@ -765,8 +752,7 @@
         },
     });
 
-    // Test: fill-multiple-subpaths - Multiple subpath handling
-    // Test: fill-multiple-subpaths - Multiple subpath handling
+    // Test 22: fill-multiple-subpaths - Multiple subpath handling
     registerVisualTest('fill-multiple-subpaths', {
         name: 'Multiple subpath handling',
         width: 300, height: 200,
@@ -849,8 +835,7 @@
         },
     });
 
-    // Test: fill-bezier-curves - Cubic bezier curve filling
-    // Test: fill-bezier-curves - Cubic bezier curve filling
+    // Test 23: fill-bezier-curves - Cubic bezier curve filling
     registerVisualTest('fill-bezier-curves', {
         name: 'Cubic bezier curve filling',
         width: 300, height: 200,
@@ -906,8 +891,7 @@
         },
     });
 
-    // Test: fill-quadratic-curves - Quadratic curve filling
-    // Test: fill-quadratic-curves - Quadratic curve filling
+    // Test 24: fill-quadratic-curves - Quadratic curve filling
     registerVisualTest('fill-quadratic-curves', {
         name: 'Quadratic curve filling',
         width: 300, height: 200,
@@ -956,8 +940,7 @@
         },
     });
 
-    // Test: fill-arcs-ellipses - Arc and ellipse filling
-    // Test: fill-arcs-ellipses - Arc and ellipse filling
+    // Test 25: fill-arcs-ellipses - Arc and ellipse filling
     registerVisualTest('fill-arcs-ellipses', {
         name: 'Arc and ellipse filling',
         width: 300, height: 200,
@@ -1005,8 +988,7 @@
         },
     });
 
-    // Test: fill-mixed-paths - Linear + curve combinations
-    // Test: fill-mixed-paths - Linear + curve combinations
+    // Test 26: fill-mixed-paths - Linear + curve combinations
     registerVisualTest('fill-mixed-paths', {
         name: 'Mixed linear and curve paths',
         width: 300, height: 200,
@@ -1072,8 +1054,7 @@
         },
     });
 
-    // Test: fill-rule-complex - Complex even-odd vs nonzero comparisons
-    // Test: fill-rule-complex - Complex even-odd vs nonzero comparisons
+    // Test 27: fill-rule-complex - Complex even-odd vs nonzero comparisons
     registerVisualTest('fill-rule-complex', {
         name: 'Complex fill rule comparisons (even-odd vs nonzero)',
         width: 400, height: 200,
@@ -1164,8 +1145,7 @@
 
     // Phase 3: Advanced Clipping Tests
 
-    // Test 1: Basic rectangular clip regions
-    // Test 1: Basic rectangular clip regions
+    // Test 28: Basic rectangular clip regions
     registerVisualTest('clip-rectangular', {
         name: 'Basic Rectangular Clipping',
         width: 400,
@@ -1208,8 +1188,7 @@
         },
     });
 
-    // Test 2: Polygon clip shapes
-    // Test 2: Polygon clip shapes
+    // Test 29: Polygon clip shapes
     registerVisualTest('clip-polygon', {
         name: 'Polygon Clipping',
         width: 400,
@@ -1302,8 +1281,7 @@
         },
     });
 
-    // Test 3: Arc/ellipse clip regions
-    // Test 3: Arc/ellipse clip regions
+    // Test 30: Arc/ellipse clip regions
     registerVisualTest('clip-curved', {
         name: 'Curved Clipping',
         width: 400,
@@ -1379,8 +1357,7 @@
         },
     });
 
-    // Test 4: Self-intersecting clip paths
-    // Test 4: Self-intersecting clip paths
+    // Test 31: Self-intersecting clip paths
     registerVisualTest('clip-self-intersecting', {
         name: 'Self-Intersecting Clipping',
         width: 400,
@@ -1486,8 +1463,7 @@
         },
     });
 
-    // Test 5: Multiple nested clips
-    // Test 5: Multiple nested clips
+    // Test 32: Multiple nested clips
     registerVisualTest('clip-stack-nested', {
         name: 'Nested Clipping Stack',
         width: 400,
@@ -1664,8 +1640,7 @@
         },
     });
 
-    // Test 6: Clip with save/restore behavior
-    // Test 6: Clip with save/restore behavior
+    // Test 33: Clip with save/restore behavior
     registerVisualTest('clip-save-restore', {
         name: 'Clipping Save/Restore',
         width: 400,
@@ -1828,8 +1803,7 @@
         },
     });
 
-    // Test 7: Basic clipping regions  
-    // Test 7: Basic clipping regions  
+    // Test 34: Basic clipping regions  
     registerVisualTest('clip-intersection', {
         name: 'Basic Clipping Regions',
         width: 400,
@@ -1922,8 +1896,7 @@
         },
     });
 
-    // Test 34: Enhanced Clipping Intersection Test
-    // Test 34: Enhanced Clipping Intersection Test
+    // Test 35: Enhanced Clipping Intersection Test
     registerVisualTest('clip-intersection-enhanced', {
         name: 'Enhanced Clipping Intersection Test',
         width: 400, height: 300,
@@ -2020,8 +1993,7 @@
         },
     });
 
-    // Test 35: Combined Transform + Fill + Rotate - Rotated complex polygons
-    // Test 35: Combined Transform + Fill + Rotate - Rotated complex polygons
+    // Test 36: Combined Transform + Fill + Rotate - Rotated complex polygons
     registerVisualTest('combined-transform-fill-rotate', {
         name: 'Rotated complex polygons',
         width: 400, height: 300,
@@ -2112,8 +2084,7 @@
         },
     });
 
-    // Test 36: Combined Transform + Fill + Scale - Scaled paths with fill rules
-    // Test 36: Combined Transform + Fill + Scale - Scaled paths with fill rules
+    // Test 37: Combined Transform + Fill + Scale - Scaled paths with fill rules
     registerVisualTest('combined-transform-fill-scale', {
         name: 'Scaled paths with fill rules',
         width: 400, height: 300,
@@ -2216,8 +2187,7 @@
         },
     });
 
-    // Test 37: Combined Transform + Clip + Fill - Critical stencil buffer test
-    // Test 37: Combined Transform + Clip + Fill - Critical stencil buffer test
+    // Test 38: Combined Transform + Clip + Fill - Critical stencil buffer test
     registerVisualTest('combined-transform-clip-fill', {
         name: 'Transform + Clip + Fill',
         width: 400, height: 300,
@@ -2352,8 +2322,7 @@
         },
     });
 
-    // Test 38: Combined All Features + GlobalAlpha - Ultimate comprehensive test
-    // Test 38: Combined All Features + GlobalAlpha - Ultimate comprehensive test
+    // Test 39: Combined All Features + GlobalAlpha - Ultimate comprehensive test
     registerVisualTest('combined-all-features', {
         name: 'All features + globalAlpha',
         width: 400, height: 300,
@@ -2512,8 +2481,7 @@
         },
     });
 
-    // Test 39: Debug Alpha Blending Issue - Multiple nested clips with varying alpha
-    // Test 39: Debug Alpha Blending Issue - Multiple nested clips with varying alpha
+    // Test 40: Debug Alpha Blending Issue - Multiple nested clips with varying alpha
     registerVisualTest('debug-alpha-blending', {
         name: 'Debug Alpha Blending Issue',
         width: 200, height: 200,
@@ -2590,8 +2558,7 @@
         },
     });
 
-    // Test 40: Debug Star Shape Issue - Complex clip path with transforms
-    // Test 40: Debug Star Shape Issue - Complex clip path with transforms
+    // Test 41: Debug Star Shape Issue - Complex clip path with transforms
     registerVisualTest('debug-star-shape', {
         name: 'Debug Star Shape Issue',
         width: 200, height: 200,
@@ -2655,8 +2622,7 @@
         },
     });
 
-    // Test 41: Pixel Analysis - Check exact pixel values at center
-    // Test 41: Pixel Analysis - Check exact pixel values at center
+    // Test 42: Pixel Analysis - Check exact pixel values at center
     registerVisualTest('pixel-analysis', {
         name: 'Pixel Analysis Test',
         width: 200, height: 200,
@@ -2704,8 +2670,7 @@
         },
     });
 
-    // Test 42: Debug Star Path Generation - Isolated star path test
-    // Test 42: Debug Star Path Generation - Isolated star path test
+    // Test 43: Debug Star Path Generation - Isolated star path test
     registerVisualTest('debug-star-path', {
         name: 'Debug Star Path Generation',
         width: 200, height: 200,
@@ -2755,8 +2720,7 @@
         },
     });
 
-    // Test 43: Combined Transform + Stroke + Rotate - Phase 4 Integration Test
-    // Test 43: Combined Transform + Stroke + Rotate - Phase 4 Integration Test
+    // Test 44: Combined Transform + Stroke + Rotate - Phase 4 Integration Test
     registerVisualTest('combined-transform-stroke-rotate', {
         name: 'Rotated Stroke Joins',
         width: 200, height: 200,
@@ -2813,8 +2777,7 @@
         },
     });
 
-    // Test 44: Combined Transform + Stroke + Scale - Phase 4 Integration Test
-    // Test 44: Combined Transform + Stroke + Scale - Phase 4 Integration Test
+    // Test 45: Combined Transform + Stroke + Scale - Phase 4 Integration Test
     registerVisualTest('combined-transform-stroke-scale', {
         name: 'Scaled Stroke Behavior',
         width: 200, height: 200,
@@ -2859,8 +2822,7 @@
         },
     });
 
-    // Test 45: Combined Transform + Clip + Stroke - Phase 4 Integration Test
-    // Test 45: Combined Transform + Clip + Stroke - Phase 4 Integration Test
+    // Test 46: Combined Transform + Clip + Stroke - Phase 4 Integration Test
     registerVisualTest('combined-transform-clip-stroke', {
         name: 'Transform + Clip + Stroke',
         width: 200, height: 200,
@@ -3036,8 +2998,7 @@
         return rgbImagelike;
     }
 
-    // Test: Basic drawImage
-    // Test: Basic drawImage
+    // Test 47: Basic drawImage
     registerVisualTest('drawimage-basic', {
         name: 'Basic drawImage positioning',
         width: 200, height: 150,
@@ -3058,8 +3019,7 @@
         },
     });
 
-    // Test: drawImage scaling
-    // Test: drawImage scaling
+    // Test 48: drawImage scaling
     registerVisualTest('drawimage-scaling', {
         name: 'drawImage with scaling',
         width: 200, height: 150,
@@ -3088,8 +3048,7 @@
         },
     });
 
-    // Test: RGB to RGBA conversion
-    // Test: RGB to RGBA conversion
+    // Test 49: RGB to RGBA conversion
     registerVisualTest('drawimage-rgb-conversion', {
         name: 'RGB to RGBA auto-conversion',
         width: 200, height: 150,
@@ -3111,8 +3070,7 @@
         },
     });
 
-    // Test: drawImage with transforms
-    // Test: drawImage with transforms
+    // Test 50: drawImage with transforms
     registerVisualTest('drawimage-transforms', {
         name: 'drawImage with transforms',
         width: 200, height: 200,
@@ -3151,8 +3109,7 @@
         },
     });
 
-    // Test: drawImage with alpha and blending
-    // Test: drawImage with alpha and blending
+    // Test 51: drawImage with alpha and blending
     registerVisualTest('drawimage-alpha-blending', {
         name: 'drawImage with alpha and blending',
         width: 200, height: 150,
@@ -3180,8 +3137,7 @@
         },
     });
 
-    // Test: Advanced drawImage using surface-to-ImageLike conversion
-    // Test: Advanced drawImage using surface-to-ImageLike conversion
+    // Test 52: Advanced drawImage using surface-to-ImageLike conversion
     registerVisualTest('drawimage-surface-conversion', {
         name: 'drawImage using surface-to-ImageLike conversion',
         width: 200, height: 150,
@@ -3256,8 +3212,7 @@
         },
     });
 
-    // Test: Sub-pixel stroke rendering comparison
-    // Test: Sub-pixel stroke rendering comparison
+    // Test 53: Sub-pixel stroke rendering comparison
     registerVisualTest('subpixel-strokes', {
         name: 'Sub-pixel Stroke Rendering',
         width: 600,
@@ -3334,8 +3289,7 @@
         },
     });
 
-    // Test: Stroke edge cases
-    // Test: Stroke edge cases
+    // Test 54: Stroke edge cases
     registerVisualTest('stroke-edge-cases', {
         name: 'Stroke Edge Cases',
         width: 500,
@@ -3425,8 +3379,7 @@
         },
     });
 
-    // Test: Clipped path strokes (recreates Polygon Clipping star issue)
-    // Test: Clipped path strokes (recreates Polygon Clipping star issue)
+    // Test 55: Clipped path strokes (recreates Polygon Clipping star issue)
     registerVisualTest('clipped-path-strokes', {
         name: 'Clipped Path Strokes',
         width: 400,
@@ -3532,8 +3485,7 @@
         },
     });
 
-    // Test: Stroke pixel analysis
-    // Test: Stroke pixel analysis
+    // Test 56: Stroke pixel analysis
     registerVisualTest('stroke-pixel-analysis', {
         name: 'Stroke Pixel Analysis',
         width: 300,
