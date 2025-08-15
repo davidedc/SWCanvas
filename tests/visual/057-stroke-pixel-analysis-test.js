@@ -1,7 +1,7 @@
-// Test 60: Stroke pixel analysis
+// Test 57: Stroke pixel analysis
 // This file will be concatenated into the main visual test suite
 
-// Test 60: Stroke pixel analysis
+// Test 57: Stroke pixel analysis
 registerVisualTest('stroke-pixel-analysis', {
     name: 'Stroke Pixel Analysis',
     width: 300,

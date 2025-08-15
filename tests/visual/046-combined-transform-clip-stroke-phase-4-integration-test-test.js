@@ -1,7 +1,7 @@
-// Test 50: Combined Transform + Clip + Stroke - Phase 4 Integration Test
+// Test 46: Combined Transform + Clip + Stroke - Phase 4 Integration Test
 // This file will be concatenated into the main visual test suite
 
-// Test 50: Combined Transform + Clip + Stroke - Phase 4 Integration Test
+// Test 46: Combined Transform + Clip + Stroke - Phase 4 Integration Test
 registerVisualTest('combined-transform-clip-stroke', {
     name: 'Transform + Clip + Stroke',
     width: 200, height: 200,

@@ -36,7 +36,8 @@ function buildCoreTests() {
     // Read the original file to get the header and footer
     const originalFile = 'tests/core-functionality-tests.js';
     if (!fs.existsSync(originalFile)) {
-        console.error('Original core-functionality-tests.js not found');
+        console.log('Original core-functionality-tests.js not found - using default structure');
+        buildCoreTestsWithDefaults();
         return;
     }
     
@@ -115,6 +116,150 @@ function buildCoreTests() {
     const outputFile = 'tests/dist/core-functionality-tests.js';
     fs.writeFileSync(outputFile, concatenated);
     console.log(`Built ${outputFile} with ${testFiles.length} tests`);
+}
+
+function buildCoreTestsWithDefaults() {
+    console.log('Building core tests with default structure...');
+    
+    const testFiles = getTestFiles('tests/core');
+    console.log(`Found ${testFiles.length} core test files`);
+    
+    if (testFiles.length === 0) {
+        console.log('No core test files found');
+        return;
+    }
+    
+    // Default header for core tests
+    let concatenated = `// Core Functionality Tests
+// Comprehensive test suite for SWCanvas API correctness
+// Tests fundamental operations, edge cases, and mathematical accuracy
+
+(function(global) {
+    'use strict';
+    
+    // Simple test framework for Node.js and browser compatibility
+    const testResults = { passed: 0, failed: 0 };
+    
+    function assertEquals(actual, expected, message) {
+        if (actual !== expected) {
+            const error = message || \`Expected \${expected}, got \${actual}\`;
+            throw new Error(error);
+        }
+    }
+    
+    function assertThrows(fn, expectedMessage) {
+        try {
+            fn();
+            throw new Error('Expected function to throw an error');
+        } catch (error) {
+            if (expectedMessage && !error.message.includes(expectedMessage)) {
+                throw new Error(\`Expected error message to contain '\${expectedMessage}', got '\${error.message}'\`);
+            }
+        }
+    }
+    
+    function test(testName, testFunction) {
+        try {
+            testFunction();
+            testResults.passed++;
+            console.log(\`✓ \${testName}\`);
+        } catch (error) {
+            testResults.failed++;
+            console.log(\`✗ \${testName}\`);
+            console.log(\`  \${error.message}\`);
+        }
+    }
+    
+    function log(message) {
+        console.log(\`  \${message}\`);
+    }
+    
+    // Helper function to save BMP files (Node.js only)
+    function saveBMP(surface, filename, description, SWCanvas) {
+        try {
+            const bmpData = SWCanvas.encodeBMP(surface);
+            const fs = require('fs');
+            const path = require('path');
+            
+            // Create output directory if it doesn't exist
+            const outputDir = path.join(__dirname, 'output');
+            if (!fs.existsSync(outputDir)) {
+                fs.mkdirSync(outputDir, { recursive: true });
+            }
+            
+            const filePath = path.join(outputDir, filename);
+            // Convert ArrayBuffer to Buffer for Node.js
+            const buffer = Buffer.from(bmpData);
+            fs.writeFileSync(filePath, buffer);
+            console.log(\`  Saved \${description}: \${filePath}\`);
+        } catch (error) {
+            console.log(\`  Warning: Could not save \${description} - \${error.message}\`);
+        }
+    }
+    
+    // Core functionality tests - run all tests
+    function runSharedTests(SWCanvas) {
+        console.log('Running SWCanvas Shared Test Suite...\\n');
+        
+`;
+
+    // Add all test files
+    testFiles.forEach((filePath, index) => {
+        const content = fs.readFileSync(filePath, 'utf8');
+        console.log(`Adding ${path.basename(filePath)}`);
+        
+        // Extract the test content - everything from the comment to the end of the test function
+        const lines = content.split('\n');
+        let testContent = [];
+        let inTest = false;
+        let braceCount = 0;
+        
+        for (const line of lines) {
+            if (line.includes('// Test ') || inTest) {
+                testContent.push(line);
+                inTest = true;
+                
+                // Count braces to find the end of the test function
+                for (const char of line) {
+                    if (char === '{') braceCount++;
+                    if (char === '}') braceCount--;
+                }
+                
+                // If we hit 0 braces and we've seen the test function, we're done
+                if (braceCount === 0 && line.includes('});')) {
+                    break;
+                }
+            }
+        }
+        
+        if (testContent.length > 0) {
+            // Add the test with proper indentation
+            const testString = testContent.join('\n');
+            concatenated += `        ${testString}\n\n`;
+        }
+    });
+    
+    // Default footer for core tests
+    concatenated += `        return testResults;
+    }
+    
+    // Export for both Node.js and browser
+    if (typeof module !== "undefined" && module.exports) {
+        module.exports = {
+            runSharedTests: runSharedTests
+        };
+    } else {
+        global.CoreFunctionalityTests = {
+            runSharedTests: runSharedTests
+        };
+    }
+    
+})(typeof window !== "undefined" ? window : global);`;
+    
+    // Write the built file
+    const outputFile = 'tests/dist/core-functionality-tests.js';
+    fs.writeFileSync(outputFile, concatenated);
+    console.log(`Built ${outputFile} with ${testFiles.length} tests using default structure`);
 }
 
 function buildVisualTests() {

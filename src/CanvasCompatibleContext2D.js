@@ -164,10 +164,6 @@ class CanvasCompatibleContext2D {
         this._core.arc(x, y, radius, startAngle, endAngle, counterclockwise);
     }
     
-    arcTo(x1, y1, x2, y2, radius) {
-        this._core.arcTo(x1, y1, x2, y2, radius);
-    }
-    
     quadraticCurveTo(cpx, cpy, x, y) {
         this._core.quadraticCurveTo(cpx, cpy, x, y);
     }

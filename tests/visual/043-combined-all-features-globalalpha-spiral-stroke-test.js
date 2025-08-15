@@ -1,7 +1,7 @@
-// Test 44: Combined All Features + GlobalAlpha - Spiral stroke version
+// Test 43: Combined All Features + GlobalAlpha - Spiral stroke version
 // This file will be concatenated into the main visual test suite
 
-// Test 44: Combined All Features + GlobalAlpha - Ultimate comprehensive test (rescued from original test 39)
+// Test 43: Combined All Features + GlobalAlpha - Ultimate comprehensive test (rescued from original test 39)
 registerVisualTest('combined-all-features-v2', {
     name: 'All features + globalAlpha (spiral stroke)',
     width: 400, height: 300,

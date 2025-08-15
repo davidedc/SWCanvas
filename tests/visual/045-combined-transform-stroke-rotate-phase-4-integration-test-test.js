@@ -1,7 +1,7 @@
-// Test 48: Combined Transform + Stroke + Rotate - Phase 4 Integration Test
+// Test 45: Combined Transform + Stroke + Rotate - Phase 4 Integration Test
 // This file will be concatenated into the main visual test suite
 
-// Test 48: Combined Transform + Stroke + Rotate - Phase 4 Integration Test
+// Test 45: Combined Transform + Stroke + Rotate - Phase 4 Integration Test
 registerVisualTest('combined-transform-stroke-rotate', {
     name: 'Rotated Stroke Joins',
     width: 200, height: 200,

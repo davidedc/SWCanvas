@@ -3,8 +3,8 @@
 
 // Test 006
 test('Matrix multiplication', () => {
-    const m1 = new SWCanvas.Matrix([2, 0, 0, 2, 10, 20]);
-    const m2 = new SWCanvas.Matrix([1, 0, 0, 1, 5, 5]);
+    const m1 = new SWCanvas.Transform2D([2, 0, 0, 2, 10, 20]);
+    const m2 = new SWCanvas.Transform2D([1, 0, 0, 1, 5, 5]);
     const result = m1.multiply(m2);
     assertEquals(result.a, 2);
     assertEquals(result.d, 2);

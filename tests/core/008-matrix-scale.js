@@ -3,7 +3,7 @@
 
 // Test 008
 test('Matrix scale', () => {
-    const m = new SWCanvas.Matrix();
+    const m = new SWCanvas.Transform2D();
     const result = m.scale(2, 3);
     assertEquals(result.a, 2);
     assertEquals(result.d, 3);

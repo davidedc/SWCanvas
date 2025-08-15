@@ -78,8 +78,6 @@ function CoreSurfaceFactory(width, height) {
     return new Surface(width, height);
 }
 
-// Legacy alias for Transform2D (backward compatibility)
-const Matrix = Transform2D;
 
 // Legacy encodeBMP function
 function encodeBMP(surface) {
@@ -120,7 +118,6 @@ if (typeof window !== 'undefined') {
         Surface: CoreSurfaceFactory,
         Context2D: Context2D,
         Transform2D: Transform2D,
-        Matrix: Matrix,
         Path2D: Path2D,
         encodeBMP: encodeBMP,
         Color: Color,
@@ -162,7 +159,6 @@ if (typeof window !== 'undefined') {
         Surface: CoreSurfaceFactory,
         Context2D: Context2D,
         Transform2D: Transform2D,
-        Matrix: Matrix,
         Path2D: Path2D,
         encodeBMP: encodeBMP,
         Color: Color,
