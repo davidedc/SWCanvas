@@ -192,17 +192,53 @@ node -e "console.log(require('./tests/dist/core-functionality-tests.js'))"
 ```
 
 ### Modular Test Development
+
+#### Adding Tests at the End (Simple)
 ```bash
-# Add a new core functionality test
+# Add a new core functionality test (next number: 032)
 echo "// Test 032: New feature test" > tests/core/032-new-feature-test.js
 echo "test('New feature test', () => { /* test code */ });" >> tests/core/032-new-feature-test.js
 
-# Add a new visual test  
+# Add a new visual test (next number: 057)
 echo "// Test 057: New visual test" > tests/visual/057-new-visual-test.js
 echo "registerVisualTest('new-visual', { /* test config */ });" >> tests/visual/057-new-visual-test.js
 
 # Build automatically includes new tests
 npm run build && npm test
+```
+
+#### Inserting Tests in the Middle (Advanced)
+When you need to add a test at a specific position (e.g., to group related tests):
+
+```bash
+# Step 1: Make space for a new test at position 25
+node tests/build/renumber-tests.js --type visual --position 25 --shift forward
+
+# This shifts all tests from 025 onwards:
+# 025-old-test.js → 026-old-test.js
+# 026-other-test.js → 027-other-test.js
+# etc.
+
+# Step 2: Create your new test at the now-available position 025
+echo "// Test 025: My Grouped Test" > tests/visual/025-my-grouped-test.js
+
+# Step 3: Rebuild and test
+npm run build && npm test
+
+# Optional: Undo if needed
+./undo-renumber.sh  # Generated automatically by renumbering script
+```
+
+**Renumbering Utility Options**:
+```bash
+# Preview changes without executing
+node tests/build/renumber-tests.js --type visual --position 30 --shift forward --dry-run
+
+# Close a gap after removing a test
+node tests/build/renumber-tests.js --type core --position 15 --shift backward
+
+# Get help
+node tests/build/renumber-tests.js --help
 ```
 
 ## Test System Architecture
@@ -236,6 +272,30 @@ npm run build  # Automatically detects /tests/core/ and /tests/visual/ directori
                # Concatenates individual files into built test suites
                # Maintains proper test ordering and dependencies
 ```
+
+### Build Utilities (`/tests/build/`)
+The modular test system includes specialized build utilities for maintenance:
+
+#### Test Concatenation (`concat-tests.js`)
+- **Purpose**: Combines individual test files into unified test suites
+- **Auto-run**: Called by `npm run build` automatically
+- **Output**: `tests/dist/core-functionality-tests.js` and `tests/dist/visual-rendering-tests.js`
+- **Fallback**: Gracefully handles missing modular files
+
+#### Test Renumbering (`renumber-tests.js`) 
+- **Purpose**: Shifts test numbers to insert tests at specific positions
+- **Use case**: Maintain logical test grouping and organization
+- **Safety**: Dry-run mode, conflict detection, undo script generation
+- **Git integration**: Preserves file history with `git mv` when available
+
+**Key Features**:
+- **Forward shift**: Make space for new test (`--shift forward`)
+- **Backward shift**: Close gaps after test removal (`--shift backward`) 
+- **Content updating**: Updates `// Test N:` comments automatically
+- **Conflict prevention**: Checks for existing files before renaming
+- **History preservation**: Uses `git mv` to maintain file history
+
+See `/tests/build/README.md` for detailed build utilities documentation.
 
 #### Smart Test Runner Architecture
 ```javascript

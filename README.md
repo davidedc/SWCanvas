@@ -328,24 +328,37 @@ SWCanvas uses a **dual test system** with two complementary test suites:
 
 ### Adding New Tests
 
-#### For Core Functionality
-Add to `tests/core-functionality-tests.js` - automatically runs in both Node.js and browsers.
+#### For Core Functionality (Modular)
+Create individual test files in `/tests/core/` using the numbering convention:
+```bash
+# Add at the end
+echo "// Test 032: New feature" > tests/core/032-new-feature-test.js
 
-#### For Visual Rendering  
-Add to `tests/visual-rendering-tests.js` using the `registerVisualTest` helper:
+# Insert at specific position (advanced)
+node tests/build/renumber-tests.js --type core --position 15 --shift forward
+echo "// Test 015: My grouped test" > tests/core/015-my-grouped-test.js
+```
 
-```javascript
-registerVisualTest('my-new-test', {
-    name: 'My New Test Description',
-    width: 200, height: 150,
-    draw: function(canvas) {
-        const ctx = canvas.getContext('2d');
-        ctx.fillStyle = 'red';
-        ctx.fillRect(10, 10, 50, 50);
-        // ... standard HTML5 Canvas API operations
-    }
-    // Backward compatibility functions auto-generated
-});
+#### For Visual Rendering (Modular)
+Create individual test files in `/tests/visual/` using the `registerVisualTest` helper:
+
+```bash
+# Add at the end  
+echo "// Test 057: New visual test" > tests/visual/057-new-visual-test.js
+
+# Insert at specific position (advanced)
+node tests/build/renumber-tests.js --type visual --position 25 --shift forward
+echo "// Test 025: My grouped test" > tests/visual/025-my-grouped-test.js
+```
+
+**Test Renumbering Utility**:
+The renumbering utility helps maintain logical test organization:
+```bash
+# Make space for a new test at position 30 
+node tests/build/renumber-tests.js --type visual --position 30 --shift forward --dry-run
+
+# See all options
+node tests/build/renumber-tests.js --help
 ```
 
 Use standard HTML5 Canvas API for consistent colors:
@@ -390,7 +403,7 @@ MIT License - see LICENSE file for details.
 1. **Build**: `npm run build`
 2. **Test**: `npm test` 
 3. **Visual Test**: Open `tests/browser/index.html` in browser
-4. **Add Tests**: Follow patterns in `tests/visual-rendering-tests.js`
+4. **Add Tests**: Create individual test files in `/tests/core/` or `/tests/visual/` (see renumbering utility for advanced organization)
 5. **Verify**: Ensure identical results in both Node.js and browser
 
 The comprehensive test suite ensures any changes maintain pixel-perfect compatibility with HTML5 Canvas.
