@@ -298,23 +298,20 @@ dist/             # Built library
 Add to `tests/shared-test-suite.js` - automatically runs in both Node.js and browsers.
 
 #### For Visual Rendering  
-Add to `tests/visual-test-registry.js` with both SWCanvas and HTML5 Canvas implementations:
+Add to `tests/visual-test-registry.js` using the `registerVisualTest` helper:
 
 ```javascript
-visualTests['my-new-test'] = {
+registerVisualTest('my-new-test', {
     name: 'My New Test Description',
     width: 200, height: 150,
-    drawSWCanvas: function(SWCanvas) {
-        const surface = SWCanvas.Surface(200, 150);
-        const ctx = new SWCanvas.Context2D(surface);
-        // ... drawing operations
-        return surface;
-    },
-    drawHTML5Canvas: function(html5Canvas) {
-        const ctx = html5Canvas.getContext('2d');
-        // ... identical drawing operations
+    draw: function(canvas) {
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = 'red';
+        ctx.fillRect(10, 10, 50, 50);
+        // ... standard HTML5 Canvas API operations
     }
-};
+    // Backward compatibility functions auto-generated
+});
 ```
 
 Use standard HTML5 Canvas API for consistent colors:

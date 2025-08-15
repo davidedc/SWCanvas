@@ -33,7 +33,7 @@ A minimal test showing basic rectangle rendering comparison.
 Browser-specific visual test functions and utilities.
 
 ### ../tests/visual-test-registry.js
-**Shared visual test registry** - contains 55+ comprehensive drawing tests used by both Node.js and browser tests to ensure identical test behavior and eliminate code duplication.
+**Shared visual test registry** - contains 55+ comprehensive drawing tests used by both Node.js and browser tests to ensure identical test behavior and eliminate code duplication. All tests use the `registerVisualTest()` helper for automatic backward compatibility.
 
 
 ## Usage
