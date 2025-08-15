@@ -13,7 +13,7 @@ This file provides Claude with essential context about the SWCanvas project for 
 - **Drop-in replacement**: True HTML5 Canvas 2D Context compatibility
 - **Memory efficient**: 1-bit stencil clipping, optimized algorithms
 - **Sub-pixel accurate**: Thin strokes render with proportional opacity (no anti-aliasing)
-- **Well-tested**: 32 shared tests + 57 visual tests with pixel-perfect validation
+- **Well-tested**: 31 core tests + 56 visual tests with pixel-perfect validation
 
 ## Dual API Architecture
 
@@ -123,7 +123,7 @@ src/ColorParser.js            # CSS color string parsing (hex, rgb, named colors
 - **Color class**: Immutable color handling with premultiplied alpha internally
 - **Surface class**: Stores non-premultiplied RGBA (0-255) with immutable dimensions
 - Color class handles conversion between premultiplied/non-premultiplied forms
-- CSS color names mapped to exact RGB values using standard Canvas API
+- CSS color names mapped to exact RGB values using ColorParser.js
 - Alpha blending uses source-over composition with correct math
 - Global alpha applied correctly via `Color.withGlobalAlpha()` method
 
@@ -157,16 +157,17 @@ src/ColorParser.js            # CSS color string parsing (hex, rgb, named colors
 # Build the library + modular tests
 npm run build          # or ./build.sh
                        # - Builds dist/swcanvas.js
-                       # - Concatenates /tests/core/ → core-functionality-tests-built.js
-                       # - Concatenates /tests/visual/ → visual-rendering-tests-built.js
+                       # - Concatenates /tests/core/ → /tests/dist/core-functionality-tests.js
+                       # - Concatenates /tests/visual/ → /tests/dist/visual-rendering-tests.js
 
 # Run all tests (31 core + 56 visual BMP generation)
 npm test              # or node tests/run-tests.js
-                      # - Uses built modular tests automatically
+                      # - Uses built modular tests from /tests/dist/ automatically
                       # - Generates 56+ BMP files in tests/output/
 
 # Check test status
 ls -la tests/output/  # Should see 56+ BMP files after test run
+ls -la tests/dist/    # Should see built test files after build
 ```
 
 ### Development Workflow
@@ -179,7 +180,7 @@ npm run build
 npm test              # Automatically uses built modular tests
 
 # 4. Browser testing (uses built tests automatically)
-open examples/test.html
+open tests/browser/index.html
 
 # 5. Add new modular tests
 # Create /tests/core/032-new-feature.js or /tests/visual/057-new-test.js
@@ -187,7 +188,7 @@ npm run build         # Auto-includes new tests
 npm test              # Runs new tests
 
 # 6. Check specific test output if needed  
-node -e "console.log(require('./tests/core-functionality-tests-built.js'))"
+node -e "console.log(require('./tests/dist/core-functionality-tests.js'))"
 ```
 
 ### Modular Test Development
@@ -213,7 +214,7 @@ SWCanvas uses a **modular dual test architecture** where each test is in its own
 
 #### Core Functionality Tests - 31 Individual Files
 - **Location**: `/tests/core/` - Individual test files numbered 001-031
-- **Built Output**: `tests/core-functionality-tests-built.js` (auto-generated)
+- **Built Output**: `/tests/dist/core-functionality-tests.js` (auto-generated)
 - **Purpose**: Programmatic verification with pass/fail assertions
 - **Type**: Unit tests with `assertEquals()` and `assertThrows()` assertions  
 - **Focus**: API correctness, error handling, data validation, mathematical accuracy
@@ -222,7 +223,7 @@ SWCanvas uses a **modular dual test architecture** where each test is in its own
 
 #### Visual Rendering Tests - 56 Individual Files  
 - **Location**: `/tests/visual/` - Individual test files numbered 001-056
-- **Built Output**: `tests/visual-rendering-tests-built.js` (auto-generated) 
+- **Built Output**: `/tests/dist/visual-rendering-tests.js` (auto-generated) 
 - **Purpose**: Visual verification with pixel-perfect BMP output
 - **Type**: Visual tests that generate images for comparison
 - **Focus**: Rendering accuracy, pixel-perfect output, visual consistency
@@ -240,8 +241,8 @@ npm run build  # Automatically detects /tests/core/ and /tests/visual/ directori
 ```javascript
 // Automatic fallback system in run-tests.js
 let CoreFunctionalityTests;
-if (fs.existsSync('./tests/core-functionality-tests-built.js')) {
-    CoreFunctionalityTests = require('./core-functionality-tests-built.js');  // Use modular
+if (fs.existsSync('./tests/dist/core-functionality-tests.js')) {
+    CoreFunctionalityTests = require('./dist/core-functionality-tests.js');  // Use modular
 } else {
     CoreFunctionalityTests = require('./core-functionality-tests.js');        // Fallback to original
 }
@@ -260,13 +261,22 @@ if (fs.existsSync('./tests/core-functionality-tests-built.js')) {
 │   ├── 027-fill-rule-complex-test.js
 │   ├── 056-stroke-pixel-analysis-test.js
 │   └── ... (53 more files)
+├── browser/                            # Browser-specific test files
+│   ├── index.html                      # Main browser test page (moved from examples/)
+│   ├── simple-test.html                # Simple visual comparison test
+│   └── browser-test-helpers.js         # Interactive test utilities
+├── dist/                               # Built test files (auto-generated, .gitignored)
+│   ├── core-functionality-tests.js     # Auto-generated from /core/
+│   └── visual-rendering-tests.js       # Auto-generated from /visual/
 ├── build/
 │   └── concat-tests.js                 # Build concatenation script
-├── core-functionality-tests-built.js   # Auto-generated from /core/
-├── visual-rendering-tests-built.js     # Auto-generated from /visual/
 ├── core-functionality-tests.js         # Original (fallback/reference)
 ├── visual-rendering-tests.js           # Original (fallback/reference)
-└── run-tests.js                        # Smart test runner with auto-detection
+├── run-tests.js                        # Smart test runner with auto-detection
+└── output/                             # Generated BMP files
+    ├── 001-simple-rectangle-test.bmp
+    ├── 056-stroke-pixel-analysis-test.bmp
+    └── ... (56+ BMP files)
 ```
 
 ### Individual Test File Format
@@ -317,7 +327,7 @@ registerVisualTest('alpha-test', {
 
 ### Test Execution
 - **Node.js**: `npm test` automatically uses built modular tests + generates 56+ BMP files  
-- **Browser**: `examples/test.html` automatically uses built modular tests with visual comparisons
+- **Browser**: `tests/browser/index.html` automatically uses built modular tests with visual comparisons
 - **Development**: Edit individual test files, run `npm run build` to regenerate
 - **Production**: Built concatenated files ensure optimal loading performance
 
@@ -415,7 +425,7 @@ npm test         # Runs all tests including your new one, generates BMP
 
 #### Step 3: Verify Cross-Platform
 ```bash
-open examples/test.html    # Browser visual comparison includes your test automatically
+open tests/browser/index.html    # Browser visual comparison includes your test automatically
 ```
 
 **Key Benefits of Modular Approach:**
@@ -498,7 +508,7 @@ const bmpData = SWCanvas.Core.BitmapEncoder.encode(surface);
 ### Debugging Rendering Issues
 1. Add debug visual test with simplified case
 2. Generate BMP: `npm test`  
-3. Compare with HTML5 Canvas in browser: `examples/test.html`
+3. Compare with HTML5 Canvas in browser: `tests/browser/index.html`
 4. Check pixel values manually if needed
 5. Use git to compare before/after BMPs
 
@@ -640,7 +650,7 @@ These scripts are invaluable for:
 - **Static Utility Classes**: ClipMaskHelper, ImageProcessor, BitmapEncoder for stateless operations
 - **Proper Encapsulation**: Private fields, parameter validation, and clear public APIs
 - **Single Responsibility**: Each class has one focused purpose with clean boundaries
-- **Comprehensive Testing**: All 32 shared tests + 58 visual tests passing with pixel-perfect accuracy
+- **Comprehensive Testing**: All 31 core tests + 56 visual tests passing with pixel-perfect accuracy
 
 ### Key Design Patterns Applied
 - **Value Object Pattern**: Point, Rectangle, Transform2D, Color are immutable
@@ -651,7 +661,7 @@ These scripts are invaluable for:
 - **Memory Efficiency**: 1-bit stencil clipping, immutable objects prevent accidental mutation
 
 ### Test Results Status
-- **Node.js**: All 32 shared tests passing, 58 visual BMPs generated successfully  
+- **Node.js**: All 31 core tests passing, 56 visual BMPs generated successfully  
 - **Browser**: Proper SWCanvas global export, all classes available for use
 - **Cross-platform**: Identical behavior verified between Node.js and browser environments
 - **Deterministic**: Same input produces identical output across all platforms

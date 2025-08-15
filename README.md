@@ -23,8 +23,8 @@ npm run build
 
 This generates:
 - `dist/swcanvas.js` containing the complete library
-- `tests/core-functionality-tests-built.js` from 31 individual test files in `/tests/core/`
-- `tests/visual-rendering-tests-built.js` from 56 individual test files in `/tests/visual/`
+- `tests/dist/core-functionality-tests.js` from 31 individual test files in `/tests/core/`
+- `tests/dist/visual-rendering-tests.js` from 56 individual test files in `/tests/visual/`
 
 ### Node.js Usage
 
@@ -95,9 +95,10 @@ This runs:
 
 ### Browser Tests
 
-Open `examples/test.html` in a web browser for:
-- Side-by-side HTML5 Canvas vs SWCanvas comparisons
+Open `tests/browser/index.html` in a web browser for:
+- Side-by-side HTML5 Canvas vs SWCanvas comparisons  
 - Interactive visual tests
+- All 56 visual rendering test comparisons (automatically uses built modular tests)
 - BMP download functionality
 
 ### Test Architecture
@@ -292,8 +293,10 @@ tests/            # Test suite
 ├── visual-rendering-tests.js    # 52+ visual tests
 └── run-tests.js            # Node.js test runner
 
-examples/         # Browser examples
-└── test.html        # Visual comparison tool
+tests/browser/    # Browser tests
+├── index.html       # Main visual comparison tool (moved from examples/)
+├── simple-test.html # Simple visual test
+└── browser-test-helpers.js # Interactive test utilities
 
 dist/             # Built library
 └── swcanvas.js      # Concatenated distribution file
@@ -386,7 +389,7 @@ MIT License - see LICENSE file for details.
 
 1. **Build**: `npm run build`
 2. **Test**: `npm test` 
-3. **Visual Test**: Open `examples/test.html` in browser
+3. **Visual Test**: Open `tests/browser/index.html` in browser
 4. **Add Tests**: Follow patterns in `tests/visual-rendering-tests.js`
 5. **Verify**: Ensure identical results in both Node.js and browser
 

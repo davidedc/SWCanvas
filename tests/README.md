@@ -16,21 +16,20 @@ tests/
 │   ├── 027-fill-rule-complex-test.js
 │   ├── 056-stroke-pixel-analysis-test.js
 │   └── ... (53 more files)
+├── browser/                       # Browser-specific test files
+│   ├── index.html                 # Main browser test page (interactive + comparisons)
+│   ├── simple-test.html           # Simple visual comparison test
+│   └── browser-test-helpers.js    # Browser-specific interactive testing tools
+├── dist/                          # Built test files (auto-generated, .gitignored)
+│   ├── core-functionality-tests.js    # Auto-generated from /core/
+│   └── visual-rendering-tests.js      # Auto-generated from /visual/
 ├── build/
 │   └── concat-tests.js            # Build-time concatenation script
-├── core-functionality-tests-built.js    # Auto-generated from /core/
-├── visual-rendering-tests-built.js      # Auto-generated from /visual/
 ├── core-functionality-tests.js          # Original (fallback/reference)
 ├── visual-rendering-tests.js            # Original (fallback/reference)
 ├── run-tests.js                         # Smart test runner with auto-detection
 ├── output/                              # Generated BMP test images (56+ files)
 └── README.md                            # This file
-
-examples/
-├── test.html                     # Browser test runner (uses built tests automatically)
-├── browser-visual-tests.js       # Browser-specific interactive testing tools
-├── test-simple.html              # Simple browser test page
-└── README.md
 ```
 
 ## Running Tests
@@ -46,17 +45,18 @@ node tests/run-tests.js  # Smart runner uses built tests when available
 ```
 
 ### Browser Tests
-1. Open `examples/test.html` in a web browser (automatically uses built modular tests)
+1. Open `tests/browser/index.html` in a web browser (automatically uses built modular tests)
 2. Click "Run Core Functionality Tests" to run 31 modular tests from `/tests/core/`
 3. Click "Run All Visual Rendering Tests" to compare 56 tests side-by-side
 4. Use interactive visual comparison tools for real-time testing
+5. Simple test: Open `tests/browser/simple-test.html` for basic visual comparison
 
 ## Modular Dual Test Architecture
 
 SWCanvas uses a **modular complementary dual test system** where individual test files are automatically concatenated at build time, maintaining both development flexibility and production performance:
 
 ### Core Functionality Tests - 31 Individual Files
-**Location**: `/tests/core/` (individual files) → `core-functionality-tests-built.js` (concatenated)
+**Location**: `/tests/core/` (individual files) → `/tests/dist/core-functionality-tests.js` (concatenated)
 
 **Modular Structure**:
 - **31 individual test files** numbered 001-031 with descriptive names
@@ -92,7 +92,7 @@ test('Surface creation with valid dimensions', () => {
 ```
 
 ### Visual Rendering Tests - 56 Individual Files
-**Location**: `/tests/visual/` (individual files) → `visual-rendering-tests-built.js` (concatenated)
+**Location**: `/tests/visual/` (individual files) → `/tests/dist/visual-rendering-tests.js` (concatenated)
 
 **Modular Structure**:
 - **56 individual test files** numbered 001-056 with descriptive names

@@ -111,8 +111,8 @@ function buildCoreTests() {
     
     concatenated += footer;
     
-    // Write the built file
-    const outputFile = 'tests/core-functionality-tests-built.js';
+    // Write the built file to tests/dist/
+    const outputFile = 'tests/dist/core-functionality-tests.js';
     fs.writeFileSync(outputFile, concatenated);
     console.log(`Built ${outputFile} with ${testFiles.length} tests`);
 }
@@ -128,10 +128,11 @@ function buildVisualTests() {
         return;
     }
     
-    // Read the original file to get the header and footer
+    // Read the original file to get the header and footer (if available)
     const originalFile = 'tests/visual-rendering-tests.js';
     if (!fs.existsSync(originalFile)) {
-        console.error('Original visual-rendering-tests.js not found');
+        console.log('Original visual-rendering-tests.js not found - using default structure');
+        buildVisualTestsWithDefaults();
         return;
     }
     
@@ -147,12 +148,12 @@ function buildVisualTests() {
     const header = headerMatch[1];
     
     // Extract footer (after last test - find the VisualRenderingTests object definition)
-    const footerMatch = originalContent.match(/(    const VisualRenderingTests = \{[\s\S]*)/);
+    const footerMatch = originalContent.match(/(    const VisualRenderingTests = \{[\s\S]*$)/);
     let footer = '';
     if (footerMatch) {
         footer = footerMatch[1];
     } else {
-        footer = '    const VisualRenderingTests = {\n        getTests: function() { return visualTests; },\n        getTest: function(name) { return visualTests[name]; }\n    };\n    if (typeof module !== "undefined" && module.exports) {\n        module.exports = VisualRenderingTests;\n    } else {\n        global.VisualRenderingTests = VisualRenderingTests;\n    }\n})(typeof window !== "undefined" ? window : global);';
+        footer = '    const VisualRenderingTests = {\n        getTests: function() { return visualTests; },\n        getTest: function(name) { return visualTests[name]; },\n        renderSWCanvasToHTML5: renderSWCanvasToHTML5\n    };\n\n    if (typeof module !== "undefined" && module.exports) {\n        module.exports = VisualRenderingTests;\n    } else {\n        global.VisualRenderingTests = VisualRenderingTests;\n    }\n\n})(typeof window !== "undefined" ? window : global);';
     }
     
     // Build the concatenated content
@@ -176,7 +177,7 @@ function buildVisualTests() {
         }
         
         if (testLines.length > 0) {
-            concatenated += testLines.join('\n') + '\n    ';
+            concatenated += testLines.join('\n') + '\n\n';
         } else {
             console.warn(`Could not extract test from ${filePath}`);
         }
@@ -184,10 +185,168 @@ function buildVisualTests() {
     
     concatenated += footer;
     
-    // Write the built file
-    const outputFile = 'tests/visual-rendering-tests-built.js';
+    // Write the built file to tests/dist/
+    const outputFile = 'tests/dist/visual-rendering-tests.js';
     fs.writeFileSync(outputFile, concatenated);
     console.log(`Built ${outputFile} with ${testFiles.length} tests`);
+}
+
+function buildVisualTestsWithDefaults() {
+    console.log('Building visual rendering tests with default structure...');
+    
+    const testFiles = getTestFiles('tests/visual');
+    console.log(`Found ${testFiles.length} visual test files`);
+    
+    if (testFiles.length === 0) {
+        console.log('No visual test files found');
+        return;
+    }
+    
+    // Default header
+    let concatenated = `// Visual Test Registry
+// Shared drawing logic for both Node.js and browser testing
+// Each test defines drawing operations that work on both SWCanvas and HTML5 Canvas
+
+(function(global) {
+    'use strict';
+    
+    // Visual test registry using standard HTML5 Canvas API
+
+    // Registry of visual tests
+    const visualTests = {};
+
+    // Helper function to create temporary canvases for unified API
+    function createTempCanvas(width = 300, height = 150) {
+        if (typeof document !== 'undefined') {
+            // Browser environment - create HTML5 Canvas
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            return canvas;
+        } else if (typeof SWCanvas !== 'undefined' && SWCanvas.createCanvas) {
+            // Node.js environment with SWCanvas - create SWCanvas
+            return SWCanvas.createCanvas(width, height);
+        } else {
+            // Fallback - create a basic canvas-like object for testing
+            throw new Error('No canvas creation method available');
+        }
+    }
+
+    // Helper function to render SWCanvas to HTML5 Canvas (for browser use)
+    function renderSWCanvasToHTML5(swSurface, html5Canvas) {
+        if (!html5Canvas || !html5Canvas.getContext) return;
+        
+        const ctx = html5Canvas.getContext('2d');
+        const imageData = ctx.createImageData(swSurface.width, swSurface.height);
+        
+        // Copy pixel data with proper unpremultiplication
+        for (let i = 0; i < swSurface.data.length; i += 4) {
+            const r = swSurface.data[i];
+            const g = swSurface.data[i + 1];
+            const b = swSurface.data[i + 2];
+            const a = swSurface.data[i + 3];
+            
+            // Always unpremultiply for display (HTML5 ImageData expects non-premultiplied)
+            if (a === 0) {
+                imageData.data[i] = 0;
+                imageData.data[i + 1] = 0;
+                imageData.data[i + 2] = 0;
+                imageData.data[i + 3] = 0;
+            } else {
+                // Unpremultiply: non_premult = premult * 255 / alpha
+                imageData.data[i] = Math.round((r * 255) / a);
+                imageData.data[i + 1] = Math.round((g * 255) / a);
+                imageData.data[i + 2] = Math.round((b * 255) / a);
+                imageData.data[i + 3] = a;
+            }
+        }
+        
+        ctx.putImageData(imageData, 0, 0);
+    }
+
+    // Helper function to register a visual test with unified API
+    function registerVisualTest(testName, testConfig) {
+        // Store the original config
+        visualTests[testName] = testConfig;
+        
+        // If it has a unified draw function, create the legacy functions for compatibility
+        if (testConfig.draw && typeof testConfig.draw === 'function' && !testConfig.drawSWCanvas) {
+            testConfig.drawSWCanvas = function(SWCanvas) {
+                const canvas = SWCanvas.createCanvas(testConfig.width || 300, testConfig.height || 150);
+                testConfig.draw(canvas);
+                return canvas._coreSurface;
+            };
+            
+            testConfig.drawHTML5Canvas = function(html5Canvas) {
+                testConfig.draw(html5Canvas);
+            };
+        }
+    }
+
+`;
+
+    // Add all test files
+    testFiles.forEach((filePath, index) => {
+        const content = fs.readFileSync(filePath, 'utf8');
+        console.log(`Adding ${path.basename(filePath)}`);
+        
+        // Simply add the entire file content with proper indentation, removing comment headers
+        const lines = content.split('\n');
+        const testLines = [];
+        
+        // Skip first few lines (comments) and add the registerVisualTest call
+        let foundRegister = false;
+        for (const line of lines) {
+            if (line.includes('registerVisualTest(') || foundRegister) {
+                foundRegister = true;
+                testLines.push('    ' + line);
+            }
+        }
+        
+        if (testLines.length > 0) {
+            concatenated += testLines.join('\n') + '\n\n';
+        } else {
+            console.warn(`Could not extract test from ${filePath}`);
+        }
+    });
+    
+    // Default footer
+    concatenated += `    const VisualRenderingTests = {
+        getTests: function() { return visualTests; },
+        getTest: function(name) { return visualTests[name]; },
+        renderSWCanvasToHTML5: renderSWCanvasToHTML5,
+        
+        // Run a visual test and return both canvases for comparison
+        runVisualTest: function(testName, SWCanvas, html5Canvas) {
+            const test = visualTests[testName];
+            if (!test) throw new Error('Visual test not found: ' + testName);
+            
+            // Draw on SWCanvas
+            const surface = test.drawSWCanvas(SWCanvas);
+            
+            // Draw on HTML5 Canvas 
+            test.drawHTML5Canvas(html5Canvas);
+            
+            return { surface: surface, html5Canvas: html5Canvas };
+        }
+    };
+
+    // Universal module definition (UMD) pattern
+    if (typeof module !== 'undefined' && module.exports) {
+        // Node.js
+        module.exports = VisualRenderingTests;
+    } else {
+        // Browser
+        global.VisualRenderingTests = VisualRenderingTests;
+    }
+
+})(typeof window !== 'undefined' ? window : global);
+`;
+    
+    // Write the built file
+    const outputFile = 'tests/dist/visual-rendering-tests.js';
+    fs.writeFileSync(outputFile, concatenated);
+    console.log(`Built ${outputFile} with ${testFiles.length} tests using default structure`);
 }
 
 // Main execution

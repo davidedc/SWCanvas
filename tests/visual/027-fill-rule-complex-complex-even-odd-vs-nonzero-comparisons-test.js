@@ -87,7 +87,5 @@ registerVisualTest('fill-rule-complex', {
         ctx.closePath();
         
         ctx.fill('evenodd');
-    },
+    }
 });
-
-// Phase 3: Advanced Clipping Tests
