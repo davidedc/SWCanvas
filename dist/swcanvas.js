@@ -4183,12 +4183,536 @@ class Context2D {
     this.rasterizer.endOp();
     }
 }
-// Backward compatibility factory functions and aliases
-function SurfaceFactory(width, height) {
+/**
+ * ColorParser for SWCanvas
+ * 
+ * Parses CSS color strings into RGBA values for use with Core API.
+ * Supports hex, RGB/RGBA functions, and named colors.
+ * Includes caching for performance optimization.
+ */
+class ColorParser {
+    constructor() {
+        this._cache = new Map();
+        
+        // CSS Color names to RGB mapping
+        this._namedColors = {
+            // Basic colors
+            black: { r: 0, g: 0, b: 0 },
+            white: { r: 255, g: 255, b: 255 },
+            red: { r: 255, g: 0, b: 0 },
+            green: { r: 0, g: 128, b: 0 },
+            blue: { r: 0, g: 0, b: 255 },
+            yellow: { r: 255, g: 255, b: 0 },
+            magenta: { r: 255, g: 0, b: 255 },
+            cyan: { r: 0, g: 255, b: 255 },
+            
+            // Extended colors
+            lime: { r: 0, g: 255, b: 0 },
+            orange: { r: 255, g: 165, b: 0 },
+            pink: { r: 255, g: 192, b: 203 },
+            purple: { r: 128, g: 0, b: 128 },
+            brown: { r: 165, g: 42, b: 42 },
+            gray: { r: 128, g: 128, b: 128 },
+            grey: { r: 128, g: 128, b: 128 },
+            
+            // Light/dark variants
+            lightblue: { r: 173, g: 216, b: 230 },
+            lightgreen: { r: 144, g: 238, b: 144 },
+            lightcyan: { r: 224, g: 255, b: 255 },
+            lightgray: { r: 211, g: 211, b: 211 },
+            lightgrey: { r: 211, g: 211, b: 211 },
+            darkblue: { r: 0, g: 0, b: 139 },
+            darkgreen: { r: 0, g: 100, b: 0 },
+            
+            // Additional common colors
+            navy: { r: 0, g: 0, b: 128 },
+            maroon: { r: 128, g: 0, b: 0 },
+            gold: { r: 255, g: 215, b: 0 },
+            silver: { r: 192, g: 192, b: 192 },
+            lightcoral: { r: 240, g: 128, b: 128 },
+            indigo: { r: 75, g: 0, b: 130 }
+        };
+    }
+    
+    /**
+     * Parse a CSS color string to RGBA values
+     * @param {string} color - CSS color string
+     * @returns {Object} {r, g, b, a} with values 0-255
+     */
+    parse(color) {
+        // Check cache first
+        if (this._cache.has(color)) {
+            return this._cache.get(color);
+        }
+        
+        let result;
+        
+        if (typeof color !== 'string') {
+            result = { r: 0, g: 0, b: 0, a: 255 };
+        } else {
+            const trimmed = color.trim().toLowerCase();
+            
+            if (trimmed.startsWith('#')) {
+                result = this._parseHex(trimmed);
+            } else if (trimmed.startsWith('rgb')) {
+                result = this._parseRGB(trimmed);
+            } else if (this._namedColors[trimmed]) {
+                const named = this._namedColors[trimmed];
+                result = { r: named.r, g: named.g, b: named.b, a: 255 };
+            } else {
+                // Unknown color - default to black
+                result = { r: 0, g: 0, b: 0, a: 255 };
+            }
+        }
+        
+        // Cache the result
+        this._cache.set(color, result);
+        return result;
+    }
+    
+    /**
+     * Parse hex color (#RGB, #RRGGBB, #RRGGBBAA)
+     * @private
+     */
+    _parseHex(hex) {
+        // Remove the #
+        hex = hex.substring(1);
+        
+        if (hex.length === 3) {
+            // #RGB -> #RRGGBB
+            hex = hex.split('').map(c => c + c).join('');
+        }
+        
+        if (hex.length === 6) {
+            // #RRGGBB
+            const r = parseInt(hex.substring(0, 2), 16);
+            const g = parseInt(hex.substring(2, 4), 16);
+            const b = parseInt(hex.substring(4, 6), 16);
+            return { r, g, b, a: 255 };
+        } else if (hex.length === 8) {
+            // #RRGGBBAA
+            const r = parseInt(hex.substring(0, 2), 16);
+            const g = parseInt(hex.substring(2, 4), 16);
+            const b = parseInt(hex.substring(4, 6), 16);
+            const a = parseInt(hex.substring(6, 8), 16);
+            return { r, g, b, a };
+        }
+        
+        // Invalid hex - default to black
+        return { r: 0, g: 0, b: 0, a: 255 };
+    }
+    
+    /**
+     * Parse RGB/RGBA function notation
+     * @private
+     */
+    _parseRGB(rgb) {
+        // Extract the content inside parentheses
+        const match = rgb.match(/rgba?\s*\(\s*([^)]+)\s*\)/);
+        if (!match) {
+            return { r: 0, g: 0, b: 0, a: 255 };
+        }
+        
+        const parts = match[1].split(',').map(s => s.trim());
+        
+        if (parts.length < 3) {
+            return { r: 0, g: 0, b: 0, a: 255 };
+        }
+        
+        const r = Math.max(0, Math.min(255, parseInt(parts[0]) || 0));
+        const g = Math.max(0, Math.min(255, parseInt(parts[1]) || 0));
+        const b = Math.max(0, Math.min(255, parseInt(parts[2]) || 0));
+        
+        let a = 255;
+        if (parts.length >= 4) {
+            const alpha = parseFloat(parts[3]);
+            if (!isNaN(alpha)) {
+                a = Math.max(0, Math.min(255, Math.round(alpha * 255)));
+            }
+        }
+        
+        return { r, g, b, a };
+    }
+    
+    /**
+     * Clear the color cache
+     */
+    clearCache() {
+        this._cache.clear();
+    }
+}
+/**
+ * CanvasCompatibleContext2D
+ * 
+ * HTML5 Canvas 2D Context-compatible wrapper around SWCanvas Core Context2D.
+ * Provides the standard HTML5 Canvas API with property setters/getters and
+ * CSS color support while delegating actual rendering to the Core implementation.
+ */
+class CanvasCompatibleContext2D {
+    constructor(surface) {
+        this._core = new Context2D(surface);
+        this._colorParser = new ColorParser();
+        
+        // Property state (mirroring HTML5 Canvas behavior)
+        this._fillStyle = '#000000';
+        this._strokeStyle = '#000000';
+    }
+    
+    /**
+     * Update the underlying surface (called when canvas is resized)
+     * @param {Surface} newSurface - New surface instance
+     * @private
+     */
+    _updateSurface(newSurface) {
+        this._core = new Context2D(newSurface);
+        
+        // Reapply current styles to new context
+        this._applyFillStyle();
+        this._applyStrokeStyle();
+    }
+    
+    // ===== STYLE PROPERTIES =====
+    
+    /**
+     * Get fill style
+     * @returns {string} Current fill style as CSS color
+     */
+    get fillStyle() {
+        return this._fillStyle;
+    }
+    
+    /**
+     * Set fill style
+     * @param {string} value - CSS color string
+     */
+    set fillStyle(value) {
+        this._fillStyle = value;
+        this._applyFillStyle();
+    }
+    
+    /**
+     * Get stroke style
+     * @returns {string} Current stroke style as CSS color
+     */
+    get strokeStyle() {
+        return this._strokeStyle;
+    }
+    
+    /**
+     * Set stroke style
+     * @param {string} value - CSS color string
+     */
+    set strokeStyle(value) {
+        this._strokeStyle = value;
+        this._applyStrokeStyle();
+    }
+    
+    /**
+     * Apply current fill style to core context
+     * @private
+     */
+    _applyFillStyle() {
+        const rgba = this._colorParser.parse(this._fillStyle);
+        this._core.setFillStyle(rgba.r, rgba.g, rgba.b, rgba.a);
+    }
+    
+    /**
+     * Apply current stroke style to core context
+     * @private
+     */
+    _applyStrokeStyle() {
+        const rgba = this._colorParser.parse(this._strokeStyle);
+        this._core.setStrokeStyle(rgba.r, rgba.g, rgba.b, rgba.a);
+    }
+    
+    // ===== DIRECT PROPERTY DELEGATION =====
+    
+    get globalAlpha() { return this._core.globalAlpha; }
+    set globalAlpha(value) { this._core.globalAlpha = value; }
+    
+    get globalCompositeOperation() { return this._core.globalCompositeOperation; }
+    set globalCompositeOperation(value) { this._core.globalCompositeOperation = value; }
+    
+    get lineWidth() { return this._core.lineWidth; }
+    set lineWidth(value) { this._core.lineWidth = value; }
+    
+    get lineJoin() { return this._core.lineJoin; }
+    set lineJoin(value) { this._core.lineJoin = value; }
+    
+    get lineCap() { return this._core.lineCap; }
+    set lineCap(value) { this._core.lineCap = value; }
+    
+    get miterLimit() { return this._core.miterLimit; }
+    set miterLimit(value) { this._core.miterLimit = value; }
+    
+    // ===== STATE MANAGEMENT =====
+    
+    save() {
+        this._core.save();
+    }
+    
+    restore() {
+        this._core.restore();
+    }
+    
+    // ===== TRANSFORMS =====
+    
+    transform(a, b, c, d, e, f) {
+        this._core.transform(a, b, c, d, e, f);
+    }
+    
+    setTransform(a, b, c, d, e, f) {
+        this._core.setTransform(a, b, c, d, e, f);
+    }
+    
+    resetTransform() {
+        this._core.resetTransform();
+    }
+    
+    translate(x, y) {
+        this._core.translate(x, y);
+    }
+    
+    scale(sx, sy) {
+        this._core.scale(sx, sy);
+    }
+    
+    rotate(angleInRadians) {
+        this._core.rotate(angleInRadians);
+    }
+    
+    // ===== PATH METHODS =====
+    
+    beginPath() {
+        this._core.beginPath();
+    }
+    
+    closePath() {
+        this._core.closePath();
+    }
+    
+    moveTo(x, y) {
+        this._core.moveTo(x, y);
+    }
+    
+    lineTo(x, y) {
+        this._core.lineTo(x, y);
+    }
+    
+    rect(x, y, w, h) {
+        this._core.rect(x, y, w, h);
+    }
+    
+    arc(x, y, radius, startAngle, endAngle, counterclockwise = false) {
+        this._core.arc(x, y, radius, startAngle, endAngle, counterclockwise);
+    }
+    
+    arcTo(x1, y1, x2, y2, radius) {
+        this._core.arcTo(x1, y1, x2, y2, radius);
+    }
+    
+    quadraticCurveTo(cpx, cpy, x, y) {
+        this._core.quadraticCurveTo(cpx, cpy, x, y);
+    }
+    
+    bezierCurveTo(cp1x, cp1y, cp2x, cp2y, x, y) {
+        this._core.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, x, y);
+    }
+    
+    // ===== DRAWING METHODS =====
+    
+    fillRect(x, y, width, height) {
+        this._core.fillRect(x, y, width, height);
+    }
+    
+    strokeRect(x, y, width, height) {
+        this._core.strokeRect(x, y, width, height);
+    }
+    
+    clearRect(x, y, width, height) {
+        this._core.clearRect(x, y, width, height);
+    }
+    
+    fill(pathOrFillRule, fillRule) {
+        if (typeof pathOrFillRule === 'string') {
+            // fill(fillRule)
+            this._core.fill(pathOrFillRule);
+        } else if (pathOrFillRule && pathOrFillRule instanceof Path2D) {
+            // fill(path, fillRule)
+            this._core.fill(pathOrFillRule, fillRule);
+        } else {
+            // fill()
+            this._core.fill();
+        }
+    }
+    
+    stroke(path) {
+        if (path && path instanceof Path2D) {
+            this._core.stroke(path);
+        } else {
+            this._core.stroke();
+        }
+    }
+    
+    clip(pathOrFillRule, fillRule) {
+        if (typeof pathOrFillRule === 'string') {
+            // clip(fillRule)
+            this._core.clip(pathOrFillRule);
+        } else if (pathOrFillRule && pathOrFillRule instanceof Path2D) {
+            // clip(path, fillRule)
+            this._core.clip(pathOrFillRule, fillRule);
+        } else {
+            // clip()
+            this._core.clip();
+        }
+    }
+    
+    // ===== IMAGE DRAWING =====
+    
+    drawImage(image, ...args) {
+        // Handle SWCanvasElement specially
+        if (image && image instanceof SWCanvasElement) {
+            this._core.drawImage(image._imageData, ...args);
+        } else {
+            this._core.drawImage(image, ...args);
+        }
+    }
+    
+    // ===== CORE ACCESS FOR ADVANCED USERS =====
+    
+    /**
+     * Get the underlying Core Context2D for advanced operations
+     * @returns {Context2D} The Core Context2D instance
+     */
+    get _coreContext() {
+        return this._core;
+    }
+}
+/**
+ * SWCanvasElement
+ * 
+ * HTML5 Canvas-compatible wrapper that mimics HTMLCanvasElement interface.
+ * Provides width/height properties and getContext('2d') method.
+ * Internally manages an SWCanvas Core Surface.
+ */
+class SWCanvasElement {
+    constructor(width = 300, height = 150) {
+        this._width = width;
+        this._height = height;
+        this._surface = new Surface(width, height);
+        this._context = null;
+    }
+    
+    /**
+     * Get canvas width
+     * @returns {number} Canvas width in pixels
+     */
+    get width() {
+        return this._width;
+    }
+    
+    /**
+     * Set canvas width (recreates surface)
+     * @param {number} value - New width in pixels
+     */
+    set width(value) {
+        const newWidth = Math.max(1, Math.floor(value));
+        if (newWidth !== this._width) {
+            this._width = newWidth;
+            this._recreateSurface();
+        }
+    }
+    
+    /**
+     * Get canvas height  
+     * @returns {number} Canvas height in pixels
+     */
+    get height() {
+        return this._height;
+    }
+    
+    /**
+     * Set canvas height (recreates surface)
+     * @param {number} value - New height in pixels  
+     */
+    set height(value) {
+        const newHeight = Math.max(1, Math.floor(value));
+        if (newHeight !== this._height) {
+            this._height = newHeight;
+            this._recreateSurface();
+        }
+    }
+    
+    /**
+     * Get rendering context
+     * @param {string} contextType - Must be '2d'
+     * @returns {CanvasCompatibleContext2D} The 2D rendering context
+     */
+    getContext(contextType) {
+        if (contextType !== '2d') {
+            throw new Error('SWCanvas only supports 2d context');
+        }
+        
+        if (!this._context) {
+            this._context = new CanvasCompatibleContext2D(this._surface);
+        }
+        
+        return this._context;
+    }
+    
+    /**
+     * Recreate surface with new dimensions
+     * @private
+     */
+    _recreateSurface() {
+        this._surface = new Surface(this._width, this._height);
+        
+        // Recreate context if it exists
+        if (this._context) {
+            this._context._updateSurface(this._surface);
+        }
+    }
+    
+    /**
+     * Get surface for Core API access
+     * Allows advanced users to access the underlying Surface directly
+     * @returns {Surface} The underlying Surface object
+     */
+    get _coreSurface() {
+        return this._surface;
+    }
+    
+    /**
+     * Get ImageData-like object for drawImage compatibility
+     * @returns {Object} ImageData-like object with width, height, data
+     */
+    get _imageData() {
+        return {
+            width: this._width,
+            height: this._height,
+            data: this._surface.data
+        };
+    }
+    
+    /**
+     * String representation for debugging
+     * @returns {string} Canvas description
+     */
+    toString() {
+        return `[object SWCanvasElement(${this._width}x${this._height})]`;
+    }
+}
+// Canvas factory function for HTML5 Canvas compatibility
+function createCanvas(width = 300, height = 150) {
+    return new SWCanvasElement(width, height);
+}
+
+// Core namespace factory functions  
+function CoreSurfaceFactory(width, height) {
     return new Surface(width, height);
 }
 
-// Legacy alias for Transform2D
+// Legacy alias for Transform2D (backward compatibility)
 const Matrix = Transform2D;
 
 // Legacy encodeBMP function
@@ -4197,27 +4721,44 @@ function encodeBMP(surface) {
 }
 
 
-// Export to global scope
+// Export to global scope with dual API architecture
 if (typeof window !== 'undefined') {
     // Browser
     window.SWCanvas = {
-        // Core API (public)
-        Surface: SurfaceFactory,
-        Transform2D: Transform2D,
-        Matrix: Matrix, // Legacy alias for Transform2D
-        Path2D: Path2D,
-        Context2D: Context2D,
-        encodeBMP: encodeBMP,
+        // HTML5 Canvas-compatible API (recommended for portability)
+        createCanvas: createCanvas,
         
-        // Advanced classes (for power users)
+        // Core API namespace (recommended for performance/control)  
+        Core: {
+            Surface: CoreSurfaceFactory,
+            Context2D: Context2D,
+            Transform2D: Transform2D,
+            Path2D: Path2D,
+            Color: Color,
+            Point: Point,
+            Rectangle: Rectangle,
+            BitmapEncoder: BitmapEncoder,
+            ClipMask: ClipMask,
+            ImageProcessor: ImageProcessor,
+            Rasterizer: Rasterizer,
+            PathFlattener: PathFlattener,
+            PolygonFiller: PolygonFiller,
+            StrokeGenerator: StrokeGenerator
+        },
+        
+        // Legacy API (backward compatibility - points to Core)
+        Surface: CoreSurfaceFactory,
+        Context2D: Context2D,
+        Transform2D: Transform2D,
+        Matrix: Matrix,
+        Path2D: Path2D,
+        encodeBMP: encodeBMP,
         Color: Color,
         Point: Point,
         Rectangle: Rectangle,
         BitmapEncoder: BitmapEncoder,
         ClipMask: ClipMask,
         ImageProcessor: ImageProcessor,
-        
-        // Internal classes (exposed for extensibility)
         Rasterizer: Rasterizer,
         PathFlattener: PathFlattener,
         PolygonFiller: PolygonFiller,
@@ -4226,23 +4767,40 @@ if (typeof window !== 'undefined') {
 } else if (typeof module !== 'undefined' && module.exports) {
     // Node.js
     module.exports = {
-        // Core API (public)
-        Surface: SurfaceFactory,
-        Transform2D: Transform2D,
-        Matrix: Matrix, // Legacy alias for Transform2D
-        Path2D: Path2D,
-        Context2D: Context2D,
-        encodeBMP: encodeBMP,
+        // HTML5 Canvas-compatible API (recommended for portability)
+        createCanvas: createCanvas,
         
-        // Advanced classes (for power users)
+        // Core API namespace (recommended for performance/control)
+        Core: {
+            Surface: CoreSurfaceFactory,
+            Context2D: Context2D,
+            Transform2D: Transform2D,
+            Path2D: Path2D,
+            Color: Color,
+            Point: Point,
+            Rectangle: Rectangle,
+            BitmapEncoder: BitmapEncoder,
+            ClipMask: ClipMask,
+            ImageProcessor: ImageProcessor,
+            Rasterizer: Rasterizer,
+            PathFlattener: PathFlattener,
+            PolygonFiller: PolygonFiller,
+            StrokeGenerator: StrokeGenerator
+        },
+        
+        // Legacy API (backward compatibility - points to Core)
+        Surface: CoreSurfaceFactory,
+        Context2D: Context2D,
+        Transform2D: Transform2D,
+        Matrix: Matrix,
+        Path2D: Path2D,
+        encodeBMP: encodeBMP,
         Color: Color,
         Point: Point,
         Rectangle: Rectangle,
         BitmapEncoder: BitmapEncoder,
         ClipMask: ClipMask,
         ImageProcessor: ImageProcessor,
-        
-        // Internal classes (exposed for extensibility)
         Rasterizer: Rasterizer,
         PathFlattener: PathFlattener,
         PolygonFiller: PolygonFiller,
