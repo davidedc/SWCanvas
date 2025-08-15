@@ -1,20 +1,34 @@
 # SWCanvas Test Suite
 
-This directory contains the comprehensive test infrastructure for SWCanvas, with 55+ visual tests and cross-platform compatibility.
+This directory contains the comprehensive **modular test infrastructure** for SWCanvas, with 31 core tests + 56 visual tests and cross-platform compatibility.
 
-## Test Structure
+## Modular Test Architecture
 
 ```
 tests/
-├── core-functionality-tests.js   # Common test logic (runs in both environments)
-├── visual-rendering-tests.js      # 55+ comprehensive visual tests
-├── run-tests.js                  # Node.js test runner + BMP generator
-├── output/                       # Generated BMP test images (55+ files)
-└── README.md                     # This file
+├── core/                          # 31 individual core test files (001-031)
+│   ├── 001-surface-creation-valid.js
+│   ├── 015-alpha-blending-test.js  
+│   ├── 031-transform-matrix-order-dependency.js
+│   └── ... (28 more files)
+├── visual/                        # 56 individual visual test files (001-056)
+│   ├── 001-simple-rectangle-test.js
+│   ├── 027-fill-rule-complex-test.js
+│   ├── 056-stroke-pixel-analysis-test.js
+│   └── ... (53 more files)
+├── build/
+│   └── concat-tests.js            # Build-time concatenation script
+├── core-functionality-tests-built.js    # Auto-generated from /core/
+├── visual-rendering-tests-built.js      # Auto-generated from /visual/
+├── core-functionality-tests.js          # Original (fallback/reference)
+├── visual-rendering-tests.js            # Original (fallback/reference)
+├── run-tests.js                         # Smart test runner with auto-detection
+├── output/                              # Generated BMP test images (56+ files)
+└── README.md                            # This file
 
 examples/
-├── test.html                     # Browser visual test runner + comparisons
-├── browser-visual-tests.js       # Browser-specific visual testing tools
+├── test.html                     # Browser test runner (uses built tests automatically)
+├── browser-visual-tests.js       # Browser-specific interactive testing tools
 ├── test-simple.html              # Simple browser test page
 └── README.md
 ```
@@ -23,24 +37,32 @@ examples/
 
 ### Node.js Tests
 ```bash
-# Run shared test suite in Node.js
-npm test
+# Build modular tests + run complete test suite
+npm run build  # Concatenates individual test files 
+npm test       # Uses built modular tests automatically
 
 # Or directly:
-node tests/run-tests.js
+node tests/run-tests.js  # Smart runner uses built tests when available
 ```
 
 ### Browser Tests
-1. Open `examples/test.html` in a web browser
-2. Click "Run Shared Test Suite" to run the same tests as Node.js
-3. Use the visual comparison tools to test rendering accuracy
+1. Open `examples/test.html` in a web browser (automatically uses built modular tests)
+2. Click "Run Core Functionality Tests" to run 31 modular tests from `/tests/core/`
+3. Click "Run All Visual Rendering Tests" to compare 56 tests side-by-side
+4. Use interactive visual comparison tools for real-time testing
 
-## Dual Test Architecture
+## Modular Dual Test Architecture
 
-SWCanvas uses a **complementary dual test system** where two test suites verify different aspects of the same functionality:
+SWCanvas uses a **modular complementary dual test system** where individual test files are automatically concatenated at build time, maintaining both development flexibility and production performance:
 
-### Core Functionality Tests (`core-functionality-tests.js`)
-**Purpose**: Programmatic API verification with pass/fail assertions
+### Core Functionality Tests - 31 Individual Files
+**Location**: `/tests/core/` (individual files) → `core-functionality-tests-built.js` (concatenated)
+
+**Modular Structure**:
+- **31 individual test files** numbered 001-031 with descriptive names
+- **Build-time concatenation** into single optimized file
+- **Smart test runner** automatically uses built version
+- **Development benefit**: No merge conflicts, focused editing
 
 **Characteristics**:
 - **31 unit tests** using `assertEquals()`, `assertThrows()` assertions
@@ -55,8 +77,12 @@ SWCanvas uses a **complementary dual test system** where two test suites verify 
 - ✅ **Data Structures**: Path2D command recording, parameter validation
 - ✅ **Integration Points**: BMP generation, cross-platform consistency
 
-**Example Test**:
+**Example Modular Test File** (`/tests/core/001-surface-creation-valid.js`):
 ```javascript
+// Test 001: Surface creation with valid dimensions
+// This file will be concatenated into the main test suite
+
+// Test 001
 test('Surface creation with valid dimensions', () => {
     const surface = SWCanvas.Surface(400, 300);
     assertEquals(surface.width, 400);
@@ -65,8 +91,14 @@ test('Surface creation with valid dimensions', () => {
 });
 ```
 
-### Visual Rendering Tests (`visual-rendering-tests.js`)  
-**Purpose**: Pixel-perfect visual verification with BMP image output
+### Visual Rendering Tests - 56 Individual Files
+**Location**: `/tests/visual/` (individual files) → `visual-rendering-tests-built.js` (concatenated)
+
+**Modular Structure**:
+- **56 individual test files** numbered 001-056 with descriptive names
+- **Build-time concatenation** preserves registerVisualTest pattern
+- **Smart test runner** with automatic fallback to original
+- **Development benefit**: Isolated test development, clear organization
 
 **Characteristics**:
 - **56 visual tests** that generate actual rendered images
@@ -83,11 +115,16 @@ test('Surface creation with valid dimensions', () => {
 - ✅ **Stroke Rendering**: Line styles, caps, joins, sub-pixel accuracy - 6 tests
 - ✅ **Debug & Analysis**: Specific rendering issue investigation - 6 tests
 
-**Example Test**:
+**Example Modular Test File** (`/tests/visual/002-alpha-blending-test.js`):
 ```javascript
-registerVisualTest('alpha-blending', {
+// Test 2: Alpha Blending Test  
+// This file will be concatenated into the main visual test suite
+
+// Test 2
+registerVisualTest('alpha-test', {
     name: 'Alpha blending test - semi-transparent rectangles',
     width: 200, height: 150,
+    // Unified drawing function that works with both canvas types
     draw: function(canvas) {
         const ctx = canvas.getContext('2d');
         ctx.fillStyle = 'red';
@@ -156,17 +193,51 @@ Interactive tests requiring DOM and visual comparison:
 
 ## Adding New Tests
 
-### For Core Functionality
-Add tests to `core-functionality-tests.js` - they will automatically run in both environments.
+### For Core Functionality Tests
+Create a new individual file in `/tests/core/` with the naming pattern `{3-digit-number}-{descriptive-name}.js`:
 
-### For Visual Rendering Tests
-Add tests to `visual-rendering-tests.js` using the established pattern:
-- Both SWCanvas and HTML5 Canvas implementations
-- Consistent naming convention (`category-specific-description`)
-- Use standard HTML5 Canvas API (`ctx.fillStyle`, `ctx.strokeStyle`)
+```bash
+# Create new core test 
+echo "// Test 032: New feature test" > tests/core/032-new-feature-test.js
+echo "test('New feature test', () => { /* test code */ });" >> tests/core/032-new-feature-test.js
+
+# Build automatically includes it
+npm run build && npm test
+```
+
+### For Visual Rendering Tests  
+Create a new individual file in `/tests/visual/` with the naming pattern `{3-digit-number}-{descriptive-name}.js`:
+
+```bash
+# Create new visual test
+cat > tests/visual/057-new-visual-test.js << 'EOF'
+// Test 57: New Visual Test
+// This file will be concatenated into the main visual test suite
+
+registerVisualTest('new-visual-test', {
+    name: 'New visual feature test',
+    width: 200, height: 150,
+    draw: function(canvas) {
+        const ctx = canvas.getContext('2d');
+        // Standard HTML5 Canvas API works with both implementations
+        ctx.fillStyle = 'blue';
+        ctx.fillRect(10, 10, 100, 100);
+    }
+});
+EOF
+
+# Build automatically includes it
+npm run build && npm test
+```
 
 ### For Browser-Specific Features
-Add tests to `browser-visual-tests.js` for features that require DOM or visual comparison.
+Add interactive tests to `browser-visual-tests.js` for features requiring DOM interaction or real-time visual comparison.
+
+**Key Benefits of Modular Approach**:
+- **No merge conflicts**: Each test is in its own file
+- **Clear organization**: Numbered files with descriptive names
+- **Easy maintenance**: Edit individual tests without affecting others
+- **Automatic integration**: Build system includes new tests automatically
 
 ## Key Features
 
@@ -183,8 +254,10 @@ Standard HTML5 Canvas API ensures consistent colors:
 - Works identically with both SWCanvas and HTML5 Canvas
 - Eliminates need for helper functions or color mapping
 
-### Comprehensive Test Coverage
-- 55+ visual tests covering all major Canvas2D features
-- Pixel-perfect comparison with HTML5 Canvas
-- Cross-platform validation (Node.js + browsers)
-- BMP generation for visual inspection
+### Comprehensive Modular Test Coverage
+- **31 modular core tests** covering all API functionality with individual files
+- **56 modular visual tests** covering all major Canvas2D features with pixel-perfect accuracy
+- **Build-time concatenation** for optimal performance
+- **Smart test runner** with automatic fallback system
+- **Cross-platform validation** (Node.js + browsers)
+- **BMP generation** for visual inspection and regression detection

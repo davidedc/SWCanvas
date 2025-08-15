@@ -1,0 +1,40 @@
+// Test 027: Basic transform - scale operations
+// This file will be concatenated into the main test suite
+
+// Test 027
+test('Basic transform - scale operations', () => {
+    if (typeof VisualRenderingTests !== 'undefined') {
+        const visualTest = VisualRenderingTests.getTest('transform-basic-scale');
+        if (visualTest) {
+            const surface = visualTest.drawSWCanvas(SWCanvas);
+            saveBMP(surface, 'transform-basic-scale.bmp', 'basic scale test', SWCanvas);
+            
+            // Verify scaling worked - blue square should be 2x size
+            let bluePixelCount = 0;
+            for (let y = 10; y < 60; y++) {
+                for (let x = 60; x < 110; x++) {
+                    const offset = (y * surface.stride) + (x * 4);
+                    if (surface.data[offset + 2] > 200) bluePixelCount++;
+                }
+            }
+            
+            if (bluePixelCount < 1500) throw new Error('Scaled blue square not found or incorrect size');
+            return;
+        }
+    }
+    
+    // Fallback test
+    const surface = SWCanvas.Surface(100, 100);
+    const ctx = new SWCanvas.Context2D(surface);
+    ctx.setFillStyle(255, 255, 255, 255);
+    ctx.fillRect(0, 0, 100, 100);
+    ctx.scale(2, 2);
+    ctx.setFillStyle(255, 0, 0, 255);
+    ctx.fillRect(10, 10, 10, 10);
+    
+    // Should see a 20x20 red square due to 2x scale
+    const pixelOffset = (25 * surface.stride) + (25 * 4);
+    if (surface.data[pixelOffset] < 200) {
+        throw new Error('Transform scale not working');
+    }
+});

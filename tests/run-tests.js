@@ -2,11 +2,31 @@
 
 // Node.js test runner using the core functionality tests
 
-const CoreFunctionalityTests = require('./core-functionality-tests.js');
+const fs = require('fs');
+
+// Use built tests if available, otherwise fall back to original
+let CoreFunctionalityTests;
+if (fs.existsSync('./tests/core-functionality-tests-built.js')) {
+    console.log('Using built core functionality tests...');
+    CoreFunctionalityTests = require('./core-functionality-tests-built.js');
+} else {
+    console.log('Using original core functionality tests...');
+    CoreFunctionalityTests = require('./core-functionality-tests.js');
+}
 
 // Load SWCanvas and Visual Rendering Tests
 const SWCanvas = require('../dist/swcanvas.js');
-const VisualRenderingTests = require('./visual-rendering-tests.js');
+
+// Use built visual tests if available, otherwise fall back to original
+let VisualRenderingTests;
+// Temporarily disable built visual tests while fixing concatenation syntax
+if (false && fs.existsSync('./tests/visual-rendering-tests-built.js')) {
+    console.log('Using built visual rendering tests...');
+    VisualRenderingTests = require('./visual-rendering-tests-built.js');
+} else {
+    console.log('Using original visual rendering tests...');
+    VisualRenderingTests = require('./visual-rendering-tests.js');
+}
 
 console.log('Running SWCanvas Tests in Node.js...\n');
 

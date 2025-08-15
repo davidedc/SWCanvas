@@ -7,6 +7,12 @@ set -e
 
 echo "Building SWCanvas..."
 
+# Step 1: Build modular tests (if directories exist)
+if [ -d "tests/core" ] || [ -d "tests/visual" ]; then
+    echo "Building modular tests..."
+    node tests/build/concat-tests.js
+fi
+
 # Create dist directory
 mkdir -p dist
 

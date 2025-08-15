@@ -1,0 +1,33 @@
+// Test 030: resetTransform functionality
+// This file will be concatenated into the main test suite
+
+// Test 030
+test('resetTransform functionality', () => {
+    if (typeof VisualRenderingTests !== 'undefined') {
+        const visualTest = VisualRenderingTests.getTest('transform-resetTransform');
+        if (visualTest) {
+            const surface = visualTest.drawSWCanvas(SWCanvas);
+            saveBMP(surface, 'transform-resetTransform.bmp', 'resetTransform test', SWCanvas);
+            return;
+        }
+    }
+    
+    // Test resetTransform works
+    const surface = SWCanvas.Surface(100, 100);
+    const ctx = new SWCanvas.Context2D(surface);
+    ctx.setFillStyle(255, 255, 255, 255);
+    ctx.fillRect(0, 0, 100, 100);
+    
+    ctx.translate(50, 50);
+    ctx.scale(2, 2);
+    ctx.resetTransform();
+    
+    // After reset, should be back to identity
+    ctx.setFillStyle(255, 0, 0, 255);
+    ctx.fillRect(10, 10, 20, 20);
+    
+    const pixelOffset = (20 * surface.stride) + (20 * 4);
+    if (surface.data[pixelOffset] < 200) {
+        throw new Error('resetTransform not working');
+    }
+});

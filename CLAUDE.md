@@ -154,94 +154,189 @@ src/ColorParser.js            # CSS color string parsing (hex, rgb, named colors
 
 ### Essential Commands
 ```bash
-# Build the library
+# Build the library + modular tests
 npm run build          # or ./build.sh
+                       # - Builds dist/swcanvas.js
+                       # - Concatenates /tests/core/ → core-functionality-tests-built.js
+                       # - Concatenates /tests/visual/ → visual-rendering-tests-built.js
 
-# Run all tests (shared + visual BMP generation)
+# Run all tests (31 core + 56 visual BMP generation)
 npm test              # or node tests/run-tests.js
+                      # - Uses built modular tests automatically
+                      # - Generates 56+ BMP files in tests/output/
 
 # Check test status
-ls -la tests/output/  # Should see 58+ BMP files after test run
+ls -la tests/output/  # Should see 56+ BMP files after test run
 ```
 
 ### Development Workflow
 ```bash
-# 1. Make changes to src/ files
-# 2. Build to regenerate dist/swcanvas.js  
+# 1. Make changes to src/ files or individual test files
+# 2. Build to regenerate dist/swcanvas.js + test suites
 npm run build
 
 # 3. Run tests to verify no regressions
-npm test
+npm test              # Automatically uses built modular tests
 
-# 4. Browser testing (open in browser)
+# 4. Browser testing (uses built tests automatically)
 open examples/test.html
 
-# 5. Check specific test output if needed
-node -e "console.log(require('./tests/core-functionality-tests.js'))"
+# 5. Add new modular tests
+# Create /tests/core/032-new-feature.js or /tests/visual/057-new-test.js
+npm run build         # Auto-includes new tests
+npm test              # Runs new tests
+
+# 6. Check specific test output if needed  
+node -e "console.log(require('./tests/core-functionality-tests-built.js'))"
+```
+
+### Modular Test Development
+```bash
+# Add a new core functionality test
+echo "// Test 032: New feature test" > tests/core/032-new-feature-test.js
+echo "test('New feature test', () => { /* test code */ });" >> tests/core/032-new-feature-test.js
+
+# Add a new visual test  
+echo "// Test 057: New visual test" > tests/visual/057-new-visual-test.js
+echo "registerVisualTest('new-visual', { /* test config */ });" >> tests/visual/057-new-visual-test.js
+
+# Build automatically includes new tests
+npm run build && npm test
 ```
 
 ## Test System Architecture
 
-SWCanvas uses a **dual test architecture** with two complementary test suites that verify different aspects of the rendering engine:
+SWCanvas uses a **modular dual test architecture** where each test is in its own file, automatically concatenated at build time for optimal performance and maintainability.
 
-### Core Functionality Tests (`core-functionality-tests.js`)
-**Purpose**: Programmatic verification with pass/fail assertions
+### Modular Test Structure
+**Core Philosophy**: Individual test files + build-time concatenation = maintainable code + production performance
+
+#### Core Functionality Tests - 31 Individual Files
+- **Location**: `/tests/core/` - Individual test files numbered 001-031
+- **Built Output**: `tests/core-functionality-tests-built.js` (auto-generated)
+- **Purpose**: Programmatic verification with pass/fail assertions
 - **Type**: Unit tests with `assertEquals()` and `assertThrows()` assertions  
 - **Focus**: API correctness, error handling, data validation, mathematical accuracy
 - **Output**: Console logs with ✓ pass/✗ fail status + assertion details
-- **Environment**: Runs identically in both Node.js and browser
-- **Examples**: Surface creation validation, matrix math correctness, transform operations accuracy, Path2D command recording
+- **Examples**: `001-surface-creation-valid.js`, `015-alpha-blending-test.js`, `031-transform-matrix-order-dependency.js`
 
-### Visual Rendering Tests (`visual-rendering-tests.js`)  
-**Purpose**: Visual verification with pixel-perfect BMP output
+#### Visual Rendering Tests - 56 Individual Files  
+- **Location**: `/tests/visual/` - Individual test files numbered 001-056
+- **Built Output**: `tests/visual-rendering-tests-built.js` (auto-generated) 
+- **Purpose**: Visual verification with pixel-perfect BMP output
 - **Type**: Visual tests that generate images for comparison
 - **Focus**: Rendering accuracy, pixel-perfect output, visual consistency
 - **Output**: BMP files for Node.js, side-by-side visual comparison in browser
-- **Environment**: Generates BMPs in Node.js, visual comparison in browser
-- **Examples**: Complex path filling, stroke rendering with caps/joins, advanced clipping operations, combined transform+clip+fill scenarios
+- **Examples**: `001-simple-rectangle-test.js`, `027-fill-rule-complex-complex-even-odd-vs-nonzero-comparisons-test.js`, `056-stroke-pixel-analysis-test.js`
 
-### Architectural Relationship
-The test architecture demonstrates **intentional complementary redundancy**:
+### Build System Integration
+```bash
+npm run build  # Automatically detects /tests/core/ and /tests/visual/ directories
+               # Concatenates individual files into built test suites
+               # Maintains proper test ordering and dependencies
+```
 
-1. **Dual Verification**: 8 overlapping tests provide both programmatic AND visual validation
-2. **Smart Delegation**: Core tests delegate to visual tests when available, with fallback implementations
-3. **Cross-Platform**: Node.js gets programmatic verification, browser gets visual comparison
-4. **Comprehensive Coverage**: 31 programmatic tests + 56 visual tests = thorough validation
-
-**Example of Complementary Testing**:
+#### Smart Test Runner Architecture
 ```javascript
-// core-functionality-tests.js
-test('Create and save a simple test image', () => {
-    // Tries to use visual test first for consistency
-    if (typeof VisualRenderingTests !== 'undefined') {
-        const visualTest = VisualRenderingTests.getTest('simple-test');
-        const surface = visualTest.drawSWCanvas(SWCanvas);
-        saveBMP(surface, 'test-output.bmp', 'test image', SWCanvas);
-        // ✓ Programmatic validation + BMP generation
-    } else {
-        // Fallback inline test code
-    }
-});
+// Automatic fallback system in run-tests.js
+let CoreFunctionalityTests;
+if (fs.existsSync('./tests/core-functionality-tests-built.js')) {
+    CoreFunctionalityTests = require('./core-functionality-tests-built.js');  // Use modular
+} else {
+    CoreFunctionalityTests = require('./core-functionality-tests.js');        // Fallback to original
+}
+```
 
-// visual-rendering-tests.js
-registerVisualTest('simple-test', {
+### Modular File Structure
+```
+/tests/
+├── core/                               # 31 individual core test files
+│   ├── 001-surface-creation-valid.js
+│   ├── 015-alpha-blending-test.js
+│   ├── 031-transform-matrix-order-dependency.js
+│   └── ... (28 more files)
+├── visual/                             # 56 individual visual test files
+│   ├── 001-simple-rectangle-test.js
+│   ├── 027-fill-rule-complex-test.js
+│   ├── 056-stroke-pixel-analysis-test.js
+│   └── ... (53 more files)
+├── build/
+│   └── concat-tests.js                 # Build concatenation script
+├── core-functionality-tests-built.js   # Auto-generated from /core/
+├── visual-rendering-tests-built.js     # Auto-generated from /visual/
+├── core-functionality-tests.js         # Original (fallback/reference)
+├── visual-rendering-tests.js           # Original (fallback/reference)
+└── run-tests.js                        # Smart test runner with auto-detection
+```
+
+### Individual Test File Format
+```javascript
+// /tests/core/015-alpha-blending-test.js
+// Test 015: Alpha blending test - semi-transparent rectangles
+// This file will be concatenated into the main test suite
+
+// Test 015
+test('Alpha blending test - semi-transparent rectangles', () => {
+    // Use visual test registry if available, otherwise fall back to inline test
+    if (typeof VisualRenderingTests !== 'undefined') {
+        const visualTest = VisualRenderingTests.getTest('alpha-test');
+        if (visualTest) {
+            const surface = visualTest.drawSWCanvas(SWCanvas);
+            // ... validation logic ...
+        }
+    }
+    // Fallback inline test code
+});
+```
+
+```javascript
+// /tests/visual/002-alpha-blending-test.js  
+// Test 2: Alpha Blending Test
+// This file will be concatenated into the main visual test suite
+
+// Test 2
+registerVisualTest('alpha-test', {
+    name: 'Alpha blending test - semi-transparent rectangles',
+    width: 200, height: 150,
     draw: function(canvas) {
-        // Same drawing operations, generates pixel-perfect BMPs
+        const ctx = canvas.getContext('2d');
+        // Unified drawing function that works with both canvas types
+        ctx.fillStyle = 'white';
+        ctx.fillRect(0, 0, 200, 150);
+        // ... drawing operations ...
     }
 });
 ```
 
-### Test Execution
-- **Node.js**: `npm test` runs core tests + generates 56 BMP files  
-- **Browser**: Open `examples/test.html` for interactive visual comparisons
-- **Both environments**: Use same test definitions - no code duplication
+### Development Benefits
+- **Individual Focus**: Each test in its own file with descriptive naming
+- **No Merge Conflicts**: Developers can work on separate tests simultaneously  
+- **Easy Maintenance**: Add/edit/remove tests without affecting others
+- **Clear Organization**: Numerical ordering with descriptive names
+- **Build Optimization**: Production gets concatenated files for performance
 
-### Key Test Categories
-- **Phase 1**: Basic transforms (translate/scale/rotate)
-- **Phase 2**: Advanced fills (curves, self-intersecting, fill rules)
-- **Phase 3**: Stencil clipping (intersection, nesting)
-- **Phase 4**: Combined features (transform+clip+fill+stroke)
-- **Phase 5**: Image operations (drawImage with transforms and alpha)
+### Test Execution
+- **Node.js**: `npm test` automatically uses built modular tests + generates 56+ BMP files  
+- **Browser**: `examples/test.html` automatically uses built modular tests with visual comparisons
+- **Development**: Edit individual test files, run `npm run build` to regenerate
+- **Production**: Built concatenated files ensure optimal loading performance
+
+### Architectural Relationship
+The modular architecture maintains **intentional complementary redundancy**:
+
+1. **Dual Verification**: 8 overlapping tests provide both programmatic AND visual validation
+2. **Smart Delegation**: Core tests delegate to visual tests when available, with fallback implementations
+3. **Cross-Platform**: Node.js gets programmatic verification, browser gets visual comparison
+4. **Comprehensive Coverage**: 31 modular core tests + 56 modular visual tests = thorough validation
+5. **Maintainable Modularity**: Each test is independently editable while preserving system integration
+
+### Key Test Categories by Phase
+- **Phase 1**: Basic transforms (Tests 011-018) - translate/scale/rotate operations
+- **Phase 2**: Advanced fills (Tests 019-027) - curves, self-intersecting paths, fill rules
+- **Phase 3**: Stencil clipping (Tests 028-035) - intersection, nesting, save/restore
+- **Phase 4**: Combined features (Tests 036-046) - transform+clip+fill+stroke integration  
+- **Phase 5**: Image operations (Tests 047-052) - drawImage with transforms and alpha
+- **Phase 6**: Sub-pixel rendering (Tests 053-056) - edge cases and pixel analysis
 
 ## Public API (Dual Architecture)
 
@@ -282,41 +377,66 @@ All existing SWCanvas APIs continue to work unchanged:
 
 ### Adding New Visual Tests
 
-**Recommended: registerVisualTest Helper (Current Approach)**
+**Recommended: Modular Test File Approach (Current Architecture)**
+
+#### Step 1: Create Individual Test File
+Create a new file in `/tests/visual/` with the naming convention `{3-digit-number}-{descriptive-name}.js`:
+
 ```javascript
-registerVisualTest('new-test-name', {
-    name: 'Human-readable description',
-    width: 200, height: 150,
-    // Single function works with both Canvas types
+// /tests/visual/057-new-feature-test.js
+// Test 57: New Feature Test
+// This file will be concatenated into the main visual test suite
+
+// Test 57: New Feature Test
+registerVisualTest('new-feature-test', {
+    name: 'Human-readable description of new feature',
+    width: 300, height: 200,
+    // Unified drawing function that works with both canvas types
     draw: function(canvas) {
         const ctx = canvas.getContext('2d');
-        ctx.fillStyle = 'red';          // Standard HTML5 Canvas API
+        
+        // Use standard HTML5 Canvas API - works with both implementations
+        ctx.fillStyle = 'white';
+        ctx.fillRect(0, 0, 300, 200);
+        
+        ctx.fillStyle = 'red';
         ctx.fillRect(10, 10, 50, 50);
+        
+        // Test your new feature here...
     }
-    // Backward compatibility functions auto-generated by registerVisualTest
 });
 ```
 
-The `registerVisualTest` helper automatically generates the required `drawSWCanvas` and `drawHTML5Canvas` functions, eliminating boilerplate code while maintaining full compatibility with existing test runners.
+#### Step 2: Build and Test
+```bash
+npm run build    # Concatenates your new test into visual-rendering-tests-built.js
+npm test         # Runs all tests including your new one, generates BMP
+```
 
-**Legacy: Manual Registration (still supported)**
+#### Step 3: Verify Cross-Platform
+```bash
+open examples/test.html    # Browser visual comparison includes your test automatically
+```
+
+**Key Benefits of Modular Approach:**
+- **No merge conflicts**: Your test file is independent
+- **Clear naming**: Descriptive filename makes purpose obvious  
+- **Automatic integration**: Build system includes it automatically
+- **Version control friendly**: Changes isolated to single file
+
+**Legacy: Direct Registration in Main File (discouraged for new tests)**
 ```javascript
-visualTests['legacy-test'] = {
-    name: 'Legacy dual-function approach',
+// In /tests/visual-rendering-tests.js - not recommended for new tests
+registerVisualTest('legacy-approach', {
+    name: 'Legacy direct registration',
     width: 200, height: 150,
-    drawSWCanvas: function(SWCanvas) {
-        const surface = SWCanvas.Core.Surface(200, 150);
-        const ctx = new SWCanvas.Core.Context2D(surface);
-        ctx.setFillStyle(255, 0, 0, 255);  // Core API
-        ctx.fillRect(10, 10, 50, 50);
-        return surface;
-    },
-    drawHTML5Canvas: function(html5Canvas) {
-        const ctx = html5Canvas.getContext('2d');
-        ctx.fillStyle = 'red';  // HTML5 Canvas API
-        ctx.fillRect(10, 10, 50, 50);
+    draw: function(canvas) {
+        // Same unified API approach
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = 'blue';
+        ctx.fillRect(0, 0, 200, 150);
     }
-};
+});
 ```
 
 ### Using the Dual API

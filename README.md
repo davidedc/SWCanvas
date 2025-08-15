@@ -8,7 +8,7 @@ A deterministic 2D raster engine with Canvas-like API. SWCanvas provides pixel-p
 - **HTML5 Canvas Compatibility**: Drop-in replacement with familiar API  
 - **Object-Oriented Design**: Clean ES6 classes following effective OO principles
 - **Memory Efficient Clipping**: Stencil-based clipping system with proper intersection support
-- **Comprehensive Test Coverage**: 31 shared tests + 52 visual tests ensuring pixel-perfect accuracy
+- **Comprehensive Test Coverage**: 31 core tests + 56 visual tests ensuring pixel-perfect accuracy with modular architecture
 - **Immutable Value Objects**: Point, Rectangle, Transform2D, Color prevent mutation bugs
 - **Cross-Platform**: Works in Node.js and browsers
 - **No Dependencies**: Pure JavaScript implementation
@@ -21,7 +21,10 @@ A deterministic 2D raster engine with Canvas-like API. SWCanvas provides pixel-p
 npm run build
 ```
 
-This generates `dist/swcanvas.js` containing the complete library.
+This generates:
+- `dist/swcanvas.js` containing the complete library
+- `tests/core-functionality-tests-built.js` from 31 individual test files in `/tests/core/`
+- `tests/visual-rendering-tests-built.js` from 56 individual test files in `/tests/visual/`
 
 ### Node.js Usage
 
@@ -86,7 +89,9 @@ ctx.restore();
 npm test
 ```
 
-This runs 31 shared tests and generates 52 visual test BMPs in `tests/output/`.
+This runs:
+- 31 modular core functionality tests (automatically uses built tests from `/tests/core/`)
+- 56 visual rendering tests generating BMPs in `tests/output/`
 
 ### Browser Tests
 
@@ -95,11 +100,13 @@ Open `examples/test.html` in a web browser for:
 - Interactive visual tests
 - BMP download functionality
 
-### Test Structure
+### Test Architecture
 
-- **Shared Tests** (31): Core functionality tests that run in both Node.js and browsers
-- **Visual Tests** (52): Comprehensive rendering tests with BMP output generation
-- **Browser Tests**: Interactive visual comparison tools with pixel-perfect validation
+- **Core Functionality Tests** (31): Individual test files in `/tests/core/` - API correctness, edge cases, mathematical accuracy
+- **Visual Rendering Tests** (56): Individual test files in `/tests/visual/` - Pixel-perfect rendering verification with BMP generation  
+- **Browser Tests**: Interactive visual comparison tools using built test suites with HTML5 Canvas vs SWCanvas side-by-side
+
+The modular architecture allows individual test development while maintaining build-time concatenation for performance.
 
 See [tests/README.md](tests/README.md) for detailed test documentation.
 

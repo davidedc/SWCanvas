@@ -1,0 +1,36 @@
+// Test 016: Path filling - simple triangle
+// This file will be concatenated into the main test suite
+
+// Test 016
+test('Path filling - simple triangle', () => {
+    const surface = SWCanvas.Surface(100, 100);
+    const ctx = new SWCanvas.Context2D(surface);
+    
+    // White background
+    ctx.setFillStyle(255, 255, 255, 255);
+    ctx.fillRect(0, 0, 100, 100);
+    
+    // Draw red triangle using path
+    ctx.setFillStyle(255, 0, 0, 255);
+    ctx.beginPath();
+    ctx.moveTo(50, 10);
+    ctx.lineTo(80, 70);
+    ctx.lineTo(20, 70);
+    ctx.closePath();
+    ctx.fill();
+    
+    // Check a point inside the triangle
+    const insideOffset = (40 * surface.stride) + (50 * 4);
+    const r = surface.data[insideOffset];
+    const g = surface.data[insideOffset + 1];
+    const b = surface.data[insideOffset + 2];
+    
+    log(`  Triangle interior pixel: R=${r}, G=${g}, B=${b}`);
+    
+    // Should be red (allowing for some tolerance)
+    if (r < 200 || g > 50 || b > 50) {
+        throw new Error(`Expected red pixel inside triangle, got R=${r}, G=${g}, B=${b}`);
+    }
+    
+    saveBMP(surface, 'triangle-test.bmp', 'triangle path test', SWCanvas);
+});
