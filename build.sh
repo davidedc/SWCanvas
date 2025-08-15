@@ -18,7 +18,7 @@ cat > dist/swcanvas.js << 'EOF'
 EOF
 
 # Concatenate source files in dependency order
-# Phase 1: Foundation classes (no dependencies)
+# Phase 1: Core Foundation classes (no dependencies)
 cat src/Color.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
 cat src/Point.js >> dist/swcanvas.js
@@ -32,7 +32,7 @@ echo "" >> dist/swcanvas.js
 cat src/Surface.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
 
-# Phase 2: Service classes (depend on foundation)
+# Phase 2: Core Service classes (depend on foundation)
 cat src/BitmapEncoder.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
 cat src/PathFlattener.js >> dist/swcanvas.js
@@ -46,20 +46,33 @@ echo "" >> dist/swcanvas.js
 cat src/ImageProcessor.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
 
-# Phase 3: State and rendering classes (depend on services)
+# Phase 3: Core rendering classes (depend on services)
 cat src/Rasterizer.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
 cat src/Context2D.js >> dist/swcanvas.js
+echo "" >> dist/swcanvas.js
 
-# Add compatibility shims
+# Phase 4: Canvas compatibility layer (depends on Core)
+cat src/ColorParser.js >> dist/swcanvas.js
+echo "" >> dist/swcanvas.js
+cat src/CanvasCompatibleContext2D.js >> dist/swcanvas.js
+echo "" >> dist/swcanvas.js
+cat src/SWCanvasElement.js >> dist/swcanvas.js
+
+# Add compatibility layer and dual API setup
 cat >> dist/swcanvas.js << 'EOF'
 
-// Backward compatibility factory functions and aliases
-function SurfaceFactory(width, height) {
+// Canvas factory function for HTML5 Canvas compatibility
+function createCanvas(width = 300, height = 150) {
+    return new SWCanvasElement(width, height);
+}
+
+// Core namespace factory functions  
+function CoreSurfaceFactory(width, height) {
     return new Surface(width, height);
 }
 
-// Legacy alias for Transform2D
+// Legacy alias for Transform2D (backward compatibility)
 const Matrix = Transform2D;
 
 // Legacy encodeBMP function
@@ -69,30 +82,47 @@ function encodeBMP(surface) {
 
 EOF
 
-# Footer to expose globals
+# Footer to expose dual API globals
 cat >> dist/swcanvas.js << 'EOF'
 
-// Export to global scope
+// Export to global scope with dual API architecture
 if (typeof window !== 'undefined') {
     // Browser
     window.SWCanvas = {
-        // Core API (public)
-        Surface: SurfaceFactory,
-        Transform2D: Transform2D,
-        Matrix: Matrix, // Legacy alias for Transform2D
-        Path2D: Path2D,
-        Context2D: Context2D,
-        encodeBMP: encodeBMP,
+        // HTML5 Canvas-compatible API (recommended for portability)
+        createCanvas: createCanvas,
         
-        // Advanced classes (for power users)
+        // Core API namespace (recommended for performance/control)  
+        Core: {
+            Surface: CoreSurfaceFactory,
+            Context2D: Context2D,
+            Transform2D: Transform2D,
+            Path2D: Path2D,
+            Color: Color,
+            Point: Point,
+            Rectangle: Rectangle,
+            BitmapEncoder: BitmapEncoder,
+            ClipMask: ClipMask,
+            ImageProcessor: ImageProcessor,
+            Rasterizer: Rasterizer,
+            PathFlattener: PathFlattener,
+            PolygonFiller: PolygonFiller,
+            StrokeGenerator: StrokeGenerator
+        },
+        
+        // Legacy API (backward compatibility - points to Core)
+        Surface: CoreSurfaceFactory,
+        Context2D: Context2D,
+        Transform2D: Transform2D,
+        Matrix: Matrix,
+        Path2D: Path2D,
+        encodeBMP: encodeBMP,
         Color: Color,
         Point: Point,
         Rectangle: Rectangle,
         BitmapEncoder: BitmapEncoder,
         ClipMask: ClipMask,
         ImageProcessor: ImageProcessor,
-        
-        // Internal classes (exposed for extensibility)
         Rasterizer: Rasterizer,
         PathFlattener: PathFlattener,
         PolygonFiller: PolygonFiller,
@@ -101,23 +131,40 @@ if (typeof window !== 'undefined') {
 } else if (typeof module !== 'undefined' && module.exports) {
     // Node.js
     module.exports = {
-        // Core API (public)
-        Surface: SurfaceFactory,
-        Transform2D: Transform2D,
-        Matrix: Matrix, // Legacy alias for Transform2D
-        Path2D: Path2D,
-        Context2D: Context2D,
-        encodeBMP: encodeBMP,
+        // HTML5 Canvas-compatible API (recommended for portability)
+        createCanvas: createCanvas,
         
-        // Advanced classes (for power users)
+        // Core API namespace (recommended for performance/control)
+        Core: {
+            Surface: CoreSurfaceFactory,
+            Context2D: Context2D,
+            Transform2D: Transform2D,
+            Path2D: Path2D,
+            Color: Color,
+            Point: Point,
+            Rectangle: Rectangle,
+            BitmapEncoder: BitmapEncoder,
+            ClipMask: ClipMask,
+            ImageProcessor: ImageProcessor,
+            Rasterizer: Rasterizer,
+            PathFlattener: PathFlattener,
+            PolygonFiller: PolygonFiller,
+            StrokeGenerator: StrokeGenerator
+        },
+        
+        // Legacy API (backward compatibility - points to Core)
+        Surface: CoreSurfaceFactory,
+        Context2D: Context2D,
+        Transform2D: Transform2D,
+        Matrix: Matrix,
+        Path2D: Path2D,
+        encodeBMP: encodeBMP,
         Color: Color,
         Point: Point,
         Rectangle: Rectangle,
         BitmapEncoder: BitmapEncoder,
         ClipMask: ClipMask,
         ImageProcessor: ImageProcessor,
-        
-        // Internal classes (exposed for extensibility)
         Rasterizer: Rasterizer,
         PathFlattener: PathFlattener,
         PolygonFiller: PolygonFiller,

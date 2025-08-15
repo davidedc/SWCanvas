@@ -4,34 +4,110 @@ This file provides Claude with essential context about the SWCanvas project for 
 
 ## Project Overview
 
-**SWCanvas** is a deterministic 2D raster engine with Canvas-like API that produces pixel-perfect, identical results across all platforms. It's designed as a drop-in replacement for HTML5 Canvas 2D Context with additional deterministic guarantees.
+**SWCanvas** is a deterministic 2D raster engine with dual API architecture that produces pixel-perfect, identical results across all platforms. It provides both HTML5 Canvas-compatible API and a high-performance Core API.
 
 ### Key Characteristics
 - **Deterministic**: Same input → same output on any platform
 - **Cross-platform**: Works identically in Node.js and browsers  
-- **Canvas-compatible**: Familiar HTML5 Canvas 2D API with sub-pixel stroke support
+- **Dual API**: HTML5-compatible API for portability + Core API for performance
+- **Drop-in replacement**: True HTML5 Canvas 2D Context compatibility
 - **Memory efficient**: 1-bit stencil clipping, optimized algorithms
 - **Sub-pixel accurate**: Thin strokes render with proportional opacity (no anti-aliasing)
-- **Well-tested**: 32 shared tests + 58 visual tests with pixel-perfect validation
+- **Well-tested**: 32 shared tests + 57 visual tests with pixel-perfect validation
+
+## Dual API Architecture
+
+SWCanvas provides two complementary APIs for different use cases:
+
+### 1. HTML5 Canvas-Compatible API (Recommended for Portability)
+```javascript
+// Drop-in replacement for HTML5 Canvas
+const canvas = SWCanvas.createCanvas(800, 600);
+const ctx = canvas.getContext('2d');
+
+// Standard HTML5 Canvas API
+ctx.fillStyle = '#FF0000';
+ctx.strokeStyle = 'blue';
+ctx.lineWidth = 2;
+ctx.fillRect(10, 10, 100, 100);
+
+// Works with CSS colors, named colors, hex, rgb(), rgba()
+ctx.fillStyle = 'rgba(0, 255, 0, 0.5)';
+```
+
+### 2. Core API (Recommended for Performance/Control)
+```javascript
+// Direct access to optimized rendering engine
+const surface = SWCanvas.Core.Surface(800, 600);
+const ctx = new SWCanvas.Core.Context2D(surface);
+
+// Explicit RGBA values (0-255) - no color parsing overhead
+ctx.setFillStyle(255, 0, 0, 255);
+ctx.setStrokeStyle(0, 0, 255, 255);
+ctx.lineWidth = 2;
+ctx.fillRect(10, 10, 100, 100);
+
+// Direct access to advanced features
+const color = new SWCanvas.Core.Color(0, 255, 0, 128);
+const transform = new SWCanvas.Core.Transform2D().translate(100, 50);
+```
+
+### When to Use Which API
+
+**Use HTML5-Compatible API for:**
+- Drop-in HTML5 Canvas replacement
+- Cross-platform code that runs in browsers
+- CSS color support (hex, named colors, rgb/rgba functions)
+- Familiar, standard web development workflow
+- Gradual migration from HTML5 Canvas
+
+**Use Core API for:**
+- Performance-critical applications
+- Color-intensive operations (avoids parsing overhead)
+- Advanced geometric operations with Point/Rectangle classes
+- Direct access to rendering internals
+- Custom rendering pipelines
+
+### Interoperability
+Both APIs are fully interoperable:
+```javascript
+// Create with Canvas API
+const canvas = SWCanvas.createCanvas(200, 200);
+const ctx = canvas.getContext('2d');
+
+// Access underlying Core surface for advanced operations
+const surface = canvas._coreSurface;
+const bmpData = SWCanvas.Core.BitmapEncoder.encode(surface);
+
+// Or access Core context for performance-critical sections
+const coreCtx = ctx._coreContext;
+coreCtx.setFillStyle(255, 0, 0, 255); // Skip color parsing
+```
 
 ## Architecture (Object-Oriented Design)
 
 ### Core Components
 ```
-src/Context2D.js         # Main API - implements Canvas 2D Context interface
-src/Rasterizer.js        # Low-level pixel operations and rendering pipeline (ES6 class)
-src/Surface.js           # Memory buffer management - RGBA pixel data (ES6 class)
-src/Transform2D.js       # Transform mathematics - immutable transformation matrix (ES6 class)
-src/Path2D.js           # Path definition and command recording (ES6 class)
-src/Color.js            # Immutable color handling with premultiplied alpha (ES6 class)
-src/Point.js            # Immutable 2D point operations (ES6 class)
-src/Rectangle.js        # Immutable rectangle operations (ES6 class)
-src/PolygonFiller.js    # Scanline polygon filling with stencil clipping (static methods)
-src/PathFlattener.js    # Converts paths to polygons (static methods)
-src/StrokeGenerator.js  # Geometric stroke path generation (static methods)
-src/BitmapEncoder.js    # BMP file format encoding (static methods)
-src/ClipMask.js         # 1-bit stencil buffer clipping implementation (ES6 class)
-src/ImageProcessor.js   # ImageLike validation and format conversion (static methods)
+# Core Rendering Engine (SWCanvas.Core.*)
+src/Context2D.js              # Core 2D rendering context (explicit RGBA API)
+src/Rasterizer.js             # Low-level pixel operations and rendering pipeline
+src/Surface.js                # Memory buffer management - RGBA pixel data
+src/Transform2D.js            # Immutable transformation matrix mathematics
+src/Path2D.js                 # Path definition and command recording
+src/Color.js                  # Immutable color handling with premultiplied alpha
+src/Point.js                  # Immutable 2D point operations
+src/Rectangle.js              # Immutable rectangle operations
+src/PolygonFiller.js          # Scanline polygon filling with stencil clipping
+src/PathFlattener.js          # Converts paths to polygons
+src/StrokeGenerator.js        # Geometric stroke path generation
+src/BitmapEncoder.js          # BMP file format encoding
+src/ClipMask.js               # 1-bit stencil buffer clipping implementation
+src/ImageProcessor.js         # ImageLike validation and format conversion
+
+# HTML5 Canvas Compatibility Layer
+src/SWCanvasElement.js        # Canvas-like object (width/height properties, getContext)
+src/CanvasCompatibleContext2D.js  # HTML5 Canvas 2D Context API wrapper
+src/ColorParser.js            # CSS color string parsing (hex, rgb, named colors)
 ```
 
 ### Key Systems
@@ -47,7 +123,7 @@ src/ImageProcessor.js   # ImageLike validation and format conversion (static met
 - **Color class**: Immutable color handling with premultiplied alpha internally
 - **Surface class**: Stores non-premultiplied RGBA (0-255) with immutable dimensions
 - Color class handles conversion between premultiplied/non-premultiplied forms
-- CSS color names mapped to exact RGB values in `tests/test-colors.js`
+- CSS color names mapped to exact RGB values using standard Canvas API
 - Alpha blending uses source-over composition with correct math
 - Global alpha applied correctly via `Color.withGlobalAlpha()` method
 
@@ -123,87 +199,142 @@ node -e "console.log(require('./tests/shared-test-suite.js'))"
 - **Phase 4**: Combined features (transform+clip+fill+stroke)
 - **Phase 5**: Image operations (drawImage with transforms and alpha)
 
-## Public API (Object-Oriented Design)
+## Public API (Dual Architecture)
 
-### Core Classes
-- **SWCanvas.Surface(width, height)**: Create rendering surface with immutable dimensions
-- **SWCanvas.Context2D(surface)**: Canvas 2D context implementation
-- **SWCanvas.Transform2D([a,b,c,d,e,f])**: Immutable transformation matrix
-- **SWCanvas.Point(x, y)**: Immutable 2D point with geometric operations
-- **SWCanvas.Rectangle(x, y, width, height)**: Immutable rectangle with bounds operations
-- **SWCanvas.Color(r, g, b, a, premultiplied)**: Immutable color with alpha handling
-- **SWCanvas.Path2D()**: Path definition and command recording
+### HTML5 Canvas-Compatible API
+- **SWCanvas.createCanvas(width, height)**: Create HTML5-style canvas element
+```javascript
+const canvas = SWCanvas.createCanvas(800, 600);
+const ctx = canvas.getContext('2d');
+ctx.fillStyle = 'red';
+ctx.fillRect(10, 10, 100, 100);
+```
 
-### Utility Classes
-- **SWCanvas.BitmapEncoder**: Static methods for BMP file encoding
-- **SWCanvas.ClipMask**: ES6 class for stencil buffer manipulation  
-- **SWCanvas.ImageProcessor**: Static methods for ImageLike validation and conversion
+### Core API (SWCanvas.Core.*)
+- **Core.Surface(width, height)**: Create rendering surface with immutable dimensions
+- **Core.Context2D(surface)**: Core 2D context with explicit RGBA API
+- **Core.Transform2D([a,b,c,d,e,f])**: Immutable transformation matrix
+- **Core.Point(x, y)**: Immutable 2D point with geometric operations
+- **Core.Rectangle(x, y, width, height)**: Immutable rectangle with bounds operations
+- **Core.Color(r, g, b, a, premultiplied)**: Immutable color with alpha handling
+- **Core.Path2D()**: Path definition and command recording
 
-*Note: Some advanced geometric utility methods have been removed for simplicity. Core functionality remains intact.*
+### Core Utility Classes
+- **Core.BitmapEncoder**: Static methods for BMP file encoding
+- **Core.ClipMask**: ES6 class for stencil buffer manipulation  
+- **Core.ImageProcessor**: Static methods for ImageLike validation and conversion
 
-### Legacy Aliases
-- **SWCanvas.Matrix**: Alias for Transform2D (backward compatibility)
+### Legacy API (Backward Compatibility)
+All existing SWCanvas APIs continue to work unchanged:
+- **SWCanvas.Surface(width, height)**: Points to Core.Surface
+- **SWCanvas.Context2D(surface)**: Points to Core.Context2D
+- **SWCanvas.Transform2D**: Points to Core.Transform2D
+- **SWCanvas.Matrix**: Alias for Core.Transform2D
 - **SWCanvas.encodeBMP(surface)**: Legacy function for BMP encoding
+
+*Note: Legacy API maintains full backward compatibility while the Core API provides explicit namespace organization.*
 
 ## Common Tasks
 
 ### Adding New Visual Tests
-Add to `tests/visual-test-registry.js`:
+
+**Recommended: Unified API Approach**
 ```javascript
 visualTests['new-test-name'] = {
     name: 'Human-readable description',
     width: 200, height: 150,
+    // NEW: Single function works with both Canvas types
+    draw: function(canvas) {
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = 'red';          // Standard HTML5 Canvas API
+        ctx.fillRect(10, 10, 50, 50);
+    },
+    // Support functions for test runner compatibility
     drawSWCanvas: function(SWCanvas) {
-        const surface = SWCanvas.Surface(200, 150);
-        const ctx = new SWCanvas.Context2D(surface);
-        helpers.setSWCanvasFill(ctx, 'red');  // Use color helpers
+        const canvas = SWCanvas.createCanvas(200, 150);
+        this.draw(canvas);
+        return canvas._coreSurface;
+    },
+    drawHTML5Canvas: function(html5Canvas) {
+        this.draw(html5Canvas);
+    }
+};
+```
+
+**Legacy: Separate Functions (still supported)**
+```javascript
+visualTests['legacy-test'] = {
+    name: 'Legacy dual-function approach',
+    width: 200, height: 150,
+    drawSWCanvas: function(SWCanvas) {
+        const surface = SWCanvas.Core.Surface(200, 150);
+        const ctx = new SWCanvas.Core.Context2D(surface);
+        ctx.setFillStyle(255, 0, 0, 255);  // Core API
         ctx.fillRect(10, 10, 50, 50);
         return surface;
     },
     drawHTML5Canvas: function(html5Canvas) {
         const ctx = html5Canvas.getContext('2d');
-        helpers.setHTML5CanvasFill(ctx, 'red');  // Same operations
+        ctx.fillStyle = 'red';  // HTML5 Canvas API
         ctx.fillRect(10, 10, 50, 50);
     }
 };
 ```
 
-### Using the New OO Classes
+### Using the Dual API
+
+**HTML5-Compatible API Usage:**
 ```javascript
-// Create surface with enhanced validation
-const surface = SWCanvas.Surface(400, 300);
+// Create HTML5-style canvas
+const canvas = SWCanvas.createCanvas(400, 300);
+const ctx = canvas.getContext('2d');
 
-// Use immutable Transform2D with constructor and method chaining
-const transform = new SWCanvas.Transform2D()
-    .translate(100, 50)
-    .scale(2, 2)
-    .rotate(Math.PI / 4);
+// Standard HTML5 Canvas operations
+ctx.fillStyle = '#FF0000';
+ctx.strokeStyle = 'rgba(0, 255, 0, 0.5)';
+ctx.lineWidth = 2;
+ctx.fillRect(10, 10, 100, 100);
 
-// Create geometric objects
-const point = new SWCanvas.Point(10, 20);
-const rect = new SWCanvas.Rectangle(0, 0, 100, 100);
-const center = rect.center; // Point(50, 50)
+// Canvas properties work as expected
+canvas.width = 800;   // Automatically resizes
+canvas.height = 600;
 
-// Advanced color handling
-const color = new SWCanvas.Color(255, 0, 0, 128); // Semi-transparent red
-const premult = color.toPremultiplied();
-
-// Utility operations
-const clipMask = new SWCanvas.ClipMask(400, 300);
-const imageData = SWCanvas.ImageProcessor.validateAndConvert(rgbImage);
-
-// Sub-pixel stroke rendering
-const ctx = new SWCanvas.Context2D(surface);
-ctx.setStrokeStyle(255, 0, 0, 255); // Red stroke
+// Sub-pixel stroke rendering (deterministic)
 ctx.lineWidth = 0.5;  // Renders as 1px stroke at 50% opacity
 ctx.beginPath();
 ctx.moveTo(10, 10);
 ctx.lineTo(100, 10);
 ctx.stroke();
+```
 
-// Zero-width strokes (renders at full opacity for HTML5Canvas compatibility)
-ctx.lineWidth = 0;    // Renders as 1px stroke at 100% opacity
-ctx.stroke();
+**Core API Usage (Performance/Control):**
+```javascript
+// Create surface with Core API
+const surface = SWCanvas.Core.Surface(400, 300);
+const ctx = new SWCanvas.Core.Context2D(surface);
+
+// Explicit RGBA operations (no color parsing)
+ctx.setFillStyle(255, 0, 0, 255);      // Red, fully opaque
+ctx.setStrokeStyle(0, 255, 0, 128);    // Green, 50% alpha
+
+// Use immutable Transform2D with method chaining
+const transform = new SWCanvas.Core.Transform2D()
+    .translate(100, 50)
+    .scale(2, 2)
+    .rotate(Math.PI / 4);
+
+// Create geometric objects
+const point = new SWCanvas.Core.Point(10, 20);
+const rect = new SWCanvas.Core.Rectangle(0, 0, 100, 100);
+const center = rect.center; // Point(50, 50)
+
+// Advanced color handling
+const color = new SWCanvas.Core.Color(255, 0, 0, 128); // Semi-transparent red
+const premult = color.toPremultiplied();
+
+// Utility operations
+const clipMask = new SWCanvas.Core.ClipMask(400, 300);
+const bmpData = SWCanvas.Core.BitmapEncoder.encode(surface);
 ```
 
 ### Debugging Rendering Issues
@@ -216,22 +347,23 @@ ctx.stroke();
 #### Quick Node.js Analysis Scripts
 Use one-liner Node.js scripts for rapid debugging and pixel-level analysis:
 
-**Pixel Inspection Example:**
+**Pixel Inspection Example (HTML5-Compatible API):**
 ```bash
 node -e "
 const SWCanvas = require('./dist/swcanvas.js');
-const surface = SWCanvas.Surface(100, 100);
-const ctx = new SWCanvas.Context2D(surface);
+const canvas = SWCanvas.createCanvas(100, 100);
+const ctx = canvas.getContext('2d');
 
 // Test your drawing operations
-ctx.setStrokeStyle(255, 0, 0, 255);
+ctx.strokeStyle = 'red';
 ctx.lineWidth = 0.5;
 ctx.beginPath();
 ctx.moveTo(50, 50);
 ctx.lineTo(80, 50);
 ctx.stroke();
 
-// Analyze specific pixels
+// Access underlying surface for pixel analysis
+const surface = canvas._coreSurface;
 for (let x = 45; x <= 85; x += 5) {
   const offset = 50 * surface.stride + x * 4;
   const r = surface.data[offset];
@@ -371,7 +503,7 @@ These scripts are invaluable for:
 ### When Debugging Tests
 - **Always run full test suite** after changes: `npm test`
 - **Browser vs Node.js differences** - use same visual test registry for consistency
-- **Color consistency** - use helpers from `tests/test-colors.js`
+- **Color consistency** - use standard Canvas API (`ctx.fillStyle`, `ctx.strokeStyle`)
 - **Coordinate expectations** - test pixel positions are carefully calculated
 
 ### When Making Changes  

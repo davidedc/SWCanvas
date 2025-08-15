@@ -35,8 +35,6 @@ Browser-specific visual test functions and utilities.
 ### ../tests/visual-test-registry.js
 **Shared visual test registry** - contains 55+ comprehensive drawing tests used by both Node.js and browser tests to ensure identical test behavior and eliminate code duplication.
 
-### ../tests/test-colors.js  
-**CSS-RGB color mapping system** - ensures perfect color consistency between HTML5 Canvas CSS colors and SWCanvas RGB values.
 
 ## Usage
 

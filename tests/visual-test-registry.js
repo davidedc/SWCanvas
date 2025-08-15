@@ -5,23 +5,7 @@
 (function(global) {
     'use strict';
     
-    // Load color system
-    let TestColorSystem;
-    let helpers;
-    
-    if (typeof require !== 'undefined') {
-        // Node.js
-        TestColorSystem = require('./test-colors.js');
-        helpers = TestColorSystem.helpers;
-    } else {
-        // Browser - should be loaded globally
-        TestColorSystem = global.TestColorSystem;
-        if (TestColorSystem) {
-            helpers = TestColorSystem.helpers;
-        } else {
-            throw new Error('TestColorSystem not loaded! Make sure test-colors.js is loaded before visual-test-registry.js');
-        }
-    }
+    // Visual test registry using standard HTML5 Canvas API
 
     // Registry of visual tests
     const visualTests = {};
@@ -140,11 +124,11 @@
             const ctx = canvas.getContext('2d');
             
             // Fill with red background
-            helpers.setSWCanvasFill(ctx, 'red');
+            ctx.fillStyle = 'red';
             ctx.fillRect(0, 0, 100, 100);
             
             // Blue square in center
-            helpers.setSWCanvasFill(ctx, 'blue');
+            ctx.fillStyle = 'blue';
             ctx.fillRect(25, 25, 50, 50);
         },
         // Backward compatibility functions
@@ -167,20 +151,20 @@
             const ctx = canvas.getContext('2d');
             
             // White background
-            helpers.setSWCanvasFill(ctx, 'white');
+            ctx.fillStyle = 'white';
             ctx.fillRect(0, 0, 200, 150);
             
             // Red rectangle (opaque)
-            helpers.setSWCanvasFill(ctx, 'red');
+            ctx.fillStyle = 'red';
             ctx.fillRect(20, 20, 80, 60);
             
             // Blue rectangle (opaque) with overlap
-            helpers.setSWCanvasFill(ctx, 'blue');
+            ctx.fillStyle = 'blue';
             ctx.fillRect(60, 60, 80, 60);
             
             // Semi-transparent green rectangle
             ctx.globalAlpha = 0.5;
-            helpers.setSWCanvasFill(ctx, 'green');
+            ctx.fillStyle = 'green';
             ctx.fillRect(40, 40, 80, 60);
             ctx.globalAlpha = 1.0;
         },
@@ -204,11 +188,11 @@
             const ctx = canvas.getContext('2d');
             
             // White background
-            helpers.setSWCanvasFill(ctx, 'white');
+            ctx.fillStyle = 'white';
             ctx.fillRect(0, 0, 100, 100);
             
             // Draw red triangle using path
-            helpers.setSWCanvasFill(ctx, 'red');
+            ctx.fillStyle = 'red';
             ctx.beginPath();
             ctx.moveTo(50, 10);
             ctx.lineTo(80, 70);
@@ -236,11 +220,11 @@
             const ctx = canvas.getContext('2d');
             
             // White background
-            helpers.setSWCanvasFill(ctx, 'white');
+            ctx.fillStyle = 'white';
             ctx.fillRect(0, 0, 100, 100);
             
             // Create overlapping rectangles (outer and inner)
-            helpers.setSWCanvasFill(ctx, 'red');
+            ctx.fillStyle = 'red';
             ctx.beginPath();
             // Outer rectangle
             ctx.rect(20, 20, 60, 60);
@@ -270,7 +254,7 @@
             const ctx = canvas.getContext('2d');
             
             // White background
-            helpers.setSWCanvasFill(ctx, 'white');
+            ctx.fillStyle = 'white';
             ctx.fillRect(0, 0, 100, 100);
             
             // Set up circular clip path
@@ -279,7 +263,7 @@
             ctx.clip();
             
             // Fill a large red rectangle - should be clipped to circle
-            helpers.setSWCanvasFill(ctx, 'red');
+            ctx.fillStyle = 'red';
             ctx.fillRect(0, 0, 100, 100);
         },
         // Backward compatibility functions
@@ -301,11 +285,11 @@
         draw: function(canvas) {
             const ctx = canvas.getContext('2d');
             // White background
-            helpers.setSWCanvasFill(ctx, 'white');
+            ctx.fillStyle = 'white';
             ctx.fillRect(0, 0, 100, 100);
             
             // Draw red line stroke
-            helpers.setSWCanvasStroke(ctx, 'red');
+            ctx.strokeStyle = 'red';
             ctx.lineWidth = 5;
             ctx.beginPath();
             ctx.moveTo(10, 50);
@@ -381,11 +365,11 @@
         draw: function(canvas) {
             const ctx = canvas.getContext('2d');
             // White background
-            helpers.setSWCanvasFill(ctx, 'white');
+            ctx.fillStyle = 'white';
             ctx.fillRect(0, 0, 150, 150);
             
             // Draw a curved path
-            helpers.setSWCanvasStroke(ctx, 'orange');
+            ctx.strokeStyle = 'orange';
             ctx.lineWidth = 4;
             ctx.lineJoin = 'round';
             ctx.lineCap = 'round';
@@ -3450,35 +3434,6 @@
         return image;
     }
     
-    // Helper function to convert SWCanvas Surface to ImageLike
-    function surfaceToImageLike(surface) {
-        return {
-            width: surface.width,
-            height: surface.height,
-            data: surface.data // Already Uint8ClampedArray in RGBA format
-        };
-    }
-    
-    // Helper function to convert ImageLike to HTML5 Canvas ImageData
-    function imagelikeToImageData(imageLike, canvasCtx) {
-        const imageData = canvasCtx.createImageData(imageLike.width, imageLike.height);
-        
-        if (imageLike.data.length === imageLike.width * imageLike.height * 3) {
-            // Convert RGB to RGBA
-            for (let i = 0; i < imageLike.width * imageLike.height; i++) {
-                imageData.data[i*4] = imageLike.data[i*3];     // R
-                imageData.data[i*4+1] = imageLike.data[i*3+1]; // G  
-                imageData.data[i*4+2] = imageLike.data[i*3+2]; // B
-                imageData.data[i*4+3] = 255;                   // A
-            }
-        } else {
-            // Copy RGBA as-is
-            imageData.data.set(imageLike.data);
-        }
-        
-        return imageData;
-    }
-
     // Helper function to create compatible images for both canvas types
     function createCompatibleImage(width, height, pattern, ctx) {
         const imagelike = createTestImage(width, height, pattern);
@@ -3892,7 +3847,7 @@
             
             // Horizontal lines
             for (let i = 0; i < strokeWidths.length; i++) {
-                helpers.setHTML5CanvasStroke(ctx, colors[i]);
+                ctx.strokeStyle = colors[i];
                 ctx.lineWidth = strokeWidths[i];
                 ctx.beginPath();
                 ctx.moveTo(50, 50 + i * 30);
@@ -3907,7 +3862,7 @@
             
             // Vertical lines
             for (let i = 0; i < strokeWidths.length; i++) {
-                helpers.setHTML5CanvasStroke(ctx, colors[i]);
+                ctx.strokeStyle = colors[i];
                 ctx.lineWidth = strokeWidths[i];
                 ctx.beginPath();
                 ctx.moveTo(250 + i * 30, 50);
@@ -3917,7 +3872,7 @@
             
             // Diagonal lines
             for (let i = 0; i < strokeWidths.length; i++) {
-                helpers.setHTML5CanvasStroke(ctx, colors[i]);
+                ctx.strokeStyle = colors[i];
                 ctx.lineWidth = strokeWidths[i];
                 ctx.beginPath();
                 ctx.moveTo(50 + i * 25, 250);
@@ -3927,7 +3882,7 @@
             
             // Rectangles
             for (let i = 0; i < strokeWidths.length; i++) {
-                helpers.setHTML5CanvasStroke(ctx, colors[i]);
+                ctx.strokeStyle = colors[i];
                 ctx.lineWidth = strokeWidths[i];
                 ctx.beginPath();
                 ctx.rect(300 + (i % 4) * 60, 250 + Math.floor(i / 4) * 60, 40, 40);
@@ -3936,7 +3891,7 @@
             
             // Circles
             for (let i = 0; i < strokeWidths.length; i++) {
-                helpers.setHTML5CanvasStroke(ctx, colors[i]);
+                ctx.strokeStyle = colors[i];
                 ctx.lineWidth = strokeWidths[i];
                 ctx.beginPath();
                 ctx.arc(500, 70 + i * 40, 15, 0, 2 * Math.PI);

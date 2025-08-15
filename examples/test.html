@@ -210,7 +210,6 @@
     </div>
 
     <script src="../dist/swcanvas.js"></script>
-    <script src="../tests/test-colors.js"></script>
     <script src="../tests/visual-test-registry.js"></script>
     <script src="../tests/shared-test-suite.js"></script>
     <script src="browser-visual-tests.js"></script>
@@ -308,12 +307,25 @@
             const swCanvas = canvases[1];
             
             try {
-                // Draw HTML5 Canvas version
-                testConfig.drawHTML5Canvas(html5Canvas);
-                
-                // Draw SWCanvas version and render to display canvas
-                const surface = testConfig.drawSWCanvas(SWCanvas);
-                VisualTestRegistry.renderSWCanvasToHTML5(surface, swCanvas);
+                // Use unified API if available, otherwise fall back to separate functions
+                if (testConfig.draw && typeof testConfig.draw === 'function') {
+                    // Draw HTML5 Canvas version using unified API
+                    testConfig.draw(html5Canvas);
+                    
+                    // Draw SWCanvas version using unified API
+                    const swCanvasForDrawing = SWCanvas.createCanvas(testConfig.width, testConfig.height);
+                    testConfig.draw(swCanvasForDrawing);
+                    VisualTestRegistry.renderSWCanvasToHTML5(swCanvasForDrawing._coreSurface, swCanvas);
+                } else {
+                    // Fall back to legacy separate functions
+                    if (testConfig.drawHTML5Canvas) {
+                        testConfig.drawHTML5Canvas(html5Canvas);
+                    }
+                    if (testConfig.drawSWCanvas) {
+                        const surface = testConfig.drawSWCanvas(SWCanvas);
+                        VisualTestRegistry.renderSWCanvasToHTML5(surface, swCanvas);
+                    }
+                }
                 
                 // Add info about the test
                 const pixelInfos = testDiv.querySelectorAll('.pixel-diff-info');

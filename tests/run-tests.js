@@ -47,7 +47,20 @@ try {
         const visualTest = visualTests[testName];
         try {
             console.log(`Generating BMP for: ${visualTest.name}`);
-            const surface = visualTest.drawSWCanvas(SWCanvas);
+            
+            let surface;
+            if (visualTest.draw && typeof visualTest.draw === 'function') {
+                // Use unified API if available
+                const canvas = SWCanvas.createCanvas(visualTest.width, visualTest.height);
+                visualTest.draw(canvas);
+                surface = canvas._coreSurface;
+            } else if (visualTest.drawSWCanvas && typeof visualTest.drawSWCanvas === 'function') {
+                // Fall back to legacy API
+                surface = visualTest.drawSWCanvas(SWCanvas);
+            } else {
+                throw new Error('No valid draw function found');
+            }
+            
             saveBMP(surface, `${testName}.bmp`, visualTest.name, SWCanvas);
         } catch (error) {
             console.log(`  Warning: Failed to generate ${testName}.bmp - ${error.message}`);

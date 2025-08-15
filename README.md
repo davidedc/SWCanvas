@@ -283,7 +283,6 @@ src/              # Source files (ES6 Classes)
 tests/            # Test suite
 ├── shared-test-suite.js    # Core functionality tests
 ├── visual-test-registry.js # 52+ visual tests
-├── test-colors.js          # Color consistency system
 └── run-tests.js            # Node.js test runner
 
 examples/         # Browser examples
@@ -318,11 +317,11 @@ visualTests['my-new-test'] = {
 };
 ```
 
-Use the color system from `tests/test-colors.js` to ensure consistency:
+Use standard HTML5 Canvas API for consistent colors:
 
 ```javascript
-helpers.setSWCanvasFill(ctx, 'red');    // For SWCanvas
-helpers.setHTML5CanvasFill(ctx, 'red');  // For HTML5 Canvas
+ctx.fillStyle = 'red';     // Works with both SWCanvas and HTML5 Canvas
+ctx.strokeStyle = 'blue';  // Standard Canvas API
 ```
 
 ### Build Process

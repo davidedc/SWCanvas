@@ -8,7 +8,6 @@ This directory contains the comprehensive test infrastructure for SWCanvas, with
 tests/
 ├── shared-test-suite.js          # Common test logic (runs in both environments)
 ├── visual-test-registry.js       # 55+ comprehensive visual tests
-├── test-colors.js                # CSS-RGB color mapping system
 ├── run-tests.js                  # Node.js test runner + BMP generator
 ├── output/                       # Generated BMP test images (55+ files)
 └── README.md                     # This file
@@ -80,7 +79,7 @@ Add tests to `shared-test-suite.js` - they will automatically run in both enviro
 Add tests to `visual-test-registry.js` using the established pattern:
 - Both SWCanvas and HTML5 Canvas implementations
 - Consistent naming convention (`category-specific-description`)
-- Use the shared color system from `test-colors.js`
+- Use standard HTML5 Canvas API (`ctx.fillStyle`, `ctx.strokeStyle`)
 
 ### For Browser-Specific Features
 Add tests to `browser-visual-tests.js` for features that require DOM or visual comparison.
@@ -95,10 +94,10 @@ SWCanvas uses a 1-bit stencil buffer approach for clipping:
 - Matches HTML5 Canvas behavior exactly
 
 ### Color Consistency System
-The `test-colors.js` module ensures consistent colors:
-- Maps CSS color names to exact RGB values
-- Eliminates color mismatches between implementations
-- Provides helper functions for both contexts
+Standard HTML5 Canvas API ensures consistent colors:
+- Use `ctx.fillStyle` and `ctx.strokeStyle` with CSS color names
+- Works identically with both SWCanvas and HTML5 Canvas
+- Eliminates need for helper functions or color mapping
 
 ### Comprehensive Test Coverage
 - 55+ visual tests covering all major Canvas2D features
