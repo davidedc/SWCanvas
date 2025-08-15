@@ -13,7 +13,7 @@ This file provides Claude with essential context about the SWCanvas project for 
 - **Drop-in replacement**: True HTML5 Canvas 2D Context compatibility
 - **Memory efficient**: 1-bit stencil clipping, optimized algorithms
 - **Sub-pixel accurate**: Thin strokes render with proportional opacity (no anti-aliasing)
-- **Well-tested**: 31 core tests + 56 visual tests with pixel-perfect validation
+- **Well-tested**: 31 core tests + 60 visual tests with pixel-perfect validation
 
 ## Dual API Architecture
 
@@ -160,13 +160,13 @@ npm run build          # or ./build.sh
                        # - Concatenates /tests/core/ → /tests/dist/core-functionality-tests.js
                        # - Concatenates /tests/visual/ → /tests/dist/visual-rendering-tests.js
 
-# Run all tests (31 core + 56 visual BMP generation)
+# Run all tests (31 core + 60 visual BMP generation)
 npm test              # or node tests/run-tests.js
                       # - Uses built modular tests from /tests/dist/ automatically
-                      # - Generates 56+ BMP files in tests/output/
+                      # - Generates 60+ BMP files in tests/output/
 
 # Check test status
-ls -la tests/output/  # Should see 56+ BMP files after test run
+ls -la tests/output/  # Should see 60+ BMP files after test run
 ls -la tests/dist/    # Should see built test files after build
 ```
 
@@ -199,9 +199,9 @@ node -e "console.log(require('./tests/dist/core-functionality-tests.js'))"
 echo "// Test 032: New feature test" > tests/core/032-new-feature-test.js
 echo "test('New feature test', () => { /* test code */ });" >> tests/core/032-new-feature-test.js
 
-# Add a new visual test (next number: 057)
-echo "// Test 057: New visual test" > tests/visual/057-new-visual-test.js
-echo "registerVisualTest('new-visual', { /* test config */ });" >> tests/visual/057-new-visual-test.js
+# Add a new visual test (next number: 061)
+echo "// Test 061: New visual test" > tests/visual/061-new-visual-test.js
+echo "registerVisualTest('new-visual', { /* test config */ });" >> tests/visual/061-new-visual-test.js
 
 # Build automatically includes new tests
 npm run build && npm test
@@ -257,14 +257,14 @@ SWCanvas uses a **modular dual test architecture** where each test is in its own
 - **Output**: Console logs with ✓ pass/✗ fail status + assertion details
 - **Examples**: `001-surface-creation-valid.js`, `015-alpha-blending-test.js`, `031-transform-matrix-order-dependency.js`
 
-#### Visual Rendering Tests - 56 Individual Files  
-- **Location**: `/tests/visual/` - Individual test files numbered 001-056
+#### Visual Rendering Tests - 60 Individual Files  
+- **Location**: `/tests/visual/` - Individual test files numbered 001-060
 - **Built Output**: `/tests/dist/visual-rendering-tests.js` (auto-generated) 
 - **Purpose**: Visual verification with pixel-perfect BMP output
 - **Type**: Visual tests that generate images for comparison
 - **Focus**: Rendering accuracy, pixel-perfect output, visual consistency
 - **Output**: BMP files for Node.js, side-by-side visual comparison in browser
-- **Examples**: `001-simple-rectangle-test.js`, `027-fill-rule-complex-complex-even-odd-vs-nonzero-comparisons-test.js`, `056-stroke-pixel-analysis-test.js`
+- **Examples**: `001-simple-rectangle-test.js`, `027-fill-rule-complex-complex-even-odd-vs-nonzero-comparisons-test.js`, `060-stroke-pixel-analysis-test.js`
 
 ### Build System Integration
 ```bash
@@ -316,11 +316,11 @@ if (fs.existsSync('./tests/dist/core-functionality-tests.js')) {
 │   ├── 015-alpha-blending-test.js
 │   ├── 031-transform-matrix-order-dependency.js
 │   └── ... (28 more files)
-├── visual/                             # 56 individual visual test files
+├── visual/                             # 60 individual visual test files
 │   ├── 001-simple-rectangle-test.js
 │   ├── 027-fill-rule-complex-test.js
-│   ├── 056-stroke-pixel-analysis-test.js
-│   └── ... (53 more files)
+│   ├── 060-stroke-pixel-analysis-test.js
+│   └── ... (57 more files)
 ├── browser/                            # Browser-specific test files
 │   ├── index.html                      # Main browser test page (moved from examples/)
 │   ├── simple-test.html                # Simple visual comparison test
@@ -335,8 +335,8 @@ if (fs.existsSync('./tests/dist/core-functionality-tests.js')) {
 ├── run-tests.js                        # Smart test runner with auto-detection
 └── output/                             # Generated BMP files
     ├── 001-simple-rectangle-test.bmp
-    ├── 056-stroke-pixel-analysis-test.bmp
-    └── ... (56+ BMP files)
+    ├── 060-stroke-pixel-analysis-test.bmp
+    └── ... (60+ BMP files)
 ```
 
 ### Individual Test File Format
@@ -386,7 +386,7 @@ registerVisualTest('alpha-test', {
 - **Build Optimization**: Production gets concatenated files for performance
 
 ### Test Execution
-- **Node.js**: `npm test` automatically uses built modular tests + generates 56+ BMP files  
+- **Node.js**: `npm test` automatically uses built modular tests + generates 60+ BMP files  
 - **Browser**: `tests/browser/index.html` automatically uses built modular tests with visual comparisons
 - **Development**: Edit individual test files, run `npm run build` to regenerate
 - **Production**: Built concatenated files ensure optimal loading performance
@@ -397,16 +397,18 @@ The modular architecture maintains **intentional complementary redundancy**:
 1. **Dual Verification**: 8 overlapping tests provide both programmatic AND visual validation
 2. **Smart Delegation**: Core tests delegate to visual tests when available, with fallback implementations
 3. **Cross-Platform**: Node.js gets programmatic verification, browser gets visual comparison
-4. **Comprehensive Coverage**: 31 modular core tests + 56 modular visual tests = thorough validation
+4. **Comprehensive Coverage**: 31 modular core tests + 60 modular visual tests = thorough validation
 5. **Maintainable Modularity**: Each test is independently editable while preserving system integration
 
 ### Key Test Categories by Phase
 - **Phase 1**: Basic transforms (Tests 011-018) - translate/scale/rotate operations
 - **Phase 2**: Advanced fills (Tests 019-027) - curves, self-intersecting paths, fill rules
 - **Phase 3**: Stencil clipping (Tests 028-035) - intersection, nesting, save/restore
-- **Phase 4**: Combined features (Tests 036-046) - transform+clip+fill+stroke integration  
-- **Phase 5**: Image operations (Tests 047-052) - drawImage with transforms and alpha
-- **Phase 6**: Sub-pixel rendering (Tests 053-056) - edge cases and pixel analysis
+- **Phase 4**: Combined features (Tests 036-050) - transform+clip+fill+stroke integration  
+  - Includes rescued complementary tests (037, 040, 042, 044) with alternative implementations
+  - 6-point star vs 5-point star variations, different scaling approaches, spiral strokes
+- **Phase 5**: Image operations (Tests 051-056) - drawImage with transforms and alpha
+- **Phase 6**: Sub-pixel rendering (Tests 057-060) - edge cases and pixel analysis
 
 ## Public API (Dual Architecture)
 
@@ -710,7 +712,7 @@ These scripts are invaluable for:
 - **Static Utility Classes**: ClipMaskHelper, ImageProcessor, BitmapEncoder for stateless operations
 - **Proper Encapsulation**: Private fields, parameter validation, and clear public APIs
 - **Single Responsibility**: Each class has one focused purpose with clean boundaries
-- **Comprehensive Testing**: All 31 core tests + 56 visual tests passing with pixel-perfect accuracy
+- **Comprehensive Testing**: All 31 core tests + 60 visual tests passing with pixel-perfect accuracy
 
 ### Key Design Patterns Applied
 - **Value Object Pattern**: Point, Rectangle, Transform2D, Color are immutable
@@ -721,7 +723,7 @@ These scripts are invaluable for:
 - **Memory Efficiency**: 1-bit stencil clipping, immutable objects prevent accidental mutation
 
 ### Test Results Status
-- **Node.js**: All 31 core tests passing, 56 visual BMPs generated successfully  
+- **Node.js**: All 31 core tests passing, 60 visual BMPs generated successfully  
 - **Browser**: Proper SWCanvas global export, all classes available for use
 - **Cross-platform**: Identical behavior verified between Node.js and browser environments
 - **Deterministic**: Same input produces identical output across all platforms

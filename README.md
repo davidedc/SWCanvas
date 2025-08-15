@@ -8,7 +8,7 @@ A deterministic 2D raster engine with Canvas-like API. SWCanvas provides pixel-p
 - **HTML5 Canvas Compatibility**: Drop-in replacement with familiar API  
 - **Object-Oriented Design**: Clean ES6 classes following effective OO principles
 - **Memory Efficient Clipping**: Stencil-based clipping system with proper intersection support
-- **Comprehensive Test Coverage**: 31 core tests + 56 visual tests ensuring pixel-perfect accuracy with modular architecture
+- **Comprehensive Test Coverage**: 31 core tests + 60 visual tests ensuring pixel-perfect accuracy with modular architecture
 - **Immutable Value Objects**: Point, Rectangle, Transform2D, Color prevent mutation bugs
 - **Cross-Platform**: Works in Node.js and browsers
 - **No Dependencies**: Pure JavaScript implementation
@@ -24,7 +24,7 @@ npm run build
 This generates:
 - `dist/swcanvas.js` containing the complete library
 - `tests/dist/core-functionality-tests.js` from 31 individual test files in `/tests/core/`
-- `tests/dist/visual-rendering-tests.js` from 56 individual test files in `/tests/visual/`
+- `tests/dist/visual-rendering-tests.js` from 60 individual test files in `/tests/visual/`
 
 ### Node.js Usage
 
@@ -91,20 +91,20 @@ npm test
 
 This runs:
 - 31 modular core functionality tests (automatically uses built tests from `/tests/core/`)
-- 56 visual rendering tests generating BMPs in `tests/output/`
+- 60 visual rendering tests generating BMPs in `tests/output/`
 
 ### Browser Tests
 
 Open `tests/browser/index.html` in a web browser for:
 - Side-by-side HTML5 Canvas vs SWCanvas comparisons  
 - Interactive visual tests
-- All 56 visual rendering test comparisons (automatically uses built modular tests)
+- All 60 visual rendering test comparisons (automatically uses built modular tests)
 - BMP download functionality
 
 ### Test Architecture
 
 - **Core Functionality Tests** (31): Individual test files in `/tests/core/` - API correctness, edge cases, mathematical accuracy
-- **Visual Rendering Tests** (56): Individual test files in `/tests/visual/` - Pixel-perfect rendering verification with BMP generation  
+- **Visual Rendering Tests** (60): Individual test files in `/tests/visual/` - Pixel-perfect rendering verification with BMP generation  
 - **Browser Tests**: Interactive visual comparison tools using built test suites with HTML5 Canvas vs SWCanvas side-by-side
 
 The modular architecture allows individual test development while maintaining build-time concatenation for performance.
@@ -315,7 +315,7 @@ SWCanvas uses a **dual test system** with two complementary test suites:
 
 ### Visual Rendering Tests (`visual-rendering-tests.js`)  
 **Purpose**: Pixel-perfect visual verification
-- **56 tests** that generate BMP images for comparison
+- **60 tests** that generate BMP images for comparison
 - **Focus**: Rendering accuracy, visual consistency across platforms  
 - **Output**: BMP files (Node.js) + side-by-side comparison (browser)
 - **Examples**: Path filling, stroke rendering, clipping, transforms
@@ -344,7 +344,7 @@ Create individual test files in `/tests/visual/` using the `registerVisualTest` 
 
 ```bash
 # Add at the end  
-echo "// Test 057: New visual test" > tests/visual/057-new-visual-test.js
+echo "// Test 061: New visual test" > tests/visual/061-new-visual-test.js
 
 # Insert at specific position (advanced)
 node tests/build/renumber-tests.js --type visual --position 25 --shift forward

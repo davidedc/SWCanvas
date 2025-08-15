@@ -11,6 +11,7 @@
 - ✅ Phase 6 Sub-pixel Rendering FULLY COMPLETED (4/4 tests)
 - ✅ Modular Test Architecture FULLY IMPLEMENTED
 - ✅ All placeholder test implementations COMPLETED
+- ✅ Rescued Test Integration FULLY COMPLETED (4/4 rescued tests)
 
 ## Test Expansion Plan
 
@@ -70,13 +71,21 @@
 
 ### Phase 7: Modular Test Architecture ✅ FULLY COMPLETED
 - [x] Individual test files for all 31 core tests in `/tests/core/`
-- [x] Individual test files for all 56 visual tests in `/tests/visual/`  
+- [x] Individual test files for all 60 visual tests in `/tests/visual/`  
 - [x] Build-time concatenation system with `concat-tests.js`
 - [x] Smart test runner with automatic built-test detection
 - [x] Browser test reorganization from `/examples/` to `/tests/browser/`
 - [x] All placeholder test implementations completed (Tests 035-039)
 
-### Phase 8: Future Edge Cases & Robustness (Optional)
+### Phase 8: Test Rescue Operation ✅ FULLY COMPLETED
+- [x] Rescued Test 037 (old 36): 6-point star complex polygons with figure-8 self-intersecting
+- [x] Rescued Test 040 (old 37): Asymmetric scaling with bow-tie evenodd fills  
+- [x] Rescued Test 042 (old 38): Rotated clip regions with multi-level intersections
+- [x] Rescued Test 044 (old 39): Spiral stroke patterns with layered globalAlpha
+- [x] Complementary test coverage with alternative geometric implementations
+- [x] Test renumbering utility integration with git history preservation
+
+### Phase 9: Future Edge Cases & Robustness (Optional)
 - [ ] edge-zero-dimensions - Zero width/height paths
 - [ ] edge-large-coordinates - Extremely large coordinates
 - [ ] edge-singular-transforms - Near-singular transform matrices
@@ -94,11 +103,13 @@
 
 ## Current Test Count ✅ COMPREHENSIVE COVERAGE ACHIEVED
 - **Core Functionality Tests**: 31 tests (complete API coverage)
-- **Visual Rendering Tests**: 56 tests (pixel-perfect validation)
-- **Total**: 87 comprehensive tests covering all Canvas API features
-- **Status**: All tests passing with full modular architecture
+- **Visual Rendering Tests**: 60 tests (pixel-perfect validation)
+  - **Original Implementation Tests**: 56 tests covering all Canvas API features
+  - **Rescued Complementary Tests**: 4 tests providing alternative geometric implementations
+- **Total**: 91 comprehensive tests covering all Canvas API features
+- **Status**: All tests passing with full modular architecture including rescued tests
 - **Architecture**: Individual test files with build-time concatenation
-- **Coverage**: Complete Canvas 2D API implementation with pixel-perfect accuracy
+- **Coverage**: Complete Canvas 2D API implementation with pixel-perfect accuracy and complementary test variations
 
 ## Completed Implementation
 ✅ **Phase 1: Basic Transformation Tests - COMPLETE**

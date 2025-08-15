@@ -1,8 +1,9 @@
 # SWCanvas — Implementation Spec & Project Plan
 
 > **📋 Implementation Status: ✅ COMPLETED**  
-> This specification has been fully implemented with 31 core tests + 56 visual tests.  
+> This specification has been fully implemented with 31 core tests + 60 visual tests.  
 > All Canvas 2D API features implemented with pixel-perfect accuracy and modular test architecture.
+> Includes 4 rescued complementary tests providing alternative geometric implementations.
 
 ---
 
