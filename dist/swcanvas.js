@@ -4507,10 +4507,6 @@ class CanvasCompatibleContext2D {
         this._core.arc(x, y, radius, startAngle, endAngle, counterclockwise);
     }
     
-    arcTo(x1, y1, x2, y2, radius) {
-        this._core.arcTo(x1, y1, x2, y2, radius);
-    }
-    
     quadraticCurveTo(cpx, cpy, x, y) {
         this._core.quadraticCurveTo(cpx, cpy, x, y);
     }
@@ -4712,8 +4708,6 @@ function CoreSurfaceFactory(width, height) {
     return new Surface(width, height);
 }
 
-// Legacy alias for Transform2D (backward compatibility)
-const Matrix = Transform2D;
 
 // Legacy encodeBMP function
 function encodeBMP(surface) {
@@ -4750,7 +4744,6 @@ if (typeof window !== 'undefined') {
         Surface: CoreSurfaceFactory,
         Context2D: Context2D,
         Transform2D: Transform2D,
-        Matrix: Matrix,
         Path2D: Path2D,
         encodeBMP: encodeBMP,
         Color: Color,
@@ -4792,7 +4785,6 @@ if (typeof window !== 'undefined') {
         Surface: CoreSurfaceFactory,
         Context2D: Context2D,
         Transform2D: Transform2D,
-        Matrix: Matrix,
         Path2D: Path2D,
         encodeBMP: encodeBMP,
         Color: Color,
