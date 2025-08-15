@@ -3,8 +3,8 @@
 
 // Test 021
 test('Stroke caps - butt, square, round', () => {
-    const surface = SWCanvas.Surface(300, 150);
-    const ctx = new SWCanvas.Context2D(surface);
+    const surface = SWCanvas.Core.Surface(300, 150);
+    const ctx = new SWCanvas.Core.Context2D(surface);
     
     // White background
     ctx.setFillStyle(255, 255, 255, 255);

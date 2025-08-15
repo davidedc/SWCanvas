@@ -30,8 +30,8 @@
         html5Ctx.fillRect(60, 60, 80, 60);
         
         // SWCanvas test
-        const swSurface = SWCanvas.Surface(200, 150);
-        const swCtx = new SWCanvas.Context2D(swSurface);
+        const swSurface = SWCanvas.Core.Surface(200, 150);
+        const swCtx = new SWCanvas.Core.Context2D(swSurface);
         swCtx.setFillStyle(255, 255, 255, 255);
         swCtx.fillRect(0, 0, 200, 150);
         swCtx.setFillStyle(255, 0, 0, 255);

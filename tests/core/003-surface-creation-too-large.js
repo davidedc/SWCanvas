@@ -3,5 +3,5 @@
 
 // Test 003
 test('Surface creation with too large dimensions throws', () => {
-    assertThrows(() => SWCanvas.Surface(20000, 20000), 'SurfaceTooLarge');
+    assertThrows(() => SWCanvas.Core.Surface(20000, 20000), 'SurfaceTooLarge');
 });

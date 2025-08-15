@@ -24,8 +24,8 @@ test('Basic transform - scale operations', () => {
     }
     
     // Fallback test
-    const surface = SWCanvas.Surface(100, 100);
-    const ctx = new SWCanvas.Context2D(surface);
+    const surface = SWCanvas.Core.Surface(100, 100);
+    const ctx = new SWCanvas.Core.Context2D(surface);
     ctx.setFillStyle(255, 255, 255, 255);
     ctx.fillRect(0, 0, 100, 100);
     ctx.scale(2, 2);

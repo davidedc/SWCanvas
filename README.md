@@ -32,24 +32,24 @@ This generates:
 const SWCanvas = require('./dist/swcanvas.js');
 
 // Create surface with immutable dimensions
-const surface = SWCanvas.Surface(800, 600);
-const ctx = new SWCanvas.Context2D(surface);
+const surface = SWCanvas.Core.Surface(800, 600);
+const ctx = new SWCanvas.Core.Context2D(surface);
 
 // Use Canvas 2D API
 ctx.setFillStyle(255, 0, 0, 255); // Red
 ctx.fillRect(10, 10, 100, 50);
 
 // Advanced: Use OO classes directly
-const transform = SWCanvas.Transform2D.identity()
+const transform = new SWCanvas.Core.Transform2D()
     .translate(100, 100)
     .rotate(Math.PI / 4);
 
 const point = new SWCanvas.Point(50, 75);
 const rect = new SWCanvas.Rectangle(0, 0, 200, 150);
-const color = new SWCanvas.Color(255, 128, 0, 200);
+const color = new SWCanvas.Core.Color(255, 128, 0, 200);
 
 // Export as BMP
-const bmpData = SWCanvas.encodeBMP(surface);
+const bmpData = SWCanvas.Core.BitmapEncoder.encode(surface);
 ```
 
 ### Browser Usage
@@ -58,8 +58,8 @@ const bmpData = SWCanvas.encodeBMP(surface);
 <script src="dist/swcanvas.js"></script>
 <script>
 // Create surface and context
-const surface = SWCanvas.Surface(800, 600);
-const ctx = new SWCanvas.Context2D(surface);
+const surface = SWCanvas.Core.Surface(800, 600);
+const ctx = new SWCanvas.Core.Context2D(surface);
 
 // Standard Canvas 2D operations
 ctx.setFillStyle(255, 0, 0, 255); // Red
@@ -74,7 +74,7 @@ if (bounds.contains(center)) {
 
 // Transform operations
 ctx.save();
-const rotTransform = SWCanvas.Transform2D.rotation(Math.PI / 6);
+const rotTransform = SWCanvas.Core.Transform2D.rotation(Math.PI / 6);
 ctx.setTransform(rotTransform.a, rotTransform.b, rotTransform.c, rotTransform.d, rotTransform.e, rotTransform.f);
 ctx.fillRect(50, 50, 100, 100);
 ctx.restore();
@@ -117,12 +117,12 @@ SWCanvas implements a subset of the HTML5 Canvas 2D API:
 
 ### Surface Creation
 ```javascript
-const surface = SWCanvas.Surface(width, height);
+const surface = SWCanvas.Core.Surface(width, height);
 ```
 
 ### Context Creation
 ```javascript
-const ctx = new SWCanvas.Context2D(surface);
+const ctx = new SWCanvas.Core.Context2D(surface);
 ```
 
 ### Drawing Operations
@@ -161,22 +161,22 @@ ctx.setFillStyle(r, g, b, a);    // 0-255 values
 ctx.setStrokeStyle(r, g, b, a);  // 0-255 values
 
 // Or use Color objects directly
-const color = new SWCanvas.Color(255, 128, 0, 200);
+const color = new SWCanvas.Core.Color(255, 128, 0, 200);
 ctx.setFillStyle(color.r, color.g, color.b, color.a);
 ```
 
-### Object-Oriented Classes
+### Core API Classes
 
-SWCanvas provides rich OO classes for advanced operations:
+SWCanvas provides rich OO classes for advanced operations through the Core API:
 
 ```javascript
 // Immutable geometry classes
-const point = new SWCanvas.Point(100, 50);
-const rect = new SWCanvas.Rectangle(10, 20, 100, 80);
+const point = new SWCanvas.Core.Point(100, 50);
+const rect = new SWCanvas.Core.Rectangle(10, 20, 100, 80);
 const center = rect.center; // Returns Point(60, 60)
 
 // Immutable transformation matrix
-const transform = SWCanvas.Transform2D.identity()
+const transform = new SWCanvas.Core.Transform2D()
     .translate(100, 100)
     .scale(2, 2)
     .rotate(Math.PI / 4);
@@ -185,11 +185,10 @@ const transform = SWCanvas.Transform2D.identity()
 const transformed = transform.transformPoint(point);
 
 // Utility classes
-const clipMask = SWCanvas.ClipMaskHelper.createClipMask(800, 600);
-const isClipped = SWCanvas.ClipMaskHelper.isPixelClipped(clipMask, 100, 200, 800);
+const clipMask = new SWCanvas.Core.ClipMask(800, 600);
 
 // Image processing utilities
-const validImage = SWCanvas.ImageProcessor.validateAndConvert(imageData);
+const validImage = SWCanvas.Core.ImageProcessor.validateAndConvert(imageData);
 ```
 
 ### Image Rendering
@@ -224,7 +223,7 @@ ctx.drawImage(imagelike, 0, 0);
 
 ### BMP Export
 ```javascript
-const bmpData = SWCanvas.encodeBMP(surface);
+const bmpData = SWCanvas.Core.BitmapEncoder.encode(surface);
 // Returns ArrayBuffer containing BMP file data
 ```
 

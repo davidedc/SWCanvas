@@ -3,8 +3,8 @@
 
 // Test 023
 test('Complex path stroke with curves', () => {
-    const surface = SWCanvas.Surface(150, 150);
-    const ctx = new SWCanvas.Context2D(surface);
+    const surface = SWCanvas.Core.Surface(150, 150);
+    const ctx = new SWCanvas.Core.Context2D(surface);
     
     // White background
     ctx.setFillStyle(255, 255, 255, 255);

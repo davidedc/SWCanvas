@@ -48,8 +48,8 @@ test('Alpha blending test - semi-transparent rectangles', () => {
     }
     
     // Fallback inline test
-    const surface = SWCanvas.Surface(200, 150);
-    const ctx = new SWCanvas.Context2D(surface);
+    const surface = SWCanvas.Core.Surface(200, 150);
+    const ctx = new SWCanvas.Core.Context2D(surface);
     
     // White background
     ctx.setFillStyle(255, 255, 255, 255);

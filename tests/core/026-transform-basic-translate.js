@@ -25,8 +25,8 @@ test('Basic transform - translate operations', () => {
     }
     
     // Fallback test without visual registry
-    const surface = SWCanvas.Surface(200, 150);
-    const ctx = new SWCanvas.Context2D(surface);
+    const surface = SWCanvas.Core.Surface(200, 150);
+    const ctx = new SWCanvas.Core.Context2D(surface);
     ctx.setFillStyle(255, 255, 255, 255);
     ctx.fillRect(0, 0, 200, 150);
     ctx.translate(50, 50);

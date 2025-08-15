@@ -16,11 +16,11 @@ function createBrowserVisualTests(SWCanvas) {
             }
 
             // Test surface creation
-            swSurface = SWCanvas.Surface(400, 300);
-            swContext = new SWCanvas.Context2D(swSurface);
+            swSurface = SWCanvas.Core.Surface(400, 300);
+            swContext = new SWCanvas.Core.Context2D(swSurface);
             
-            interactiveSurface = SWCanvas.Surface(400, 300);
-            interactiveContext = new SWCanvas.Context2D(interactiveSurface);
+            interactiveSurface = SWCanvas.Core.Surface(400, 300);
+            interactiveContext = new SWCanvas.Core.Context2D(interactiveSurface);
             
             // Initialize HTML5 canvas for interactive tests
             const html5Canvas = document.getElementById('interactive-html5');
@@ -148,7 +148,7 @@ function createBrowserVisualTests(SWCanvas) {
         }
         
         try {
-            const bmpData = SWCanvas.encodeBMP(swSurface);
+            const bmpData = SWCanvas.Core.BitmapEncoder.encode(swSurface);
             const blob = new Blob([bmpData], { type: 'application/octet-stream' });
             const url = URL.createObjectURL(blob);
             

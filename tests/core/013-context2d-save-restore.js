@@ -3,8 +3,8 @@
 
 // Test 013
 test('Context2D state save/restore', () => {
-    const surface = SWCanvas.Surface(100, 100);
-    const ctx = new SWCanvas.Context2D(surface);
+    const surface = SWCanvas.Core.Surface(100, 100);
+    const ctx = new SWCanvas.Core.Context2D(surface);
     
     ctx.globalAlpha = 0.5;
     ctx.save();

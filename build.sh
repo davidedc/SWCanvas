@@ -86,10 +86,10 @@ function encodeBMP(surface) {
 
 EOF
 
-# Footer to expose dual API globals
+# Footer to expose clean dual API globals
 cat >> dist/swcanvas.js << 'EOF'
 
-// Export to global scope with dual API architecture
+// Export to global scope with clean dual API architecture
 if (typeof window !== 'undefined') {
     // Browser
     window.SWCanvas = {
@@ -112,24 +112,7 @@ if (typeof window !== 'undefined') {
             PathFlattener: PathFlattener,
             PolygonFiller: PolygonFiller,
             StrokeGenerator: StrokeGenerator
-        },
-        
-        // Legacy API (backward compatibility - points to Core)
-        Surface: CoreSurfaceFactory,
-        Context2D: Context2D,
-        Transform2D: Transform2D,
-        Path2D: Path2D,
-        encodeBMP: encodeBMP,
-        Color: Color,
-        Point: Point,
-        Rectangle: Rectangle,
-        BitmapEncoder: BitmapEncoder,
-        ClipMask: ClipMask,
-        ImageProcessor: ImageProcessor,
-        Rasterizer: Rasterizer,
-        PathFlattener: PathFlattener,
-        PolygonFiller: PolygonFiller,
-        StrokeGenerator: StrokeGenerator
+        }
     };
 } else if (typeof module !== 'undefined' && module.exports) {
     // Node.js
@@ -153,24 +136,7 @@ if (typeof window !== 'undefined') {
             PathFlattener: PathFlattener,
             PolygonFiller: PolygonFiller,
             StrokeGenerator: StrokeGenerator
-        },
-        
-        // Legacy API (backward compatibility - points to Core)
-        Surface: CoreSurfaceFactory,
-        Context2D: Context2D,
-        Transform2D: Transform2D,
-        Path2D: Path2D,
-        encodeBMP: encodeBMP,
-        Color: Color,
-        Point: Point,
-        Rectangle: Rectangle,
-        BitmapEncoder: BitmapEncoder,
-        ClipMask: ClipMask,
-        ImageProcessor: ImageProcessor,
-        Rasterizer: Rasterizer,
-        PathFlattener: PathFlattener,
-        PolygonFiller: PolygonFiller,
-        StrokeGenerator: StrokeGenerator
+        }
     };
 }
 

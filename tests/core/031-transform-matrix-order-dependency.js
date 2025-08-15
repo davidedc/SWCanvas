@@ -51,14 +51,14 @@ test('Transform matrix order dependency (A*B ≠ B*A)', () => {
     }
     
     // Fallback test showing transform order matters
-    const surface = SWCanvas.Surface(200, 100);
-    const ctx = new SWCanvas.Context2D(surface);
+    const surface = SWCanvas.Core.Surface(200, 100);
+    const ctx = new SWCanvas.Core.Context2D(surface);
     ctx.setFillStyle(255, 255, 255, 255);
     ctx.fillRect(0, 0, 200, 100);
     
     // Test 1: Translate then Scale
     ctx.save();
-    const matrix1 = new SWCanvas.Transform2D();
+    const matrix1 = new SWCanvas.Core.Transform2D();
     const translated = matrix1.translate(20, 20);
     const translateThenScale = translated.scale(2, 2);
     ctx.setTransform(translateThenScale.a, translateThenScale.b, translateThenScale.c, 
@@ -69,7 +69,7 @@ test('Transform matrix order dependency (A*B ≠ B*A)', () => {
     
     // Test 2: Scale then Translate
     ctx.save();
-    const matrix2 = new SWCanvas.Transform2D();
+    const matrix2 = new SWCanvas.Core.Transform2D();
     const scaled = matrix2.scale(2, 2);
     const scaleThenTranslate = scaled.translate(20, 20);
     ctx.setTransform(scaleThenTranslate.a, scaleThenTranslate.b, scaleThenTranslate.c,

@@ -177,7 +177,7 @@ function buildCoreTestsWithDefaults() {
     // Helper function to save BMP files (Node.js only)
     function saveBMP(surface, filename, description, SWCanvas) {
         try {
-            const bmpData = SWCanvas.encodeBMP(surface);
+            const bmpData = SWCanvas.Core.BitmapEncoder.encode(surface);
             const fs = require('fs');
             const path = require('path');
             

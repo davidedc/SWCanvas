@@ -14,8 +14,8 @@ test('Create and save a simple test image', () => {
     }
     
     // Fallback inline test
-    const surface = SWCanvas.Surface(100, 100);
-    const ctx = new SWCanvas.Context2D(surface);
+    const surface = SWCanvas.Core.Surface(100, 100);
+    const ctx = new SWCanvas.Core.Context2D(surface);
     
     // Fill with red background
     ctx.setFillStyle(255, 0, 0, 255);

@@ -129,7 +129,7 @@ src/ColorParser.js            # CSS color string parsing (hex, rgb, named colors
 
 #### Transform System
 - **Transform2D class**: Immutable transformation matrix (replaces Matrix)
-- Static factory methods: `Transform2D.identity()`, `.translation()`, `.scaling()`, `.rotation()`
+- Static factory methods: `.translation()`, `.scaling()`, `.rotation()` (identity is default constructor)
 - Accumulative: `transform()` multiplies with current matrix
 - Absolute: `setTransform()` replaces current matrix
 - Transform order matters: translate→scale ≠ scale→translate
@@ -435,15 +435,6 @@ ctx.fillRect(10, 10, 100, 100);
 - **Core.ClipMask**: ES6 class for stencil buffer manipulation  
 - **Core.ImageProcessor**: Static methods for ImageLike validation and conversion
 
-### Legacy API (Backward Compatibility)
-All existing SWCanvas APIs continue to work unchanged:
-- **SWCanvas.Surface(width, height)**: Points to Core.Surface
-- **SWCanvas.Context2D(surface)**: Points to Core.Context2D
-- **SWCanvas.Transform2D**: Points to Core.Transform2D
-- **SWCanvas.Matrix**: Alias for Core.Transform2D
-- **SWCanvas.encodeBMP(surface)**: Legacy function for BMP encoding
-
-*Note: Legacy API maintains full backward compatibility while the Core API provides explicit namespace organization.*
 
 ## Common Tasks
 
@@ -610,8 +601,8 @@ for (let x = 45; x <= 85; x += 5) {
 ```bash
 node -e "
 const SWCanvas = require('./dist/swcanvas.js');
-const surface = SWCanvas.Surface(200, 100);
-const ctx = new SWCanvas.Context2D(surface);
+const surface = SWCanvas.Core.Surface(200, 100);
+const ctx = new SWCanvas.Core.Context2D(surface);
 
 // White background
 ctx.setFillStyle(255, 255, 255, 255);
@@ -648,8 +639,8 @@ node -e "
 const SWCanvas = require('./dist/swcanvas.js');
 
 console.log('=== FEATURE ANALYSIS ===');
-const surface = SWCanvas.Surface(100, 100);
-const ctx = new SWCanvas.Context2D(surface);
+const surface = SWCanvas.Core.Surface(100, 100);
+const ctx = new SWCanvas.Core.Context2D(surface);
 
 // Test specific behavior
 ctx.setFillStyle(255, 255, 255, 255);
@@ -676,15 +667,15 @@ const SWCanvas = require('./dist/swcanvas.js');
 const fs = require('fs');
 
 // Create test image
-const surface = SWCanvas.Surface(100, 100);
-const ctx = new SWCanvas.Context2D(surface);
+const surface = SWCanvas.Core.Surface(100, 100);
+const ctx = new SWCanvas.Core.Context2D(surface);
 
 // Your drawing code here
 ctx.setFillStyle(255, 0, 0, 255);
 ctx.fillRect(25, 25, 50, 50);
 
 // Save for visual inspection
-const bmpData = SWCanvas.BitmapEncoder.encode(surface);
+const bmpData = SWCanvas.Core.BitmapEncoder.encode(surface);
 fs.writeFileSync('debug-output.bmp', Buffer.from(bmpData));
 console.log('Saved debug image: debug-output.bmp');
 "
@@ -743,7 +734,7 @@ These scripts are invaluable for:
 - **Build before testing** - `npm run build` then `npm test`
 
 ### OO Development Patterns
-- **Use proper classes**: Prefer `new SWCanvas.Point(x, y)` over plain objects
+- **Use proper classes**: Prefer `new SWCanvas.Core.Point(x, y)` over plain objects
 - **Leverage immutability**: Transform2D, Point, Rectangle, Color are immutable - use their methods
 - **Static utilities**: Use ClipMask class for bit operations, ImageProcessor for format conversion
 - **Factory methods**: Use Transform2D constructor and .translation(), .scaling(), .rotation() for common transformations

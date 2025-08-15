@@ -3,7 +3,7 @@
 
 // Test 005
 test('Matrix creation with initial values', () => {
-    const m = new SWCanvas.Transform2D([2, 3, 4, 5, 6, 7]);
+    const m = new SWCanvas.Core.Transform2D([2, 3, 4, 5, 6, 7]);
     assertEquals(m.a, 2);
     assertEquals(m.b, 3);
     assertEquals(m.c, 4);

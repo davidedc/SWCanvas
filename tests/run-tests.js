@@ -15,7 +15,7 @@ console.log('Running SWCanvas Tests in Node.js...\n');
 // Helper function to save BMP files (same as in core-functionality-tests.js)
 function saveBMP(surface, filename, description, SWCanvasRef) {
     try {
-        const bmpData = SWCanvasRef.encodeBMP(surface);
+        const bmpData = SWCanvasRef.Core.BitmapEncoder.encode(surface);
         const fs = require('fs');
         const path = require('path');
         

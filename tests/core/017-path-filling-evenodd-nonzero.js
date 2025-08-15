@@ -3,8 +3,8 @@
 
 // Test 017
 test('Path filling - evenodd vs nonzero', () => {
-    const surface = SWCanvas.Surface(100, 100);
-    const ctx = new SWCanvas.Context2D(surface);
+    const surface = SWCanvas.Core.Surface(100, 100);
+    const ctx = new SWCanvas.Core.Context2D(surface);
     
     // White background
     ctx.setFillStyle(255, 255, 255, 255);

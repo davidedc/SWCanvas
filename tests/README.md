@@ -84,7 +84,7 @@ SWCanvas uses a **modular complementary dual test system** where individual test
 
 // Test 001
 test('Surface creation with valid dimensions', () => {
-    const surface = SWCanvas.Surface(400, 300);
+    const surface = SWCanvas.Core.Surface(400, 300);
     assertEquals(surface.width, 400);
     assertEquals(surface.height, 300);
     // ✓ Programmatic validation with assertions

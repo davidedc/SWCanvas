@@ -3,7 +3,7 @@
 
 // Test 007
 test('Matrix translate', () => {
-    const m = new SWCanvas.Transform2D();
+    const m = new SWCanvas.Core.Transform2D();
     const result = m.translate(10, 20);
     assertEquals(result.e, 10);
     assertEquals(result.f, 20);

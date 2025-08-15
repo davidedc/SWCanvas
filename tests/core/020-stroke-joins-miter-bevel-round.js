@@ -3,8 +3,8 @@
 
 // Test 020
 test('Stroke joins - miter, bevel, round', () => {
-    const surface = SWCanvas.Surface(300, 100);
-    const ctx = new SWCanvas.Context2D(surface);
+    const surface = SWCanvas.Core.Surface(300, 100);
+    const ctx = new SWCanvas.Core.Context2D(surface);
     
     // White background
     ctx.setFillStyle(255, 255, 255, 255);
