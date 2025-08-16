@@ -1,7 +1,7 @@
 # SWCanvas — Implementation Spec & Project Plan
 
 > **📋 Implementation Status: ✅ COMPLETED**  
-> This specification has been fully implemented with 31 core tests + 60 visual tests.  
+> This specification has been fully implemented with 31 core tests + 57 visual tests.  
 > All Canvas 2D API features implemented with pixel-perfect accuracy and modular test architecture.
 > Includes 4 rescued complementary tests providing alternative geometric implementations.
 
@@ -14,9 +14,9 @@
 **Goals**
 
 *   Deterministic, portable Javascript 2D raster engine with a Canvas‑like API, compatible with both browsers and Node.js.
-*   Visually consistent rendering using **premultiplied sRGB** math end‑to‑end.
-*   High throughput for large fills/paths via simple span batching (no AA in v1).
-*   Minimal **.BMP** image exports.
+*   Visually consistent rendering using **premultiplied sRGB** math end‑to‑end
+*   High throughput for large fills/paths via simple span batching (no AA in v1)
+*   Minimal **.BMP** image exports
 
 **Non‑Goals (v1)**
 

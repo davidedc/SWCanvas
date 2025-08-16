@@ -703,7 +703,7 @@ These scripts are invaluable for:
 - **Static Utility Classes**: ClipMaskHelper, ImageProcessor, BitmapEncoder for stateless operations
 - **Proper Encapsulation**: Private fields, parameter validation, and clear public APIs
 - **Single Responsibility**: Each class has one focused purpose with clean boundaries
-- **Comprehensive Testing**: All 31 core tests + 60 visual tests passing with pixel-perfect accuracy
+- **Comprehensive Testing**: All 31 core tests + 57 visual tests passing with pixel-perfect accuracy
 
 ### Key Design Patterns Applied
 - **Value Object Pattern**: Point, Rectangle, Transform2D, Color are immutable
@@ -714,12 +714,17 @@ These scripts are invaluable for:
 - **Memory Efficiency**: 1-bit stencil clipping, immutable objects prevent accidental mutation
 
 ### Test Results Status
-- **Node.js**: All 31 core tests passing, 60 visual BMPs generated successfully  
+- **Node.js**: All 31 core tests passing, 57 visual BMPs generated successfully  
 - **Browser**: Proper SWCanvas global export, all classes available for use
 - **Cross-platform**: Identical behavior verified between Node.js and browser environments
 - **Deterministic**: Same input produces identical output across all platforms
 
 ## Important Notes for Claude
+
+### Documentation Strategy
+- **Avoid duplication**: Each document has specific responsibilities (see DOCS.md)
+- **Use cross-references**: Reference other docs rather than duplicating content
+- **Single source of truth**: API examples in README.md, architecture in ARCHITECTURE.md, tests in tests/README.md
 
 ### When Debugging Tests
 - **Always run full test suite** after changes: `npm test`

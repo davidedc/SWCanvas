@@ -1,6 +1,6 @@
 # SWCanvas Test Suite
 
-This directory contains the comprehensive **modular test infrastructure** for SWCanvas, with 31 core tests + 56 visual tests and cross-platform compatibility.
+This directory contains the comprehensive **modular test infrastructure** for SWCanvas, with 31 core tests + 57 visual tests and cross-platform compatibility.
 
 ## Modular Test Architecture
 
@@ -11,7 +11,7 @@ tests/
 │   ├── 015-alpha-blending-test.js  
 │   ├── 031-transform-matrix-order-dependency.js
 │   └── ... (28 more files)
-├── visual/                        # 56 individual visual test files (001-056)
+├── visual/                        # 57 individual visual test files (001-057)
 │   ├── 001-simple-rectangle-test.js
 │   ├── 027-fill-rule-complex-test.js
 │   ├── 056-stroke-pixel-analysis-test.js
@@ -47,7 +47,7 @@ node tests/run-tests.js  # Smart runner uses built tests when available
 ### Browser Tests
 1. Open `tests/browser/index.html` in a web browser (automatically uses built modular tests)
 2. Click "Run Core Functionality Tests" to run 31 modular tests from `/tests/core/`
-3. Click "Run All Visual Rendering Tests" to compare 56 tests side-by-side
+3. Click "Run All Visual Rendering Tests" to compare 57 tests side-by-side
 4. Use interactive visual comparison tools for real-time testing
 5. Simple test: Open `tests/browser/simple-test.html` for basic visual comparison
 
@@ -101,7 +101,7 @@ test('Surface creation with valid dimensions', () => {
 - **Development benefit**: Isolated test development, clear organization
 
 **Characteristics**:
-- **56 visual tests** that generate actual rendered images
+- **57 visual tests** that generate actual rendered images
 - **Output**: BMP files (Node.js) + side-by-side comparison (browser)
 - **Environment**: BMP generation in Node.js, visual comparison in browser
 - **Focus**: Rendering accuracy, visual consistency, pixel-perfect output
