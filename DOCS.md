@@ -2,25 +2,59 @@
 
 ## Documentation Strategy
 
-Each document has a specific responsibility to avoid duplication and maintain clarity:
+Each document has a **single responsibility** to avoid duplication:
 
-- **README.md**: Quick start, API examples, build instructions, testing overview
-- **ARCHITECTURE.md**: System design, component organization, architectural patterns  
-- **tests/README.md**: Test system documentation, adding tests, build utilities
-- **CLAUDE.md**: Claude development context, project-specific guidance
-- **specs-and-high-level-project-plan.md**: Requirements specification, implementation details
+### Primary Responsibilities
+
+- **README.md**: Quick start, API examples, build instructions, brief testing overview
+- **ARCHITECTURE.md**: System design, component organization, architectural patterns, OO design
+- **tests/README.md**: Complete test system documentation, adding tests, build utilities
+- **tests/build/README.md**: Build utility scripts documentation (concat-tests.js, renumber-tests.js)
+- **CLAUDE.md**: Claude-specific development context and workflow tips ONLY
+- **specs-and-high-level-project-plan.md**: Original requirements specification
+
+### What NOT to Include (Anti-Duplication Rules)
+
+**README.md should NOT contain:**
+- Detailed test architecture (→ tests/README.md)
+- Detailed build utility instructions (→ tests/build/README.md)
+- Architecture implementation details (→ ARCHITECTURE.md)
+
+**CLAUDE.md should NOT contain:**
+- API usage examples (→ README.md)
+- Test architecture details (→ tests/README.md) 
+- Build instruction details (→ README.md)
+- Architecture explanations (→ ARCHITECTURE.md)
+
+**ARCHITECTURE.md should NOT contain:**
+- API usage examples (→ README.md)
+- Test development instructions (→ tests/README.md)
+
+**tests/README.md should NOT contain:**
+- API examples (→ README.md)
+- Architecture theory (→ ARCHITECTURE.md)
+
+### Cross-Reference Pattern
+
+**Instead of duplicating content, use references:**
+- "See README.md for API examples"
+- "See ARCHITECTURE.md for design details" 
+- "See tests/README.md for test documentation"
+- "See tests/build/README.md for build utilities"
+
+### Single Source of Truth
+
+- **API examples**: README.md only
+- **Architecture details**: ARCHITECTURE.md only
+- **Test documentation**: tests/README.md only
+- **Build utilities**: tests/build/README.md only
+- **Claude guidance**: CLAUDE.md only (no duplication from other docs)
 
 ## Quick Navigation
 
 - **Getting started** → README.md
 - **Understanding the design** → ARCHITECTURE.md  
-- **Adding tests** → tests/README.md
+- **Adding/running tests** → tests/README.md
+- **Build utilities** → tests/build/README.md
 - **Development with Claude** → CLAUDE.md
-- **Technical specifications** → specs-and-high-level-project-plan.md
-
-## Cross-References
-
-All documents use cross-references to avoid duplication:
-- API examples are centralized in README.md
-- Architecture details are centralized in ARCHITECTURE.md
-- Test documentation is centralized in tests/README.md
+- **Original specifications** → specs-and-high-level-project-plan.md

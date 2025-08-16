@@ -303,69 +303,12 @@ dist/             # Built library
 
 ## Test Architecture
 
-SWCanvas uses a **dual test system** with two complementary test suites:
+SWCanvas uses a comprehensive dual test system:
+- **31 core functionality tests**: Programmatic API verification with assertions
+- **57 visual rendering tests**: Pixel-perfect BMP generation and comparison
+- **Modular architecture**: Individual test files auto-concatenated at build time
 
-### Core Functionality Tests (`core-functionality-tests.js`)
-**Purpose**: Programmatic API verification  
-- **31 tests** with pass/fail assertions (`assertEquals`, `assertThrows`)
-- **Focus**: API correctness, error handling, mathematical accuracy
-- **Output**: Console ✓/✗ with detailed assertion results
-- **Examples**: Surface creation, matrix operations, state management
-
-### Visual Rendering Tests (`visual-rendering-tests.js`)  
-**Purpose**: Pixel-perfect visual verification
-- **60 tests** that generate BMP images for comparison
-- **Focus**: Rendering accuracy, visual consistency across platforms  
-- **Output**: BMP files (Node.js) + side-by-side comparison (browser)
-- **Examples**: Path filling, stroke rendering, clipping, transforms
-
-### Why Two Test Types?
-1. **Complementary Verification**: Same functionality tested programmatically AND visually
-2. **Cross-Platform Validation**: Ensures identical behavior in Node.js and browsers
-3. **Smart Delegation**: Core tests use visual tests when available for consistency
-4. **Comprehensive Coverage**: Mathematical correctness + pixel-perfect output
-
-### Adding New Tests
-
-#### For Core Functionality (Modular)
-Create individual test files in `/tests/core/` using the numbering convention:
-```bash
-# Add at the end
-echo "// Test 032: New feature" > tests/core/032-new-feature-test.js
-
-# Insert at specific position (advanced)
-node tests/build/renumber-tests.js --type core --position 15 --shift forward
-echo "// Test 015: My grouped test" > tests/core/015-my-grouped-test.js
-```
-
-#### For Visual Rendering (Modular)
-Create individual test files in `/tests/visual/` using the `registerVisualTest` helper:
-
-```bash
-# Add at the end  
-echo "// Test 061: New visual test" > tests/visual/061-new-visual-test.js
-
-# Insert at specific position (advanced)
-node tests/build/renumber-tests.js --type visual --position 25 --shift forward
-echo "// Test 025: My grouped test" > tests/visual/025-my-grouped-test.js
-```
-
-**Test Renumbering Utility**:
-The renumbering utility helps maintain logical test organization:
-```bash
-# Make space for a new test at position 30 
-node tests/build/renumber-tests.js --type visual --position 30 --shift forward --dry-run
-
-# See all options
-node tests/build/renumber-tests.js --help
-```
-
-Use standard HTML5 Canvas API for consistent colors:
-
-```javascript
-ctx.fillStyle = 'red';     // Works with both SWCanvas and HTML5 Canvas
-ctx.strokeStyle = 'blue';  // Standard Canvas API
-```
+See [tests/README.md](tests/README.md) for complete test documentation, adding tests, and build utilities.
 
 ### Build Process
 
