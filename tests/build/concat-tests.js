@@ -409,6 +409,125 @@ function buildVisualTestsWithDefaults() {
         ctx.putImageData(imageData, 0, 0);
     }
 
+    // Helper function to create test images with various patterns
+    function createTestImage(width, height, pattern) {
+        const image = {
+            width: width,
+            height: height,
+            data: new Uint8ClampedArray(width * height * 4)
+        };
+        
+        for (let y = 0; y < height; y++) {
+            for (let x = 0; x < width; x++) {
+                const i = (y * width + x) * 4;
+                
+                switch (pattern) {
+                    case 'checkerboard':
+                        const isEven = (x + y) % 2 === 0;
+                        image.data[i] = isEven ? 255 : 0;     // R
+                        image.data[i + 1] = isEven ? 0 : 255; // G  
+                        image.data[i + 2] = 0;                // B
+                        image.data[i + 3] = 255;              // A
+                        break;
+                        
+                    case 'gradient':
+                        image.data[i] = Math.floor((x / width) * 255);     // R
+                        image.data[i + 1] = Math.floor((y / height) * 255); // G
+                        image.data[i + 2] = 128;                           // B
+                        image.data[i + 3] = 255;                           // A
+                        break;
+                        
+                    case 'border':
+                        const isBorder = x === 0 || y === 0 || x === width - 1 || y === height - 1;
+                        image.data[i] = isBorder ? 255 : 100;     // R
+                        image.data[i + 1] = isBorder ? 255 : 150; // G
+                        image.data[i + 2] = isBorder ? 0 : 200;   // B
+                        image.data[i + 3] = 255;                  // A
+                        break;
+                        
+                    case 'alpha':
+                        image.data[i] = 255;                      // R
+                        image.data[i + 1] = 0;                    // G
+                        image.data[i + 2] = 0;                    // B
+                        image.data[i + 3] = Math.floor((x / width) * 255); // A gradient
+                        break;
+                }
+            }
+        }
+        
+        return image;
+    }
+    
+    // Helper function to create RGB test image (3 channels)
+    function createRGBTestImage(width, height) {
+        const image = {
+            width: width,
+            height: height,
+            data: new Uint8ClampedArray(width * height * 3) // RGB only
+        };
+        
+        for (let y = 0; y < height; y++) {
+            for (let x = 0; x < width; x++) {
+                const i = (y * width + x) * 3;
+                image.data[i] = x < width / 2 ? 255 : 0;     // R
+                image.data[i + 1] = y < height / 2 ? 255 : 0; // G
+                image.data[i + 2] = (x + y) % 2 ? 255 : 0;   // B
+            }
+        }
+        
+        return image;
+    }
+
+    // Helper function to create compatible images for both canvas types
+    function createCompatibleImage(width, height, pattern, ctx) {
+        const imagelike = createTestImage(width, height, pattern);
+        
+        // For HTML5 Canvas, create a temporary canvas element
+        if (!ctx._core && typeof document !== 'undefined') {
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = width;
+            tempCanvas.height = height;
+            const tempCtx = tempCanvas.getContext('2d');
+            
+            const imageData = tempCtx.createImageData(width, height);
+            imageData.data.set(imagelike.data);
+            tempCtx.putImageData(imageData, 0, 0);
+            
+            return tempCanvas;
+        }
+        
+        // For SWCanvas, return the ImageLike object directly
+        return imagelike;
+    }
+
+    // Helper function for RGB images
+    function createCompatibleRGBImage(width, height, ctx) {
+        const rgbImagelike = createRGBTestImage(width, height);
+        
+        // For HTML5 Canvas, create a temporary canvas element
+        if (!ctx._core && typeof document !== 'undefined') {
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = width;
+            tempCanvas.height = height;
+            const tempCtx = tempCanvas.getContext('2d');
+            
+            const imageData = tempCtx.createImageData(width, height);
+            // Convert RGB to RGBA
+            for (let i = 0, j = 0; i < rgbImagelike.data.length; i += 3, j += 4) {
+                imageData.data[j] = rgbImagelike.data[i];     // R
+                imageData.data[j + 1] = rgbImagelike.data[i + 1]; // G
+                imageData.data[j + 2] = rgbImagelike.data[i + 2]; // B
+                imageData.data[j + 3] = 255; // A
+            }
+            tempCtx.putImageData(imageData, 0, 0);
+            
+            return tempCanvas;
+        }
+        
+        // For SWCanvas, return the RGB ImageLike object directly
+        return rgbImagelike;
+    }
+
     // Helper function to register a visual test with unified API
     function registerVisualTest(testName, testConfig) {
         // Store the original config

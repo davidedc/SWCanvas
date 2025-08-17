@@ -287,4 +287,36 @@ class ImageProcessor {
             memoryUsage: validated.data.byteLength
         };
     }
+    
+    /**
+     * Convert HTMLCanvasElement to ImageLike format
+     * @param {HTMLCanvasElement} canvas - HTML canvas element to convert
+     * @returns {Object} ImageLike representation of canvas
+     */
+    static fromCanvas(canvas) {
+        if (!canvas || typeof canvas !== 'object') {
+            throw new Error('Canvas must be a valid HTMLCanvasElement');
+        }
+        
+        if (typeof canvas.width !== 'number' || typeof canvas.height !== 'number') {
+            throw new Error('Canvas must have numeric width and height');
+        }
+        
+        if (!canvas.getContext || typeof canvas.getContext !== 'function') {
+            throw new Error('Canvas must have getContext method');
+        }
+        
+        try {
+            const ctx = canvas.getContext('2d');
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            
+            return {
+                width: canvas.width,
+                height: canvas.height,
+                data: new Uint8ClampedArray(imageData.data)
+            };
+        } catch (error) {
+            throw new Error(`Failed to extract canvas data: ${error.message}`);
+        }
+    }
 }

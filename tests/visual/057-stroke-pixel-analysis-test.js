@@ -72,35 +72,26 @@ registerVisualTest('stroke-pixel-analysis', {
             ctx.stroke();
         }
         
-        // Pixel analysis for both canvas types
-        if (canvas._coreSurface) {
-            // SWCanvas pixel analysis
-            const surface = canvas._coreSurface;
-            console.log('SWCanvas stroke pixel analysis:');
-            const pixelAt50_50 = surface.data[(50 * surface.stride) + (50 * 4)];
-            console.log(`  Pixel at (50,50) - Red stroke 1px: R=${pixelAt50_50} (should be 255 if rendered)`);
+        // Unified stroke pixel analysis using standard getImageData API
+        try {
+            console.log('Stroke pixel analysis:');
             
-            const pixelAt50_70 = surface.data[(50 * surface.stride) + (70 * 4)];
-            console.log(`  Pixel at (50,70) - Blue stroke 0.1px: R=${surface.data[(70 * surface.stride) + (50 * 4)]}`);
+            // Check red stroke at (50,50)
+            const redPixelData = ctx.getImageData(50, 50, 1, 1);
+            const redPixel = redPixelData.data[0];
+            console.log(`  Pixel at (50,50) - Red stroke 1px: R=${redPixel} (should be 255 if rendered)`);
             
-            const pixelAt50_75 = surface.data[(75 * surface.stride) + (50 * 4) + 2];
-            console.log(`  Pixel at (50,75) - Blue stroke 0.5px: B=${pixelAt50_75}`);
-        } else {
-            // HTML5Canvas pixel analysis
-            try {
-                const imageData = ctx.getImageData(0, 0, 300, 200);
-                console.log('HTML5Canvas stroke pixel analysis:');
-                const redPixel = imageData.data[(50 * 300 + 50) * 4];
-                console.log(`  Pixel at (50,50) - Red stroke 1px: R=${redPixel}`);
-                
-                const bluePixel70 = imageData.data[(70 * 300 + 50) * 4 + 2];
-                console.log(`  Pixel at (50,70) - Blue stroke 0.1px: B=${bluePixel70}`);
-                
-                const bluePixel75 = imageData.data[(75 * 300 + 50) * 4 + 2];
-                console.log(`  Pixel at (50,75) - Blue stroke 0.5px: B=${bluePixel75}`);
-            } catch (e) {
-                console.log('Could not sample HTML5Canvas pixels (security restriction)');
-            }
+            // Check blue strokes
+            const bluePixel70Data = ctx.getImageData(50, 70, 1, 1);
+            const bluePixel75Data = ctx.getImageData(50, 75, 1, 1);
+            
+            const bluePixel70 = bluePixel70Data.data[0];
+            const bluePixel75 = bluePixel75Data.data[2];
+            
+            console.log(`  Pixel at (50,70) - Blue stroke 0.1px: R=${bluePixel70}`);
+            console.log(`  Pixel at (50,75) - Blue stroke 0.5px: B=${bluePixel75}`);
+        } catch (e) {
+            console.log('Could not sample pixels (security restriction)');
         }
     }
 });

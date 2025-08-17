@@ -334,6 +334,9 @@
                 
             } catch (error) {
                 testDiv.innerHTML += `<div style="color: red; margin-top: 10px;">Error: ${error.message}</div>`;
+                // Re-throw error for console debugging
+                console.error('Test error details:', error);
+                throw error;
             }
         }
 

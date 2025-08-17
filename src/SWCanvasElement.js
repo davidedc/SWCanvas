@@ -105,6 +105,15 @@ class SWCanvasElement {
     }
     
     /**
+     * Get pixel data for ImageLike interface compatibility
+     * Makes SWCanvasElement directly usable as an ImageLike object
+     * @returns {Uint8ClampedArray} The pixel data
+     */
+    get data() {
+        return this._surface.data;
+    }
+    
+    /**
      * String representation for debugging
      * @returns {string} Canvas description
      */

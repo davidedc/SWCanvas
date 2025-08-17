@@ -27,24 +27,12 @@ registerVisualTest('pixel-analysis', {
         
         ctx.restore();
         
-        // Pixel analysis for both canvas types
-        if (canvas._coreSurface) {
-            // SWCanvas pixel analysis
-            const surface = canvas._coreSurface;
-            const centerOffset = 100 * surface.stride + 100 * 4;
-            const r = surface.data[centerOffset];
-            const g = surface.data[centerOffset + 1];
-            const b = surface.data[centerOffset + 2];
-            const a = surface.data[centerOffset + 3];
-            console.log(`SWCanvas center pixel: R=${r}, G=${g}, B=${b}, A=${a}`);
-        } else {
-            // HTML5Canvas pixel analysis
-            const imageData = ctx.getImageData(100, 100, 1, 1);
-            const r = imageData.data[0];
-            const g = imageData.data[1];
-            const b = imageData.data[2];
-            const a = imageData.data[3];
-            console.log(`HTML5Canvas center pixel: R=${r}, G=${g}, B=${b}, A=${a}`);
-        }
+        // Unified pixel analysis using standard getImageData API
+        const imageData = ctx.getImageData(100, 100, 1, 1);
+        const r = imageData.data[0];
+        const g = imageData.data[1];
+        const b = imageData.data[2];
+        const a = imageData.data[3];
+        console.log(`Center pixel: R=${r}, G=${g}, B=${b}, A=${a}`);
     },
 });

@@ -84,6 +84,22 @@ function encodeBMP(surface) {
     return BitmapEncoder.encode(surface);
 }
 
+// Factory function for creating ImageData objects
+function createImageData(width, height) {
+    if (typeof width !== 'number' || width <= 0 || !Number.isInteger(width)) {
+        throw new Error('Width must be a positive integer');
+    }
+    if (typeof height !== 'number' || height <= 0 || !Number.isInteger(height)) {
+        throw new Error('Height must be a positive integer');
+    }
+    
+    return {
+        width: width,
+        height: height,
+        data: new Uint8ClampedArray(width * height * 4)
+    };
+}
+
 EOF
 
 # Footer to expose clean dual API globals
@@ -95,6 +111,7 @@ if (typeof window !== 'undefined') {
     window.SWCanvas = {
         // HTML5 Canvas-compatible API (recommended for portability)
         createCanvas: createCanvas,
+        createImageData: createImageData,
         
         // Core API namespace (recommended for performance/control)  
         Core: {
@@ -119,6 +136,7 @@ if (typeof window !== 'undefined') {
     module.exports = {
         // HTML5 Canvas-compatible API (recommended for portability)
         createCanvas: createCanvas,
+        createImageData: createImageData,
         
         // Core API namespace (recommended for performance/control)
         Core: {

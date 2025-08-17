@@ -223,11 +223,151 @@ class CanvasCompatibleContext2D {
     // ===== IMAGE DRAWING =====
     
     drawImage(image, ...args) {
+        // Debug logging for browser troubleshooting
+        if (typeof console !== 'undefined' && console.log) {
+            console.log('CanvasCompatibleContext2D.drawImage called with:', {
+                imageType: image ? image.constructor.name : 'null',
+                hasGetContext: image && typeof image.getContext === 'function',
+                hasWidth: image ? typeof image.width : 'N/A',
+                hasHeight: image ? typeof image.height : 'N/A', 
+                hasData: image ? !!image.data : 'N/A',
+                isSWCanvasElement: image instanceof SWCanvasElement,
+                argsLength: args.length
+            });
+        }
+        
         // Handle SWCanvasElement specially
         if (image && image instanceof SWCanvasElement) {
             this._core.drawImage(image._imageData, ...args);
-        } else {
+        } else if (image && typeof image === 'object' && image.getContext && typeof image.getContext === 'function') {
+            // Handle HTMLCanvasElement (has getContext method)
+            const ctx = image.getContext('2d');
+            const imageData = ctx.getImageData(0, 0, image.width, image.height);
+            this._core.drawImage(imageData, ...args);
+        } else if (image && typeof image === 'object' && image.width && image.height && image.data) {
+            // Handle ImageLike objects (duck typing)
             this._core.drawImage(image, ...args);
+        } else {
+            // Fallback to core implementation (includes HTMLImageElement and other types)
+            this._core.drawImage(image, ...args);
+        }
+    }
+    
+    // ===== IMAGE DATA API =====
+    
+    /**
+     * Create new ImageData object with specified dimensions
+     * @param {number} width - Width in pixels
+     * @param {number} height - Height in pixels
+     * @returns {Object} ImageData-like object
+     */
+    createImageData(width, height) {
+        if (typeof width !== 'number' || width <= 0 || !Number.isInteger(width)) {
+            throw new Error('Width must be a positive integer');
+        }
+        if (typeof height !== 'number' || height <= 0 || !Number.isInteger(height)) {
+            throw new Error('Height must be a positive integer');
+        }
+        
+        return {
+            width: width,
+            height: height,
+            data: new Uint8ClampedArray(width * height * 4)
+        };
+    }
+    
+    /**
+     * Get ImageData from a rectangular region
+     * @param {number} x - X coordinate of rectangle
+     * @param {number} y - Y coordinate of rectangle  
+     * @param {number} width - Width of rectangle
+     * @param {number} height - Height of rectangle
+     * @returns {Object} ImageData-like object
+     */
+    getImageData(x, y, width, height) {
+        if (typeof x !== 'number' || typeof y !== 'number') {
+            throw new Error('Coordinates must be numbers');
+        }
+        if (typeof width !== 'number' || width <= 0 || !Number.isInteger(width)) {
+            throw new Error('Width must be a positive integer');
+        }
+        if (typeof height !== 'number' || height <= 0 || !Number.isInteger(height)) {
+            throw new Error('Height must be a positive integer');
+        }
+        
+        // Create ImageData object
+        const imageData = this.createImageData(width, height);
+        const surface = this._core.surface;
+        
+        // Copy pixel data from surface to ImageData
+        for (let row = 0; row < height; row++) {
+            const surfaceRow = Math.floor(y) + row;
+            const imageRow = row;
+            
+            if (surfaceRow >= 0 && surfaceRow < surface.height) {
+                for (let col = 0; col < width; col++) {
+                    const surfaceCol = Math.floor(x) + col;
+                    const imageCol = col;
+                    
+                    if (surfaceCol >= 0 && surfaceCol < surface.width) {
+                        const surfaceOffset = surfaceRow * surface.stride + surfaceCol * 4;
+                        const imageOffset = imageRow * width * 4 + imageCol * 4;
+                        
+                        imageData.data[imageOffset] = surface.data[surfaceOffset];
+                        imageData.data[imageOffset + 1] = surface.data[surfaceOffset + 1];
+                        imageData.data[imageOffset + 2] = surface.data[surfaceOffset + 2];
+                        imageData.data[imageOffset + 3] = surface.data[surfaceOffset + 3];
+                    }
+                }
+            }
+        }
+        
+        return imageData;
+    }
+    
+    /**
+     * Put ImageData onto the canvas at specified position
+     * @param {Object} imageData - ImageData-like object
+     * @param {number} dx - Destination x coordinate
+     * @param {number} dy - Destination y coordinate
+     */
+    putImageData(imageData, dx, dy) {
+        if (!imageData || typeof imageData !== 'object') {
+            throw new Error('ImageData must be an object');
+        }
+        if (typeof imageData.width !== 'number' || typeof imageData.height !== 'number') {
+            throw new Error('ImageData must have numeric width and height');
+        }
+        if (!(imageData.data instanceof Uint8ClampedArray)) {
+            throw new Error('ImageData data must be a Uint8ClampedArray');
+        }
+        if (typeof dx !== 'number' || typeof dy !== 'number') {
+            throw new Error('Destination coordinates must be numbers');
+        }
+        
+        const surface = this._core.surface;
+        
+        // Copy pixel data from ImageData to surface
+        for (let row = 0; row < imageData.height; row++) {
+            const surfaceRow = Math.floor(dy) + row;
+            const imageRow = row;
+            
+            if (surfaceRow >= 0 && surfaceRow < surface.height) {
+                for (let col = 0; col < imageData.width; col++) {
+                    const surfaceCol = Math.floor(dx) + col;
+                    const imageCol = col;
+                    
+                    if (surfaceCol >= 0 && surfaceCol < surface.width) {
+                        const surfaceOffset = surfaceRow * surface.stride + surfaceCol * 4;
+                        const imageOffset = imageRow * imageData.width * 4 + imageCol * 4;
+                        
+                        surface.data[surfaceOffset] = imageData.data[imageOffset];
+                        surface.data[surfaceOffset + 1] = imageData.data[imageOffset + 1];
+                        surface.data[surfaceOffset + 2] = imageData.data[imageOffset + 2];
+                        surface.data[surfaceOffset + 3] = imageData.data[imageOffset + 3];
+                    }
+                }
+            }
         }
     }
     
