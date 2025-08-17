@@ -479,10 +479,23 @@ function buildVisualTestsWithDefaults() {
     }
 
     // Helper function to create compatible images for both canvas types
+    // 
+    // This function has divergent code paths due to fundamental API incompatibility:
+    // - Native HTML5 Canvas drawImage() only accepts DOM elements (HTMLCanvasElement, HTMLImageElement, etc.)
+    // - SWCanvas drawImage() accepts DOM elements PLUS ImageLike objects ({width, height, data})
+    // 
+    // The helper detects the environment and provides the appropriate object type:
+    // - For native HTML5 Canvas in browser: Convert ImageLike to HTMLCanvasElement (required by W3C spec)
+    // - For SWCanvas: Return ImageLike directly (efficient, no conversion needed)
+    // 
+    // This divergence cannot be eliminated without either:
+    // 1. Limiting SWCanvas to only accept DOM elements (losing ImageLike convenience)
+    // 2. Modifying browser Canvas API (impossible)
     function createCompatibleImage(width, height, pattern, ctx) {
         const imagelike = createTestImage(width, height, pattern);
         
         // For HTML5 Canvas, create a temporary canvas element
+        // Detection: !ctx._core (not SWCanvas) && document exists (browser environment)
         if (!ctx._core && typeof document !== 'undefined') {
             const tempCanvas = document.createElement('canvas');
             tempCanvas.width = width;
@@ -501,10 +514,15 @@ function buildVisualTestsWithDefaults() {
     }
 
     // Helper function for RGB images
+    // 
+    // Same API incompatibility as above - native HTML5 Canvas cannot accept
+    // plain ImageLike objects, so we must convert RGB pixel data to HTMLCanvasElement
+    // for browser testing while SWCanvas can handle ImageLike objects directly.
     function createCompatibleRGBImage(width, height, ctx) {
         const rgbImagelike = createRGBTestImage(width, height);
         
         // For HTML5 Canvas, create a temporary canvas element
+        // Same detection logic: native Canvas in browser environment
         if (!ctx._core && typeof document !== 'undefined') {
             const tempCanvas = document.createElement('canvas');
             tempCanvas.width = width;
