@@ -113,16 +113,49 @@ See [tests/README.md](tests/README.md) for detailed test documentation.
 
 ## API Documentation
 
-SWCanvas implements a subset of the HTML5 Canvas 2D API:
+SWCanvas provides **dual API architecture** for maximum flexibility:
 
-### Surface Creation
+### HTML5 Canvas-Compatible API (Recommended for Portability)
+
+Drop-in replacement for HTML5 Canvas with familiar API:
+
 ```javascript
-const surface = SWCanvas.Core.Surface(width, height);
+// Create canvas element (works in Node.js and browsers)
+const canvas = SWCanvas.createCanvas(800, 600);
+const ctx = canvas.getContext('2d');
+
+// Standard HTML5 Canvas API
+ctx.fillStyle = 'red';
+ctx.fillRect(10, 10, 100, 50);
+
+ctx.strokeStyle = '#0066cc';
+ctx.lineWidth = 2;
+ctx.strokeRect(20, 20, 80, 30);
+
+// ImageData API for pixel manipulation
+const imageData = ctx.createImageData(100, 100);
+// ... modify imageData.data ...
+ctx.putImageData(imageData, 50, 50);
+
+// Extract pixel data
+const pixelData = ctx.getImageData(60, 60, 10, 10);
+
+// Factory method for ImageData objects
+const blankImage = SWCanvas.createImageData(50, 50);
 ```
 
-### Context Creation
+### Core API (Recommended for Performance)
+
+Direct access to core classes with explicit RGBA values:
+
 ```javascript
+// Create surface and context directly  
+const surface = SWCanvas.Core.Surface(width, height);
 const ctx = new SWCanvas.Core.Context2D(surface);
+
+// Explicit RGBA values (0-255)
+ctx.setFillStyle(255, 0, 0, 255);    // Red
+ctx.setStrokeStyle(0, 102, 204, 255); // Blue
 ```
 
 ### Drawing Operations

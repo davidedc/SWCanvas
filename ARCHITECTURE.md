@@ -65,10 +65,11 @@ HTML5 Canvas has a fundamental dual nature that SWCanvas preserves through archi
 - **Surface Lifecycle**: Managing the underlying pixel buffer
 
 ### Context Concerns (CanvasCompatibleContext2D)
-- **Drawing Operations**: `fillRect()`, `stroke()`, `fill()`
+- **Drawing Operations**: `fillRect()`, `stroke()`, `fill()`, `drawImage()`
 - **State Management**: `save()`/`restore()` stack
 - **Style Properties**: `fillStyle`, `strokeStyle`, `lineWidth`
 - **Transform Operations**: `translate()`, `rotate()`, `scale()`
+- **ImageData API**: `getImageData()`, `createImageData()`, `putImageData()`
 
 This separation maintains the HTML5 Canvas conceptual model while enabling performance optimizations.
 

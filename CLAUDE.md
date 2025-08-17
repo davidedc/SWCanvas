@@ -321,6 +321,8 @@ Project fully implemented with object-oriented ES6 class design. See ARCHITECTUR
 - **Browser vs Node.js differences** - use same visual test registry for consistency
 - **Color consistency** - use standard Canvas API (`ctx.fillStyle`, `ctx.strokeStyle`)
 - **Coordinate expectations** - test pixel positions are carefully calculated
+- **ImageData API available** - use `ctx.getImageData()` for pixel analysis (works on both APIs)
+- **Image creation helpers** - use `createCompatibleImage()` for unified image handling in tests
 
 ### When Making Changes  
 - **Update both paths** - SWCanvas and HTML5Canvas implementations in visual tests
