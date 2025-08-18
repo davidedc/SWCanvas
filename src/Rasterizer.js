@@ -154,8 +154,9 @@ class Rasterizer {
         const minY = Math.max(0, Math.floor(Math.min(topLeft.y, topRight.y, bottomLeft.y, bottomRight.y)));
         const maxY = Math.min(this._surface.height - 1, Math.ceil(Math.max(topLeft.y, topRight.y, bottomLeft.y, bottomRight.y)));
         
-        // Optimized path for axis-aligned rectangles
-        if (this._currentOp.transform.b === 0 && this._currentOp.transform.c === 0) {
+        // Optimized path for axis-aligned rectangles with solid colors only
+        if (this._currentOp.transform.b === 0 && this._currentOp.transform.c === 0 && 
+            (color instanceof Color || Array.isArray(color))) {
             this._fillAxisAlignedRect(minX, minY, maxX - minX + 1, maxY - minY + 1, color);
         } else {
             // Handle rotated rectangles by converting to polygon
@@ -167,8 +168,8 @@ class Rasterizer {
             ];
             
             // Use existing polygon filling system which handles transforms and stencil clipping
-            const rectColor = Array.isArray(color) ? PolygonFiller.colorFromRGBA(color) : color;
-            PolygonFiller.fillPolygons(this._surface, [rectPolygon], rectColor, 'nonzero', this._currentOp.transform, this._currentOp.clipMask);
+            const rectColor = Array.isArray(color) ? new Color(color[0], color[1], color[2], color[3]) : color;
+            PolygonFiller.fillPolygons(this._surface, [rectPolygon], rectColor, 'nonzero', this._currentOp.transform, this._currentOp.clipMask, this._currentOp.globalAlpha);
         }
     }
 
@@ -185,12 +186,13 @@ class Rasterizer {
         const surface = this._surface;
         const globalAlpha = this._currentOp.globalAlpha;
         
-        // Apply global alpha to source color (keep non-premultiplied to match surface format)
-        const effectiveAlpha = (color[3] / 255) * globalAlpha; // Normalize to 0-1 range
-        const srcA = Math.round(effectiveAlpha * 255);
-        const srcR = color[0];
-        const srcG = color[1];
-        const srcB = color[2];
+        // Convert color to Color object if needed and apply global alpha
+        const colorObj = Array.isArray(color) ? new Color(color[0], color[1], color[2], color[3]) : color;
+        const finalColor = colorObj.withGlobalAlpha(globalAlpha);
+        const srcR = finalColor.r;
+        const srcG = finalColor.g;
+        const srcB = finalColor.b;
+        const srcA = finalColor.a;
         
         for (let py = y; py < y + height; py++) {
             if (py < 0 || py >= surface.height) continue;
@@ -239,17 +241,15 @@ class Rasterizer {
     fill(path, rule) {
         this._requireActiveOp();
         
-        // Apply global alpha to fill color
-        const colorData = this._currentOp.fillStyle || [0, 0, 0, 255];
-        const color = Array.isArray(colorData) ? 
-            new Color(colorData[0], colorData[1], colorData[2], colorData[3]) : colorData;
-        const fillColor = color.withGlobalAlpha(this._currentOp.globalAlpha);
+        // Get fill style (Color, Gradient, or Pattern)
+        const fillStyle = this._currentOp.fillStyle || new Color(0, 0, 0, 255);
+        // Global alpha will be applied during pixel evaluation
         const fillRule = rule || 'nonzero';
         
         // Flatten path to polygons
         const polygons = PathFlattener.flattenPath(path);
         // Fill polygons with current transform and stencil clipping
-        PolygonFiller.fillPolygons(this._surface, polygons, fillColor, fillRule, this._currentOp.transform, this._currentOp.clipMask);
+        PolygonFiller.fillPolygons(this._surface, polygons, fillStyle, fillRule, this._currentOp.transform, this._currentOp.clipMask, this._currentOp.globalAlpha);
     }
 
     /**
@@ -260,22 +260,15 @@ class Rasterizer {
     stroke(path, strokeProps) {
         this._requireActiveOp();
         
-        // Apply global alpha to stroke color
-        const colorData = this._currentOp.strokeStyle || [0, 0, 0, 255];
-        const color = Array.isArray(colorData) ? 
-            new Color(colorData[0], colorData[1], colorData[2], colorData[3]) : colorData;
-        let finalStrokeColor = color.withGlobalAlpha(this._currentOp.globalAlpha);
+        // Get stroke style (Color, Gradient, or Pattern)
+        const strokeStyle = this._currentOp.strokeStyle || new Color(0, 0, 0, 255);
         
-        // Sub-pixel stroke rendering: apply opacity adjustment for strokes <= 1px
+        // Sub-pixel stroke rendering: for now, just adjust line width
+        // TODO: Handle sub-pixel opacity for gradients/patterns in PolygonFiller
         let adjustedStrokeProps = strokeProps;
         if (strokeProps.lineWidth <= 1.0) {
-            // Zero-width strokes: render at full opacity like HTML5Canvas (browsers render at minimum visible width)
-            // Sub-pixel strokes: render with proportional opacity
-            const subPixelOpacity = strokeProps.lineWidth === 0 ? 1.0 : strokeProps.lineWidth; // 0px = 100% opacity, 0.5px = 50% opacity
-            const adjustedAlpha = Math.round(finalStrokeColor.a * subPixelOpacity);
-            finalStrokeColor = new Color(finalStrokeColor.r, finalStrokeColor.g, finalStrokeColor.b, adjustedAlpha, finalStrokeColor.premultiplied);
-            
-            // Render all sub-pixel strokes (including zero-width) at 1px width with adjusted opacity
+            // Render all sub-pixel strokes (including zero-width) at 1px width
+            // Opacity adjustment will be handled in paint source evaluation
             adjustedStrokeProps = { ...strokeProps, lineWidth: 1.0 };
         }
         
@@ -283,7 +276,7 @@ class Rasterizer {
         const strokePolygons = StrokeGenerator.generateStrokePolygons(path, adjustedStrokeProps);
         
         // Fill stroke polygons with current transform and stencil clipping
-        PolygonFiller.fillPolygons(this._surface, strokePolygons, finalStrokeColor, 'nonzero', this._currentOp.transform, this._currentOp.clipMask);
+        PolygonFiller.fillPolygons(this._surface, strokePolygons, strokeStyle, 'nonzero', this._currentOp.transform, this._currentOp.clipMask, this._currentOp.globalAlpha);
     }
 
     /**

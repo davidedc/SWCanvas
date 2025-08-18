@@ -30,8 +30,8 @@ class Context2D {
         this.globalAlpha = 1.0;
         this.globalCompositeOperation = 'source-over';
         this._transform = new Transform2D();
-        this._fillStyle = [0, 0, 0, 255]; // Black, non-premultiplied
-        this._strokeStyle = [0, 0, 0, 255]; // Black, non-premultiplied
+        this._fillStyle = new Color(0, 0, 0, 255); // Black
+        this._strokeStyle = new Color(0, 0, 0, 255); // Black
         
         // Stroke properties
         this.lineWidth = 1.0;
@@ -64,8 +64,8 @@ class Context2D {
             globalCompositeOperation: this.globalCompositeOperation,
             transform: new Transform2D([this._transform.a, this._transform.b, this._transform.c, 
                                   this._transform.d, this._transform.e, this._transform.f]),
-            fillStyle: this._fillStyle.slice(),
-            strokeStyle: this._strokeStyle.slice(),
+            fillStyle: this._fillStyle, // Paint sources are immutable, safe to share
+            strokeStyle: this._strokeStyle, // Paint sources are immutable, safe to share
             clipMask: clipMaskCopy,   // Deep copy of clip mask
             lineWidth: this.lineWidth,
             lineJoin: this.lineJoin,
@@ -126,17 +126,31 @@ class Context2D {
     this._transform = new Transform2D().rotate(angleInRadians).multiply(this._transform);
     }
 
-    // Style setters (simplified for M1)
+    // Style setters - support solid colors and paint sources
     setFillStyle(r, g, b, a) {
-    a = a !== undefined ? a : 255;
-    // Store colors in non-premultiplied form
-    this._fillStyle = [r, g, b, a];
+        if (arguments.length === 1 && (r instanceof Color || r instanceof Gradient || 
+            r instanceof LinearGradient || r instanceof RadialGradient || 
+            r instanceof ConicGradient || r instanceof Pattern)) {
+            // Paint source (gradient or pattern)
+            this._fillStyle = r;
+        } else {
+            // RGBA color
+            a = a !== undefined ? a : 255;
+            this._fillStyle = new Color(r, g, b, a);
+        }
     }
 
     setStrokeStyle(r, g, b, a) {
-    a = a !== undefined ? a : 255;
-    // Store colors in non-premultiplied form  
-    this._strokeStyle = [r, g, b, a];
+        if (arguments.length === 1 && (r instanceof Color || r instanceof Gradient || 
+            r instanceof LinearGradient || r instanceof RadialGradient || 
+            r instanceof ConicGradient || r instanceof Pattern)) {
+            // Paint source (gradient or pattern)
+            this._strokeStyle = r;
+        } else {
+            // RGBA color
+            a = a !== undefined ? a : 255;
+            this._strokeStyle = new Color(r, g, b, a);
+        }
     }
 
     // Path methods (delegated to internal path)
@@ -563,5 +577,54 @@ class Context2D {
      */
     get lineDashOffset() {
         return this._lineDashOffset;
+    }
+    
+    // Gradient and Pattern Creation Methods
+    
+    /**
+     * Create a linear gradient
+     * @param {number} x0 - Start point x coordinate
+     * @param {number} y0 - Start point y coordinate
+     * @param {number} x1 - End point x coordinate
+     * @param {number} y1 - End point y coordinate
+     * @returns {LinearGradient} New linear gradient object
+     */
+    createLinearGradient(x0, y0, x1, y1) {
+        return new LinearGradient(x0, y0, x1, y1);
+    }
+    
+    /**
+     * Create a radial gradient
+     * @param {number} x0 - Inner circle center x
+     * @param {number} y0 - Inner circle center y
+     * @param {number} r0 - Inner circle radius
+     * @param {number} x1 - Outer circle center x
+     * @param {number} y1 - Outer circle center y
+     * @param {number} r1 - Outer circle radius
+     * @returns {RadialGradient} New radial gradient object
+     */
+    createRadialGradient(x0, y0, r0, x1, y1, r1) {
+        return new RadialGradient(x0, y0, r0, x1, y1, r1);
+    }
+    
+    /**
+     * Create a conic gradient
+     * @param {number} angle - Starting angle in radians
+     * @param {number} x - Center point x coordinate
+     * @param {number} y - Center point y coordinate
+     * @returns {ConicGradient} New conic gradient object
+     */
+    createConicGradient(angle, x, y) {
+        return new ConicGradient(angle, x, y);
+    }
+    
+    /**
+     * Create a pattern from an image
+     * @param {Object} image - ImageLike object (canvas, surface, imagedata)
+     * @param {string} repetition - Repetition mode: 'repeat', 'repeat-x', 'repeat-y', 'no-repeat'
+     * @returns {Pattern} New pattern object
+     */
+    createPattern(image, repetition) {
+        return new Pattern(image, repetition);
     }
 }

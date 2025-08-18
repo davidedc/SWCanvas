@@ -15,15 +15,16 @@ class PolygonFiller {
      * 
      * @param {Surface} surface - Target surface to render to
      * @param {Array} polygons - Array of polygons (each polygon is array of {x,y} points)  
-     * @param {Color} color - Color to fill with
+     * @param {Color|Gradient|Pattern} paintSource - Paint source to fill with
      * @param {string} fillRule - 'nonzero' or 'evenodd' winding rule
      * @param {Transform2D} transform - Transformation matrix to apply to polygons
      * @param {Uint8Array|null} clipMask - Optional 1-bit stencil buffer for clipping
+     * @param {number} globalAlpha - Global alpha value (0-1) for rendering operation
      */
-    static fillPolygons(surface, polygons, color, fillRule, transform, clipMask) {
+    static fillPolygons(surface, polygons, paintSource, fillRule, transform, clipMask, globalAlpha = 1.0) {
         if (polygons.length === 0) return;
-        if (!(color instanceof Color)) {
-            throw new Error('Color must be a Color instance');
+        if (!PolygonFiller._isValidPaintSource(paintSource)) {
+            throw new Error('Paint source must be a Color, Gradient, or Pattern instance');
         }
         
         // Transform all polygon vertices
@@ -37,7 +38,7 @@ class PolygonFiller {
         // Process each scanline
         for (let y = bounds.minY; y <= bounds.maxY; y++) {
             PolygonFiller._fillScanline(
-                surface, y, transformedPolygons, color, fillRule, clipMask
+                surface, y, transformedPolygons, paintSource, fillRule, clipMask, transform, globalAlpha
             );
         }
     }
@@ -71,12 +72,14 @@ class PolygonFiller {
      * @param {Surface} surface - Target surface
      * @param {number} y - Scanline y coordinate
      * @param {Array} polygons - Transformed polygons
-     * @param {Color} color - Fill color
+     * @param {Color|Gradient|Pattern} paintSource - Paint source
      * @param {string} fillRule - Winding rule
      * @param {Uint8Array|null} clipMask - Clipping mask
+     * @param {Transform2D} transform - Canvas transform (for gradients/patterns)
+     * @param {number} globalAlpha - Global alpha value (0-1)
      * @private
      */
-    static _fillScanline(surface, y, polygons, color, fillRule, clipMask) {
+    static _fillScanline(surface, y, polygons, paintSource, fillRule, clipMask, transform, globalAlpha) {
         const intersections = [];
         
         // Find all intersections with this scanline
@@ -88,7 +91,7 @@ class PolygonFiller {
         intersections.sort((a, b) => a.x - b.x);
         
         // Fill spans based on winding rule
-        PolygonFiller._fillSpans(surface, y, intersections, color, fillRule, clipMask);
+        PolygonFiller._fillSpans(surface, y, intersections, paintSource, fillRule, clipMask, transform, globalAlpha);
     }
     
     /**
@@ -128,12 +131,14 @@ class PolygonFiller {
      * @param {Surface} surface - Target surface
      * @param {number} y - Scanline y coordinate
      * @param {Array} intersections - Sorted intersections with winding info
-     * @param {Color} color - Fill color
+     * @param {Color|Gradient|Pattern} paintSource - Paint source
      * @param {string} fillRule - 'evenodd' or 'nonzero'
      * @param {ClipMask|null} clipMask - Stencil clipping mask
+     * @param {Transform2D} transform - Canvas transform (for gradients/patterns)
+     * @param {number} globalAlpha - Global alpha value (0-1)
      * @private
      */
-    static _fillSpans(surface, y, intersections, color, fillRule, clipMask) {
+    static _fillSpans(surface, y, intersections, paintSource, fillRule, clipMask, transform, globalAlpha) {
         if (intersections.length === 0) return;
         
         let windingNumber = 0;
@@ -159,31 +164,36 @@ class PolygonFiller {
                 const endX = Math.min(surface.width - 1, Math.floor(nextIntersection.x));
                 
                 PolygonFiller._fillPixelSpan(
-                    surface, y, startX, endX, color, clipMask
+                    surface, y, startX, endX, paintSource, clipMask, transform, globalAlpha
                 );
             }
         }
     }
     
     /**
-     * Fill a horizontal span of pixels with color and alpha blending
+     * Fill a horizontal span of pixels with paint source and alpha blending
      * @param {Surface} surface - Target surface
      * @param {number} y - Y coordinate
      * @param {number} startX - Start X coordinate (inclusive)
      * @param {number} endX - End X coordinate (inclusive)
-     * @param {Color} color - Fill color (with alpha)
+     * @param {Color|Gradient|Pattern} paintSource - Paint source
      * @param {ClipMask|null} clipMask - Stencil clipping mask
+     * @param {Transform2D} transform - Canvas transform (for gradients/patterns)
+     * @param {number} globalAlpha - Global alpha value (0-1)
      * @private
      */
-    static _fillPixelSpan(surface, y, startX, endX, color, clipMask) {
+    static _fillPixelSpan(surface, y, startX, endX, paintSource, clipMask, transform, globalAlpha) {
         for (let x = startX; x <= endX; x++) {
             // Check stencil buffer clipping
             if (clipMask && clipMask.isPixelClipped(x, y)) {
                 continue; // Skip pixels clipped by stencil buffer
             }
             
+            // Evaluate paint source at pixel position
+            const pixelColor = PolygonFiller._evaluatePaintSource(paintSource, x, y, transform, globalAlpha);
+            
             const offset = y * surface.stride + x * 4;
-            PolygonFiller._blendPixel(surface, offset, color);
+            PolygonFiller._blendPixel(surface, offset, pixelColor);
         }
     }
     
@@ -268,5 +278,50 @@ class PolygonFiller {
      */
     static countVertices(polygons) {
         return polygons.reduce((total, poly) => total + poly.length, 0);
+    }
+    
+    /**
+     * Validate paint source type
+     * @param {*} paintSource - Object to validate
+     * @returns {boolean} True if valid paint source
+     * @private
+     */
+    static _isValidPaintSource(paintSource) {
+        return paintSource instanceof Color ||
+               paintSource instanceof Gradient ||
+               paintSource instanceof LinearGradient ||
+               paintSource instanceof RadialGradient ||
+               paintSource instanceof ConicGradient ||
+               paintSource instanceof Pattern;
+    }
+    
+    /**
+     * Evaluate paint source at a pixel position
+     * @param {Color|Gradient|Pattern} paintSource - Paint source to evaluate
+     * @param {number} x - Pixel x coordinate
+     * @param {number} y - Pixel y coordinate
+     * @param {Transform2D} transform - Current canvas transform
+     * @param {number} globalAlpha - Global alpha value (0-1)
+     * @returns {Color} Color for this pixel
+     * @private
+     */
+    static _evaluatePaintSource(paintSource, x, y, transform, globalAlpha) {
+        let color;
+        if (paintSource instanceof Color) {
+            color = paintSource;
+        } else if (paintSource instanceof Gradient ||
+                   paintSource instanceof LinearGradient ||
+                   paintSource instanceof RadialGradient ||
+                   paintSource instanceof ConicGradient) {
+            color = paintSource.getColorForPixel(x, y, transform);
+        } else if (paintSource instanceof Pattern) {
+            color = paintSource.getColorForPixel(x, y, transform);
+        } else {
+            // Fallback to transparent black
+            color = new Color(0, 0, 0, 0);
+        }
+        
+        // Apply global alpha
+        return color.withGlobalAlpha(globalAlpha);
     }
 }

@@ -51,6 +51,14 @@ cat src/ClipMask.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
 cat src/ImageProcessor.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
+cat src/ColorParser.js >> dist/swcanvas.js
+echo "" >> dist/swcanvas.js
+
+# Phase 2.5: Paint sources (depend on foundation + ColorParser)
+cat src/Gradient.js >> dist/swcanvas.js
+echo "" >> dist/swcanvas.js
+cat src/Pattern.js >> dist/swcanvas.js
+echo "" >> dist/swcanvas.js
 
 # Phase 3: Core rendering classes (depend on services)
 cat src/Rasterizer.js >> dist/swcanvas.js
@@ -59,8 +67,6 @@ cat src/Context2D.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
 
 # Phase 4: Canvas compatibility layer (depends on Core)
-cat src/ColorParser.js >> dist/swcanvas.js
-echo "" >> dist/swcanvas.js
 cat src/CanvasCompatibleContext2D.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
 cat src/SWCanvasElement.js >> dist/swcanvas.js
@@ -128,7 +134,12 @@ if (typeof window !== 'undefined') {
             Rasterizer: Rasterizer,
             PathFlattener: PathFlattener,
             PolygonFiller: PolygonFiller,
-            StrokeGenerator: StrokeGenerator
+            StrokeGenerator: StrokeGenerator,
+            Gradient: Gradient,
+            LinearGradient: LinearGradient,
+            RadialGradient: RadialGradient,
+            ConicGradient: ConicGradient,
+            Pattern: Pattern
         }
     };
 } else if (typeof module !== 'undefined' && module.exports) {
@@ -153,7 +164,12 @@ if (typeof window !== 'undefined') {
             Rasterizer: Rasterizer,
             PathFlattener: PathFlattener,
             PolygonFiller: PolygonFiller,
-            StrokeGenerator: StrokeGenerator
+            StrokeGenerator: StrokeGenerator,
+            Gradient: Gradient,
+            LinearGradient: LinearGradient,
+            RadialGradient: RadialGradient,
+            ConicGradient: ConicGradient,
+            Pattern: Pattern
         }
     };
 }

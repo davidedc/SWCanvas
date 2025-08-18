@@ -40,7 +40,7 @@ class CanvasCompatibleContext2D {
     
     /**
      * Set fill style
-     * @param {string} value - CSS color string
+     * @param {string|Gradient|Pattern} value - CSS color string or paint source
      */
     set fillStyle(value) {
         this._fillStyle = value;
@@ -57,7 +57,7 @@ class CanvasCompatibleContext2D {
     
     /**
      * Set stroke style
-     * @param {string} value - CSS color string
+     * @param {string|Gradient|Pattern} value - CSS color string or paint source
      */
     set strokeStyle(value) {
         this._strokeStyle = value;
@@ -69,8 +69,18 @@ class CanvasCompatibleContext2D {
      * @private
      */
     _applyFillStyle() {
-        const rgba = this._colorParser.parse(this._fillStyle);
-        this._core.setFillStyle(rgba.r, rgba.g, rgba.b, rgba.a);
+        if (this._fillStyle instanceof Gradient || 
+            this._fillStyle instanceof LinearGradient ||
+            this._fillStyle instanceof RadialGradient ||
+            this._fillStyle instanceof ConicGradient ||
+            this._fillStyle instanceof Pattern) {
+            // Pass gradient/pattern directly to core
+            this._core.setFillStyle(this._fillStyle);
+        } else {
+            // Parse CSS color string
+            const rgba = this._colorParser.parse(this._fillStyle);
+            this._core.setFillStyle(rgba.r, rgba.g, rgba.b, rgba.a);
+        }
     }
     
     /**
@@ -78,8 +88,18 @@ class CanvasCompatibleContext2D {
      * @private
      */
     _applyStrokeStyle() {
-        const rgba = this._colorParser.parse(this._strokeStyle);
-        this._core.setStrokeStyle(rgba.r, rgba.g, rgba.b, rgba.a);
+        if (this._strokeStyle instanceof Gradient || 
+            this._strokeStyle instanceof LinearGradient ||
+            this._strokeStyle instanceof RadialGradient ||
+            this._strokeStyle instanceof ConicGradient ||
+            this._strokeStyle instanceof Pattern) {
+            // Pass gradient/pattern directly to core
+            this._core.setStrokeStyle(this._strokeStyle);
+        } else {
+            // Parse CSS color string
+            const rgba = this._colorParser.parse(this._strokeStyle);
+            this._core.setStrokeStyle(rgba.r, rgba.g, rgba.b, rgba.a);
+        }
     }
     
     // ===== DIRECT PROPERTY DELEGATION =====
@@ -381,6 +401,55 @@ class CanvasCompatibleContext2D {
                 }
             }
         }
+    }
+    
+    // ===== GRADIENT AND PATTERN METHODS =====
+    
+    /**
+     * Create a linear gradient
+     * @param {number} x0 - Start point x coordinate
+     * @param {number} y0 - Start point y coordinate
+     * @param {number} x1 - End point x coordinate
+     * @param {number} y1 - End point y coordinate
+     * @returns {LinearGradient} New linear gradient object
+     */
+    createLinearGradient(x0, y0, x1, y1) {
+        return this._core.createLinearGradient(x0, y0, x1, y1);
+    }
+    
+    /**
+     * Create a radial gradient
+     * @param {number} x0 - Inner circle center x
+     * @param {number} y0 - Inner circle center y
+     * @param {number} r0 - Inner circle radius
+     * @param {number} x1 - Outer circle center x
+     * @param {number} y1 - Outer circle center y
+     * @param {number} r1 - Outer circle radius
+     * @returns {RadialGradient} New radial gradient object
+     */
+    createRadialGradient(x0, y0, r0, x1, y1, r1) {
+        return this._core.createRadialGradient(x0, y0, r0, x1, y1, r1);
+    }
+    
+    /**
+     * Create a conic gradient
+     * @param {number} angle - Starting angle in radians
+     * @param {number} x - Center point x coordinate
+     * @param {number} y - Center point y coordinate
+     * @returns {ConicGradient} New conic gradient object
+     */
+    createConicGradient(angle, x, y) {
+        return this._core.createConicGradient(angle, x, y);
+    }
+    
+    /**
+     * Create a pattern from an image
+     * @param {Object} image - ImageLike object (canvas, surface, imagedata)
+     * @param {string} repetition - Repetition mode: 'repeat', 'repeat-x', 'repeat-y', 'no-repeat'
+     * @returns {Pattern} New pattern object
+     */
+    createPattern(image, repetition) {
+        return this._core.createPattern(image, repetition);
     }
     
     // ===== CORE ACCESS FOR ADVANCED USERS =====
