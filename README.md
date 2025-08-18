@@ -8,7 +8,7 @@ A deterministic 2D raster engine with Canvas-like API. SWCanvas provides pixel-p
 - **HTML5 Canvas Compatibility**: Drop-in replacement with familiar API  
 - **Object-Oriented Design**: Clean ES6 classes following effective OO principles
 - **Memory Efficient Clipping**: Stencil-based clipping system with proper intersection support
-- **Comprehensive Test Coverage**: 31 core tests + 57 visual tests ensuring pixel-perfect accuracy with modular architecture
+- **Comprehensive Test Coverage**: 32 core tests + 60 visual tests ensuring pixel-perfect accuracy with modular architecture
 - **Immutable Value Objects**: Point, Rectangle, Transform2D, Color prevent mutation bugs
 - **Cross-Platform**: Works in Node.js and browsers
 - **No Dependencies**: Pure JavaScript implementation
@@ -90,21 +90,21 @@ npm test
 ```
 
 This runs:
-- 31 modular core functionality tests (automatically uses built tests from `/tests/core/`)
-- 57 visual rendering tests generating BMPs in `tests/output/`
+- 32 modular core functionality tests (automatically uses built tests from `/tests/core/`)
+- 60 visual rendering tests generating BMPs in `tests/output/`
 
 ### Browser Tests
 
 Open `tests/browser/index.html` in a web browser for:
 - Side-by-side HTML5 Canvas vs SWCanvas comparisons  
 - Interactive visual tests
-- All 57 visual rendering test comparisons (automatically uses built modular tests)
+- All 60 visual rendering test comparisons (automatically uses built modular tests)
 - BMP download functionality
 
 ### Test Architecture
 
-- **Core Functionality Tests** (31): Individual test files in `/tests/core/` - API correctness, edge cases, mathematical accuracy
-- **Visual Rendering Tests** (57): Individual test files in `/tests/visual/` - Pixel-perfect rendering verification with BMP generation  
+- **Core Functionality Tests** (32): Individual test files in `/tests/core/` - API correctness, edge cases, mathematical accuracy
+- **Visual Rendering Tests** (60): Individual test files in `/tests/visual/` - Pixel-perfect rendering verification with BMP generation  
 - **Browser Tests**: Interactive visual comparison tools using built test suites with HTML5 Canvas vs SWCanvas side-by-side
 
 The modular architecture allows individual test development while maintaining build-time concatenation for performance.
@@ -131,6 +131,14 @@ ctx.fillRect(10, 10, 100, 50);
 ctx.strokeStyle = '#0066cc';
 ctx.lineWidth = 2;
 ctx.strokeRect(20, 20, 80, 30);
+
+// Line dashing
+ctx.setLineDash([5, 5]);       // Dashed line pattern
+ctx.lineDashOffset = 0;        // Starting offset
+ctx.beginPath();
+ctx.moveTo(10, 70);
+ctx.lineTo(100, 70);
+ctx.stroke();
 
 // ImageData API for pixel manipulation
 const imageData = ctx.createImageData(100, 100);
@@ -186,6 +194,11 @@ ctx.restore();
 ctx.drawImage(imagelike, dx, dy);                    // Basic positioning
 ctx.drawImage(imagelike, dx, dy, dw, dh);            // With scaling
 ctx.drawImage(imagelike, sx, sy, sw, sh, dx, dy, dw, dh); // With source rectangle
+
+// Line dashing
+ctx.setLineDash([10, 5]);        // Set dash pattern: 10px dash, 5px gap
+ctx.lineDashOffset = 2;          // Starting offset into pattern
+const pattern = ctx.getLineDash(); // Get current pattern: [10, 5]
 ```
 
 ### Color Setting

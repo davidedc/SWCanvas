@@ -1,12 +1,12 @@
 # SWCanvas Test Suite
 
-This directory contains the comprehensive **modular test infrastructure** for SWCanvas, with 31 core tests + 57 visual tests and cross-platform compatibility.
+This directory contains the comprehensive **modular test infrastructure** for SWCanvas, with 32 core tests + 60 visual tests and cross-platform compatibility.
 
 ## Modular Test Architecture
 
 ```
 tests/
-├── core/                          # 31 individual core test files (001-031)
+├── core/                          # 32 individual core test files (001-032)
 │   ├── 001-surface-creation-valid.js
 │   ├── 015-alpha-blending-test.js  
 │   ├── 031-transform-matrix-order-dependency.js
@@ -46,8 +46,8 @@ node tests/run-tests.js  # Smart runner uses built tests when available
 
 ### Browser Tests
 1. Open `tests/browser/index.html` in a web browser (automatically uses built modular tests)
-2. Click "Run Core Functionality Tests" to run 31 modular tests from `/tests/core/`
-3. Click "Run All Visual Rendering Tests" to compare 57 tests side-by-side
+2. Click "Run Core Functionality Tests" to run 32 modular tests from `/tests/core/`
+3. Click "Run All Visual Rendering Tests" to compare 60 tests side-by-side
 4. Use interactive visual comparison tools for real-time testing
 5. Simple test: Open `tests/browser/simple-test.html` for basic visual comparison
 
@@ -55,17 +55,17 @@ node tests/run-tests.js  # Smart runner uses built tests when available
 
 SWCanvas uses a **modular complementary dual test system** where individual test files are automatically concatenated at build time, maintaining both development flexibility and production performance:
 
-### Core Functionality Tests - 31 Individual Files
+### Core Functionality Tests - 32 Individual Files
 **Location**: `/tests/core/` (individual files) → `/tests/dist/core-functionality-tests.js` (concatenated)
 
 **Modular Structure**:
-- **31 individual test files** numbered 001-031 with descriptive names
+- **32 individual test files** numbered 001-032 with descriptive names
 - **Build-time concatenation** into single optimized file
 - **Smart test runner** automatically uses built version
 - **Development benefit**: No merge conflicts, focused editing
 
 **Characteristics**:
-- **31 unit tests** using `assertEquals()`, `assertThrows()` assertions
+- **32 unit tests** using `assertEquals()`, `assertThrows()` assertions
 - **Output**: Console logs with ✓ pass/✗ fail status + detailed error messages
 - **Environment**: Runs identically in both Node.js and browser
 - **Focus**: API correctness, error handling, data validation, mathematical accuracy
@@ -91,17 +91,17 @@ test('Surface creation with valid dimensions', () => {
 });
 ```
 
-### Visual Rendering Tests - 56 Individual Files
+### Visual Rendering Tests - 60 Individual Files
 **Location**: `/tests/visual/` (individual files) → `/tests/dist/visual-rendering-tests.js` (concatenated)
 
 **Modular Structure**:
-- **56 individual test files** numbered 001-056 with descriptive names
+- **60 individual test files** numbered 001-060 with descriptive names
 - **Build-time concatenation** preserves registerVisualTest pattern
 - **Smart test runner** with automatic fallback to original
 - **Development benefit**: Isolated test development, clear organization
 
 **Characteristics**:
-- **57 visual tests** that generate actual rendered images
+- **60 visual tests** that generate actual rendered images
 - **Output**: BMP files (Node.js) + side-by-side comparison (browser)
 - **Environment**: BMP generation in Node.js, visual comparison in browser
 - **Focus**: Rendering accuracy, visual consistency, pixel-perfect output
@@ -113,6 +113,7 @@ test('Surface creation with valid dimensions', () => {
 - ✅ **Phase 4**: Combined features (transform+clip+fill+stroke integration) - 7 tests
 - ✅ **Phase 5**: Image operations (drawImage with transforms and alpha) - 6 tests
 - ✅ **Stroke Rendering**: Line styles, caps, joins, sub-pixel accuracy - 6 tests
+- ✅ **Line Dashing**: Dash patterns, offsets, complex paths - 3 tests
 - ✅ **Debug & Analysis**: Specific rendering issue investigation - 6 tests
 
 **Example Modular Test File** (`/tests/visual/002-alpha-blending-test.js`):

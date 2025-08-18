@@ -40,7 +40,7 @@ src/Point.js                  # Immutable 2D point operations
 src/Rectangle.js              # Immutable rectangle operations
 src/PolygonFiller.js          # Scanline polygon filling with stencil clipping
 src/PathFlattener.js          # Converts paths to polygons
-src/StrokeGenerator.js        # Geometric stroke path generation
+src/StrokeGenerator.js        # Geometric stroke path generation with line dashing
 src/BitmapEncoder.js          # BMP file format encoding
 src/ClipMask.js               # 1-bit stencil buffer clipping implementation
 src/ImageProcessor.js         # ImageLike validation and format conversion
@@ -91,6 +91,15 @@ src/ColorParser.js            # CSS color string parsing (hex, rgb, named colors
 - **Visual consistency**: Maintains deterministic pixel-perfect output across platforms
 - **Browser compatibility**: Matches modern HTML5Canvas behavior for edge cases
 
+#### Line Dashing System
+- **HTML5 Canvas-compatible API**: `setLineDash()`, `getLineDash()`, `lineDashOffset` property
+- **Deterministic dash patterns**: Consistent dash spacing across all platforms 
+- **Complex path support**: Works with curves, arcs, transforms, and clipping
+- **Odd-length pattern handling**: Automatically duplicates odd-length arrays per HTML5 spec
+- **Implementation location**: `StrokeGenerator.js` applies dash patterns before stroke generation
+- **Algorithm**: Walks path segments, breaks at dash boundaries, generates only visible segments
+- **State management**: Dash properties saved/restored with context state stack
+
 ## Build & Test Commands
 
 See README.md for complete build and test instructions.
@@ -114,7 +123,7 @@ SWCanvas uses a comprehensive test system with modular architecture. See `tests/
 - Build utilities and renumbering tools
 - Cross-platform validation approach
 
-Quick reference: `npm run build` then `npm test` to run all 31 core + 57 visual tests.
+Quick reference: `npm run build` then `npm test` to run all 32 core + 60 visual tests.
 
 #### Smart Test Runner Architecture
 ```javascript
@@ -130,15 +139,15 @@ if (fs.existsSync('./tests/dist/core-functionality-tests.js')) {
 ### Modular File Structure
 ```
 /tests/
-├── core/                               # 31 individual core test files
+├── core/                               # 32 individual core test files
 │   ├── 001-surface-creation-valid.js
 │   ├── 015-alpha-blending-test.js
-│   ├── 031-transform-matrix-order-dependency.js
-│   └── ... (28 more files)
+│   ├── 032-line-dash-api-test.js
+│   └── ... (29 more files)
 ├── visual/                             # 60 individual visual test files
 │   ├── 001-simple-rectangle-test.js
-│   ├── 027-fill-rule-complex-test.js
-│   ├── 060-stroke-pixel-analysis-test.js
+│   ├── 058-line-dash-basic-patterns-test.js
+│   ├── 060-line-dash-complex-paths-test.js
 │   └── ... (57 more files)
 ├── browser/                            # Browser-specific test files
 │   ├── index.html                      # Main browser test page (moved from examples/)
@@ -154,7 +163,8 @@ if (fs.existsSync('./tests/dist/core-functionality-tests.js')) {
 ├── run-tests.js                        # Smart test runner with auto-detection
 └── output/                             # Generated BMP files
     ├── 001-simple-rectangle-test.bmp
-    ├── 060-stroke-pixel-analysis-test.bmp
+    ├── 058-line-dash-basic-patterns.bmp
+    ├── 060-line-dash-complex-paths.bmp
     └── ... (60+ BMP files)
 ```
 
