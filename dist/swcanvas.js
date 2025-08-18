@@ -2112,9 +2112,13 @@ class StrokeGenerator {
         
         // Flatten path to get line segments
         const pathPolygons = PathFlattener.flattenPath(path);
+        
+        // Apply dash pattern if specified
+        const dashedPolygons = StrokeGenerator._applyDashPattern(pathPolygons, validatedProps);
+        
         const strokePolygons = [];
         
-        for (const polygon of pathPolygons) {
+        for (const polygon of dashedPolygons) {
             if (polygon.length < 2) continue;
             
             const strokeParts = StrokeGenerator._generateStrokeForPolygon(
@@ -2137,7 +2141,9 @@ class StrokeGenerator {
             lineWidth: 1.0,
             lineJoin: 'miter',
             lineCap: 'butt',
-            miterLimit: 10.0
+            miterLimit: 10.0,
+            lineDash: [],
+            lineDashOffset: 0
         };
         
         const validated = { ...defaults, ...props };
@@ -2161,6 +2167,179 @@ class StrokeGenerator {
         }
         
         return validated;
+    }
+    
+    /**
+     * Apply dash pattern to path polygons
+     * @param {Array<Array>} pathPolygons - Original path polygons
+     * @param {Object} strokeProps - Stroke properties including dash settings
+     * @returns {Array<Array>} Dashed polygons (only visible segments)
+     * @private
+     */
+    static _applyDashPattern(pathPolygons, strokeProps) {
+        if (!strokeProps.lineDash || strokeProps.lineDash.length === 0) {
+            return pathPolygons; // No dashing - return original polygons
+        }
+        
+        const dashedPolygons = [];
+        
+        for (const polygon of pathPolygons) {
+            if (polygon.length < 2) continue;
+            
+            const dashedSegments = StrokeGenerator._dashPolygon(
+                polygon, 
+                strokeProps.lineDash, 
+                strokeProps.lineDashOffset
+            );
+            
+            dashedPolygons.push(...dashedSegments);
+        }
+        
+        return dashedPolygons;
+    }
+    
+    /**
+     * Apply dash pattern to a single polygon
+     * @param {Array} points - Array of {x, y} points
+     * @param {Array<number>} lineDash - Dash pattern array
+     * @param {number} lineDashOffset - Starting offset
+     * @returns {Array<Array>} Array of dashed polygon segments
+     * @private
+     */
+    static _dashPolygon(points, lineDash, lineDashOffset) {
+        if (points.length < 2) return [];
+        
+        const dashedSegments = [];
+        const patternLength = lineDash.reduce((sum, segment) => sum + segment, 0);
+        
+        if (patternLength <= 0) {
+            return [points]; // Invalid pattern - return original
+        }
+        
+        // Normalize offset to be within pattern bounds
+        let normalizedOffset = lineDashOffset % patternLength;
+        if (normalizedOffset < 0) {
+            normalizedOffset += patternLength;
+        }
+        
+        let currentDistance = 0;
+        let patternPosition = normalizedOffset;
+        let patternIndex = 0;
+        let isDash = true; // Start with assuming we're in a dash
+        
+        // Find starting pattern index and dash/gap state
+        let tempPos = 0;
+        for (let i = 0; i < lineDash.length; i++) {
+            if (tempPos + lineDash[i] > normalizedOffset) {
+                patternIndex = i;
+                patternPosition = normalizedOffset - tempPos;
+                isDash = (i % 2 === 0); // Even indices are dashes, odd are gaps
+                break;
+            }
+            tempPos += lineDash[i];
+        }
+        
+        let currentSegment = [];
+        
+        for (let i = 0; i < points.length - 1; i++) {
+            const p1 = points[i];
+            const p2 = points[i + 1];
+            
+            const segmentLength = Math.sqrt(
+                Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2)
+            );
+            
+            if (segmentLength === 0) continue; // Skip zero-length segments
+            
+            const segmentProcessed = StrokeGenerator._processSegmentWithDash(
+                p1, p2, segmentLength, lineDash, patternIndex, patternPosition, 
+                isDash, currentSegment, dashedSegments
+            );
+            
+            // Update state for next segment
+            patternIndex = segmentProcessed.patternIndex;
+            patternPosition = segmentProcessed.patternPosition;
+            isDash = segmentProcessed.isDash;
+            currentSegment = segmentProcessed.currentSegment;
+        }
+        
+        // Add any remaining segment
+        if (currentSegment.length > 1) {
+            dashedSegments.push(currentSegment);
+        }
+        
+        return dashedSegments;
+    }
+    
+    /**
+     * Process a single line segment with dash pattern
+     * @param {Object} p1 - Start point {x, y}
+     * @param {Object} p2 - End point {x, y}
+     * @param {number} segmentLength - Length of segment
+     * @param {Array<number>} lineDash - Dash pattern
+     * @param {number} patternIndex - Current pattern index
+     * @param {number} patternPosition - Position within current pattern segment
+     * @param {boolean} isDash - Whether currently in dash or gap
+     * @param {Array} currentSegment - Current dash segment being built
+     * @param {Array} dashedSegments - Array to add completed segments to
+     * @returns {Object} Updated state
+     * @private
+     */
+    static _processSegmentWithDash(p1, p2, segmentLength, lineDash, patternIndex, patternPosition, isDash, currentSegment, dashedSegments) {
+        let remainingLength = segmentLength;
+        let currentPoint = p1;
+        
+        // Add start point to current segment if we're in a dash
+        if (isDash && currentSegment.length === 0) {
+            currentSegment.push({x: p1.x, y: p1.y});
+        }
+        
+        while (remainingLength > 0) {
+            const currentPatternSegment = lineDash[patternIndex];
+            const remainingInPattern = currentPatternSegment - patternPosition;
+            const distanceToUse = Math.min(remainingLength, remainingInPattern);
+            
+            // Calculate intermediate point
+            const t = (segmentLength - remainingLength + distanceToUse) / segmentLength;
+            const intermediatePoint = {
+                x: p1.x + t * (p2.x - p1.x),
+                y: p1.y + t * (p2.y - p1.y)
+            };
+            
+            if (isDash) {
+                currentSegment.push({x: intermediatePoint.x, y: intermediatePoint.y});
+            }
+            
+            remainingLength -= distanceToUse;
+            patternPosition += distanceToUse;
+            
+            // Check if we've completed current pattern segment
+            if (patternPosition >= currentPatternSegment) {
+                if (isDash && currentSegment.length > 1) {
+                    dashedSegments.push(currentSegment);
+                    currentSegment = [];
+                }
+                
+                // Move to next pattern segment
+                patternIndex = (patternIndex + 1) % lineDash.length;
+                patternPosition = 0;
+                isDash = !isDash;
+                
+                // Start new segment if entering dash
+                if (isDash && remainingLength > 0) {
+                    currentSegment = [{x: intermediatePoint.x, y: intermediatePoint.y}];
+                }
+            }
+            
+            currentPoint = intermediatePoint;
+        }
+        
+        return {
+            patternIndex: patternIndex,
+            patternPosition: patternPosition,
+            isDash: isDash,
+            currentSegment: currentSegment
+        };
     }
     
     /**
@@ -3774,6 +3953,11 @@ class Context2D {
         this.lineCap = 'butt';    // 'butt', 'round', 'square'
         this.miterLimit = 10.0;
         
+        // Line dash properties
+        this._lineDash = [];         // Internal working dash pattern (may be duplicated)
+        this._originalLineDash = []; // Original pattern as set by user
+        this._lineDashOffset = 0;    // Starting offset into dash pattern
+        
         // Internal path and clipping
         this._currentPath = new Path2D();
         
@@ -3800,7 +3984,10 @@ class Context2D {
             lineWidth: this.lineWidth,
             lineJoin: this.lineJoin,
             lineCap: this.lineCap,
-            miterLimit: this.miterLimit
+            miterLimit: this.miterLimit,
+            lineDash: this._lineDash.slice(),    // Copy working dash pattern array
+            originalLineDash: this._originalLineDash.slice(), // Copy original pattern
+            lineDashOffset: this._lineDashOffset
         });
     }
 
@@ -3821,6 +4008,9 @@ class Context2D {
     this.lineJoin = state.lineJoin;
     this.lineCap = state.lineCap;
     this.miterLimit = state.miterLimit;
+    this._lineDash = state.lineDash || [];
+    this._originalLineDash = state.originalLineDash || [];
+    this._lineDashOffset = state.lineDashOffset || 0;
     }
 
     // Transform methods
@@ -4006,7 +4196,9 @@ class Context2D {
         lineWidth: this.lineWidth,
         lineJoin: this.lineJoin,
         lineCap: this.lineCap,
-        miterLimit: this.miterLimit
+        miterLimit: this.miterLimit,
+        lineDash: this._lineDash.slice(),    // Copy to avoid mutation
+        lineDashOffset: this._lineDashOffset
     });
     
     this.rasterizer.endOp();
@@ -4183,6 +4375,18 @@ class Context2D {
 
     // Image rendering
     drawImage(image, sx, sy, sw, sh, dx, dy, dw, dh) {
+    // Debug logging for browser troubleshooting
+    if (typeof console !== 'undefined' && console.log) {
+        console.log('Core drawImage called with:', {
+            imageType: image ? image.constructor.name : 'null',
+            hasWidth: image ? typeof image.width : 'N/A',
+            hasHeight: image ? typeof image.height : 'N/A',
+            hasData: image ? !!image.data : 'N/A',
+            dataType: image && image.data ? image.data.constructor.name : 'N/A',
+            dataInstanceCheck: image && image.data ? (image.data instanceof Uint8ClampedArray) : 'N/A'
+        });
+    }
+    
     // Validate ImageLike object at API level
     if (!image || typeof image !== 'object') {
         throw new Error('First argument must be an ImageLike object');
@@ -4213,6 +4417,66 @@ class Context2D {
     
     // End rasterizer operation
     this.rasterizer.endOp();
+    }
+
+    // Line dash methods
+    
+    /**
+     * Set line dash pattern
+     * @param {Array<number>} segments - Array of dash and gap lengths
+     */
+    setLineDash(segments) {
+        if (!Array.isArray(segments)) {
+            throw new Error('setLineDash expects an array');
+        }
+        
+        // Validate all segments are numbers and non-negative
+        for (let i = 0; i < segments.length; i++) {
+            if (typeof segments[i] !== 'number' || isNaN(segments[i])) {
+                throw new Error('Dash segments must be numbers');
+            }
+            if (segments[i] < 0) {
+                throw new Error('Dash segments must be non-negative');
+            }
+        }
+        
+        // Store original pattern for getLineDash()
+        this._originalLineDash = segments.slice();
+        
+        // Create working pattern - duplicate if odd length
+        // This matches HTML5 Canvas behavior: [5, 10, 15] becomes [5, 10, 15, 5, 10, 15]
+        this._lineDash = segments.slice();
+        if (this._lineDash.length % 2 === 1) {
+            this._lineDash = this._lineDash.concat(this._lineDash);
+        }
+    }
+    
+    /**
+     * Get current line dash pattern
+     * @returns {Array<number>} Copy of current dash pattern
+     */
+    getLineDash() {
+        // Return copy of original pattern as set by user
+        return this._originalLineDash.slice();
+    }
+    
+    /**
+     * Set line dash offset
+     * @param {number} offset - Starting offset into dash pattern
+     */
+    set lineDashOffset(offset) {
+        if (typeof offset !== 'number' || isNaN(offset)) {
+            return; // Silently ignore invalid values like HTML5 Canvas
+        }
+        this._lineDashOffset = offset;
+    }
+    
+    /**
+     * Get line dash offset
+     * @returns {number} Current dash offset
+     */
+    get lineDashOffset() {
+        return this._lineDashOffset;
     }
 }
 /**
@@ -4477,6 +4741,9 @@ class CanvasCompatibleContext2D {
     get miterLimit() { return this._core.miterLimit; }
     set miterLimit(value) { this._core.miterLimit = value; }
     
+    get lineDashOffset() { return this._core.lineDashOffset; }
+    set lineDashOffset(value) { this._core.lineDashOffset = value; }
+    
     // ===== STATE MANAGEMENT =====
     
     save() {
@@ -4582,6 +4849,15 @@ class CanvasCompatibleContext2D {
         }
     }
     
+    // Line dash methods
+    setLineDash(segments) {
+        this._core.setLineDash(segments);
+    }
+    
+    getLineDash() {
+        return this._core.getLineDash();
+    }
+    
     clip(pathOrFillRule, fillRule) {
         if (typeof pathOrFillRule === 'string') {
             // clip(fillRule)
@@ -4598,6 +4874,19 @@ class CanvasCompatibleContext2D {
     // ===== IMAGE DRAWING =====
     
     drawImage(image, ...args) {
+        // Debug logging for browser troubleshooting
+        if (typeof console !== 'undefined' && console.log) {
+            console.log('CanvasCompatibleContext2D.drawImage called with:', {
+                imageType: image ? image.constructor.name : 'null',
+                hasGetContext: image && typeof image.getContext === 'function',
+                hasWidth: image ? typeof image.width : 'N/A',
+                hasHeight: image ? typeof image.height : 'N/A', 
+                hasData: image ? !!image.data : 'N/A',
+                isSWCanvasElement: image instanceof SWCanvasElement,
+                argsLength: args.length
+            });
+        }
+        
         // Handle SWCanvasElement specially
         if (image && image instanceof SWCanvasElement) {
             this._core.drawImage(image._imageData, ...args);
