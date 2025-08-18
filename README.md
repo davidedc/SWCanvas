@@ -8,7 +8,7 @@ A deterministic 2D raster engine with Canvas-like API. SWCanvas provides pixel-p
 - **HTML5 Canvas Compatibility**: Drop-in replacement with familiar API  
 - **Object-Oriented Design**: Clean ES6 classes following effective OO principles
 - **Memory Efficient Clipping**: Stencil-based clipping system with proper intersection support
-- **Comprehensive Test Coverage**: 32 core tests + 60 visual tests ensuring pixel-perfect accuracy with modular architecture
+- **Comprehensive Test Coverage**: 32 core tests + 68 visual tests ensuring pixel-perfect accuracy with modular architecture
 - **Immutable Value Objects**: Point, Rectangle, Transform2D, Color prevent mutation bugs
 - **Cross-Platform**: Works in Node.js and browsers
 - **No Dependencies**: Pure JavaScript implementation
@@ -24,7 +24,7 @@ npm run build
 This generates:
 - `dist/swcanvas.js` containing the complete library
 - `tests/dist/core-functionality-tests.js` from 31 individual test files in `/tests/core/`
-- `tests/dist/visual-rendering-tests.js` from 60 individual test files in `/tests/visual/`
+- `tests/dist/visual-rendering-tests.js` from 68 individual test files in `/tests/visual/`
 
 ### Node.js Usage
 
@@ -91,20 +91,20 @@ npm test
 
 This runs:
 - 32 modular core functionality tests (automatically uses built tests from `/tests/core/`)
-- 60 visual rendering tests generating BMPs in `tests/output/`
+- 68 visual rendering tests generating BMPs in `tests/output/`
 
 ### Browser Tests
 
 Open `tests/browser/index.html` in a web browser for:
 - Side-by-side HTML5 Canvas vs SWCanvas comparisons  
 - Interactive visual tests
-- All 60 visual rendering test comparisons (automatically uses built modular tests)
+- All 68 visual rendering test comparisons (automatically uses built modular tests)
 - BMP download functionality
 
 ### Test Architecture
 
 - **Core Functionality Tests** (32): Individual test files in `/tests/core/` - API correctness, edge cases, mathematical accuracy
-- **Visual Rendering Tests** (60): Individual test files in `/tests/visual/` - Pixel-perfect rendering verification with BMP generation  
+- **Visual Rendering Tests** (68): Individual test files in `/tests/visual/` - Pixel-perfect rendering verification with BMP generation  
 - **Browser Tests**: Interactive visual comparison tools using built test suites with HTML5 Canvas vs SWCanvas side-by-side
 
 The modular architecture allows individual test development while maintaining build-time concatenation for performance.
@@ -211,6 +211,103 @@ const color = new SWCanvas.Core.Color(255, 128, 0, 200);
 ctx.setFillStyle(color.r, color.g, color.b, color.a);
 ```
 
+### Gradients and Patterns
+
+SWCanvas supports HTML5 Canvas-compatible gradients and patterns for advanced fill and stroke operations:
+
+#### HTML5 Canvas-Compatible API
+```javascript
+const canvas = SWCanvas.createCanvas(400, 300);
+const ctx = canvas.getContext('2d');
+
+// Linear gradients
+const linearGrad = ctx.createLinearGradient(0, 0, 200, 0);
+linearGrad.addColorStop(0, 'red');
+linearGrad.addColorStop(0.5, 'yellow');
+linearGrad.addColorStop(1, 'blue');
+ctx.fillStyle = linearGrad;
+ctx.fillRect(10, 10, 200, 100);
+
+// Radial gradients  
+const radialGrad = ctx.createRadialGradient(150, 75, 0, 150, 75, 50);
+radialGrad.addColorStop(0, '#ff0000');
+radialGrad.addColorStop(1, '#0000ff');
+ctx.fillStyle = radialGrad;
+ctx.fillRect(100, 50, 100, 100);
+
+// Conic gradients (CSS conic-gradient equivalent)
+const conicGrad = ctx.createConicGradient(Math.PI / 4, 200, 150);
+conicGrad.addColorStop(0, 'red');
+conicGrad.addColorStop(0.25, 'yellow');
+conicGrad.addColorStop(0.5, 'lime');
+conicGrad.addColorStop(0.75, 'aqua');
+conicGrad.addColorStop(1, 'red');
+ctx.fillStyle = conicGrad;
+ctx.fillRect(150, 100, 100, 100);
+
+// Patterns with ImageLike objects
+const patternImage = ctx.createImageData(20, 20);
+// ... fill patternImage.data with pattern ...
+const pattern = ctx.createPattern(patternImage, 'repeat');
+ctx.fillStyle = pattern;
+ctx.fillRect(50, 150, 150, 100);
+
+// Gradients work with strokes too
+ctx.strokeStyle = linearGrad;
+ctx.lineWidth = 5;
+ctx.strokeRect(250, 50, 100, 100);
+```
+
+#### Core API (Performance)
+```javascript
+const surface = SWCanvas.Core.Surface(400, 300);
+const ctx = new SWCanvas.Core.Context2D(surface);
+
+// Linear gradients
+const linearGrad = ctx.createLinearGradient(0, 0, 200, 0);
+linearGrad.addColorStop(0, new SWCanvas.Core.Color(255, 0, 0, 255));
+linearGrad.addColorStop(1, new SWCanvas.Core.Color(0, 0, 255, 255));
+ctx.setFillStyle(linearGrad);
+ctx.fillRect(10, 10, 200, 100);
+
+// Radial gradients
+const radialGrad = ctx.createRadialGradient(150, 75, 0, 150, 75, 50);
+radialGrad.addColorStop(0, new SWCanvas.Core.Color(255, 255, 0, 255));
+radialGrad.addColorStop(1, new SWCanvas.Core.Color(255, 0, 255, 255));
+ctx.setStrokeStyle(radialGrad);
+ctx.lineWidth = 8;
+ctx.beginPath();
+ctx.arc(150, 75, 40);
+ctx.stroke();
+
+// Conic gradients
+const conicGrad = ctx.createConicGradient(0, 200, 150);
+conicGrad.addColorStop(0, new SWCanvas.Core.Color(255, 0, 0, 255));
+conicGrad.addColorStop(0.33, new SWCanvas.Core.Color(0, 255, 0, 255));
+conicGrad.addColorStop(0.66, new SWCanvas.Core.Color(0, 0, 255, 255));
+conicGrad.addColorStop(1, new SWCanvas.Core.Color(255, 0, 0, 255));
+ctx.setFillStyle(conicGrad);
+ctx.fillRect(150, 100, 100, 100);
+
+// Patterns
+const imagelike = { width: 10, height: 10, data: new Uint8ClampedArray(400) };
+// ... fill imagelike.data ...
+const pattern = ctx.createPattern(imagelike, 'repeat-x');
+ctx.setFillStyle(pattern);
+ctx.fillRect(50, 200, 200, 50);
+```
+
+#### Pattern Repetition Modes
+- `'repeat'` - Tile in both directions (default)
+- `'repeat-x'` - Tile horizontally only
+- `'repeat-y'` - Tile vertically only  
+- `'no-repeat'` - Display once at pattern origin
+
+#### Gradient Types
+- **LinearGradient**: `createLinearGradient(x0, y0, x1, y1)` - Linear color transition
+- **RadialGradient**: `createRadialGradient(x0, y0, r0, x1, y1, r1)` - Radial color transition
+- **ConicGradient**: `createConicGradient(startAngle, centerX, centerY)` - Conic sweep transition
+
 ### Core API Classes
 
 SWCanvas provides rich OO classes for advanced operations through the Core API:
@@ -283,10 +380,12 @@ const bmpData = SWCanvas.Core.BitmapEncoder.encode(surface);
 - **Path2D**: Path definition and flattening
 - **Rasterizer**: Low-level pixel operations
 - **Color**: Immutable color handling with premultiplied alpha support
+- **Gradients**: Paint source objects for linear, radial, and conic gradients with color stops
+- **Pattern**: Paint source objects for repeating image patterns with repetition modes
 - **Geometry**: Point and Rectangle value objects
 - **StencilBuffer**: 1-bit clipping buffer management
 - **DrawingState**: Context state stack management
-- **PolygonFiller**: Scanline-based polygon filling (static methods)
+- **PolygonFiller**: Scanline-based polygon filling with paint source support
 - **StrokeGenerator**: Geometric stroke generation (static methods)  
 - **PathFlattener**: Path-to-polygon conversion (static methods)
 - **BitmapEncoder**: BMP file format export (static methods)
@@ -318,19 +417,20 @@ const bmpData = SWCanvas.Core.BitmapEncoder.encode(surface);
 src/              # Source files (ES6 Classes)
 ├── Context2D.js     # Main drawing API (class)
 ├── Surface.js       # Memory management (ES6 class) 
-├── Matrix.js        # Transform mathematics (immutable class)
+├── Transform2D.js   # Transform mathematics (immutable class)
 ├── Rasterizer.js    # Low-level rendering (ES6 class)
 ├── Color.js         # Immutable color handling (class)
 ├── Point.js         # Immutable 2D point operations (class)
 ├── Rectangle.js     # Immutable rectangle operations (class)
-├── StencilBuffer.js # 1-bit clipping buffer (class)
-├── DrawingState.js  # State stack management (class)
-├── ClipMaskHelper.js # 1-bit stencil buffer utilities (static methods)
+├── Gradient.js      # Gradient paint sources (linear, radial, conic)
+├── Pattern.js       # Pattern paint sources with repetition modes
+├── ClipMask.js      # 1-bit clipping buffer (class)
 ├── ImageProcessor.js # ImageLike validation and conversion (static methods)
-├── PolygonFiller.js # Scanline polygon filling (static methods)
+├── PolygonFiller.js # Scanline polygon filling with paint sources (static methods)
 ├── StrokeGenerator.js # Stroke generation (static methods)
 ├── PathFlattener.js # Path to polygon conversion (static methods)
 ├── BitmapEncoder.js # BMP file encoding (static methods)
+├── ColorParser.js   # CSS color string parsing (static methods)
 └── Path2D.js        # Path definition (class)
 
 tests/            # Test suite
@@ -350,8 +450,8 @@ dist/             # Built library
 ## Test Architecture
 
 SWCanvas uses a comprehensive dual test system:
-- **31 core functionality tests**: Programmatic API verification with assertions
-- **57 visual rendering tests**: Pixel-perfect BMP generation and comparison
+- **32 core functionality tests**: Programmatic API verification with assertions
+- **68 visual rendering tests**: Pixel-perfect BMP generation and comparison
 - **Modular architecture**: Individual test files auto-concatenated at build time
 
 See [tests/README.md](tests/README.md) for complete test documentation, adding tests, and build utilities.
@@ -364,23 +464,26 @@ The build script (`build.sh`) concatenates source files in dependency order, fol
 1. Color - Immutable color handling
 2. Point - Immutable 2D point operations
 3. Rectangle - Immutable rectangle operations
-4. Matrix - Transformation mathematics
+4. Transform2D - Transformation mathematics
 5. Path2D - Path definitions
 6. Surface - Memory buffer management
 
 **Phase 2: Service Classes**
 7. BitmapEncoder - BMP file encoding (static methods)
 8. PathFlattener - Path-to-polygon conversion (static methods)
-9. PolygonFiller - Scanline filling (static methods)
+9. PolygonFiller - Scanline filling with paint sources (static methods)
 10. StrokeGenerator - Stroke generation (static methods) 
-11. ClipMaskHelper - 1-bit stencil buffer utilities (static methods)
+11. ClipMask - 1-bit stencil buffer management (class)
 12. ImageProcessor - ImageLike validation and conversion (static methods)
-13. StencilBuffer - 1-bit clipping buffer management (class)
+13. ColorParser - CSS color string parsing (static methods)
 
-**Phase 3: State and Rendering Classes**
-14. DrawingState - State stack management (class)
-15. Rasterizer - Rendering pipeline (class)
-16. Context2D - Main drawing API (class)
+**Phase 2.5: Paint Sources**
+14. Gradient - Linear, radial, and conic gradient paint sources
+15. Pattern - Repeating image pattern paint sources
+
+**Phase 3: Rendering Classes**
+16. Rasterizer - Rendering pipeline (class)
+17. Context2D - Main drawing API (class)
 
 ## License
 

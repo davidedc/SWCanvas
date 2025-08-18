@@ -13,7 +13,8 @@ This file provides Claude with essential context about the SWCanvas project for 
 - **Drop-in replacement**: True HTML5 Canvas 2D Context compatibility
 - **Memory efficient**: 1-bit stencil clipping, optimized algorithms
 - **Sub-pixel accurate**: Thin strokes render with proportional opacity (no anti-aliasing)
-- **Well-tested**: 31 core tests + 60 visual tests with pixel-perfect validation
+- **Well-tested**: 32 core tests + 68 visual tests with pixel-perfect validation
+- **Paint Sources**: Full HTML5-compatible gradients (linear, radial, conic) and patterns
 
 ## API Usage
 
@@ -36,9 +37,11 @@ src/Surface.js                # Memory buffer management - RGBA pixel data
 src/Transform2D.js            # Immutable transformation matrix mathematics
 src/Path2D.js                 # Path definition and command recording
 src/Color.js                  # Immutable color handling with premultiplied alpha
+src/Gradient.js               # Linear, radial, and conic gradient paint sources
+src/Pattern.js                # Repeating image pattern paint sources
 src/Point.js                  # Immutable 2D point operations
 src/Rectangle.js              # Immutable rectangle operations
-src/PolygonFiller.js          # Scanline polygon filling with stencil clipping
+src/PolygonFiller.js          # Scanline polygon filling with paint source support
 src/PathFlattener.js          # Converts paths to polygons
 src/StrokeGenerator.js        # Geometric stroke path generation with line dashing
 src/BitmapEncoder.js          # BMP file format encoding
@@ -100,6 +103,17 @@ src/ColorParser.js            # CSS color string parsing (hex, rgb, named colors
 - **Algorithm**: Walks path segments, breaks at dash boundaries, generates only visible segments
 - **State management**: Dash properties saved/restored with context state stack
 
+#### Paint Source System
+- **Unified paint source architecture**: Colors, gradients, and patterns all implement consistent interface
+- **LinearGradient**: Linear color transitions with `addColorStop()` API matching HTML5 Canvas
+- **RadialGradient**: Radial color transitions between two circles (inner/outer radius)
+- **ConicGradient**: Sweep gradients around a center point with configurable start angle
+- **Pattern**: Repeating image patterns with repetition modes (`repeat`, `repeat-x`, `repeat-y`, `no-repeat`)
+- **Per-pixel evaluation**: All paint sources evaluated at rasterization time with transform awareness
+- **Color interpolation**: Linear interpolation between color stops for smooth gradients
+- **Global alpha support**: Global alpha correctly applied during per-pixel paint evaluation
+- **Implementation location**: `PolygonFiller.js` evaluates paint sources via `_evaluatePaintSource()` method
+
 ## Build & Test Commands
 
 See README.md for complete build and test instructions.
@@ -144,11 +158,12 @@ if (fs.existsSync('./tests/dist/core-functionality-tests.js')) {
 │   ├── 015-alpha-blending-test.js
 │   ├── 032-line-dash-api-test.js
 │   └── ... (29 more files)
-├── visual/                             # 60 individual visual test files
+├── visual/                             # 68 individual visual test files
 │   ├── 001-simple-rectangle-test.js
 │   ├── 058-line-dash-basic-patterns-test.js
 │   ├── 060-line-dash-complex-paths-test.js
-│   └── ... (57 more files)
+│   ├── 068-gradient-strokes-with-dashes-test.js
+│   └── ... (64 more files)
 ├── browser/                            # Browser-specific test files
 │   ├── index.html                      # Main browser test page (moved from examples/)
 │   ├── simple-test.html                # Simple visual comparison test
@@ -165,7 +180,7 @@ if (fs.existsSync('./tests/dist/core-functionality-tests.js')) {
     ├── 001-simple-rectangle-test.bmp
     ├── 058-line-dash-basic-patterns.bmp
     ├── 060-line-dash-complex-paths.bmp
-    └── ... (60+ BMP files)
+    └── ... (68+ BMP files)
 ```
 
 ## Common Tasks

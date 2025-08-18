@@ -31,6 +31,8 @@ Context2D.js        → High-performance rendering engine
 Transform2D.js      → Immutable transformation mathematics
 Point/Rectangle.js  → Pure geometric value objects
 Color.js            → Immutable color handling
+Gradient.js         → Linear, radial, and conic gradient paint sources
+Pattern.js          → Repeating image pattern paint sources
 Path2D.js           → Path definition and command recording
 ```
 
@@ -68,6 +70,7 @@ HTML5 Canvas has a fundamental dual nature that SWCanvas preserves through archi
 - **Drawing Operations**: `fillRect()`, `stroke()`, `fill()`, `drawImage()`
 - **State Management**: `save()`/`restore()` stack
 - **Style Properties**: `fillStyle`, `strokeStyle`, `lineWidth`
+- **Paint Sources**: `createLinearGradient()`, `createRadialGradient()`, `createConicGradient()`, `createPattern()`
 - **Transform Operations**: `translate()`, `rotate()`, `scale()`
 - **ImageData API**: `getImageData()`, `createImageData()`, `putImageData()`
 
@@ -141,6 +144,8 @@ SWCanvas.Core.* → Direct access to all engine classes
 - `Transform2D()` - Immutable transformation matrices
 - `Point()`, `Rectangle()` - Geometric value objects
 - `Color()` - Immutable color handling
+- `LinearGradient()`, `RadialGradient()`, `ConicGradient()` - Gradient paint sources
+- `Pattern()` - Repeating image pattern paint sources
 - `BitmapEncoder` - File format export utilities
 
 ## Interoperability Bridges
