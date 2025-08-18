@@ -102,6 +102,9 @@ class CanvasCompatibleContext2D {
     get miterLimit() { return this._core.miterLimit; }
     set miterLimit(value) { this._core.miterLimit = value; }
     
+    get lineDashOffset() { return this._core.lineDashOffset; }
+    set lineDashOffset(value) { this._core.lineDashOffset = value; }
+    
     // ===== STATE MANAGEMENT =====
     
     save() {
@@ -205,6 +208,15 @@ class CanvasCompatibleContext2D {
         } else {
             this._core.stroke();
         }
+    }
+    
+    // Line dash methods
+    setLineDash(segments) {
+        this._core.setLineDash(segments);
+    }
+    
+    getLineDash() {
+        return this._core.getLineDash();
     }
     
     clip(pathOrFillRule, fillRule) {

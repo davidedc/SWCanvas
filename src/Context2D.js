@@ -39,6 +39,11 @@ class Context2D {
         this.lineCap = 'butt';    // 'butt', 'round', 'square'
         this.miterLimit = 10.0;
         
+        // Line dash properties
+        this._lineDash = [];         // Internal working dash pattern (may be duplicated)
+        this._originalLineDash = []; // Original pattern as set by user
+        this._lineDashOffset = 0;    // Starting offset into dash pattern
+        
         // Internal path and clipping
         this._currentPath = new Path2D();
         
@@ -65,7 +70,10 @@ class Context2D {
             lineWidth: this.lineWidth,
             lineJoin: this.lineJoin,
             lineCap: this.lineCap,
-            miterLimit: this.miterLimit
+            miterLimit: this.miterLimit,
+            lineDash: this._lineDash.slice(),    // Copy working dash pattern array
+            originalLineDash: this._originalLineDash.slice(), // Copy original pattern
+            lineDashOffset: this._lineDashOffset
         });
     }
 
@@ -86,6 +94,9 @@ class Context2D {
     this.lineJoin = state.lineJoin;
     this.lineCap = state.lineCap;
     this.miterLimit = state.miterLimit;
+    this._lineDash = state.lineDash || [];
+    this._originalLineDash = state.originalLineDash || [];
+    this._lineDashOffset = state.lineDashOffset || 0;
     }
 
     // Transform methods
@@ -271,7 +282,9 @@ class Context2D {
         lineWidth: this.lineWidth,
         lineJoin: this.lineJoin,
         lineCap: this.lineCap,
-        miterLimit: this.miterLimit
+        miterLimit: this.miterLimit,
+        lineDash: this._lineDash.slice(),    // Copy to avoid mutation
+        lineDashOffset: this._lineDashOffset
     });
     
     this.rasterizer.endOp();
@@ -490,5 +503,65 @@ class Context2D {
     
     // End rasterizer operation
     this.rasterizer.endOp();
+    }
+
+    // Line dash methods
+    
+    /**
+     * Set line dash pattern
+     * @param {Array<number>} segments - Array of dash and gap lengths
+     */
+    setLineDash(segments) {
+        if (!Array.isArray(segments)) {
+            throw new Error('setLineDash expects an array');
+        }
+        
+        // Validate all segments are numbers and non-negative
+        for (let i = 0; i < segments.length; i++) {
+            if (typeof segments[i] !== 'number' || isNaN(segments[i])) {
+                throw new Error('Dash segments must be numbers');
+            }
+            if (segments[i] < 0) {
+                throw new Error('Dash segments must be non-negative');
+            }
+        }
+        
+        // Store original pattern for getLineDash()
+        this._originalLineDash = segments.slice();
+        
+        // Create working pattern - duplicate if odd length
+        // This matches HTML5 Canvas behavior: [5, 10, 15] becomes [5, 10, 15, 5, 10, 15]
+        this._lineDash = segments.slice();
+        if (this._lineDash.length % 2 === 1) {
+            this._lineDash = this._lineDash.concat(this._lineDash);
+        }
+    }
+    
+    /**
+     * Get current line dash pattern
+     * @returns {Array<number>} Copy of current dash pattern
+     */
+    getLineDash() {
+        // Return copy of original pattern as set by user
+        return this._originalLineDash.slice();
+    }
+    
+    /**
+     * Set line dash offset
+     * @param {number} offset - Starting offset into dash pattern
+     */
+    set lineDashOffset(offset) {
+        if (typeof offset !== 'number' || isNaN(offset)) {
+            return; // Silently ignore invalid values like HTML5 Canvas
+        }
+        this._lineDashOffset = offset;
+    }
+    
+    /**
+     * Get line dash offset
+     * @returns {number} Current dash offset
+     */
+    get lineDashOffset() {
+        return this._lineDashOffset;
     }
 }
