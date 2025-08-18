@@ -13,7 +13,7 @@ This file provides Claude with essential context about the SWCanvas project for 
 - **Drop-in replacement**: True HTML5 Canvas 2D Context compatibility
 - **Memory efficient**: 1-bit stencil clipping, optimized algorithms
 - **Sub-pixel accurate**: Thin strokes render with proportional opacity (no anti-aliasing)
-- **Well-tested**: 32 core tests + 68 visual tests with pixel-perfect validation
+- **Well-tested**: 32 core tests + 75 visual tests with pixel-perfect validation
 - **Paint Sources**: Full HTML5-compatible gradients (linear, radial, conic) and patterns
 
 ## API Usage
@@ -160,12 +160,13 @@ if (fs.existsSync('./tests/dist/core-functionality-tests.js')) {
 │   ├── 015-alpha-blending-test.js
 │   ├── 032-line-dash-api-test.js
 │   └── ... (29 more files)
-├── visual/                             # 68 individual visual test files
+├── visual/                             # 75 individual visual test files
 │   ├── 001-simple-rectangle-test.js
 │   ├── 058-line-dash-basic-patterns-test.js
 │   ├── 060-line-dash-complex-paths-test.js
 │   ├── 068-gradient-strokes-with-dashes-test.js
-│   └── ... (64 more files)
+│   ├── 075-gradient-strokes-with-dashes-subpixel-test.js
+│   └── ... (71 more files)
 ├── browser/                            # Browser-specific test files
 │   ├── index.html                      # Main browser test page (moved from examples/)
 │   ├── simple-test.html                # Simple visual comparison test
@@ -182,7 +183,7 @@ if (fs.existsSync('./tests/dist/core-functionality-tests.js')) {
     ├── 001-simple-rectangle-test.bmp
     ├── 058-line-dash-basic-patterns.bmp
     ├── 060-line-dash-complex-paths.bmp
-    └── ... (68+ BMP files)
+    └── ... (75+ BMP files)
 ```
 
 ## Common Tasks
