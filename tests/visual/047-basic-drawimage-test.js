@@ -12,7 +12,7 @@ registerVisualTest('drawimage-basic', {
         ctx.fillRect(0, 0, 200, 150);
         
         // Create test image compatible with both canvas types
-        const testImage = createCompatibleImage(20, 20, 'checkerboard', ctx);
+        const testImage = createTestImage(20, 20, 'checkerboard', ctx);
         
         // Draw at different positions
         ctx.drawImage(testImage, 10, 10);        // Basic position

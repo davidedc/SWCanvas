@@ -409,12 +409,12 @@ function buildVisualTestsWithDefaults() {
         ctx.putImageData(imageData, 0, 0);
     }
 
-    // Helper function to create test images with various patterns
-    function createTestImage(width, height, pattern) {
+    // Helper function to create test patterns (always RGBA)
+    function createTestPattern(width, height, pattern) {
         const image = {
             width: width,
             height: height,
-            data: new Uint8ClampedArray(width * height * 4)
+            data: new Uint8ClampedArray(width * height * 4) // Always RGBA
         };
         
         for (let y = 0; y < height; y++) {
@@ -451,34 +451,45 @@ function buildVisualTestsWithDefaults() {
                         image.data[i + 2] = 0;                    // B
                         image.data[i + 3] = Math.floor((x / width) * 255); // A gradient
                         break;
+                        
+                    case 'rgbtest':
+                        // RGBA pattern that simulates what an RGB conversion would look like
+                        image.data[i] = x < width / 2 ? 255 : 0;     // R
+                        image.data[i + 1] = y < height / 2 ? 255 : 0; // G
+                        image.data[i + 2] = (x + y) % 2 ? 255 : 0;   // B
+                        image.data[i + 3] = 255;                     // A (full opacity)
+                        break;
+                        
+                    case 'overlapping-squares':
+                        // Complex pattern: Red background with yellow and blue overlapping squares
+                        if (x >= 5 && x < 15 && y >= 5 && y < 15) {
+                            // Yellow square (5,5) to (15,15)
+                            image.data[i] = 255;     // R
+                            image.data[i + 1] = 255; // G
+                            image.data[i + 2] = 0;   // B
+                            image.data[i + 3] = 255; // A
+                        } else if (x >= 10 && x < 30 && y >= 10 && y < 30) {
+                            // Blue square (10,10) to (30,30)
+                            image.data[i] = 0;       // R
+                            image.data[i + 1] = 0;   // G
+                            image.data[i + 2] = 255; // B
+                            image.data[i + 3] = 255; // A
+                        } else {
+                            // Red background
+                            image.data[i] = 255;     // R
+                            image.data[i + 1] = 0;   // G
+                            image.data[i + 2] = 0;   // B
+                            image.data[i + 3] = 255; // A
+                        }
+                        break;
                 }
             }
         }
         
         return image;
     }
-    
-    // Helper function to create RGB test image (3 channels)
-    function createRGBTestImage(width, height) {
-        const image = {
-            width: width,
-            height: height,
-            data: new Uint8ClampedArray(width * height * 3) // RGB only
-        };
-        
-        for (let y = 0; y < height; y++) {
-            for (let x = 0; x < width; x++) {
-                const i = (y * width + x) * 3;
-                image.data[i] = x < width / 2 ? 255 : 0;     // R
-                image.data[i + 1] = y < height / 2 ? 255 : 0; // G
-                image.data[i + 2] = (x + y) % 2 ? 255 : 0;   // B
-            }
-        }
-        
-        return image;
-    }
 
-    // Helper function to create compatible images for both canvas types
+    // Helper function to create test images for different canvas implementations
     // 
     // This function has divergent code paths due to fundamental API incompatibility:
     // - Native HTML5 Canvas drawImage() only accepts DOM elements (HTMLCanvasElement, HTMLImageElement, etc.)
@@ -491,8 +502,8 @@ function buildVisualTestsWithDefaults() {
     // This divergence cannot be eliminated without either:
     // 1. Limiting SWCanvas to only accept DOM elements (losing ImageLike convenience)
     // 2. Modifying browser Canvas API (impossible)
-    function createCompatibleImage(width, height, pattern, ctx) {
-        const imagelike = createTestImage(width, height, pattern);
+    function createTestImage(width, height, pattern, ctx) {
+        const imagelike = createTestPattern(width, height, pattern);
         
         // For HTML5 Canvas, create a temporary canvas element
         // Detection: !ctx._core (not SWCanvas) && document exists (browser environment)
@@ -503,9 +514,10 @@ function buildVisualTestsWithDefaults() {
             const tempCtx = tempCanvas.getContext('2d');
             
             const imageData = tempCtx.createImageData(width, height);
+            // Always RGBA data - copy directly
             imageData.data.set(imagelike.data);
-            tempCtx.putImageData(imageData, 0, 0);
             
+            tempCtx.putImageData(imageData, 0, 0);
             return tempCanvas;
         }
         
@@ -513,38 +525,6 @@ function buildVisualTestsWithDefaults() {
         return imagelike;
     }
 
-    // Helper function for RGB images
-    // 
-    // Same API incompatibility as above - native HTML5 Canvas cannot accept
-    // plain ImageLike objects, so we must convert RGB pixel data to HTMLCanvasElement
-    // for browser testing while SWCanvas can handle ImageLike objects directly.
-    function createCompatibleRGBImage(width, height, ctx) {
-        const rgbImagelike = createRGBTestImage(width, height);
-        
-        // For HTML5 Canvas, create a temporary canvas element
-        // Same detection logic: native Canvas in browser environment
-        if (!ctx._core && typeof document !== 'undefined') {
-            const tempCanvas = document.createElement('canvas');
-            tempCanvas.width = width;
-            tempCanvas.height = height;
-            const tempCtx = tempCanvas.getContext('2d');
-            
-            const imageData = tempCtx.createImageData(width, height);
-            // Convert RGB to RGBA
-            for (let i = 0, j = 0; i < rgbImagelike.data.length; i += 3, j += 4) {
-                imageData.data[j] = rgbImagelike.data[i];     // R
-                imageData.data[j + 1] = rgbImagelike.data[i + 1]; // G
-                imageData.data[j + 2] = rgbImagelike.data[i + 2]; // B
-                imageData.data[j + 3] = 255; // A
-            }
-            tempCtx.putImageData(imageData, 0, 0);
-            
-            return tempCanvas;
-        }
-        
-        // For SWCanvas, return the RGB ImageLike object directly
-        return rgbImagelike;
-    }
 
     // Helper function to register a visual test with unified API
     function registerVisualTest(testName, testConfig) {

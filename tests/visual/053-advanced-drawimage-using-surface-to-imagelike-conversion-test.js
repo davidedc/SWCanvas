@@ -12,35 +12,8 @@ registerVisualTest('drawimage-surface-conversion', {
         ctx.fillStyle = 'white';
         ctx.fillRect(0, 0, 200, 150);
         
-        // Create source image using new unified createImageData API
-        const sourceImage = ctx.createImageData(40, 40);
-        
-        // Populate with pixel data
-        for (let y = 0; y < 40; y++) {
-            for (let x = 0; x < 40; x++) {
-                const offset = (y * 40 + x) * 4;
-                
-                if (x >= 5 && x < 15 && y >= 5 && y < 15) {
-                    // Yellow square (5,5) to (15,15)
-                    sourceImage.data[offset] = 255;     // R
-                    sourceImage.data[offset + 1] = 255; // G
-                    sourceImage.data[offset + 2] = 0;   // B
-                    sourceImage.data[offset + 3] = 255; // A
-                } else if (x >= 10 && x < 30 && y >= 10 && y < 30) {
-                    // Blue square (10,10) to (30,30)
-                    sourceImage.data[offset] = 0;       // R
-                    sourceImage.data[offset + 1] = 0;   // G
-                    sourceImage.data[offset + 2] = 255; // B
-                    sourceImage.data[offset + 3] = 255; // A
-                } else {
-                    // Red background
-                    sourceImage.data[offset] = 255;     // R
-                    sourceImage.data[offset + 1] = 0;   // G
-                    sourceImage.data[offset + 2] = 0;   // B
-                    sourceImage.data[offset + 3] = 255; // A
-                }
-            }
-        }
+        // Create source image using pattern system compatible with both canvas types
+        const sourceImage = createTestImage(40, 40, 'overlapping-squares', ctx);
         
         // Draw the source image at different positions and scales
         ctx.drawImage(sourceImage, 20, 20);           // Original size

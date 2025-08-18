@@ -12,13 +12,13 @@ registerVisualTest('drawimage-rgb-conversion', {
         ctx.fillRect(0, 0, 200, 150);
         
         // Create RGB test image compatible with both canvas types
-        const rgbImage = createCompatibleRGBImage(30, 30, ctx);
+        const rgbImage = createTestImage(30, 30, 'rgbtest', ctx);
         
         // Draw RGB image - should auto-convert to RGBA
         ctx.drawImage(rgbImage, 20, 20);
         
         // Create RGBA test image for comparison
-        const rgbaImage = createCompatibleImage(30, 30, 'border', ctx);
+        const rgbaImage = createTestImage(30, 30, 'border', ctx);
         ctx.drawImage(rgbaImage, 70, 20);
     },
 });

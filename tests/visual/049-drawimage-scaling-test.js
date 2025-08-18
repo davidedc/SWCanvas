@@ -11,7 +11,7 @@ registerVisualTest('drawimage-scaling', {
         ctx.fillRect(0, 0, 200, 150);
         
         // Create gradient test image compatible with both canvas types
-        const testImage = createCompatibleImage(10, 10, 'gradient', ctx);
+        const testImage = createTestImage(10, 10, 'gradient', ctx);
         
         // Draw at original size
         ctx.drawImage(testImage, 10, 10);

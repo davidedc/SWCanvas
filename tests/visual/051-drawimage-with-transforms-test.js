@@ -13,7 +13,7 @@ registerVisualTest('drawimage-transforms', {
         ctx.fillRect(0, 0, 200, 200);
         
         // Create compatible test image for both canvas types
-        const testImage = createCompatibleImage(20, 20, 'checkerboard', ctx);
+        const testImage = createTestImage(20, 20, 'checkerboard', ctx);
         
         // Original
         ctx.drawImage(testImage, 10, 10);

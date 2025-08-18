@@ -12,7 +12,7 @@ registerVisualTest('drawimage-alpha-blending', {
         ctx.fillRect(0, 0, 200, 150);
         
         // Create alpha gradient image compatible with both canvas types
-        const alphaImage = createCompatibleImage(40, 40, 'alpha', ctx);
+        const alphaImage = createTestImage(40, 40, 'alpha', ctx);
         
         // Draw with full alpha
         ctx.drawImage(alphaImage, 20, 20);
@@ -23,7 +23,7 @@ registerVisualTest('drawimage-alpha-blending', {
         ctx.globalAlpha = 1.0;
         
         // Draw overlapping for blending test
-        const solidImage = createCompatibleImage(30, 30, 'checkerboard', ctx);
+        const solidImage = createTestImage(30, 30, 'checkerboard', ctx);
         ctx.drawImage(solidImage, 120, 50);
         ctx.drawImage(alphaImage, 130, 60);
     },
