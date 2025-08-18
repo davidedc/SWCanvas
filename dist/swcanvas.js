@@ -1831,15 +1831,16 @@ class PolygonFiller {
      * 
      * @param {Surface} surface - Target surface to render to
      * @param {Array} polygons - Array of polygons (each polygon is array of {x,y} points)  
-     * @param {Color} color - Color to fill with
+     * @param {Color|Gradient|Pattern} paintSource - Paint source to fill with
      * @param {string} fillRule - 'nonzero' or 'evenodd' winding rule
      * @param {Transform2D} transform - Transformation matrix to apply to polygons
      * @param {Uint8Array|null} clipMask - Optional 1-bit stencil buffer for clipping
+     * @param {number} globalAlpha - Global alpha value (0-1) for rendering operation
      */
-    static fillPolygons(surface, polygons, color, fillRule, transform, clipMask) {
+    static fillPolygons(surface, polygons, paintSource, fillRule, transform, clipMask, globalAlpha = 1.0) {
         if (polygons.length === 0) return;
-        if (!(color instanceof Color)) {
-            throw new Error('Color must be a Color instance');
+        if (!PolygonFiller._isValidPaintSource(paintSource)) {
+            throw new Error('Paint source must be a Color, Gradient, or Pattern instance');
         }
         
         // Transform all polygon vertices
@@ -1853,7 +1854,7 @@ class PolygonFiller {
         // Process each scanline
         for (let y = bounds.minY; y <= bounds.maxY; y++) {
             PolygonFiller._fillScanline(
-                surface, y, transformedPolygons, color, fillRule, clipMask
+                surface, y, transformedPolygons, paintSource, fillRule, clipMask, transform, globalAlpha
             );
         }
     }
@@ -1887,12 +1888,14 @@ class PolygonFiller {
      * @param {Surface} surface - Target surface
      * @param {number} y - Scanline y coordinate
      * @param {Array} polygons - Transformed polygons
-     * @param {Color} color - Fill color
+     * @param {Color|Gradient|Pattern} paintSource - Paint source
      * @param {string} fillRule - Winding rule
      * @param {Uint8Array|null} clipMask - Clipping mask
+     * @param {Transform2D} transform - Canvas transform (for gradients/patterns)
+     * @param {number} globalAlpha - Global alpha value (0-1)
      * @private
      */
-    static _fillScanline(surface, y, polygons, color, fillRule, clipMask) {
+    static _fillScanline(surface, y, polygons, paintSource, fillRule, clipMask, transform, globalAlpha) {
         const intersections = [];
         
         // Find all intersections with this scanline
@@ -1904,7 +1907,7 @@ class PolygonFiller {
         intersections.sort((a, b) => a.x - b.x);
         
         // Fill spans based on winding rule
-        PolygonFiller._fillSpans(surface, y, intersections, color, fillRule, clipMask);
+        PolygonFiller._fillSpans(surface, y, intersections, paintSource, fillRule, clipMask, transform, globalAlpha);
     }
     
     /**
@@ -1944,12 +1947,14 @@ class PolygonFiller {
      * @param {Surface} surface - Target surface
      * @param {number} y - Scanline y coordinate
      * @param {Array} intersections - Sorted intersections with winding info
-     * @param {Color} color - Fill color
+     * @param {Color|Gradient|Pattern} paintSource - Paint source
      * @param {string} fillRule - 'evenodd' or 'nonzero'
      * @param {ClipMask|null} clipMask - Stencil clipping mask
+     * @param {Transform2D} transform - Canvas transform (for gradients/patterns)
+     * @param {number} globalAlpha - Global alpha value (0-1)
      * @private
      */
-    static _fillSpans(surface, y, intersections, color, fillRule, clipMask) {
+    static _fillSpans(surface, y, intersections, paintSource, fillRule, clipMask, transform, globalAlpha) {
         if (intersections.length === 0) return;
         
         let windingNumber = 0;
@@ -1975,31 +1980,36 @@ class PolygonFiller {
                 const endX = Math.min(surface.width - 1, Math.floor(nextIntersection.x));
                 
                 PolygonFiller._fillPixelSpan(
-                    surface, y, startX, endX, color, clipMask
+                    surface, y, startX, endX, paintSource, clipMask, transform, globalAlpha
                 );
             }
         }
     }
     
     /**
-     * Fill a horizontal span of pixels with color and alpha blending
+     * Fill a horizontal span of pixels with paint source and alpha blending
      * @param {Surface} surface - Target surface
      * @param {number} y - Y coordinate
      * @param {number} startX - Start X coordinate (inclusive)
      * @param {number} endX - End X coordinate (inclusive)
-     * @param {Color} color - Fill color (with alpha)
+     * @param {Color|Gradient|Pattern} paintSource - Paint source
      * @param {ClipMask|null} clipMask - Stencil clipping mask
+     * @param {Transform2D} transform - Canvas transform (for gradients/patterns)
+     * @param {number} globalAlpha - Global alpha value (0-1)
      * @private
      */
-    static _fillPixelSpan(surface, y, startX, endX, color, clipMask) {
+    static _fillPixelSpan(surface, y, startX, endX, paintSource, clipMask, transform, globalAlpha) {
         for (let x = startX; x <= endX; x++) {
             // Check stencil buffer clipping
             if (clipMask && clipMask.isPixelClipped(x, y)) {
                 continue; // Skip pixels clipped by stencil buffer
             }
             
+            // Evaluate paint source at pixel position
+            const pixelColor = PolygonFiller._evaluatePaintSource(paintSource, x, y, transform, globalAlpha);
+            
             const offset = y * surface.stride + x * 4;
-            PolygonFiller._blendPixel(surface, offset, color);
+            PolygonFiller._blendPixel(surface, offset, pixelColor);
         }
     }
     
@@ -2084,6 +2094,51 @@ class PolygonFiller {
      */
     static countVertices(polygons) {
         return polygons.reduce((total, poly) => total + poly.length, 0);
+    }
+    
+    /**
+     * Validate paint source type
+     * @param {*} paintSource - Object to validate
+     * @returns {boolean} True if valid paint source
+     * @private
+     */
+    static _isValidPaintSource(paintSource) {
+        return paintSource instanceof Color ||
+               paintSource instanceof Gradient ||
+               paintSource instanceof LinearGradient ||
+               paintSource instanceof RadialGradient ||
+               paintSource instanceof ConicGradient ||
+               paintSource instanceof Pattern;
+    }
+    
+    /**
+     * Evaluate paint source at a pixel position
+     * @param {Color|Gradient|Pattern} paintSource - Paint source to evaluate
+     * @param {number} x - Pixel x coordinate
+     * @param {number} y - Pixel y coordinate
+     * @param {Transform2D} transform - Current canvas transform
+     * @param {number} globalAlpha - Global alpha value (0-1)
+     * @returns {Color} Color for this pixel
+     * @private
+     */
+    static _evaluatePaintSource(paintSource, x, y, transform, globalAlpha) {
+        let color;
+        if (paintSource instanceof Color) {
+            color = paintSource;
+        } else if (paintSource instanceof Gradient ||
+                   paintSource instanceof LinearGradient ||
+                   paintSource instanceof RadialGradient ||
+                   paintSource instanceof ConicGradient) {
+            color = paintSource.getColorForPixel(x, y, transform);
+        } else if (paintSource instanceof Pattern) {
+            color = paintSource.getColorForPixel(x, y, transform);
+        } else {
+            // Fallback to transparent black
+            color = new Color(0, 0, 0, 0);
+        }
+        
+        // Apply global alpha
+        return color.withGlobalAlpha(globalAlpha);
     }
 }
 /**
@@ -3467,6 +3522,683 @@ class ImageProcessor {
     }
 }
 /**
+ * ColorParser for SWCanvas
+ * 
+ * Parses CSS color strings into RGBA values for use with Core API.
+ * Supports hex, RGB/RGBA functions, and named colors.
+ * Includes caching for performance optimization.
+ */
+class ColorParser {
+    constructor() {
+        this._cache = new Map();
+        
+        // CSS Color names to RGB mapping
+        this._namedColors = {
+            // Basic colors
+            black: { r: 0, g: 0, b: 0 },
+            white: { r: 255, g: 255, b: 255 },
+            red: { r: 255, g: 0, b: 0 },
+            green: { r: 0, g: 128, b: 0 },
+            blue: { r: 0, g: 0, b: 255 },
+            yellow: { r: 255, g: 255, b: 0 },
+            magenta: { r: 255, g: 0, b: 255 },
+            cyan: { r: 0, g: 255, b: 255 },
+            
+            // Extended colors
+            lime: { r: 0, g: 255, b: 0 },
+            orange: { r: 255, g: 165, b: 0 },
+            pink: { r: 255, g: 192, b: 203 },
+            purple: { r: 128, g: 0, b: 128 },
+            brown: { r: 165, g: 42, b: 42 },
+            gray: { r: 128, g: 128, b: 128 },
+            grey: { r: 128, g: 128, b: 128 },
+            
+            // Light/dark variants
+            lightblue: { r: 173, g: 216, b: 230 },
+            lightgreen: { r: 144, g: 238, b: 144 },
+            lightcyan: { r: 224, g: 255, b: 255 },
+            lightgray: { r: 211, g: 211, b: 211 },
+            lightgrey: { r: 211, g: 211, b: 211 },
+            darkblue: { r: 0, g: 0, b: 139 },
+            darkgreen: { r: 0, g: 100, b: 0 },
+            
+            // Additional common colors
+            navy: { r: 0, g: 0, b: 128 },
+            maroon: { r: 128, g: 0, b: 0 },
+            gold: { r: 255, g: 215, b: 0 },
+            silver: { r: 192, g: 192, b: 192 },
+            lightcoral: { r: 240, g: 128, b: 128 },
+            indigo: { r: 75, g: 0, b: 130 }
+        };
+    }
+    
+    /**
+     * Parse a CSS color string to RGBA values
+     * @param {string} color - CSS color string
+     * @returns {Object} {r, g, b, a} with values 0-255
+     */
+    parse(color) {
+        // Check cache first
+        if (this._cache.has(color)) {
+            return this._cache.get(color);
+        }
+        
+        let result;
+        
+        if (typeof color !== 'string') {
+            result = { r: 0, g: 0, b: 0, a: 255 };
+        } else {
+            const trimmed = color.trim().toLowerCase();
+            
+            if (trimmed.startsWith('#')) {
+                result = this._parseHex(trimmed);
+            } else if (trimmed.startsWith('rgb')) {
+                result = this._parseRGB(trimmed);
+            } else if (this._namedColors[trimmed]) {
+                const named = this._namedColors[trimmed];
+                result = { r: named.r, g: named.g, b: named.b, a: 255 };
+            } else {
+                // Unknown color - default to black
+                result = { r: 0, g: 0, b: 0, a: 255 };
+            }
+        }
+        
+        // Cache the result
+        this._cache.set(color, result);
+        return result;
+    }
+    
+    /**
+     * Parse hex color (#RGB, #RRGGBB, #RRGGBBAA)
+     * @private
+     */
+    _parseHex(hex) {
+        // Remove the #
+        hex = hex.substring(1);
+        
+        if (hex.length === 3) {
+            // #RGB -> #RRGGBB
+            hex = hex.split('').map(c => c + c).join('');
+        }
+        
+        if (hex.length === 6) {
+            // #RRGGBB
+            const r = parseInt(hex.substring(0, 2), 16);
+            const g = parseInt(hex.substring(2, 4), 16);
+            const b = parseInt(hex.substring(4, 6), 16);
+            return { r, g, b, a: 255 };
+        } else if (hex.length === 8) {
+            // #RRGGBBAA
+            const r = parseInt(hex.substring(0, 2), 16);
+            const g = parseInt(hex.substring(2, 4), 16);
+            const b = parseInt(hex.substring(4, 6), 16);
+            const a = parseInt(hex.substring(6, 8), 16);
+            return { r, g, b, a };
+        }
+        
+        // Invalid hex - default to black
+        return { r: 0, g: 0, b: 0, a: 255 };
+    }
+    
+    /**
+     * Parse RGB/RGBA function notation
+     * @private
+     */
+    _parseRGB(rgb) {
+        // Extract the content inside parentheses
+        const match = rgb.match(/rgba?\s*\(\s*([^)]+)\s*\)/);
+        if (!match) {
+            return { r: 0, g: 0, b: 0, a: 255 };
+        }
+        
+        const parts = match[1].split(',').map(s => s.trim());
+        
+        if (parts.length < 3) {
+            return { r: 0, g: 0, b: 0, a: 255 };
+        }
+        
+        const r = Math.max(0, Math.min(255, parseInt(parts[0]) || 0));
+        const g = Math.max(0, Math.min(255, parseInt(parts[1]) || 0));
+        const b = Math.max(0, Math.min(255, parseInt(parts[2]) || 0));
+        
+        let a = 255;
+        if (parts.length >= 4) {
+            const alpha = parseFloat(parts[3]);
+            if (!isNaN(alpha)) {
+                a = Math.max(0, Math.min(255, Math.round(alpha * 255)));
+            }
+        }
+        
+        return { r, g, b, a };
+    }
+    
+    /**
+     * Clear the color cache
+     */
+    clearCache() {
+        this._cache.clear();
+    }
+}
+/**
+ * Gradient classes for SWCanvas
+ * 
+ * Implements HTML5 Canvas gradient support with deterministic, pixel-perfect rendering.
+ * Follows SWCanvas's immutable object-oriented design principles.
+ * 
+ * Gradients are paint sources that can replace solid colors in fillStyle/strokeStyle.
+ * They work in canvas coordinate space and are affected by current transform.
+ */
+
+/**
+ * Base Gradient class
+ * Abstract base class for all gradient types
+ */
+class Gradient {
+    /**
+     * Create a Gradient
+     * @private - Use specific gradient factory methods instead
+     */
+    constructor() {
+        this._colorStops = [];
+        this._sorted = false;
+    }
+    
+    /**
+     * Add a color stop to the gradient
+     * @param {number} offset - Position along gradient (0-1)
+     * @param {string} color - CSS color string
+     */
+    addColorStop(offset, color) {
+        // Validate offset
+        if (typeof offset !== 'number' || !isFinite(offset)) {
+            throw new Error('Color stop offset must be a finite number');
+        }
+        
+        if (offset < 0 || offset > 1) {
+            throw new Error('Color stop offset must be between 0 and 1');
+        }
+        
+        // Parse color using ColorParser
+        const colorParser = new ColorParser();
+        const rgba = colorParser.parse(color);
+        const colorObj = new Color(rgba.r, rgba.g, rgba.b, rgba.a);
+        
+        // Add color stop
+        this._colorStops.push({
+            offset: offset,
+            color: colorObj
+        });
+        
+        this._sorted = false; // Mark as needing re-sort
+    }
+    
+    /**
+     * Get sorted color stops array
+     * @returns {Array} Sorted color stops
+     * @private
+     */
+    _getSortedColorStops() {
+        if (!this._sorted) {
+            this._colorStops.sort((a, b) => a.offset - b.offset);
+            this._sorted = true;
+        }
+        return this._colorStops;
+    }
+    
+    /**
+     * Get color at parameter t using color stops
+     * @param {number} t - Parameter value (0-1, but can be outside range)
+     * @returns {Color} Color at parameter t
+     * @private
+     */
+    _getColorAt(t) {
+        const stops = this._getSortedColorStops();
+        
+        if (stops.length === 0) {
+            return new Color(0, 0, 0, 0); // Transparent black
+        }
+        
+        if (stops.length === 1) {
+            return stops[0].color;
+        }
+        
+        // Clamp t to [0, 1] range for gradient bounds
+        if (t <= stops[0].offset) {
+            return stops[0].color;
+        }
+        
+        if (t >= stops[stops.length - 1].offset) {
+            return stops[stops.length - 1].color;
+        }
+        
+        // Find adjacent color stops
+        for (let i = 0; i < stops.length - 1; i++) {
+            const stop1 = stops[i];
+            const stop2 = stops[i + 1];
+            
+            if (t >= stop1.offset && t <= stop2.offset) {
+                // Linear interpolation between color stops
+                const range = stop2.offset - stop1.offset;
+                if (range === 0) {
+                    return stop1.color;
+                }
+                
+                const localT = (t - stop1.offset) / range;
+                
+                // Interpolate RGBA components
+                const r1 = stop1.color.r, g1 = stop1.color.g, b1 = stop1.color.b, a1 = stop1.color.a;
+                const r2 = stop2.color.r, g2 = stop2.color.g, b2 = stop2.color.b, a2 = stop2.color.a;
+                
+                const r = Math.round(r1 + (r2 - r1) * localT);
+                const g = Math.round(g1 + (g2 - g1) * localT);
+                const b = Math.round(b1 + (b2 - b1) * localT);
+                const a = Math.round(a1 + (a2 - a1) * localT);
+                
+                return new Color(r, g, b, a);
+            }
+        }
+        
+        // Fallback (shouldn't reach here)
+        return stops[0].color;
+    }
+    
+    /**
+     * Calculate color for a pixel position (must be implemented by subclasses)
+     * @param {number} x - Pixel x coordinate in canvas space
+     * @param {number} y - Pixel y coordinate in canvas space  
+     * @param {Transform2D} transform - Current canvas transform
+     * @returns {Color} Color for this pixel
+     * @abstract
+     */
+    getColorForPixel(x, y, transform) {
+        throw new Error('getColorForPixel must be implemented by subclass');
+    }
+}
+
+/**
+ * Linear Gradient implementation
+ */
+class LinearGradient extends Gradient {
+    /**
+     * Create a LinearGradient
+     * @param {number} x0 - Start point x
+     * @param {number} y0 - Start point y
+     * @param {number} x1 - End point x
+     * @param {number} y1 - End point y
+     */
+    constructor(x0, y0, x1, y1) {
+        super();
+        
+        this._x0 = x0;
+        this._y0 = y0;
+        this._x1 = x1;
+        this._y1 = y1;
+        
+        // Pre-compute gradient vector
+        this._dx = x1 - x0;
+        this._dy = y1 - y0;
+        this._lengthSquared = this._dx * this._dx + this._dy * this._dy;
+    }
+    
+    /**
+     * Calculate color for a pixel position
+     * @param {number} x - Pixel x coordinate in canvas space
+     * @param {number} y - Pixel y coordinate in canvas space
+     * @param {Transform2D} transform - Current canvas transform (applied to gradient)
+     * @returns {Color} Color for this pixel
+     */
+    getColorForPixel(x, y, transform) {
+        // Transform gradient coordinates by current transform
+        // Gradients work in transformed coordinate space
+        const p0 = transform.transformPoint(new Point(this._x0, this._y0));
+        const p1 = transform.transformPoint(new Point(this._x1, this._y1));
+        
+        const dx = p1.x - p0.x;
+        const dy = p1.y - p0.y;
+        const lengthSquared = dx * dx + dy * dy;
+        
+        if (lengthSquared === 0) {
+            // Degenerate gradient (same start/end points)
+            return this._getColorAt(0);
+        }
+        
+        // Calculate parameter t along gradient line
+        // Project pixel onto gradient line
+        const px = x - p0.x;
+        const py = y - p0.y;
+        const t = (px * dx + py * dy) / lengthSquared;
+        
+        return this._getColorAt(t);
+    }
+}
+
+/**
+ * Radial Gradient implementation
+ */
+class RadialGradient extends Gradient {
+    /**
+     * Create a RadialGradient
+     * @param {number} x0 - Inner circle center x
+     * @param {number} y0 - Inner circle center y
+     * @param {number} r0 - Inner circle radius
+     * @param {number} x1 - Outer circle center x
+     * @param {number} y1 - Outer circle center y
+     * @param {number} r1 - Outer circle radius
+     */
+    constructor(x0, y0, r0, x1, y1, r1) {
+        super();
+        
+        // Validate radii
+        if (r0 < 0 || r1 < 0) {
+            throw new Error('Radial gradient radii must be non-negative');
+        }
+        
+        // Check for identical circles (would paint nothing)
+        if (x0 === x1 && y0 === y1 && r0 === r1) {
+            throw new Error('Radial gradient circles must not be identical');
+        }
+        
+        this._x0 = x0;
+        this._y0 = y0;
+        this._r0 = r0;
+        this._x1 = x1;
+        this._y1 = y1;
+        this._r1 = r1;
+    }
+    
+    /**
+     * Calculate color for a pixel position
+     * @param {number} x - Pixel x coordinate in canvas space
+     * @param {number} y - Pixel y coordinate in canvas space
+     * @param {Transform2D} transform - Current canvas transform
+     * @returns {Color} Color for this pixel
+     */
+    getColorForPixel(x, y, transform) {
+        // Transform gradient coordinates by current transform
+        const p0 = transform.transformPoint(new Point(this._x0, this._y0));
+        const p1 = transform.transformPoint(new Point(this._x1, this._y1));
+        
+        // For simplicity, we'll use distance-based calculation
+        // More accurate would be solving the cone intersection equation
+        const d0 = Math.sqrt((x - p0.x) ** 2 + (y - p0.y) ** 2);
+        const d1 = Math.sqrt((x - p1.x) ** 2 + (y - p1.y) ** 2);
+        
+        // Simple linear interpolation based on distance ratio
+        const maxDistance = Math.sqrt((p1.x - p0.x) ** 2 + (p1.y - p0.y) ** 2) + this._r1;
+        
+        let t;
+        if (d0 <= this._r0) {
+            t = 0; // Inside inner circle
+        } else if (d1 >= this._r1) {
+            t = 1; // Outside outer circle
+        } else {
+            // Simple distance-based calculation
+            t = (d0 - this._r0) / (maxDistance - this._r0);
+        }
+        
+        return this._getColorAt(Math.max(0, Math.min(1, t)));
+    }
+}
+
+/**
+ * Conic Gradient implementation
+ */
+class ConicGradient extends Gradient {
+    /**
+     * Create a ConicGradient
+     * @param {number} angle - Starting angle in radians
+     * @param {number} x - Center point x
+     * @param {number} y - Center point y
+     */
+    constructor(angle, x, y) {
+        super();
+        
+        this._angle = angle;
+        this._x = x;
+        this._y = y;
+    }
+    
+    /**
+     * Calculate color for a pixel position
+     * @param {number} x - Pixel x coordinate in canvas space
+     * @param {number} y - Pixel y coordinate in canvas space
+     * @param {Transform2D} transform - Current canvas transform
+     * @returns {Color} Color for this pixel
+     */
+    getColorForPixel(x, y, transform) {
+        // Transform gradient center by current transform
+        const center = transform.transformPoint(new Point(this._x, this._y));
+        
+        // Calculate angle from center to pixel
+        let pixelAngle = Math.atan2(y - center.y, x - center.x) - this._angle;
+        
+        // Normalize angle to [0, 2π)
+        while (pixelAngle < 0) {
+            pixelAngle += 2 * Math.PI;
+        }
+        while (pixelAngle >= 2 * Math.PI) {
+            pixelAngle -= 2 * Math.PI;
+        }
+        
+        // Convert angle to parameter t [0, 1]
+        const t = pixelAngle / (2 * Math.PI);
+        
+        return this._getColorAt(t);
+    }
+}
+/**
+ * Pattern class for SWCanvas
+ * 
+ * Implements HTML5 Canvas pattern support with deterministic, pixel-perfect rendering.
+ * Follows SWCanvas's immutable object-oriented design principles.
+ * 
+ * Patterns are paint sources that tile ImageLike objects and can replace solid colors.
+ * They work in canvas coordinate space and support repetition modes.
+ */
+class Pattern {
+    /**
+     * Create a Pattern
+     * @param {Object} image - ImageLike object (canvas, surface, imagedata)
+     * @param {string} repetition - Repetition mode: 'repeat', 'repeat-x', 'repeat-y', 'no-repeat'
+     */
+    constructor(image, repetition = 'repeat') {
+        // Validate and convert image to standard format
+        this._imageData = ImageProcessor.validateAndConvert(image);
+        
+        // Validate repetition mode
+        const validRepetitions = ['repeat', 'repeat-x', 'repeat-y', 'no-repeat'];
+        if (!validRepetitions.includes(repetition)) {
+            throw new Error(`Invalid repetition mode: ${repetition}. Must be one of: ${validRepetitions.join(', ')}`);
+        }
+        
+        this._repetition = repetition;
+        
+        // Pattern-specific transform (initially identity)
+        this._patternTransform = new Transform2D();
+        
+        Object.freeze(this);
+    }
+    
+    /**
+     * Set pattern transformation matrix
+     * @param {Transform2D|DOMMatrix} matrix - Pattern transformation
+     */
+    setTransform(matrix) {
+        if (matrix instanceof Transform2D) {
+            // Create new Pattern with updated transform (immutable)
+            const newPattern = Object.create(Object.getPrototypeOf(this));
+            newPattern._imageData = this._imageData;
+            newPattern._repetition = this._repetition;
+            newPattern._patternTransform = matrix;
+            Object.freeze(newPattern);
+            return newPattern;
+        } else if (matrix && typeof matrix.a === 'number') {
+            // DOMMatrix-like object
+            const transform = new Transform2D([matrix.a, matrix.b, matrix.c, matrix.d, matrix.e, matrix.f]);
+            return this.setTransform(transform);
+        } else {
+            throw new Error('Pattern transform must be a Transform2D or DOMMatrix-like object');
+        }
+    }
+    
+    /**
+     * Calculate color for a pixel position
+     * @param {number} x - Pixel x coordinate in canvas space
+     * @param {number} y - Pixel y coordinate in canvas space
+     * @param {Transform2D} canvasTransform - Current canvas transform
+     * @returns {Color} Color for this pixel
+     */
+    getColorForPixel(x, y, canvasTransform) {
+        // Apply inverse pattern transform, then inverse canvas transform
+        // to map pixel coordinates to pattern image space
+        try {
+            const combinedTransform = canvasTransform.multiply(this._patternTransform);
+            const inverseTransform = combinedTransform.invert();
+            const patternPoint = inverseTransform.transformPoint(new Point(x, y));
+            
+            // Sample pattern image at calculated coordinates
+            return this._samplePattern(patternPoint.x, patternPoint.y);
+        } catch (error) {
+            // If transform is not invertible, return transparent
+            return new Color(0, 0, 0, 0);
+        }
+    }
+    
+    /**
+     * Sample pattern image at given coordinates with repetition logic
+     * @param {number} x - X coordinate in pattern space
+     * @param {number} y - Y coordinate in pattern space
+     * @returns {Color} Sampled color
+     * @private
+     */
+    _samplePattern(x, y) {
+        const width = this._imageData.width;
+        const height = this._imageData.height;
+        
+        // Apply repetition logic
+        let sampleX, sampleY;
+        
+        switch (this._repetition) {
+            case 'repeat':
+                sampleX = this._repeatCoordinate(x, width);
+                sampleY = this._repeatCoordinate(y, height);
+                break;
+                
+            case 'repeat-x':
+                sampleX = this._repeatCoordinate(x, width);
+                sampleY = y;
+                // Check if Y is out of bounds
+                if (y < 0 || y >= height) {
+                    return new Color(0, 0, 0, 0); // Transparent
+                }
+                break;
+                
+            case 'repeat-y':
+                sampleX = x;
+                sampleY = this._repeatCoordinate(y, height);
+                // Check if X is out of bounds  
+                if (x < 0 || x >= width) {
+                    return new Color(0, 0, 0, 0); // Transparent
+                }
+                break;
+                
+            case 'no-repeat':
+                sampleX = x;
+                sampleY = y;
+                // Check if coordinates are out of bounds
+                if (x < 0 || x >= width || y < 0 || y >= height) {
+                    return new Color(0, 0, 0, 0); // Transparent
+                }
+                break;
+        }
+        
+        // Use nearest neighbor sampling (matching SWCanvas approach)
+        const pixelX = Math.floor(sampleX);
+        const pixelY = Math.floor(sampleY);
+        
+        // Clamp to image bounds (safety check)
+        const clampedX = Math.max(0, Math.min(width - 1, pixelX));
+        const clampedY = Math.max(0, Math.min(height - 1, pixelY));
+        
+        // Sample pixel from image data
+        const offset = (clampedY * width + clampedX) * 4;
+        const r = this._imageData.data[offset];
+        const g = this._imageData.data[offset + 1];
+        const b = this._imageData.data[offset + 2];
+        const a = this._imageData.data[offset + 3];
+        
+        return new Color(r, g, b, a);
+    }
+    
+    /**
+     * Apply repeat logic to a coordinate
+     * @param {number} coord - Input coordinate
+     * @param {number} size - Pattern dimension size
+     * @returns {number} Repeated coordinate
+     * @private
+     */
+    _repeatCoordinate(coord, size) {
+        if (size === 0) return 0;
+        
+        let result = coord % size;
+        if (result < 0) {
+            result += size; // Handle negative coordinates
+        }
+        return result;
+    }
+    
+    /**
+     * Get pattern dimensions
+     * @returns {Object} {width, height} of pattern
+     */
+    getDimensions() {
+        return {
+            width: this._imageData.width,
+            height: this._imageData.height
+        };
+    }
+    
+    /**
+     * Get repetition mode
+     * @returns {string} Current repetition mode
+     */
+    getRepetition() {
+        return this._repetition;
+    }
+    
+    /**
+     * Get current pattern transform
+     * @returns {Transform2D} Current pattern transform
+     */
+    getTransform() {
+        return this._patternTransform;
+    }
+    
+    /**
+     * Create a pattern from a Surface object
+     * @param {Surface} surface - Source surface
+     * @param {string} repetition - Repetition mode
+     * @returns {Pattern} New pattern instance
+     */
+    static fromSurface(surface, repetition = 'repeat') {
+        const imageData = ImageProcessor.surfaceToImageLike(surface);
+        return new Pattern(imageData, repetition);
+    }
+    
+    /**
+     * Create a solid color pattern (useful for testing)
+     * @param {number} width - Pattern width
+     * @param {number} height - Pattern height
+     * @param {Color|Array} color - Fill color
+     * @param {string} repetition - Repetition mode
+     * @returns {Pattern} New solid pattern
+     */
+    static createSolid(width, height, color, repetition = 'repeat') {
+        const imageData = ImageProcessor.createBlankImage(width, height, color);
+        return new Pattern(imageData, repetition);
+    }
+}
+/**
  * Rasterizer class for SWCanvas
  * 
  * Handles low-level pixel operations and rendering pipeline.
@@ -3622,8 +4354,9 @@ class Rasterizer {
         const minY = Math.max(0, Math.floor(Math.min(topLeft.y, topRight.y, bottomLeft.y, bottomRight.y)));
         const maxY = Math.min(this._surface.height - 1, Math.ceil(Math.max(topLeft.y, topRight.y, bottomLeft.y, bottomRight.y)));
         
-        // Optimized path for axis-aligned rectangles
-        if (this._currentOp.transform.b === 0 && this._currentOp.transform.c === 0) {
+        // Optimized path for axis-aligned rectangles with solid colors only
+        if (this._currentOp.transform.b === 0 && this._currentOp.transform.c === 0 && 
+            (color instanceof Color || Array.isArray(color))) {
             this._fillAxisAlignedRect(minX, minY, maxX - minX + 1, maxY - minY + 1, color);
         } else {
             // Handle rotated rectangles by converting to polygon
@@ -3635,8 +4368,8 @@ class Rasterizer {
             ];
             
             // Use existing polygon filling system which handles transforms and stencil clipping
-            const rectColor = Array.isArray(color) ? PolygonFiller.colorFromRGBA(color) : color;
-            PolygonFiller.fillPolygons(this._surface, [rectPolygon], rectColor, 'nonzero', this._currentOp.transform, this._currentOp.clipMask);
+            const rectColor = Array.isArray(color) ? new Color(color[0], color[1], color[2], color[3]) : color;
+            PolygonFiller.fillPolygons(this._surface, [rectPolygon], rectColor, 'nonzero', this._currentOp.transform, this._currentOp.clipMask, this._currentOp.globalAlpha);
         }
     }
 
@@ -3653,12 +4386,13 @@ class Rasterizer {
         const surface = this._surface;
         const globalAlpha = this._currentOp.globalAlpha;
         
-        // Apply global alpha to source color (keep non-premultiplied to match surface format)
-        const effectiveAlpha = (color[3] / 255) * globalAlpha; // Normalize to 0-1 range
-        const srcA = Math.round(effectiveAlpha * 255);
-        const srcR = color[0];
-        const srcG = color[1];
-        const srcB = color[2];
+        // Convert color to Color object if needed and apply global alpha
+        const colorObj = Array.isArray(color) ? new Color(color[0], color[1], color[2], color[3]) : color;
+        const finalColor = colorObj.withGlobalAlpha(globalAlpha);
+        const srcR = finalColor.r;
+        const srcG = finalColor.g;
+        const srcB = finalColor.b;
+        const srcA = finalColor.a;
         
         for (let py = y; py < y + height; py++) {
             if (py < 0 || py >= surface.height) continue;
@@ -3707,17 +4441,15 @@ class Rasterizer {
     fill(path, rule) {
         this._requireActiveOp();
         
-        // Apply global alpha to fill color
-        const colorData = this._currentOp.fillStyle || [0, 0, 0, 255];
-        const color = Array.isArray(colorData) ? 
-            new Color(colorData[0], colorData[1], colorData[2], colorData[3]) : colorData;
-        const fillColor = color.withGlobalAlpha(this._currentOp.globalAlpha);
+        // Get fill style (Color, Gradient, or Pattern)
+        const fillStyle = this._currentOp.fillStyle || new Color(0, 0, 0, 255);
+        // Global alpha will be applied during pixel evaluation
         const fillRule = rule || 'nonzero';
         
         // Flatten path to polygons
         const polygons = PathFlattener.flattenPath(path);
         // Fill polygons with current transform and stencil clipping
-        PolygonFiller.fillPolygons(this._surface, polygons, fillColor, fillRule, this._currentOp.transform, this._currentOp.clipMask);
+        PolygonFiller.fillPolygons(this._surface, polygons, fillStyle, fillRule, this._currentOp.transform, this._currentOp.clipMask, this._currentOp.globalAlpha);
     }
 
     /**
@@ -3728,22 +4460,15 @@ class Rasterizer {
     stroke(path, strokeProps) {
         this._requireActiveOp();
         
-        // Apply global alpha to stroke color
-        const colorData = this._currentOp.strokeStyle || [0, 0, 0, 255];
-        const color = Array.isArray(colorData) ? 
-            new Color(colorData[0], colorData[1], colorData[2], colorData[3]) : colorData;
-        let finalStrokeColor = color.withGlobalAlpha(this._currentOp.globalAlpha);
+        // Get stroke style (Color, Gradient, or Pattern)
+        const strokeStyle = this._currentOp.strokeStyle || new Color(0, 0, 0, 255);
         
-        // Sub-pixel stroke rendering: apply opacity adjustment for strokes <= 1px
+        // Sub-pixel stroke rendering: for now, just adjust line width
+        // TODO: Handle sub-pixel opacity for gradients/patterns in PolygonFiller
         let adjustedStrokeProps = strokeProps;
         if (strokeProps.lineWidth <= 1.0) {
-            // Zero-width strokes: render at full opacity like HTML5Canvas (browsers render at minimum visible width)
-            // Sub-pixel strokes: render with proportional opacity
-            const subPixelOpacity = strokeProps.lineWidth === 0 ? 1.0 : strokeProps.lineWidth; // 0px = 100% opacity, 0.5px = 50% opacity
-            const adjustedAlpha = Math.round(finalStrokeColor.a * subPixelOpacity);
-            finalStrokeColor = new Color(finalStrokeColor.r, finalStrokeColor.g, finalStrokeColor.b, adjustedAlpha, finalStrokeColor.premultiplied);
-            
-            // Render all sub-pixel strokes (including zero-width) at 1px width with adjusted opacity
+            // Render all sub-pixel strokes (including zero-width) at 1px width
+            // Opacity adjustment will be handled in paint source evaluation
             adjustedStrokeProps = { ...strokeProps, lineWidth: 1.0 };
         }
         
@@ -3751,7 +4476,7 @@ class Rasterizer {
         const strokePolygons = StrokeGenerator.generateStrokePolygons(path, adjustedStrokeProps);
         
         // Fill stroke polygons with current transform and stencil clipping
-        PolygonFiller.fillPolygons(this._surface, strokePolygons, finalStrokeColor, 'nonzero', this._currentOp.transform, this._currentOp.clipMask);
+        PolygonFiller.fillPolygons(this._surface, strokePolygons, strokeStyle, 'nonzero', this._currentOp.transform, this._currentOp.clipMask, this._currentOp.globalAlpha);
     }
 
     /**
@@ -3944,8 +4669,8 @@ class Context2D {
         this.globalAlpha = 1.0;
         this.globalCompositeOperation = 'source-over';
         this._transform = new Transform2D();
-        this._fillStyle = [0, 0, 0, 255]; // Black, non-premultiplied
-        this._strokeStyle = [0, 0, 0, 255]; // Black, non-premultiplied
+        this._fillStyle = new Color(0, 0, 0, 255); // Black
+        this._strokeStyle = new Color(0, 0, 0, 255); // Black
         
         // Stroke properties
         this.lineWidth = 1.0;
@@ -3978,8 +4703,8 @@ class Context2D {
             globalCompositeOperation: this.globalCompositeOperation,
             transform: new Transform2D([this._transform.a, this._transform.b, this._transform.c, 
                                   this._transform.d, this._transform.e, this._transform.f]),
-            fillStyle: this._fillStyle.slice(),
-            strokeStyle: this._strokeStyle.slice(),
+            fillStyle: this._fillStyle, // Paint sources are immutable, safe to share
+            strokeStyle: this._strokeStyle, // Paint sources are immutable, safe to share
             clipMask: clipMaskCopy,   // Deep copy of clip mask
             lineWidth: this.lineWidth,
             lineJoin: this.lineJoin,
@@ -4040,17 +4765,31 @@ class Context2D {
     this._transform = new Transform2D().rotate(angleInRadians).multiply(this._transform);
     }
 
-    // Style setters (simplified for M1)
+    // Style setters - support solid colors and paint sources
     setFillStyle(r, g, b, a) {
-    a = a !== undefined ? a : 255;
-    // Store colors in non-premultiplied form
-    this._fillStyle = [r, g, b, a];
+        if (arguments.length === 1 && (r instanceof Color || r instanceof Gradient || 
+            r instanceof LinearGradient || r instanceof RadialGradient || 
+            r instanceof ConicGradient || r instanceof Pattern)) {
+            // Paint source (gradient or pattern)
+            this._fillStyle = r;
+        } else {
+            // RGBA color
+            a = a !== undefined ? a : 255;
+            this._fillStyle = new Color(r, g, b, a);
+        }
     }
 
     setStrokeStyle(r, g, b, a) {
-    a = a !== undefined ? a : 255;
-    // Store colors in non-premultiplied form  
-    this._strokeStyle = [r, g, b, a];
+        if (arguments.length === 1 && (r instanceof Color || r instanceof Gradient || 
+            r instanceof LinearGradient || r instanceof RadialGradient || 
+            r instanceof ConicGradient || r instanceof Pattern)) {
+            // Paint source (gradient or pattern)
+            this._strokeStyle = r;
+        } else {
+            // RGBA color
+            a = a !== undefined ? a : 255;
+            this._strokeStyle = new Color(r, g, b, a);
+        }
     }
 
     // Path methods (delegated to internal path)
@@ -4478,163 +5217,54 @@ class Context2D {
     get lineDashOffset() {
         return this._lineDashOffset;
     }
-}
-/**
- * ColorParser for SWCanvas
- * 
- * Parses CSS color strings into RGBA values for use with Core API.
- * Supports hex, RGB/RGBA functions, and named colors.
- * Includes caching for performance optimization.
- */
-class ColorParser {
-    constructor() {
-        this._cache = new Map();
-        
-        // CSS Color names to RGB mapping
-        this._namedColors = {
-            // Basic colors
-            black: { r: 0, g: 0, b: 0 },
-            white: { r: 255, g: 255, b: 255 },
-            red: { r: 255, g: 0, b: 0 },
-            green: { r: 0, g: 128, b: 0 },
-            blue: { r: 0, g: 0, b: 255 },
-            yellow: { r: 255, g: 255, b: 0 },
-            magenta: { r: 255, g: 0, b: 255 },
-            cyan: { r: 0, g: 255, b: 255 },
-            
-            // Extended colors
-            lime: { r: 0, g: 255, b: 0 },
-            orange: { r: 255, g: 165, b: 0 },
-            pink: { r: 255, g: 192, b: 203 },
-            purple: { r: 128, g: 0, b: 128 },
-            brown: { r: 165, g: 42, b: 42 },
-            gray: { r: 128, g: 128, b: 128 },
-            grey: { r: 128, g: 128, b: 128 },
-            
-            // Light/dark variants
-            lightblue: { r: 173, g: 216, b: 230 },
-            lightgreen: { r: 144, g: 238, b: 144 },
-            lightcyan: { r: 224, g: 255, b: 255 },
-            lightgray: { r: 211, g: 211, b: 211 },
-            lightgrey: { r: 211, g: 211, b: 211 },
-            darkblue: { r: 0, g: 0, b: 139 },
-            darkgreen: { r: 0, g: 100, b: 0 },
-            
-            // Additional common colors
-            navy: { r: 0, g: 0, b: 128 },
-            maroon: { r: 128, g: 0, b: 0 },
-            gold: { r: 255, g: 215, b: 0 },
-            silver: { r: 192, g: 192, b: 192 },
-            lightcoral: { r: 240, g: 128, b: 128 },
-            indigo: { r: 75, g: 0, b: 130 }
-        };
+    
+    // Gradient and Pattern Creation Methods
+    
+    /**
+     * Create a linear gradient
+     * @param {number} x0 - Start point x coordinate
+     * @param {number} y0 - Start point y coordinate
+     * @param {number} x1 - End point x coordinate
+     * @param {number} y1 - End point y coordinate
+     * @returns {LinearGradient} New linear gradient object
+     */
+    createLinearGradient(x0, y0, x1, y1) {
+        return new LinearGradient(x0, y0, x1, y1);
     }
     
     /**
-     * Parse a CSS color string to RGBA values
-     * @param {string} color - CSS color string
-     * @returns {Object} {r, g, b, a} with values 0-255
+     * Create a radial gradient
+     * @param {number} x0 - Inner circle center x
+     * @param {number} y0 - Inner circle center y
+     * @param {number} r0 - Inner circle radius
+     * @param {number} x1 - Outer circle center x
+     * @param {number} y1 - Outer circle center y
+     * @param {number} r1 - Outer circle radius
+     * @returns {RadialGradient} New radial gradient object
      */
-    parse(color) {
-        // Check cache first
-        if (this._cache.has(color)) {
-            return this._cache.get(color);
-        }
-        
-        let result;
-        
-        if (typeof color !== 'string') {
-            result = { r: 0, g: 0, b: 0, a: 255 };
-        } else {
-            const trimmed = color.trim().toLowerCase();
-            
-            if (trimmed.startsWith('#')) {
-                result = this._parseHex(trimmed);
-            } else if (trimmed.startsWith('rgb')) {
-                result = this._parseRGB(trimmed);
-            } else if (this._namedColors[trimmed]) {
-                const named = this._namedColors[trimmed];
-                result = { r: named.r, g: named.g, b: named.b, a: 255 };
-            } else {
-                // Unknown color - default to black
-                result = { r: 0, g: 0, b: 0, a: 255 };
-            }
-        }
-        
-        // Cache the result
-        this._cache.set(color, result);
-        return result;
+    createRadialGradient(x0, y0, r0, x1, y1, r1) {
+        return new RadialGradient(x0, y0, r0, x1, y1, r1);
     }
     
     /**
-     * Parse hex color (#RGB, #RRGGBB, #RRGGBBAA)
-     * @private
+     * Create a conic gradient
+     * @param {number} angle - Starting angle in radians
+     * @param {number} x - Center point x coordinate
+     * @param {number} y - Center point y coordinate
+     * @returns {ConicGradient} New conic gradient object
      */
-    _parseHex(hex) {
-        // Remove the #
-        hex = hex.substring(1);
-        
-        if (hex.length === 3) {
-            // #RGB -> #RRGGBB
-            hex = hex.split('').map(c => c + c).join('');
-        }
-        
-        if (hex.length === 6) {
-            // #RRGGBB
-            const r = parseInt(hex.substring(0, 2), 16);
-            const g = parseInt(hex.substring(2, 4), 16);
-            const b = parseInt(hex.substring(4, 6), 16);
-            return { r, g, b, a: 255 };
-        } else if (hex.length === 8) {
-            // #RRGGBBAA
-            const r = parseInt(hex.substring(0, 2), 16);
-            const g = parseInt(hex.substring(2, 4), 16);
-            const b = parseInt(hex.substring(4, 6), 16);
-            const a = parseInt(hex.substring(6, 8), 16);
-            return { r, g, b, a };
-        }
-        
-        // Invalid hex - default to black
-        return { r: 0, g: 0, b: 0, a: 255 };
+    createConicGradient(angle, x, y) {
+        return new ConicGradient(angle, x, y);
     }
     
     /**
-     * Parse RGB/RGBA function notation
-     * @private
+     * Create a pattern from an image
+     * @param {Object} image - ImageLike object (canvas, surface, imagedata)
+     * @param {string} repetition - Repetition mode: 'repeat', 'repeat-x', 'repeat-y', 'no-repeat'
+     * @returns {Pattern} New pattern object
      */
-    _parseRGB(rgb) {
-        // Extract the content inside parentheses
-        const match = rgb.match(/rgba?\s*\(\s*([^)]+)\s*\)/);
-        if (!match) {
-            return { r: 0, g: 0, b: 0, a: 255 };
-        }
-        
-        const parts = match[1].split(',').map(s => s.trim());
-        
-        if (parts.length < 3) {
-            return { r: 0, g: 0, b: 0, a: 255 };
-        }
-        
-        const r = Math.max(0, Math.min(255, parseInt(parts[0]) || 0));
-        const g = Math.max(0, Math.min(255, parseInt(parts[1]) || 0));
-        const b = Math.max(0, Math.min(255, parseInt(parts[2]) || 0));
-        
-        let a = 255;
-        if (parts.length >= 4) {
-            const alpha = parseFloat(parts[3]);
-            if (!isNaN(alpha)) {
-                a = Math.max(0, Math.min(255, Math.round(alpha * 255)));
-            }
-        }
-        
-        return { r, g, b, a };
-    }
-    
-    /**
-     * Clear the color cache
-     */
-    clearCache() {
-        this._cache.clear();
+    createPattern(image, repetition) {
+        return new Pattern(image, repetition);
     }
 }
 /**
@@ -4679,7 +5309,7 @@ class CanvasCompatibleContext2D {
     
     /**
      * Set fill style
-     * @param {string} value - CSS color string
+     * @param {string|Gradient|Pattern} value - CSS color string or paint source
      */
     set fillStyle(value) {
         this._fillStyle = value;
@@ -4696,7 +5326,7 @@ class CanvasCompatibleContext2D {
     
     /**
      * Set stroke style
-     * @param {string} value - CSS color string
+     * @param {string|Gradient|Pattern} value - CSS color string or paint source
      */
     set strokeStyle(value) {
         this._strokeStyle = value;
@@ -4708,8 +5338,18 @@ class CanvasCompatibleContext2D {
      * @private
      */
     _applyFillStyle() {
-        const rgba = this._colorParser.parse(this._fillStyle);
-        this._core.setFillStyle(rgba.r, rgba.g, rgba.b, rgba.a);
+        if (this._fillStyle instanceof Gradient || 
+            this._fillStyle instanceof LinearGradient ||
+            this._fillStyle instanceof RadialGradient ||
+            this._fillStyle instanceof ConicGradient ||
+            this._fillStyle instanceof Pattern) {
+            // Pass gradient/pattern directly to core
+            this._core.setFillStyle(this._fillStyle);
+        } else {
+            // Parse CSS color string
+            const rgba = this._colorParser.parse(this._fillStyle);
+            this._core.setFillStyle(rgba.r, rgba.g, rgba.b, rgba.a);
+        }
     }
     
     /**
@@ -4717,8 +5357,18 @@ class CanvasCompatibleContext2D {
      * @private
      */
     _applyStrokeStyle() {
-        const rgba = this._colorParser.parse(this._strokeStyle);
-        this._core.setStrokeStyle(rgba.r, rgba.g, rgba.b, rgba.a);
+        if (this._strokeStyle instanceof Gradient || 
+            this._strokeStyle instanceof LinearGradient ||
+            this._strokeStyle instanceof RadialGradient ||
+            this._strokeStyle instanceof ConicGradient ||
+            this._strokeStyle instanceof Pattern) {
+            // Pass gradient/pattern directly to core
+            this._core.setStrokeStyle(this._strokeStyle);
+        } else {
+            // Parse CSS color string
+            const rgba = this._colorParser.parse(this._strokeStyle);
+            this._core.setStrokeStyle(rgba.r, rgba.g, rgba.b, rgba.a);
+        }
     }
     
     // ===== DIRECT PROPERTY DELEGATION =====
@@ -5022,6 +5672,55 @@ class CanvasCompatibleContext2D {
         }
     }
     
+    // ===== GRADIENT AND PATTERN METHODS =====
+    
+    /**
+     * Create a linear gradient
+     * @param {number} x0 - Start point x coordinate
+     * @param {number} y0 - Start point y coordinate
+     * @param {number} x1 - End point x coordinate
+     * @param {number} y1 - End point y coordinate
+     * @returns {LinearGradient} New linear gradient object
+     */
+    createLinearGradient(x0, y0, x1, y1) {
+        return this._core.createLinearGradient(x0, y0, x1, y1);
+    }
+    
+    /**
+     * Create a radial gradient
+     * @param {number} x0 - Inner circle center x
+     * @param {number} y0 - Inner circle center y
+     * @param {number} r0 - Inner circle radius
+     * @param {number} x1 - Outer circle center x
+     * @param {number} y1 - Outer circle center y
+     * @param {number} r1 - Outer circle radius
+     * @returns {RadialGradient} New radial gradient object
+     */
+    createRadialGradient(x0, y0, r0, x1, y1, r1) {
+        return this._core.createRadialGradient(x0, y0, r0, x1, y1, r1);
+    }
+    
+    /**
+     * Create a conic gradient
+     * @param {number} angle - Starting angle in radians
+     * @param {number} x - Center point x coordinate
+     * @param {number} y - Center point y coordinate
+     * @returns {ConicGradient} New conic gradient object
+     */
+    createConicGradient(angle, x, y) {
+        return this._core.createConicGradient(angle, x, y);
+    }
+    
+    /**
+     * Create a pattern from an image
+     * @param {Object} image - ImageLike object (canvas, surface, imagedata)
+     * @param {string} repetition - Repetition mode: 'repeat', 'repeat-x', 'repeat-y', 'no-repeat'
+     * @returns {Pattern} New pattern object
+     */
+    createPattern(image, repetition) {
+        return this._core.createPattern(image, repetition);
+    }
+    
     // ===== CORE ACCESS FOR ADVANCED USERS =====
     
     /**
@@ -5211,7 +5910,12 @@ if (typeof window !== 'undefined') {
             Rasterizer: Rasterizer,
             PathFlattener: PathFlattener,
             PolygonFiller: PolygonFiller,
-            StrokeGenerator: StrokeGenerator
+            StrokeGenerator: StrokeGenerator,
+            Gradient: Gradient,
+            LinearGradient: LinearGradient,
+            RadialGradient: RadialGradient,
+            ConicGradient: ConicGradient,
+            Pattern: Pattern
         }
     };
 } else if (typeof module !== 'undefined' && module.exports) {
@@ -5236,7 +5940,12 @@ if (typeof window !== 'undefined') {
             Rasterizer: Rasterizer,
             PathFlattener: PathFlattener,
             PolygonFiller: PolygonFiller,
-            StrokeGenerator: StrokeGenerator
+            StrokeGenerator: StrokeGenerator,
+            Gradient: Gradient,
+            LinearGradient: LinearGradient,
+            RadialGradient: RadialGradient,
+            ConicGradient: ConicGradient,
+            Pattern: Pattern
         }
     };
 }
