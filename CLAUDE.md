@@ -89,7 +89,8 @@ src/ColorParser.js            # CSS color string parsing (hex, rgb, named colors
 - **Deterministic sub-pixel rendering**: Strokes thinner than 1px render with proportional opacity
 - **Zero-width stroke handling**: `lineWidth = 0` renders at full opacity (matches HTML5Canvas behavior)
 - **Opacity-based thinning**: 0.5px stroke = 1px stroke at 50% opacity (no anti-aliasing)
-- **Implementation location**: `Rasterizer.js:270-280` applies opacity adjustment before stroke generation
+- **Universal paint source support**: Works with Colors, Gradients, and Patterns seamlessly
+- **Implementation location**: `Rasterizer.js:270-277` calculates opacity, `PolygonFiller.js` applies during paint evaluation
 - **Formula**: `subPixelOpacity = lineWidth === 0 ? 1.0 : lineWidth`
 - **Visual consistency**: Maintains deterministic pixel-perfect output across platforms
 - **Browser compatibility**: Matches modern HTML5Canvas behavior for edge cases
@@ -112,6 +113,7 @@ src/ColorParser.js            # CSS color string parsing (hex, rgb, named colors
 - **Per-pixel evaluation**: All paint sources evaluated at rasterization time with transform awareness
 - **Color interpolation**: Linear interpolation between color stops for smooth gradients
 - **Global alpha support**: Global alpha correctly applied during per-pixel paint evaluation
+- **Sub-pixel stroke integration**: Sub-pixel opacity applied to all paint source types during evaluation
 - **Implementation location**: `PolygonFiller.js` evaluates paint sources via `_evaluatePaintSource()` method
 
 ## Build & Test Commands

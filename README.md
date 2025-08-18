@@ -8,6 +8,7 @@ A deterministic 2D raster engine with Canvas-like API. SWCanvas provides pixel-p
 - **HTML5 Canvas Compatibility**: Drop-in replacement with familiar API  
 - **Object-Oriented Design**: Clean ES6 classes following effective OO principles
 - **Memory Efficient Clipping**: Stencil-based clipping system with proper intersection support
+- **Sub-pixel Stroke Rendering**: Thin strokes render with proportional opacity, works with all paint sources
 - **Comprehensive Test Coverage**: 32 core tests + 68 visual tests ensuring pixel-perfect accuracy with modular architecture
 - **Immutable Value Objects**: Point, Rectangle, Transform2D, Color prevent mutation bugs
 - **Cross-Platform**: Works in Node.js and browsers
@@ -252,10 +253,15 @@ const pattern = ctx.createPattern(patternImage, 'repeat');
 ctx.fillStyle = pattern;
 ctx.fillRect(50, 150, 150, 100);
 
-// Gradients work with strokes too
+// Gradients work with strokes too, including sub-pixel strokes
 ctx.strokeStyle = linearGrad;
 ctx.lineWidth = 5;
 ctx.strokeRect(250, 50, 100, 100);
+
+// Sub-pixel strokes work with all paint sources
+ctx.strokeStyle = radialGrad;
+ctx.lineWidth = 0.5; // 50% opacity stroke
+ctx.strokeRect(250, 150, 100, 100);
 ```
 
 #### Core API (Performance)
@@ -289,12 +295,13 @@ conicGrad.addColorStop(1, new SWCanvas.Core.Color(255, 0, 0, 255));
 ctx.setFillStyle(conicGrad);
 ctx.fillRect(150, 100, 100, 100);
 
-// Patterns
+// Patterns with sub-pixel strokes
 const imagelike = { width: 10, height: 10, data: new Uint8ClampedArray(400) };
 // ... fill imagelike.data ...
 const pattern = ctx.createPattern(imagelike, 'repeat-x');
-ctx.setFillStyle(pattern);
-ctx.fillRect(50, 200, 200, 50);
+ctx.setStrokeStyle(pattern);
+ctx.lineWidth = 0.25; // 25% opacity stroke  
+ctx.strokeRect(50, 200, 200, 50);
 ```
 
 #### Pattern Repetition Modes
