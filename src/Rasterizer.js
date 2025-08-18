@@ -263,12 +263,16 @@ class Rasterizer {
         // Get stroke style (Color, Gradient, or Pattern)
         const strokeStyle = this._currentOp.strokeStyle || new Color(0, 0, 0, 255);
         
-        // Sub-pixel stroke rendering: for now, just adjust line width
-        // TODO: Handle sub-pixel opacity for gradients/patterns in PolygonFiller
+        // Sub-pixel stroke rendering: calculate opacity adjustment
         let adjustedStrokeProps = strokeProps;
+        let subPixelOpacity = 1.0; // Default for strokes > 1px
+        
         if (strokeProps.lineWidth <= 1.0) {
+            // Calculate sub-pixel opacity: zero-width = 1.0, thin strokes = proportional
+            subPixelOpacity = strokeProps.lineWidth === 0 ? 1.0 : strokeProps.lineWidth;
+            
             // Render all sub-pixel strokes (including zero-width) at 1px width
-            // Opacity adjustment will be handled in paint source evaluation
+            // Opacity adjustment handled in paint source evaluation
             adjustedStrokeProps = { ...strokeProps, lineWidth: 1.0 };
         }
         
@@ -276,7 +280,7 @@ class Rasterizer {
         const strokePolygons = StrokeGenerator.generateStrokePolygons(path, adjustedStrokeProps);
         
         // Fill stroke polygons with current transform and stencil clipping
-        PolygonFiller.fillPolygons(this._surface, strokePolygons, strokeStyle, 'nonzero', this._currentOp.transform, this._currentOp.clipMask, this._currentOp.globalAlpha);
+        PolygonFiller.fillPolygons(this._surface, strokePolygons, strokeStyle, 'nonzero', this._currentOp.transform, this._currentOp.clipMask, this._currentOp.globalAlpha, subPixelOpacity);
     }
 
     /**

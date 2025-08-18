@@ -20,8 +20,9 @@ class PolygonFiller {
      * @param {Transform2D} transform - Transformation matrix to apply to polygons
      * @param {Uint8Array|null} clipMask - Optional 1-bit stencil buffer for clipping
      * @param {number} globalAlpha - Global alpha value (0-1) for rendering operation
+     * @param {number} subPixelOpacity - Sub-pixel opacity for thin strokes (0-1)
      */
-    static fillPolygons(surface, polygons, paintSource, fillRule, transform, clipMask, globalAlpha = 1.0) {
+    static fillPolygons(surface, polygons, paintSource, fillRule, transform, clipMask, globalAlpha = 1.0, subPixelOpacity = 1.0) {
         if (polygons.length === 0) return;
         if (!PolygonFiller._isValidPaintSource(paintSource)) {
             throw new Error('Paint source must be a Color, Gradient, or Pattern instance');
@@ -38,7 +39,7 @@ class PolygonFiller {
         // Process each scanline
         for (let y = bounds.minY; y <= bounds.maxY; y++) {
             PolygonFiller._fillScanline(
-                surface, y, transformedPolygons, paintSource, fillRule, clipMask, transform, globalAlpha
+                surface, y, transformedPolygons, paintSource, fillRule, clipMask, transform, globalAlpha, subPixelOpacity
             );
         }
     }
@@ -77,9 +78,10 @@ class PolygonFiller {
      * @param {Uint8Array|null} clipMask - Clipping mask
      * @param {Transform2D} transform - Canvas transform (for gradients/patterns)
      * @param {number} globalAlpha - Global alpha value (0-1)
+     * @param {number} subPixelOpacity - Sub-pixel opacity for thin strokes (0-1)
      * @private
      */
-    static _fillScanline(surface, y, polygons, paintSource, fillRule, clipMask, transform, globalAlpha) {
+    static _fillScanline(surface, y, polygons, paintSource, fillRule, clipMask, transform, globalAlpha, subPixelOpacity = 1.0) {
         const intersections = [];
         
         // Find all intersections with this scanline
@@ -91,7 +93,7 @@ class PolygonFiller {
         intersections.sort((a, b) => a.x - b.x);
         
         // Fill spans based on winding rule
-        PolygonFiller._fillSpans(surface, y, intersections, paintSource, fillRule, clipMask, transform, globalAlpha);
+        PolygonFiller._fillSpans(surface, y, intersections, paintSource, fillRule, clipMask, transform, globalAlpha, subPixelOpacity);
     }
     
     /**
@@ -136,9 +138,10 @@ class PolygonFiller {
      * @param {ClipMask|null} clipMask - Stencil clipping mask
      * @param {Transform2D} transform - Canvas transform (for gradients/patterns)
      * @param {number} globalAlpha - Global alpha value (0-1)
+     * @param {number} subPixelOpacity - Sub-pixel opacity for thin strokes (0-1)
      * @private
      */
-    static _fillSpans(surface, y, intersections, paintSource, fillRule, clipMask, transform, globalAlpha) {
+    static _fillSpans(surface, y, intersections, paintSource, fillRule, clipMask, transform, globalAlpha, subPixelOpacity = 1.0) {
         if (intersections.length === 0) return;
         
         let windingNumber = 0;
@@ -164,7 +167,7 @@ class PolygonFiller {
                 const endX = Math.min(surface.width - 1, Math.floor(nextIntersection.x));
                 
                 PolygonFiller._fillPixelSpan(
-                    surface, y, startX, endX, paintSource, clipMask, transform, globalAlpha
+                    surface, y, startX, endX, paintSource, clipMask, transform, globalAlpha, subPixelOpacity
                 );
             }
         }
@@ -180,9 +183,10 @@ class PolygonFiller {
      * @param {ClipMask|null} clipMask - Stencil clipping mask
      * @param {Transform2D} transform - Canvas transform (for gradients/patterns)
      * @param {number} globalAlpha - Global alpha value (0-1)
+     * @param {number} subPixelOpacity - Sub-pixel opacity for thin strokes (0-1)
      * @private
      */
-    static _fillPixelSpan(surface, y, startX, endX, paintSource, clipMask, transform, globalAlpha) {
+    static _fillPixelSpan(surface, y, startX, endX, paintSource, clipMask, transform, globalAlpha, subPixelOpacity = 1.0) {
         for (let x = startX; x <= endX; x++) {
             // Check stencil buffer clipping
             if (clipMask && clipMask.isPixelClipped(x, y)) {
@@ -190,7 +194,7 @@ class PolygonFiller {
             }
             
             // Evaluate paint source at pixel position
-            const pixelColor = PolygonFiller._evaluatePaintSource(paintSource, x, y, transform, globalAlpha);
+            const pixelColor = PolygonFiller._evaluatePaintSource(paintSource, x, y, transform, globalAlpha, subPixelOpacity);
             
             const offset = y * surface.stride + x * 4;
             PolygonFiller._blendPixel(surface, offset, pixelColor);
@@ -302,10 +306,11 @@ class PolygonFiller {
      * @param {number} y - Pixel y coordinate
      * @param {Transform2D} transform - Current canvas transform
      * @param {number} globalAlpha - Global alpha value (0-1)
+     * @param {number} subPixelOpacity - Sub-pixel opacity for thin strokes (0-1)
      * @returns {Color} Color for this pixel
      * @private
      */
-    static _evaluatePaintSource(paintSource, x, y, transform, globalAlpha) {
+    static _evaluatePaintSource(paintSource, x, y, transform, globalAlpha, subPixelOpacity = 1.0) {
         let color;
         if (paintSource instanceof Color) {
             color = paintSource;
@@ -321,7 +326,15 @@ class PolygonFiller {
             color = new Color(0, 0, 0, 0);
         }
         
-        // Apply global alpha
-        return color.withGlobalAlpha(globalAlpha);
+        // Apply global alpha and sub-pixel opacity
+        let resultColor = color.withGlobalAlpha(globalAlpha);
+        
+        // Apply sub-pixel opacity for thin strokes
+        if (subPixelOpacity < 1.0) {
+            const adjustedAlpha = Math.round(resultColor.a * subPixelOpacity);
+            resultColor = new Color(resultColor.r, resultColor.g, resultColor.b, adjustedAlpha, resultColor.premultiplied);
+        }
+        
+        return resultColor;
     }
 }
