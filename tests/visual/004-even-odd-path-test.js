@@ -1,7 +1,6 @@
-// Test 4: Even-Odd Path
+// Test: Even-Odd Path
 // This file will be concatenated into the main visual test suite
 
-// Test 4: Even-Odd Path  
 registerVisualTest('evenodd-test', {
     name: 'Path filling - evenodd vs nonzero',
     width: 100, height: 100,

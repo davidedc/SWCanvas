@@ -1,7 +1,6 @@
-// Test 20: fill-self-intersecting - Self-intersecting paths
+// Test: fill-self-intersecting - Self-intersecting paths
 // This file will be concatenated into the main visual test suite
 
-// Test 20: fill-self-intersecting - Self-intersecting paths
 registerVisualTest('fill-self-intersecting', {
     name: 'Self-intersecting path filling',
     width: 300, height: 200,

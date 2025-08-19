@@ -1,7 +1,6 @@
-// Test 021: Stroke caps - butt, square, round
+// Test: Stroke caps - butt, square, round
 // This file will be concatenated into the main test suite
 
-// Test 021
 test('Stroke caps - butt, square, round', () => {
     const surface = SWCanvas.Core.Surface(300, 150);
     const ctx = new SWCanvas.Core.Context2D(surface);

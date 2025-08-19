@@ -1,7 +1,6 @@
-// Test 13: Basic Rotation
+// Test: Basic Rotation
 // This file will be concatenated into the main visual test suite
 
-// Test 13: Basic Rotation
 registerVisualTest('transform-basic-rotate', {
     name: 'Basic rotation operations',
     width: 200, height: 150,

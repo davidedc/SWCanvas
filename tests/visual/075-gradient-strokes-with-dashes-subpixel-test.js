@@ -1,4 +1,4 @@
-// Test 75: Gradient Strokes with Line Dashes and Sub-pixel Width
+// Test: Gradient Strokes with Line Dashes and Sub-pixel Width
 // This file will be concatenated into the main visual test suite
 
 registerVisualTest('gradient-strokes-dashes-subpixel', {

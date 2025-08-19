@@ -1,7 +1,6 @@
-// Test 014: Create and save a simple test image
+// Test: Create and save a simple test image
 // This file will be concatenated into the main test suite
 
-// Test 014
 test('Create and save a simple test image', () => {
     // Use visual test registry if available, otherwise fall back to inline test
     if (typeof VisualRenderingTests !== 'undefined') {

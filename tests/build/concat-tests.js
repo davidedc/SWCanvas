@@ -76,7 +76,7 @@ function buildCoreTests() {
         let braceCount = 0;
         
         for (const line of lines) {
-            if (line.includes('// Test ') || inTest) {
+            if (line.includes('// Test') || inTest) {
                 testContent.push(line);
                 inTest = true;
                 
@@ -215,7 +215,7 @@ function buildCoreTestsWithDefaults() {
         let braceCount = 0;
         
         for (const line of lines) {
-            if (line.includes('// Test ') || inTest) {
+            if (line.includes('// Test') || inTest) {
                 testContent.push(line);
                 inTest = true;
                 

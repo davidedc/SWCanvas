@@ -1,7 +1,6 @@
-// Test 005: Matrix creation with initial values
+// Test: Matrix creation with initial values
 // This file will be concatenated into the main test suite
 
-// Test 005
 test('Matrix creation with initial values', () => {
     const m = new SWCanvas.Core.Transform2D([2, 3, 4, 5, 6, 7]);
     assertEquals(m.a, 2);

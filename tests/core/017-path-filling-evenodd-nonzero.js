@@ -1,7 +1,6 @@
-// Test 017: Path filling - evenodd vs nonzero
+// Test: Path filling - evenodd vs nonzero
 // This file will be concatenated into the main test suite
 
-// Test 017
 test('Path filling - evenodd vs nonzero', () => {
     const surface = SWCanvas.Core.Surface(100, 100);
     const ctx = new SWCanvas.Core.Context2D(surface);

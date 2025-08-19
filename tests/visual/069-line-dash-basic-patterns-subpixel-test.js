@@ -1,4 +1,4 @@
-// Test 69: Basic Line Dash Patterns with Sub-pixel Strokes
+// Test: Basic Line Dash Patterns with Sub-pixel Strokes
 // This file will be concatenated into the main visual test suite
 
 // Test 69
@@ -16,28 +16,28 @@ registerVisualTest('line-dash-basic-patterns-subpixel', {
         ctx.strokeStyle = 'red';
         ctx.lineWidth = 0.5; // Sub-pixel width (50% opacity)
         
-        // Test 1: Solid sub-pixel line (empty dash array)
+        // Test: Solid sub-pixel line (empty dash array)
         ctx.setLineDash([]);
         ctx.beginPath();
         ctx.moveTo(20, 30);
         ctx.lineTo(280, 30);
         ctx.stroke();
         
-        // Test 2: Simple dash pattern [5, 5] with sub-pixel width
+        // Test: Simple dash pattern [5, 5] with sub-pixel width
         ctx.setLineDash([5, 5]);
         ctx.beginPath();
         ctx.moveTo(20, 60);
         ctx.lineTo(280, 60);
         ctx.stroke();
         
-        // Test 3: Long dash pattern [15, 5] with sub-pixel width
+        // Test: Long dash pattern [15, 5] with sub-pixel width
         ctx.setLineDash([15, 5]);
         ctx.beginPath();
         ctx.moveTo(20, 90);
         ctx.lineTo(280, 90);
         ctx.stroke();
         
-        // Test 4: Change to even thinner stroke
+        // Test: Change to even thinner stroke
         ctx.lineWidth = 0.25; // 25% opacity
         ctx.strokeStyle = 'blue';
         
@@ -48,7 +48,7 @@ registerVisualTest('line-dash-basic-patterns-subpixel', {
         ctx.lineTo(280, 120);
         ctx.stroke();
         
-        // Test 5: Ultra-thin stroke
+        // Test: Ultra-thin stroke
         ctx.lineWidth = 0.1; // 10% opacity  
         ctx.strokeStyle = 'green';
         

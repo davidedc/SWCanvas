@@ -1,7 +1,6 @@
-// Test 10: Miter Limit Basic Functionality
+// Test: Miter Limit Basic Functionality
 // This file will be concatenated into the main visual test suite
 
-// Test 10: Miter Limit Basic Functionality
 registerVisualTest('miter-limits-basic', {
     name: 'Miter limit property and basic functionality',
     width: 100, height: 100,

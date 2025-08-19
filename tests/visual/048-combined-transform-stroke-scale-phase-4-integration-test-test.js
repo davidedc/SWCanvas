@@ -1,7 +1,6 @@
-// Test 48: Combined Transform + Stroke + Scale - Phase 4 Integration Test
+// Test: Combined Transform + Stroke + Scale
 // This file will be concatenated into the main visual test suite
 
-// Test 48: Combined Transform + Stroke + Scale - Phase 4 Integration Test
 registerVisualTest('combined-transform-stroke-scale', {
     name: 'Scaled Stroke Behavior',
     width: 200, height: 200,

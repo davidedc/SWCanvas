@@ -1,4 +1,4 @@
-// Test 63: Pattern Basic Test
+// Test: Pattern Basic Test
 // This file will be concatenated into the main visual test suite
 
 registerVisualTest('pattern-basic', {

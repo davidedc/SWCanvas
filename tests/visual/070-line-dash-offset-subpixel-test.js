@@ -1,4 +1,4 @@
-// Test 70: Line Dash Offset with Sub-pixel Strokes
+// Test: Line Dash Offset with Sub-pixel Strokes
 // This file will be concatenated into the main visual test suite
 
 // Test 70
@@ -19,28 +19,28 @@ registerVisualTest('line-dash-offset-subpixel', {
         // Use consistent dash pattern [20, 10] for all tests
         ctx.setLineDash([20, 10]);
         
-        // Test 1: No offset (lineDashOffset = 0)
+        // Test: No offset (lineDashOffset = 0)
         ctx.lineDashOffset = 0;
         ctx.beginPath();
         ctx.moveTo(50, 40);
         ctx.lineTo(250, 40);
         ctx.stroke();
         
-        // Test 2: Small offset (lineDashOffset = 5)
+        // Test: Small offset (lineDashOffset = 5)
         ctx.lineDashOffset = 5;
         ctx.beginPath();
         ctx.moveTo(50, 70);
         ctx.lineTo(250, 70);
         ctx.stroke();
         
-        // Test 3: Half pattern offset (lineDashOffset = 15)
+        // Test: Half pattern offset (lineDashOffset = 15)
         ctx.lineDashOffset = 15;
         ctx.beginPath();
         ctx.moveTo(50, 100);
         ctx.lineTo(250, 100);
         ctx.stroke();
         
-        // Test 4: Change to thinner stroke
+        // Test: Change to thinner stroke
         ctx.strokeStyle = 'purple';
         ctx.lineWidth = 0.3; // 30% opacity
         
@@ -51,14 +51,14 @@ registerVisualTest('line-dash-offset-subpixel', {
         ctx.lineTo(250, 130);
         ctx.stroke();
         
-        // Test 5: Greater than pattern length (lineDashOffset = 35, wraps around)
+        // Test: Greater than pattern length (lineDashOffset = 35, wraps around)
         ctx.lineDashOffset = 35;
         ctx.beginPath();
         ctx.moveTo(50, 160);
         ctx.lineTo(250, 160);
         ctx.stroke();
         
-        // Test 6: Ultra-thin stroke with negative offset
+        // Test: Ultra-thin stroke with negative offset
         ctx.strokeStyle = 'green';  
         ctx.lineWidth = 0.15; // 15% opacity
         ctx.lineDashOffset = -10;

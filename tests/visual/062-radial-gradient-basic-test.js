@@ -1,4 +1,4 @@
-// Test 62: Radial Gradient Basic Test
+// Test: Radial Gradient Basic Test
 // This file will be concatenated into the main visual test suite
 
 registerVisualTest('radial-gradient-basic', {

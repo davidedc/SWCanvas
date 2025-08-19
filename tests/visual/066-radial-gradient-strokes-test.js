@@ -1,4 +1,4 @@
-// Test 66: Radial Gradient Strokes Test
+// Test: Radial Gradient Strokes Test
 // This file will be concatenated into the main visual test suite
 
 registerVisualTest('radial-gradient-strokes', {
@@ -20,7 +20,7 @@ registerVisualTest('radial-gradient-strokes', {
         
         ctx.strokeStyle = grad;
         
-        // Test 1: Thick lines with different caps
+        // Test: Thick lines with different caps
         ctx.lineWidth = 10;
         
         ctx.lineCap = 'butt';
@@ -41,7 +41,7 @@ registerVisualTest('radial-gradient-strokes', {
         ctx.lineTo(280, 30);
         ctx.stroke();
         
-        // Test 2: Star shape with miter joins
+        // Test: Star shape with miter joins
         ctx.lineWidth = 6;
         ctx.lineJoin = 'miter';
         ctx.lineCap = 'butt';
@@ -63,7 +63,7 @@ registerVisualTest('radial-gradient-strokes', {
         ctx.closePath();
         ctx.stroke();
         
-        // Test 3: Concentric circles
+        // Test: Concentric circles
         ctx.lineWidth = 4;
         ctx.lineCap = 'butt';
         const radii = [15, 25, 35];
@@ -73,7 +73,7 @@ registerVisualTest('radial-gradient-strokes', {
             ctx.stroke();
         });
         
-        // Test 4: Spiral
+        // Test: Spiral
         ctx.lineWidth = 3;
         ctx.beginPath();
         ctx.moveTo(80, 140);
@@ -86,7 +86,7 @@ registerVisualTest('radial-gradient-strokes', {
         }
         ctx.stroke();
         
-        // Test 5: Complex path with curves
+        // Test: Complex path with curves
         ctx.lineWidth = 8;
         ctx.lineJoin = 'round';
         ctx.beginPath();

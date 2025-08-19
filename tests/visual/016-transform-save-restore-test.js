@@ -1,7 +1,6 @@
-// Test 16: Transform state save/restore
+// Test: Transform state save/restore
 // This file will be concatenated into the main visual test suite
 
-// Test 16: Transform state save/restore
 registerVisualTest('transform-state-save-restore', {
     name: 'Transform with save/restore stack',
     width: 200, height: 150,

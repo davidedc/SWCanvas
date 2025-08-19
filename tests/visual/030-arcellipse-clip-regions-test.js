@@ -1,7 +1,6 @@
-// Test 30: Arc/ellipse clip regions
+// Test: Arc/ellipse clip regions
 // This file will be concatenated into the main visual test suite
 
-// Test 30: Arc/ellipse clip regions
 registerVisualTest('clip-curved', {
     name: 'Curved Clipping',
     width: 400,

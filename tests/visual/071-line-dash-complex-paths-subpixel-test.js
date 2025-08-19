@@ -1,4 +1,4 @@
-// Test 71: Line Dash with Complex Paths and Sub-pixel Strokes
+// Test: Line Dash with Complex Paths and Sub-pixel Strokes
 // This file will be concatenated into the main visual test suite
 
 // Test 71
@@ -13,7 +13,7 @@ registerVisualTest('line-dash-complex-paths-subpixel', {
         ctx.fillStyle = 'white';
         ctx.fillRect(0, 0, 350, 300);
         
-        // Test 1: Dashed rectangle with sub-pixel stroke
+        // Test: Dashed rectangle with sub-pixel stroke
         ctx.strokeStyle = 'red';
         ctx.lineWidth = 0.4; // 40% opacity
         ctx.setLineDash([8, 4]);
@@ -22,7 +22,7 @@ registerVisualTest('line-dash-complex-paths-subpixel', {
         ctx.rect(20, 20, 80, 60);
         ctx.stroke();
         
-        // Test 2: Dashed circle with thinner sub-pixel stroke
+        // Test: Dashed circle with thinner sub-pixel stroke
         ctx.strokeStyle = 'green';
         ctx.lineWidth = 0.25; // 25% opacity
         ctx.setLineDash([5, 5]);
@@ -31,7 +31,7 @@ registerVisualTest('line-dash-complex-paths-subpixel', {
         ctx.arc(180, 50, 35, 0, 2 * Math.PI);
         ctx.stroke();
         
-        // Test 3: Dashed triangle with odd-length pattern and sub-pixel stroke
+        // Test: Dashed triangle with odd-length pattern and sub-pixel stroke
         ctx.strokeStyle = 'blue';
         ctx.lineWidth = 0.6; // 60% opacity
         ctx.setLineDash([12, 8, 4]); // Odd length - should duplicate to [12,8,4,12,8,4]
@@ -43,7 +43,7 @@ registerVisualTest('line-dash-complex-paths-subpixel', {
         ctx.closePath();
         ctx.stroke();
         
-        // Test 4: Dashed bezier curve with very thin stroke
+        // Test: Dashed bezier curve with very thin stroke
         ctx.strokeStyle = 'purple';
         ctx.lineWidth = 0.15; // 15% opacity
         ctx.setLineDash([10, 5]);
@@ -53,7 +53,7 @@ registerVisualTest('line-dash-complex-paths-subpixel', {
         ctx.bezierCurveTo(50, 90, 80, 150, 110, 120);
         ctx.stroke();
         
-        // Test 5: Dashed quadratic curve with sub-pixel width
+        // Test: Dashed quadratic curve with sub-pixel width
         ctx.strokeStyle = 'orange';
         ctx.lineWidth = 0.35; // 35% opacity
         ctx.setLineDash([6, 3]);
@@ -63,7 +63,7 @@ registerVisualTest('line-dash-complex-paths-subpixel', {
         ctx.quadraticCurveTo(165, 90, 200, 120);
         ctx.stroke();
         
-        // Test 6: Complex path with multiple segments, transforms, and sub-pixel stroke
+        // Test: Complex path with multiple segments, transforms, and sub-pixel stroke
         ctx.save();
         ctx.translate(250, 150);
         ctx.rotate(Math.PI / 6);
@@ -82,7 +82,7 @@ registerVisualTest('line-dash-complex-paths-subpixel', {
         ctx.stroke();
         ctx.restore();
         
-        // Test 7: Star shape with ultra-thin dashed outline
+        // Test: Star shape with ultra-thin dashed outline
         ctx.strokeStyle = 'darkgreen';
         ctx.lineWidth = 0.2; // 20% opacity
         ctx.setLineDash([4, 2]);
@@ -108,7 +108,7 @@ registerVisualTest('line-dash-complex-paths-subpixel', {
         ctx.closePath();
         ctx.stroke();
         
-        // Test 8: Arc with sub-pixel dashed stroke
+        // Test: Arc with sub-pixel dashed stroke
         ctx.strokeStyle = 'darkblue';
         ctx.lineWidth = 0.45; // 45% opacity
         ctx.setLineDash([12, 6]);

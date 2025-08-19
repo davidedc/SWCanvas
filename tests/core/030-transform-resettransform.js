@@ -1,7 +1,6 @@
-// Test 030: resetTransform functionality
+// Test: resetTransform functionality
 // This file will be concatenated into the main test suite
 
-// Test 030
 test('resetTransform functionality', () => {
     if (typeof VisualRenderingTests !== 'undefined') {
         const visualTest = VisualRenderingTests.getTest('transform-resetTransform');

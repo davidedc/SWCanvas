@@ -1,4 +1,4 @@
-// Test 73: Radial Gradient Strokes with Sub-pixel Width
+// Test: Radial Gradient Strokes with Sub-pixel Width
 // This file will be concatenated into the main visual test suite
 
 registerVisualTest('radial-gradient-strokes-subpixel', {
@@ -20,7 +20,7 @@ registerVisualTest('radial-gradient-strokes-subpixel', {
         
         ctx.strokeStyle = grad;
         
-        // Test 1: Thin sub-pixel lines with different caps
+        // Test: Thin sub-pixel lines with different caps
         ctx.lineWidth = 0.5; // 50% opacity
         
         ctx.lineCap = 'butt';
@@ -41,7 +41,7 @@ registerVisualTest('radial-gradient-strokes-subpixel', {
         ctx.lineTo(280, 30);
         ctx.stroke();
         
-        // Test 2: Star shape with ultra-thin sub-pixel stroke
+        // Test: Star shape with ultra-thin sub-pixel stroke
         ctx.lineWidth = 0.3; // 30% opacity
         ctx.lineJoin = 'miter';
         ctx.lineCap = 'butt';
@@ -63,7 +63,7 @@ registerVisualTest('radial-gradient-strokes-subpixel', {
         ctx.closePath();
         ctx.stroke();
         
-        // Test 3: Concentric circles with varying sub-pixel widths
+        // Test: Concentric circles with varying sub-pixel widths
         ctx.lineCap = 'butt';
         const radii = [15, 25, 35];
         const widths = [0.2, 0.35, 0.5]; // Different sub-pixel widths
@@ -74,7 +74,7 @@ registerVisualTest('radial-gradient-strokes-subpixel', {
             ctx.stroke();
         });
         
-        // Test 4: Spiral with very thin stroke
+        // Test: Spiral with very thin stroke
         ctx.lineWidth = 0.15; // 15% opacity - very thin
         ctx.beginPath();
         ctx.moveTo(80, 140);
@@ -87,7 +87,7 @@ registerVisualTest('radial-gradient-strokes-subpixel', {
         }
         ctx.stroke();
         
-        // Test 5: Complex path with curves and sub-pixel stroke
+        // Test: Complex path with curves and sub-pixel stroke
         ctx.lineWidth = 0.4; // 40% opacity
         ctx.lineJoin = 'round';
         ctx.beginPath();

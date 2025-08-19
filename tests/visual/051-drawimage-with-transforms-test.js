@@ -1,7 +1,6 @@
-// Test 49: drawImage with transforms
+// Test: drawImage with transforms
 // This file will be concatenated into the main visual test suite
 
-// Test 49: drawImage with transforms
 registerVisualTest('drawimage-transforms', {
     name: 'drawImage with transforms',
     width: 200, height: 200,

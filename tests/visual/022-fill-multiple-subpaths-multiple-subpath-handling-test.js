@@ -1,7 +1,6 @@
-// Test 22: fill-multiple-subpaths - Multiple subpath handling
+// Test: fill-multiple-subpaths - Multiple subpath handling
 // This file will be concatenated into the main visual test suite
 
-// Test 22: fill-multiple-subpaths - Multiple subpath handling
 registerVisualTest('fill-multiple-subpaths', {
     name: 'Multiple subpath handling',
     width: 300, height: 200,

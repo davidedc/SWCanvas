@@ -1,7 +1,6 @@
-// Test 004: Matrix identity creation
+// Test: Matrix identity creation
 // This file will be concatenated into the main test suite
 
-// Test 004
 test('Matrix identity creation', () => {
     const m = new SWCanvas.Core.Transform2D();
     assertEquals(m.a, 1);

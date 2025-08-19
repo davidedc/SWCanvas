@@ -1,7 +1,6 @@
-// Test 48: drawImage scaling
+// Test: drawImage scaling
 // This file will be concatenated into the main visual test suite
 
-// Test 48: drawImage scaling
 registerVisualTest('drawimage-scaling', {
     name: 'drawImage with scaling',
     width: 200, height: 150,

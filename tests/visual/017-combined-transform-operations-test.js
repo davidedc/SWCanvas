@@ -1,7 +1,6 @@
-// Test 17: Combined transform operations
+// Test: Combined transform operations
 // This file will be concatenated into the main visual test suite
 
-// Test 17: Combined transform operations
 registerVisualTest('transform-combined-operations', {
     name: 'Multiple transforms combined',
     width: 200, height: 150,

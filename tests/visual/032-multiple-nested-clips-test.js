@@ -1,7 +1,6 @@
-// Test 32: Multiple nested clips
+// Test: Multiple nested clips
 // This file will be concatenated into the main visual test suite
 
-// Test 32: Multiple nested clips
 registerVisualTest('clip-stack-nested', {
     name: 'Nested Clipping Stack',
     width: 400,

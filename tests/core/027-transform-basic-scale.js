@@ -1,7 +1,6 @@
-// Test 027: Basic transform - scale operations
+// Test: Basic transform - scale operations
 // This file will be concatenated into the main test suite
 
-// Test 027
 test('Basic transform - scale operations', () => {
     if (typeof VisualRenderingTests !== 'undefined') {
         const visualTest = VisualRenderingTests.getTest('transform-basic-scale');

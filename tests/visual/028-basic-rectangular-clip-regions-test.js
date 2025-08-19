@@ -1,7 +1,6 @@
-// Test 28: Basic rectangular clip regions
+// Test: Basic rectangular clip regions
 // This file will be concatenated into the main visual test suite
 
-// Test 28: Basic rectangular clip regions
 registerVisualTest('clip-rectangular', {
     name: 'Basic Rectangular Clipping',
     width: 400,

@@ -1,7 +1,6 @@
-// Test 11: Basic Translation
+// Test: Basic Translation
 // This file will be concatenated into the main visual test suite
 
-// Test 11: Basic Translation
 registerVisualTest('transform-basic-translate', {
     name: 'Basic translation operations',
     width: 200, height: 150,

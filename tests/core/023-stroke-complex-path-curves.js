@@ -1,7 +1,6 @@
-// Test 023: Complex path stroke with curves
+// Test: Complex path stroke with curves
 // This file will be concatenated into the main test suite
 
-// Test 023
 test('Complex path stroke with curves', () => {
     const surface = SWCanvas.Core.Surface(150, 150);
     const ctx = new SWCanvas.Core.Context2D(surface);

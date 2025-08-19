@@ -1,7 +1,6 @@
-// Test 54: Sub-pixel stroke rendering comparison
+// Test: Sub-pixel stroke rendering comparison
 // This file will be concatenated into the main visual test suite
 
-// Test 54: Sub-pixel stroke rendering comparison
 registerVisualTest('subpixel-strokes', {
     name: 'Sub-pixel Stroke Rendering',
     width: 600,

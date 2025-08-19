@@ -1,7 +1,6 @@
-// Test 55: Stroke edge cases
+// Test: Stroke edge cases
 // This file will be concatenated into the main visual test suite
 
-// Test 55: Stroke edge cases
 registerVisualTest('stroke-edge-cases', {
     name: 'Stroke Edge Cases',
     width: 500,
@@ -13,7 +12,7 @@ registerVisualTest('stroke-edge-cases', {
         ctx.fillStyle = 'white';
         ctx.fillRect(0, 0, 500, 300);
         
-        // Test 1: Zero-width stroke (SWCanvas renders faint line, HTML5Canvas may not render)
+        // Test: Zero-width stroke (SWCanvas renders faint line, HTML5Canvas may not render)
         ctx.strokeStyle = 'red';
         ctx.lineWidth = 0;
         ctx.beginPath();
@@ -21,7 +20,7 @@ registerVisualTest('stroke-edge-cases', {
         ctx.lineTo(150, 50);
         ctx.stroke();
         
-        // Test 2: Very thin strokes
+        // Test: Very thin strokes
         const thinWidths = [0.01, 0.1, 0.2, 0.3, 0.4];
         for (let i = 0; i < thinWidths.length; i++) {
             ctx.strokeStyle = 'blue';
@@ -32,7 +31,7 @@ registerVisualTest('stroke-edge-cases', {
             ctx.stroke();
         }
         
-        // Test 3: Strokes with scale transform
+        // Test: Strokes with scale transform
         ctx.save();
         ctx.scale(0.5, 0.5);
         ctx.strokeStyle = 'green';
@@ -43,7 +42,7 @@ registerVisualTest('stroke-edge-cases', {
         ctx.stroke();
         ctx.restore();
         
-        // Test 4: Strokes with clipping
+        // Test: Strokes with clipping
         ctx.save();
         ctx.beginPath();
         ctx.rect(250, 50, 100, 80);
@@ -57,7 +56,7 @@ registerVisualTest('stroke-edge-cases', {
         ctx.stroke();
         ctx.restore();
         
-        // Test 5: Circles with very thin strokes
+        // Test: Circles with very thin strokes
         const circleWidths = [0.1, 0.3, 0.5, 1.0, 2.0];
         for (let i = 0; i < circleWidths.length; i++) {
             ctx.strokeStyle = 'orange';
@@ -67,7 +66,7 @@ registerVisualTest('stroke-edge-cases', {
             ctx.stroke();
         }
         
-        // Test 6: Single pixel positioned strokes
+        // Test: Single pixel positioned strokes
         ctx.strokeStyle = 'black';
         ctx.lineWidth = 1.0;
         

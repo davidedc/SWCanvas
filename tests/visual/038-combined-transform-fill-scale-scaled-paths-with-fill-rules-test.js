@@ -1,7 +1,6 @@
-// Test 38: Combined Transform + Fill + Scale - Scaled paths with fill rules
+// Test: Combined Transform + Fill + Scale - Scaled paths with fill rules
 // This file will be concatenated into the main visual test suite
 
-// Test 38: Combined Transform + Fill + Scale - Scaled paths with fill rules
 registerVisualTest('combined-transform-fill-scale', {
     name: 'Scaled paths with fill rules',
     width: 400, height: 300,
@@ -12,7 +11,7 @@ registerVisualTest('combined-transform-fill-scale', {
         ctx.fillStyle = 'white';
         ctx.fillRect(0, 0, 400, 300);
         
-        // Test 1: Scaled self-intersecting path with nonzero fill rule (left top)
+        // Test: Scaled self-intersecting path with nonzero fill rule (left top)
         ctx.save();
         ctx.translate(100, 70);
         ctx.scale(1.5, 1.0);
@@ -31,7 +30,7 @@ registerVisualTest('combined-transform-fill-scale', {
         ctx.stroke();
         ctx.restore();
         
-        // Test 2: Same scaled path with evenodd fill rule (right top)
+        // Test: Same scaled path with evenodd fill rule (right top)
         ctx.save();
         ctx.translate(300, 70);
         ctx.scale(1.5, 1.0);
@@ -50,7 +49,7 @@ registerVisualTest('combined-transform-fill-scale', {
         ctx.stroke();
         ctx.restore();
         
-        // Test 3: Scaled complex star with nonzero (bottom left)
+        // Test: Scaled complex star with nonzero (bottom left)
         ctx.save();
         ctx.translate(100, 180);
         ctx.scale(0.8, 1.2);
@@ -79,7 +78,7 @@ registerVisualTest('combined-transform-fill-scale', {
         ctx.stroke();
         ctx.restore();
         
-        // Test 4: Same scaled star with evenodd (bottom right)
+        // Test: Same scaled star with evenodd (bottom right)
         ctx.save();
         ctx.translate(300, 180);
         ctx.scale(0.8, 1.2);
@@ -107,7 +106,7 @@ registerVisualTest('combined-transform-fill-scale', {
         ctx.stroke();
         ctx.restore();
         
-        // Test 5: Highly scaled path with nested shapes (center bottom)
+        // Test: Highly scaled path with nested shapes (center bottom)
         ctx.save();
         ctx.translate(200, 240);
         ctx.scale(2.0, 0.5);

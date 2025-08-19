@@ -1,7 +1,6 @@
-// Test 1: Simple Rectangle Test
+// Test: Simple Rectangle Test
 // This file will be concatenated into the main visual test suite
 
-// Test 1
 registerVisualTest('simple-test', {
     name: 'Create and save a simple test image',
     width: 100, height: 100,

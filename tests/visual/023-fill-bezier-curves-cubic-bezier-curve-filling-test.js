@@ -1,7 +1,6 @@
-// Test 23: fill-bezier-curves - Cubic bezier curve filling
+// Test: fill-bezier-curves - Cubic bezier curve filling
 // This file will be concatenated into the main visual test suite
 
-// Test 23: fill-bezier-curves - Cubic bezier curve filling
 registerVisualTest('fill-bezier-curves', {
     name: 'Cubic bezier curve filling',
     width: 300, height: 200,

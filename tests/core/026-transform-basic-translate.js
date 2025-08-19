@@ -1,7 +1,6 @@
-// Test 026: Basic transform - translate operations
+// Test: Basic transform - translate operations
 // This file will be concatenated into the main test suite
 
-// Test 026
 test('Basic transform - translate operations', () => {
     if (typeof VisualRenderingTests !== 'undefined') {
         const visualTest = VisualRenderingTests.getTest('transform-basic-translate');

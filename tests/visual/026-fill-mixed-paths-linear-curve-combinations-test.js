@@ -1,7 +1,6 @@
-// Test 26: fill-mixed-paths - Linear + curve combinations
+// Test: fill-mixed-paths - Linear + curve combinations
 // This file will be concatenated into the main visual test suite
 
-// Test 26: fill-mixed-paths - Linear + curve combinations
 registerVisualTest('fill-mixed-paths', {
     name: 'Mixed linear and curve paths',
     width: 300, height: 200,

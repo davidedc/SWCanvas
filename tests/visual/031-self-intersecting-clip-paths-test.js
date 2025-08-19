@@ -1,7 +1,6 @@
-// Test 31: Self-intersecting clip paths
+// Test: Self-intersecting clip paths
 // This file will be concatenated into the main visual test suite
 
-// Test 31: Self-intersecting clip paths
 registerVisualTest('clip-self-intersecting', {
     name: 'Self-Intersecting Clipping',
     width: 400,

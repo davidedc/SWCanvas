@@ -1,7 +1,6 @@
-// Test 57: Stroke pixel analysis
+// Test: Stroke pixel analysis
 // This file will be concatenated into the main visual test suite
 
-// Test 57: Stroke pixel analysis
 registerVisualTest('stroke-pixel-analysis', {
     name: 'Stroke Pixel Analysis',
     width: 300,
@@ -13,7 +12,7 @@ registerVisualTest('stroke-pixel-analysis', {
         ctx.fillStyle = 'white';
         ctx.fillRect(0, 0, 300, 200);
         
-        // Test 1: Single pixel stroke at integer coordinates
+        // Test: Single pixel stroke at integer coordinates
         ctx.strokeStyle = 'red';
         ctx.lineWidth = 1.0;
         ctx.beginPath();
@@ -21,7 +20,7 @@ registerVisualTest('stroke-pixel-analysis', {
         ctx.lineTo(100, 50);
         ctx.stroke();
         
-        // Test 2: Sub-pixel stroke widths at integer coordinates
+        // Test: Sub-pixel stroke widths at integer coordinates
         const subPixelWidths = [0.1, 0.25, 0.5, 0.75];
         for (let i = 0; i < subPixelWidths.length; i++) {
             ctx.strokeStyle = 'blue';
@@ -32,7 +31,7 @@ registerVisualTest('stroke-pixel-analysis', {
             ctx.stroke();
         }
         
-        // Test 3: 1-pixel stroke at fractional coordinates
+        // Test: 1-pixel stroke at fractional coordinates
         ctx.strokeStyle = 'green';
         ctx.lineWidth = 1.0;
         ctx.beginPath();
@@ -40,7 +39,7 @@ registerVisualTest('stroke-pixel-analysis', {
         ctx.lineTo(100.5, 120);
         ctx.stroke();
         
-        // Test 4: Sub-pixel strokes at fractional coordinates
+        // Test: Sub-pixel strokes at fractional coordinates
         for (let i = 0; i < subPixelWidths.length; i++) {
             ctx.strokeStyle = 'purple';
             ctx.lineWidth = subPixelWidths[i];
@@ -50,7 +49,7 @@ registerVisualTest('stroke-pixel-analysis', {
             ctx.stroke();
         }
         
-        // Test 5: Very thin vertical lines
+        // Test: Very thin vertical lines
         const xPositions = [150, 160, 170, 180, 190];
         const thinWidths = [0.1, 0.2, 0.3, 0.5, 1.0];
         for (let i = 0; i < xPositions.length; i++) {
@@ -62,7 +61,7 @@ registerVisualTest('stroke-pixel-analysis', {
             ctx.stroke();
         }
         
-        // Test 6: Diagonal lines with thin strokes
+        // Test: Diagonal lines with thin strokes
         for (let i = 0; i < 3; i++) {
             ctx.strokeStyle = 'brown';
             ctx.lineWidth = 0.25 + i * 0.25;

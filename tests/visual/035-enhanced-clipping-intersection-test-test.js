@@ -1,7 +1,6 @@
-// Test 35: Enhanced Clipping Intersection Test
+// Test: Enhanced Clipping Intersection Test
 // This file will be concatenated into the main visual test suite
 
-// Test 35: Enhanced Clipping Intersection Test
 registerVisualTest('clip-intersection-enhanced', {
     name: 'Enhanced Clipping Intersection Test',
     width: 400, height: 300,
@@ -11,7 +10,7 @@ registerVisualTest('clip-intersection-enhanced', {
         ctx.fillStyle = 'white';
         ctx.fillRect(0, 0, 400, 300);
         
-        // Test 1: Basic rectangular clip intersection (left side)
+        // Test: Basic rectangular clip intersection (left side)
         ctx.save();
         ctx.beginPath();
         ctx.rect(50, 50, 120, 80);
@@ -28,7 +27,7 @@ registerVisualTest('clip-intersection-enhanced', {
         ctx.restore();
         ctx.restore();
         
-        // Test 2: Circular and rectangular clip intersection (right side)
+        // Test: Circular and rectangular clip intersection (right side)
         ctx.save();
         ctx.beginPath();
         ctx.arc(300, 90, 60, 0, 2 * Math.PI);
@@ -45,7 +44,7 @@ registerVisualTest('clip-intersection-enhanced', {
         ctx.restore();
         ctx.restore();
         
-        // Test 3: Multiple nested intersections (bottom)
+        // Test: Multiple nested intersections (bottom)
         ctx.save();
         ctx.beginPath();
         ctx.rect(50, 180, 150, 100);
@@ -68,7 +67,7 @@ registerVisualTest('clip-intersection-enhanced', {
         ctx.restore();
         ctx.restore();
         
-        // Test 4: Complex polygon intersection (bottom right)
+        // Test: Complex polygon intersection (bottom right)
         ctx.save();
         ctx.beginPath();
         for (let i = 0; i < 6; i++) {

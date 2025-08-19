@@ -1,4 +1,4 @@
-// Test 68: Gradient Strokes with Line Dashes Test
+// Test: Gradient Strokes with Line Dashes Test
 // This file will be concatenated into the main visual test suite
 
 registerVisualTest('gradient-strokes-dashes', {

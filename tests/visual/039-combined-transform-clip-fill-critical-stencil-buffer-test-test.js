@@ -1,7 +1,6 @@
-// Test 39: Combined Transform + Clip + Fill - Critical stencil buffer test
+// Test: Combined Transform + Clip + Fill - Critical stencil buffer test
 // This file will be concatenated into the main visual test suite
 
-// Test 39: Combined Transform + Clip + Fill - Critical stencil buffer test
 registerVisualTest('combined-transform-clip-fill', {
     name: 'Transform + Clip + Fill',
     width: 400, height: 300,
@@ -12,7 +11,7 @@ registerVisualTest('combined-transform-clip-fill', {
         ctx.fillStyle = 'white';
         ctx.fillRect(0, 0, 400, 300);
         
-        // Test 1: Transform + Circular Clip + Complex Fill (top left)
+        // Test: Transform + Circular Clip + Complex Fill (top left)
         ctx.save();
         ctx.translate(100, 80);
         ctx.rotate(Math.PI / 6);
@@ -33,7 +32,7 @@ registerVisualTest('combined-transform-clip-fill', {
         ctx.fillRect(20, -30, 40, 60);
         ctx.restore();
         
-        // Test 2: Nested Transform + Multiple Clips (top right)
+        // Test: Nested Transform + Multiple Clips (top right)
         ctx.save();
         ctx.translate(300, 80);
         ctx.scale(0.9, 1.1);
@@ -68,7 +67,7 @@ registerVisualTest('combined-transform-clip-fill', {
         ctx.restore();
         ctx.restore();
         
-        // Test 3: Critical stencil buffer test with overlapping transforms (bottom left)
+        // Test: Critical stencil buffer test with overlapping transforms (bottom left)
         ctx.save();
         ctx.translate(100, 200);
         
@@ -99,7 +98,7 @@ registerVisualTest('combined-transform-clip-fill', {
         }
         ctx.restore();
         
-        // Test 4: Complex nested save/restore with clipping (bottom right)
+        // Test: Complex nested save/restore with clipping (bottom right)
         ctx.save();
         ctx.translate(300, 200);
         ctx.scale(1.3, 0.7);

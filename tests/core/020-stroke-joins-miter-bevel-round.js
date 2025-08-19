@@ -1,7 +1,6 @@
-// Test 020: Stroke joins - miter, bevel, round
+// Test: Stroke joins - miter, bevel, round
 // This file will be concatenated into the main test suite
 
-// Test 020
 test('Stroke joins - miter, bevel, round', () => {
     const surface = SWCanvas.Core.Surface(300, 100);
     const ctx = new SWCanvas.Core.Context2D(surface);

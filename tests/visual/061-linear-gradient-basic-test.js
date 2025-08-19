@@ -1,4 +1,4 @@
-// Test 61: Linear Gradient Basic Test
+// Test: Linear Gradient Basic Test
 // This file will be concatenated into the main visual test suite
 
 registerVisualTest('linear-gradient-basic', {

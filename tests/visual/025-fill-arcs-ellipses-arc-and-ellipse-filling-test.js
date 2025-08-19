@@ -1,7 +1,6 @@
-// Test 25: fill-arcs-ellipses - Arc and ellipse filling
+// Test: fill-arcs-ellipses - Arc and ellipse filling
 // This file will be concatenated into the main visual test suite
 
-// Test 25: fill-arcs-ellipses - Arc and ellipse filling
 registerVisualTest('fill-arcs-ellipses', {
     name: 'Arc and ellipse filling',
     width: 300, height: 200,

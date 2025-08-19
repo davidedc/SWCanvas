@@ -1,7 +1,6 @@
-// Test 029: setTransform vs transform behavior
+// Test: setTransform vs transform behavior
 // This file will be concatenated into the main test suite
 
-// Test 029
 test('setTransform vs transform behavior', () => {
     if (typeof VisualRenderingTests !== 'undefined') {
         const visualTest = VisualRenderingTests.getTest('transform-setTransform-vs-transform');

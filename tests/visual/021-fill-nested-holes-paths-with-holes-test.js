@@ -1,7 +1,6 @@
-// Test 21: fill-nested-holes - Paths with holes
+// Test: fill-nested-holes - Paths with holes
 // This file will be concatenated into the main visual test suite
 
-// Test 21: fill-nested-holes - Paths with holes
 registerVisualTest('fill-nested-holes', {
     name: 'Path filling with nested holes',
     width: 300, height: 200,

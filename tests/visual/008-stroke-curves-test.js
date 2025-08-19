@@ -1,7 +1,6 @@
-// Test 8: Stroke Curves
+// Test: Stroke Curves
 // This file will be concatenated into the main visual test suite
 
-// Test 8: Stroke Curves  
 registerVisualTest('stroke-curves', {
     name: 'Complex path stroke with curves',
     width: 150, height: 150,

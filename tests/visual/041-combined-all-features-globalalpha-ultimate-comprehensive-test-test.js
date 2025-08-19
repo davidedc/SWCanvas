@@ -1,7 +1,6 @@
-// Test 41: Combined All Features + GlobalAlpha - Ultimate comprehensive test
+// Test: Combined All Features + GlobalAlpha - Ultimate comprehensive test
 // This file will be concatenated into the main visual test suite
 
-// Test 41: Combined All Features + GlobalAlpha - Ultimate comprehensive test
 registerVisualTest('combined-all-features', {
     name: 'All features + globalAlpha',
     width: 400, height: 300,
@@ -15,7 +14,7 @@ registerVisualTest('combined-all-features', {
         // ULTIMATE COMPREHENSIVE TEST: All features combined
         // This test exercises transforms, clipping, fill rules, strokes, and global alpha
         
-        // Test 1: Transformed + Clipped + Alpha Blended Complex Shapes (top left)
+        // Test: Transformed + Clipped + Alpha Blended Complex Shapes (top left)
         ctx.save();
         ctx.globalAlpha = 0.8;
         ctx.translate(100, 70);
@@ -55,7 +54,7 @@ registerVisualTest('combined-all-features', {
         ctx.fillRect(15, -25, 35, 50);
         ctx.restore();
         
-        // Test 2: Advanced path with evenodd fill + stroke + alpha (top right)
+        // Test: Advanced path with evenodd fill + stroke + alpha (top right)
         ctx.save();
         ctx.globalAlpha = 0.9;
         ctx.translate(300, 70);
@@ -84,7 +83,7 @@ registerVisualTest('combined-all-features', {
         ctx.stroke();
         ctx.restore();
         
-        // Test 3: Nested clipping + transforms + gradual alpha changes (bottom left)
+        // Test: Nested clipping + transforms + gradual alpha changes (bottom left)
         ctx.save();
         ctx.translate(100, 200);
         ctx.scale(0.8, 1.1);
@@ -128,7 +127,7 @@ registerVisualTest('combined-all-features', {
         ctx.restore();
         ctx.restore();
         
-        // Test 4: Ultimate complexity - all features combined (bottom right)
+        // Test: Ultimate complexity - all features combined (bottom right)
         ctx.save();
         ctx.globalAlpha = 0.85;
         ctx.translate(300, 200);

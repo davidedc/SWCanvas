@@ -1,7 +1,6 @@
-// Test 031: Transform matrix order dependency (A*B ≠ B*A)
+// Test: Transform matrix order dependency (A*B ≠ B*A)
 // This file will be concatenated into the main test suite
 
-// Test 031
 test('Transform matrix order dependency (A*B ≠ B*A)', () => {
     if (typeof VisualRenderingTests !== 'undefined') {
         const visualTest = VisualRenderingTests.getTest('transform-matrix-order');
@@ -56,7 +55,7 @@ test('Transform matrix order dependency (A*B ≠ B*A)', () => {
     ctx.setFillStyle(255, 255, 255, 255);
     ctx.fillRect(0, 0, 200, 100);
     
-    // Test 1: Translate then Scale
+    // Test: Translate then Scale
     ctx.save();
     const matrix1 = new SWCanvas.Core.Transform2D();
     const translated = matrix1.translate(20, 20);
@@ -67,7 +66,7 @@ test('Transform matrix order dependency (A*B ≠ B*A)', () => {
     ctx.fillRect(0, 0, 10, 10);
     ctx.restore();
     
-    // Test 2: Scale then Translate
+    // Test: Scale then Translate
     ctx.save();
     const matrix2 = new SWCanvas.Core.Transform2D();
     const scaled = matrix2.scale(2, 2);

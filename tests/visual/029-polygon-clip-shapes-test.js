@@ -1,7 +1,6 @@
-// Test 29: Polygon clip shapes
+// Test: Polygon clip shapes
 // This file will be concatenated into the main visual test suite
 
-// Test 29: Polygon clip shapes
 registerVisualTest('clip-polygon', {
     name: 'Polygon Clipping',
     width: 400,

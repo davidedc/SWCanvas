@@ -1,7 +1,6 @@
-// Test 43: Combined All Features + GlobalAlpha - Spiral stroke version
+// Test: Combined All Features + GlobalAlpha - Spiral stroke version
 // This file will be concatenated into the main visual test suite
 
-// Test 43: Combined All Features + GlobalAlpha - Ultimate comprehensive test (rescued from original test 39)
 registerVisualTest('combined-all-features-v2', {
     name: 'All features + globalAlpha (spiral stroke)',
     width: 400, height: 300,
@@ -12,7 +11,7 @@ registerVisualTest('combined-all-features-v2', {
         ctx.fillStyle = 'white';
         ctx.fillRect(0, 0, 400, 300);
         
-        // Test 1: Rotated clip with semi-transparent fill (top left)
+        // Test: Rotated clip with semi-transparent fill (top left)
         ctx.save();
         ctx.translate(100, 75);
         ctx.rotate(Math.PI / 6);
@@ -42,7 +41,7 @@ registerVisualTest('combined-all-features-v2', {
         ctx.fill();
         ctx.restore();
         
-        // Test 2: Scaled stroke with clip and alpha (top right)
+        // Test: Scaled stroke with clip and alpha (top right)
         ctx.save();
         ctx.translate(300, 75);
         ctx.scale(1.2, 0.8);
@@ -68,7 +67,7 @@ registerVisualTest('combined-all-features-v2', {
         ctx.stroke();
         ctx.restore();
         
-        // Test 3: Multiple nested clips with varying alpha (bottom left)
+        // Test: Multiple nested clips with varying alpha (bottom left)
         ctx.save();
         ctx.translate(100, 200);
         
@@ -106,7 +105,7 @@ registerVisualTest('combined-all-features-v2', {
         ctx.fill();
         ctx.restore();
         
-        // Test 4: Ultimate complexity - all features combined (bottom right)
+        // Test: Ultimate complexity - all features combined (bottom right)
         ctx.save();
         ctx.translate(300, 200);
         ctx.rotate(Math.PI / 12);

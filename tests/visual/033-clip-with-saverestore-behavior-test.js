@@ -1,7 +1,6 @@
-// Test 33: Clip with save/restore behavior
+// Test: Clip with save/restore behavior
 // This file will be concatenated into the main visual test suite
 
-// Test 33: Clip with save/restore behavior
 registerVisualTest('clip-save-restore', {
     name: 'Clipping Save/Restore',
     width: 400,

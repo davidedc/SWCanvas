@@ -1,7 +1,6 @@
-// Test 19: fill-concave-polygons - Star shapes and L-shapes
+// Test: fill-concave-polygons - Star shapes and L-shapes
 // This file will be concatenated into the main visual test suite
 
-// Test 19: fill-concave-polygons - Star shapes and L-shapes
 registerVisualTest('fill-concave-polygons', {
     name: 'Concave polygon filling (star and L-shape)',
     width: 300, height: 200,

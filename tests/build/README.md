@@ -21,7 +21,6 @@ This directory contains utility scripts for managing the SWCanvas test system.
 
 **What it does**:
 - Shifts test file numbers (e.g., 025-test.js → 026-test.js)
-- Updates internal test number comments (// Test 25: → // Test 26:)
 - Preserves git history when possible using `git mv`
 - Generates undo scripts for reverting changes
 - Provides dry-run mode for previewing changes
@@ -64,7 +63,7 @@ This renames:
 ### 2. **Create your new test file**
 ```bash
 # Now position 025 is free
-echo "// Test 025: My New Test" > tests/visual/025-my-new-test.js
+echo "// Test: My New Test" > tests/visual/025-my-new-test.js
 # Add your test implementation...
 ```
 

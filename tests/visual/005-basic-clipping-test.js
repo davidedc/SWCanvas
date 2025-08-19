@@ -1,7 +1,6 @@
-// Test 5: Basic Clipping
+// Test: Basic Clipping
 // This file will be concatenated into the main visual test suite
 
-// Test 5: Basic Clipping
 registerVisualTest('clipping-test', {
     name: 'Basic clipping test',
     width: 100, height: 100,

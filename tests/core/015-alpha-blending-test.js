@@ -1,7 +1,6 @@
-// Test 015: Alpha blending test - semi-transparent rectangles
+// Test: Alpha blending test - semi-transparent rectangles
 // This file will be concatenated into the main test suite
 
-// Test 015
 test('Alpha blending test - semi-transparent rectangles', () => {
     // Use visual test registry if available
     if (typeof VisualRenderingTests !== 'undefined') {

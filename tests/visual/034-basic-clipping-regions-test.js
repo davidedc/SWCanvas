@@ -1,7 +1,6 @@
-// Test 34: Basic clipping regions  
+// Test: Basic clipping regions  
 // This file will be concatenated into the main visual test suite
 
-// Test 34: Basic clipping regions  
 registerVisualTest('clip-intersection', {
     name: 'Basic Clipping Regions',
     width: 400,

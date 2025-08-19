@@ -1,7 +1,6 @@
-// Test 56: Clipped path strokes (recreates Polygon Clipping star issue)
+// Test: Clipped path strokes (recreates Polygon Clipping star issue)
 // This file will be concatenated into the main visual test suite
 
-// Test 56: Clipped path strokes (recreates Polygon Clipping star issue)
 registerVisualTest('clipped-path-strokes', {
     name: 'Clipped Path Strokes',
     width: 400,
@@ -13,7 +12,7 @@ registerVisualTest('clipped-path-strokes', {
         ctx.fillStyle = 'white';
         ctx.fillRect(0, 0, 400, 300);
         
-        // Test 1: Star without clipping (left side)
+        // Test: Star without clipping (left side)
         const cx1 = 100, cy1 = 80;
         ctx.save();
         ctx.beginPath();
@@ -43,7 +42,7 @@ registerVisualTest('clipped-path-strokes', {
         ctx.stroke();
         ctx.restore();
         
-        // Test 2: Star with clipping (right side) - same as Polygon Clipping
+        // Test: Star with clipping (right side) - same as Polygon Clipping
         // NOTE: If you see a thin stroke around the star in some browsers but not in SWCanvas,
         // this is expected. Some browsers incorrectly auto-stroke clip paths, but this is
         // non-standard behavior. Chrome and SWCanvas correctly follow the spec.
@@ -72,7 +71,7 @@ registerVisualTest('clipped-path-strokes', {
         ctx.fillRect(280, 60, 40, 40);
         ctx.restore();
         
-        // Test 3: Compare stroke widths
+        // Test: Compare stroke widths
         const strokeWidths = [0.25, 0.5, 1.0, 2.0];
         for (let j = 0; j < strokeWidths.length; j++) {
             const cx = 50 + j * 80;

@@ -1,7 +1,6 @@
-// Test 18: Transform matrix order dependency (A*B ≠ B*A)
+// Test: Transform matrix order dependency (A*B ≠ B*A)
 // This file will be concatenated into the main visual test suite
 
-// Test 18: Transform matrix order dependency (A*B ≠ B*A)
 registerVisualTest('transform-matrix-order', {
     name: 'Transform order dependency (A*B ≠ B*A)',
     width: 200, height: 150,

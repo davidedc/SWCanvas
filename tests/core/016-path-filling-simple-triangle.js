@@ -1,7 +1,6 @@
-// Test 016: Path filling - simple triangle
+// Test: Path filling - simple triangle
 // This file will be concatenated into the main test suite
 
-// Test 016
 test('Path filling - simple triangle', () => {
     const surface = SWCanvas.Core.Surface(100, 100);
     const ctx = new SWCanvas.Core.Context2D(surface);

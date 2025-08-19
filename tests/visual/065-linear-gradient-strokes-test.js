@@ -1,4 +1,4 @@
-// Test 65: Linear Gradient Strokes Test
+// Test: Linear Gradient Strokes Test
 // This file will be concatenated into the main visual test suite
 
 registerVisualTest('linear-gradient-strokes', {
@@ -19,7 +19,7 @@ registerVisualTest('linear-gradient-strokes', {
         
         ctx.strokeStyle = grad;
         
-        // Test 1: Simple line with different line caps
+        // Test: Simple line with different line caps
         ctx.lineWidth = 8;
         
         // Butt cap
@@ -43,7 +43,7 @@ registerVisualTest('linear-gradient-strokes', {
         ctx.lineTo(280, 30);
         ctx.stroke();
         
-        // Test 2: Line joins with thick strokes
+        // Test: Line joins with thick strokes
         ctx.lineWidth = 12;
         ctx.lineCap = 'butt';
         
@@ -71,7 +71,7 @@ registerVisualTest('linear-gradient-strokes', {
         ctx.lineTo(280, 60);
         ctx.stroke();
         
-        // Test 3: Different stroke widths
+        // Test: Different stroke widths
         ctx.lineJoin = 'round';
         ctx.lineCap = 'round';
         
@@ -84,7 +84,7 @@ registerVisualTest('linear-gradient-strokes', {
             ctx.stroke();
         });
         
-        // Test 4: Curved paths
+        // Test: Curved paths
         ctx.lineWidth = 6;
         ctx.beginPath();
         ctx.moveTo(20, 150);
@@ -92,11 +92,11 @@ registerVisualTest('linear-gradient-strokes', {
         ctx.bezierCurveTo(160, 180, 200, 120, 280, 150);
         ctx.stroke();
         
-        // Test 5: Rectangle stroke
+        // Test: Rectangle stroke
         ctx.lineWidth = 4;
         ctx.strokeRect(20, 170, 80, 20);
         
-        // Test 6: Circle stroke  
+        // Test: Circle stroke  
         ctx.beginPath();
         ctx.arc(180, 180, 15, 0, Math.PI * 2);
         ctx.stroke();

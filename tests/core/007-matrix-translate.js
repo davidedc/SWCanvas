@@ -1,7 +1,6 @@
-// Test 007: Matrix translate
+// Test: Matrix translate
 // This file will be concatenated into the main test suite
 
-// Test 007
 test('Matrix translate', () => {
     const m = new SWCanvas.Core.Transform2D();
     const result = m.translate(10, 20);

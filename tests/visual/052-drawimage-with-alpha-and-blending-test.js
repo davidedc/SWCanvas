@@ -1,7 +1,6 @@
-// Test 51: drawImage with alpha and blending
+// Test: drawImage with alpha and blending
 // This file will be concatenated into the main visual test suite
 
-// Test 51: drawImage with alpha and blending
 registerVisualTest('drawimage-alpha-blending', {
     name: 'drawImage with alpha and blending',
     width: 200, height: 150,

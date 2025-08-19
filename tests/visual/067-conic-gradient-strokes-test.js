@@ -1,4 +1,4 @@
-// Test 67: Conic Gradient Strokes Test
+// Test: Conic Gradient Strokes Test
 // This file will be concatenated into the main visual test suite
 
 registerVisualTest('conic-gradient-strokes', {
@@ -22,7 +22,7 @@ registerVisualTest('conic-gradient-strokes', {
         
         ctx.strokeStyle = grad;
         
-        // Test 1: Rays emanating from center
+        // Test: Rays emanating from center
         ctx.lineWidth = 4;
         ctx.lineCap = 'round';
         
@@ -41,7 +41,7 @@ registerVisualTest('conic-gradient-strokes', {
             ctx.stroke();
         }
         
-        // Test 2: Polygon with various joins
+        // Test: Polygon with various joins
         ctx.lineWidth = 8;
         
         // Hexagon with miter joins
@@ -59,7 +59,7 @@ registerVisualTest('conic-gradient-strokes', {
         }
         ctx.stroke();
         
-        // Test 3: Wavy line
+        // Test: Wavy line
         ctx.lineWidth = 6;
         ctx.lineJoin = 'round';
         ctx.lineCap = 'round';
@@ -72,7 +72,7 @@ registerVisualTest('conic-gradient-strokes', {
         }
         ctx.stroke();
         
-        // Test 4: Figure-eight pattern
+        // Test: Figure-eight pattern
         ctx.lineWidth = 5;
         ctx.beginPath();
         ctx.moveTo(80, 160);
@@ -82,7 +82,7 @@ registerVisualTest('conic-gradient-strokes', {
         ctx.bezierCurveTo(40, 180, 80, 180, 80, 160);
         ctx.stroke();
         
-        // Test 5: Arc segments with different thickness
+        // Test: Arc segments with different thickness
         const thicknesses = [2, 4, 6, 8];
         thicknesses.forEach((thickness, i) => {
             ctx.lineWidth = thickness;

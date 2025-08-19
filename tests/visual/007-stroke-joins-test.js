@@ -1,7 +1,6 @@
-// Test 7: Stroke Joins
+// Test: Stroke Joins
 // This file will be concatenated into the main visual test suite
 
-// Test 7: Stroke Joins
 registerVisualTest('stroke-joins', {
     name: 'Stroke joins - miter, bevel, round',
     width: 300, height: 100,

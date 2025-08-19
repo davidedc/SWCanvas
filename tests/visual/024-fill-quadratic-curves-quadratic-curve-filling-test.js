@@ -1,7 +1,6 @@
-// Test 24: fill-quadratic-curves - Quadratic curve filling
+// Test: fill-quadratic-curves - Quadratic curve filling
 // This file will be concatenated into the main visual test suite
 
-// Test 24: fill-quadratic-curves - Quadratic curve filling
 registerVisualTest('fill-quadratic-curves', {
     name: 'Quadratic curve filling',
     width: 300, height: 200,

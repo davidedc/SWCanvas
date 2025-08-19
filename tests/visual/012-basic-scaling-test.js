@@ -1,7 +1,6 @@
-// Test 12: Basic Scaling
+// Test: Basic Scaling
 // This file will be concatenated into the main visual test suite
 
-// Test 12: Basic Scaling
 registerVisualTest('transform-basic-scale', {
     name: 'Basic scaling operations',
     width: 200, height: 150,

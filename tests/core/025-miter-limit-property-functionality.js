@@ -1,7 +1,6 @@
-// Test 025: Miter limit property and basic functionality
+// Test: Miter limit property and basic functionality
 // This file will be concatenated into the main test suite
 
-// Test 025
 test('Miter limit property and basic functionality', () => {
     // Test that miterLimit property works and doesn't cause crashes
     

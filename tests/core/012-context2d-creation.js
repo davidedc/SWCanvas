@@ -1,7 +1,6 @@
-// Test 012: Context2D creation
+// Test: Context2D creation
 // This file will be concatenated into the main test suite
 
-// Test 012
 test('Context2D creation', () => {
     const surface = SWCanvas.Core.Surface(100, 100);
     const ctx = new SWCanvas.Core.Context2D(surface);

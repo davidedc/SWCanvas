@@ -1,7 +1,6 @@
-// Test 024: Miter limit test
+// Test: Miter limit test
 // This file will be concatenated into the main test suite
 
-// Test 024
 test('Miter limit test', () => {
     const surface = SWCanvas.Core.Surface(200, 100);
     const ctx = new SWCanvas.Core.Context2D(surface);

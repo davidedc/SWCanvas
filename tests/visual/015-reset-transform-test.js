@@ -1,7 +1,6 @@
-// Test 15: resetTransform functionality
+// Test: resetTransform functionality
 // This file will be concatenated into the main visual test suite
 
-// Test 15: resetTransform functionality
 registerVisualTest('transform-resetTransform', {
     name: 'resetTransform functionality',
     width: 200, height: 150,

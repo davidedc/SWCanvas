@@ -1,7 +1,6 @@
-// Test 27: fill-rule-complex - Complex even-odd vs nonzero comparisons
+// Test: fill-rule-complex - Complex even-odd vs nonzero comparisons
 // This file will be concatenated into the main visual test suite
 
-// Test 27: fill-rule-complex - Complex even-odd vs nonzero comparisons
 registerVisualTest('fill-rule-complex', {
     name: 'Complex fill rule comparisons (even-odd vs nonzero)',
     width: 400, height: 200,

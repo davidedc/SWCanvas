@@ -1,7 +1,6 @@
-// Test 010: Path2D command recording
+// Test: Path2D command recording
 // This file will be concatenated into the main test suite
 
-// Test 010
 test('Path2D command recording', () => {
     const path = new SWCanvas.Core.Path2D();
     path.moveTo(10, 20);

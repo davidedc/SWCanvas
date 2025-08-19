@@ -79,7 +79,7 @@ SWCanvas uses a **modular complementary dual test system** where individual test
 
 **Example Modular Test File** (`/tests/core/001-surface-creation-valid.js`):
 ```javascript
-// Test 001: Surface creation with valid dimensions
+// Test: Surface creation with valid dimensions
 // This file will be concatenated into the main test suite
 
 // Test 001
@@ -118,7 +118,7 @@ test('Surface creation with valid dimensions', () => {
 
 **Example Modular Test File** (`/tests/visual/002-alpha-blending-test.js`):
 ```javascript
-// Test 2: Alpha Blending Test  
+// Test: Alpha Blending Test  
 // This file will be concatenated into the main visual test suite
 
 // Test 2
@@ -199,7 +199,7 @@ Create a new individual file in `/tests/core/` with the naming pattern `{3-digit
 
 ```bash
 # Create new core test 
-echo "// Test 032: New feature test" > tests/core/032-new-feature-test.js
+echo "// Test: New feature test" > tests/core/032-new-feature-test.js
 echo "test('New feature test', () => { /* test code */ });" >> tests/core/032-new-feature-test.js
 
 # Build automatically includes it
@@ -212,7 +212,7 @@ Create a new individual file in `/tests/visual/` with the naming pattern `{3-dig
 ```bash
 # Create new visual test
 cat > tests/visual/057-new-visual-test.js << 'EOF'
-// Test 57: New Visual Test
+// Test: New Visual Test
 // This file will be concatenated into the main visual test suite
 
 registerVisualTest('new-visual-test', {

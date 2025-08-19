@@ -1,7 +1,6 @@
-// Test 36: Combined Transform + Fill + Rotate - Rotated complex polygons
+// Test: Combined Transform + Fill + Rotate - Rotated complex polygons
 // This file will be concatenated into the main visual test suite
 
-// Test 36: Combined Transform + Fill + Rotate - Rotated complex polygons
 registerVisualTest('combined-transform-fill-rotate', {
     name: 'Rotated complex polygons',
     width: 400, height: 300,
@@ -12,7 +11,7 @@ registerVisualTest('combined-transform-fill-rotate', {
         ctx.fillStyle = 'white';
         ctx.fillRect(0, 0, 400, 300);
         
-        // Test 1: Rotated star polygon (left side)
+        // Test: Rotated star polygon (left side)
         ctx.save();
         ctx.translate(100, 80);
         ctx.rotate(Math.PI / 6); // 30 degrees
@@ -41,7 +40,7 @@ registerVisualTest('combined-transform-fill-rotate', {
         ctx.stroke();
         ctx.restore();
         
-        // Test 2: Rotated complex hexagon with hole (center top)
+        // Test: Rotated complex hexagon with hole (center top)
         ctx.save();
         ctx.translate(300, 80);
         ctx.rotate(-Math.PI / 4); // -45 degrees
@@ -74,7 +73,7 @@ registerVisualTest('combined-transform-fill-rotate', {
         ctx.stroke();
         ctx.restore();
         
-        // Test 3: Multiple rotated triangles (bottom left)
+        // Test: Multiple rotated triangles (bottom left)
         const triangleAngles = [0, Math.PI / 3, 2 * Math.PI / 3];
         triangleAngles.forEach((baseAngle, idx) => {
             ctx.save();
@@ -94,7 +93,7 @@ registerVisualTest('combined-transform-fill-rotate', {
             ctx.restore();
         });
         
-        // Test 4: Rotated spiral polygon (bottom right)
+        // Test: Rotated spiral polygon (bottom right)
         ctx.save();
         ctx.translate(300, 200);
         ctx.rotate(Math.PI / 8);

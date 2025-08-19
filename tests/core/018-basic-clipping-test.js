@@ -1,7 +1,6 @@
-// Test 018: Basic clipping test
+// Test: Basic clipping test
 // This file will be concatenated into the main test suite
 
-// Test 018
 test('Basic clipping test', () => {
     const surface = SWCanvas.Core.Surface(100, 100);
     const ctx = new SWCanvas.Core.Context2D(surface);

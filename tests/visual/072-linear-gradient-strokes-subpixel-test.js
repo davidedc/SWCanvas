@@ -1,4 +1,4 @@
-// Test 72: Linear Gradient Strokes with Sub-pixel Width
+// Test: Linear Gradient Strokes with Sub-pixel Width
 // This file will be concatenated into the main visual test suite
 
 registerVisualTest('linear-gradient-strokes-subpixel', {
@@ -19,7 +19,7 @@ registerVisualTest('linear-gradient-strokes-subpixel', {
         
         ctx.strokeStyle = grad;
         
-        // Test 1: Simple line with different line caps and sub-pixel width
+        // Test: Simple line with different line caps and sub-pixel width
         ctx.lineWidth = 0.6; // 60% opacity
         
         // Butt cap
@@ -43,7 +43,7 @@ registerVisualTest('linear-gradient-strokes-subpixel', {
         ctx.lineTo(280, 30);
         ctx.stroke();
         
-        // Test 2: Line joins with thin sub-pixel strokes
+        // Test: Line joins with thin sub-pixel strokes
         ctx.lineWidth = 0.4; // 40% opacity
         ctx.lineCap = 'butt';
         
@@ -71,7 +71,7 @@ registerVisualTest('linear-gradient-strokes-subpixel', {
         ctx.lineTo(280, 60);
         ctx.stroke();
         
-        // Test 3: Different sub-pixel stroke widths
+        // Test: Different sub-pixel stroke widths
         ctx.lineJoin = 'round';
         ctx.lineCap = 'round';
         
@@ -84,7 +84,7 @@ registerVisualTest('linear-gradient-strokes-subpixel', {
             ctx.stroke();
         });
         
-        // Test 4: Curved paths with ultra-thin stroke
+        // Test: Curved paths with ultra-thin stroke
         ctx.lineWidth = 0.25; // 25% opacity
         ctx.beginPath();
         ctx.moveTo(20, 150);
@@ -92,11 +92,11 @@ registerVisualTest('linear-gradient-strokes-subpixel', {
         ctx.bezierCurveTo(160, 180, 200, 120, 280, 150);
         ctx.stroke();
         
-        // Test 5: Rectangle stroke with sub-pixel width
+        // Test: Rectangle stroke with sub-pixel width
         ctx.lineWidth = 0.35; // 35% opacity
         ctx.strokeRect(20, 170, 80, 20);
         
-        // Test 6: Circle stroke with very thin width
+        // Test: Circle stroke with very thin width
         ctx.lineWidth = 0.2; // 20% opacity
         ctx.beginPath();
         ctx.arc(180, 180, 15, 0, Math.PI * 2);

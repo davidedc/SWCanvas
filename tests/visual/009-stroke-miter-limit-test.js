@@ -1,7 +1,6 @@
-// Test 9: Stroke Miter Limit (Original Test)
+// Test: Stroke Miter Limit (Original Test)
 // This file will be concatenated into the main visual test suite
 
-// Test 9: Stroke Miter Limit (Original Test)
 registerVisualTest('stroke-miter-limit', {
     name: 'Miter limit test',
     width: 200, height: 100,

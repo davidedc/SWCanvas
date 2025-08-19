@@ -1,7 +1,6 @@
-// Test 14: setTransform vs transform behavior
+// Test: setTransform vs transform behavior
 // This file will be concatenated into the main visual test suite
 
-// Test 14: setTransform vs transform behavior
 registerVisualTest('transform-setTransform-vs-transform', {
     name: 'setTransform vs transform behavior comparison',
     width: 250, height: 150,

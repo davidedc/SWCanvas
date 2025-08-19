@@ -1,7 +1,6 @@
-// Test 028: Basic transform - rotate operations
+// Test: Basic transform - rotate operations
 // This file will be concatenated into the main test suite
 
-// Test 028
 test('Basic transform - rotate operations', () => {
     if (typeof VisualRenderingTests !== 'undefined') {
         const visualTest = VisualRenderingTests.getTest('transform-basic-rotate');

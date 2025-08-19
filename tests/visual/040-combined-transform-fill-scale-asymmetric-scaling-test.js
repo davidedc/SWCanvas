@@ -1,7 +1,6 @@
-// Test 40: Combined Transform + Fill + Scale - Asymmetric scaling version
+// Test: Combined Transform + Fill + Scale - Scaled paths with fill rules
 // This file will be concatenated into the main visual test suite
 
-// Test 40: Combined Transform + Fill + Scale - Scaled paths with fill rules (rescued from original test 37)
 registerVisualTest('combined-transform-fill-scale-v2', {
     name: 'Scaled paths with fill rules (asymmetric)',
     width: 400, height: 300,
@@ -12,7 +11,7 @@ registerVisualTest('combined-transform-fill-scale-v2', {
         ctx.fillStyle = 'white';
         ctx.fillRect(0, 0, 400, 300);
         
-        // Test 1: Asymmetrically scaled star with nonzero fill rule (top left)
+        // Test: Asymmetrically scaled star with nonzero fill rule (top left)
         ctx.save();
         ctx.translate(100, 75);
         ctx.scale(1.5, 0.8); // Wide and short
@@ -40,7 +39,7 @@ registerVisualTest('combined-transform-fill-scale-v2', {
         ctx.fill('nonzero');
         ctx.restore();
         
-        // Test 2: Scaled self-intersecting shape with evenodd rule (top right)
+        // Test: Scaled self-intersecting shape with evenodd rule (top right)
         ctx.save();
         ctx.translate(300, 75);
         ctx.scale(0.7, 1.8); // Tall and narrow
@@ -57,7 +56,7 @@ registerVisualTest('combined-transform-fill-scale-v2', {
         ctx.fill('evenodd');
         ctx.restore();
         
-        // Test 3: Multiple scaled concentric shapes (bottom left)
+        // Test: Multiple scaled concentric shapes (bottom left)
         const scales = [1.0, 0.75, 0.5, 0.25];
         const colors = ['blue', 'orange', 'purple', 'yellow'];
         
@@ -85,7 +84,7 @@ registerVisualTest('combined-transform-fill-scale-v2', {
         }
         ctx.restore();
         
-        // Test 4: Extremely scaled bezier curves (bottom right)
+        // Test: Extremely scaled bezier curves (bottom right)
         ctx.save();
         ctx.translate(300, 200);
         ctx.scale(2.5, 0.4); // Very wide and very short

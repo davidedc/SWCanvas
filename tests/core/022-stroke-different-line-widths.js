@@ -1,7 +1,6 @@
-// Test 022: Stroke with different line widths
+// Test: Stroke with different line widths
 // This file will be concatenated into the main test suite
 
-// Test 022
 test('Stroke with different line widths', () => {
     const surface = SWCanvas.Core.Surface(200, 150);
     const ctx = new SWCanvas.Core.Context2D(surface);

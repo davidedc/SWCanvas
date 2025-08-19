@@ -1,7 +1,6 @@
-// Test 37: Combined Transform + Fill + Rotate - Complex 6-point star version
+// Test: Combined Transform + Fill + Rotate - Complex 6-point star version
 // This file will be concatenated into the main visual test suite
 
-// Test 37: Combined Transform + Fill + Rotate - Rotated complex polygons (rescued from original test 36)
 registerVisualTest('combined-transform-fill-rotate-v2', {
     name: 'Rotated complex polygons (6-point star)',
     width: 400, height: 300,
@@ -12,7 +11,7 @@ registerVisualTest('combined-transform-fill-rotate-v2', {
         ctx.fillStyle = 'white';
         ctx.fillRect(0, 0, 400, 300);
         
-        // Test 1: Rotated star (top left)
+        // Test: Rotated star (top left)
         ctx.save();
         ctx.translate(100, 75);
         ctx.rotate(Math.PI / 4); // 45 degrees
@@ -40,7 +39,7 @@ registerVisualTest('combined-transform-fill-rotate-v2', {
         ctx.fill();
         ctx.restore();
         
-        // Test 2: Rotated self-intersecting polygon (top right)
+        // Test: Rotated self-intersecting polygon (top right)
         ctx.save();
         ctx.translate(300, 75);
         ctx.rotate(-Math.PI / 6); // -30 degrees
@@ -58,7 +57,7 @@ registerVisualTest('combined-transform-fill-rotate-v2', {
         ctx.fill('evenodd');
         ctx.restore();
         
-        // Test 3: Multiple rotated rectangles with different angles (bottom left)
+        // Test: Multiple rotated rectangles with different angles (bottom left)
         const colors = ['blue', 'orange', 'purple', 'brown'];
         const angles = [0, Math.PI/6, Math.PI/3, Math.PI/2];
         
@@ -72,7 +71,7 @@ registerVisualTest('combined-transform-fill-rotate-v2', {
             ctx.restore();
         }
         
-        // Test 4: Rotated complex path with curves (bottom right)
+        // Test: Rotated complex path with curves (bottom right)
         ctx.save();
         ctx.translate(300, 200);
         ctx.rotate(Math.PI / 8);

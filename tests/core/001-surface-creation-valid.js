@@ -1,7 +1,6 @@
-// Test 001: Surface creation with valid dimensions
+// Test: Surface creation with valid dimensions
 // This file will be concatenated into the main test suite
 
-// Test 001
 test('Surface creation with valid dimensions', () => {
     const surface = SWCanvas.Core.Surface(100, 50);
     assertEquals(surface.width, 100);

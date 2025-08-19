@@ -1,7 +1,6 @@
-// Test 019: Basic stroke - simple line
+// Test: Basic stroke - simple line
 // This file will be concatenated into the main test suite
 
-// Test 019
 test('Basic stroke - simple line', () => {
     const surface = SWCanvas.Core.Surface(100, 100);
     const ctx = new SWCanvas.Core.Context2D(surface);

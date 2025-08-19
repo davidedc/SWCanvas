@@ -1,7 +1,6 @@
-// Test 006: Matrix multiplication
+// Test: Matrix multiplication
 // This file will be concatenated into the main test suite
 
-// Test 006
 test('Matrix multiplication', () => {
     const m1 = new SWCanvas.Core.Transform2D([2, 0, 0, 2, 10, 20]);
     const m2 = new SWCanvas.Core.Transform2D([1, 0, 0, 1, 5, 5]);

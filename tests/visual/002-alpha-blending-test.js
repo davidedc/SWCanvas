@@ -1,7 +1,6 @@
-// Test 2: Alpha Blending Test
+// Test: Alpha Blending Test
 // This file will be concatenated into the main visual test suite
 
-// Test 2: Alpha Blending Test  
 registerVisualTest('alpha-test', {
     name: 'Alpha blending test - semi-transparent rectangles',
     width: 200, height: 150,

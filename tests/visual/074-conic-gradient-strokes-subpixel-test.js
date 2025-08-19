@@ -1,4 +1,4 @@
-// Test 74: Conic Gradient Strokes with Sub-pixel Width
+// Test: Conic Gradient Strokes with Sub-pixel Width
 // This file will be concatenated into the main visual test suite
 
 registerVisualTest('conic-gradient-strokes-subpixel', {
@@ -22,7 +22,7 @@ registerVisualTest('conic-gradient-strokes-subpixel', {
         
         ctx.strokeStyle = grad;
         
-        // Test 1: Rays emanating from center with sub-pixel strokes
+        // Test: Rays emanating from center with sub-pixel strokes
         ctx.lineWidth = 0.3; // 30% opacity
         ctx.lineCap = 'round';
         
@@ -41,7 +41,7 @@ registerVisualTest('conic-gradient-strokes-subpixel', {
             ctx.stroke();
         }
         
-        // Test 2: Polygon with various joins and sub-pixel width
+        // Test: Polygon with various joins and sub-pixel width
         ctx.lineWidth = 0.6; // 60% opacity
         
         // Hexagon with miter joins
@@ -59,7 +59,7 @@ registerVisualTest('conic-gradient-strokes-subpixel', {
         }
         ctx.stroke();
         
-        // Test 3: Wavy line with thin sub-pixel stroke
+        // Test: Wavy line with thin sub-pixel stroke
         ctx.lineWidth = 0.25; // 25% opacity
         ctx.lineJoin = 'round';
         ctx.lineCap = 'round';
@@ -72,7 +72,7 @@ registerVisualTest('conic-gradient-strokes-subpixel', {
         }
         ctx.stroke();
         
-        // Test 4: Figure-eight pattern with sub-pixel width
+        // Test: Figure-eight pattern with sub-pixel width
         ctx.lineWidth = 0.4; // 40% opacity
         ctx.beginPath();
         ctx.moveTo(80, 160);
@@ -82,7 +82,7 @@ registerVisualTest('conic-gradient-strokes-subpixel', {
         ctx.bezierCurveTo(40, 180, 80, 180, 80, 160);
         ctx.stroke();
         
-        // Test 5: Arc segments with different sub-pixel thicknesses
+        // Test: Arc segments with different sub-pixel thicknesses
         const thicknesses = [0.15, 0.3, 0.45, 0.6]; // All sub-pixel
         thicknesses.forEach((thickness, i) => {
             ctx.lineWidth = thickness;

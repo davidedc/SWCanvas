@@ -1,7 +1,6 @@
-// Test 3: Triangle Path
+// Test: Triangle Path
 // This file will be concatenated into the main visual test suite
 
-// Test 3: Triangle Path
 registerVisualTest('triangle-test', {
     name: 'Path filling - simple triangle',
     width: 100, height: 100,

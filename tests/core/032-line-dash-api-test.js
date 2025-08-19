@@ -1,7 +1,6 @@
-// Test 032: Line dash API functionality
+// Test: Line dash API functionality
 // This file will be concatenated into the main test suite
 
-// Test 032
 test('Line dash API - setLineDash, getLineDash, lineDashOffset', () => {
     const surface = SWCanvas.Core.Surface(100, 100);
     const ctx = new SWCanvas.Core.Context2D(surface);

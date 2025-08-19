@@ -21,7 +21,6 @@
  * 
  * The script will:
  * - Rename test files (e.g., 025-test.js -> 026-test.js)
- * - Update internal test number comments (// Test 25: -> // Test 26:)
  * - Update test function calls when applicable
  * - Generate undo script for reverting changes
  * - Preserve git history when possible
@@ -149,55 +148,14 @@ class TestRenumberer {
         return conflicts;
     }
     
-    /**
-     * Update the internal content of a test file (test number comments)
-     */
-    updateFileContent(filePath, oldNumber, newNumber) {
-        if (this.dryRun) return;
-        
-        let content = fs.readFileSync(filePath, 'utf8');
-        let modified = false;
-        
-        // Update comment lines like "// Test 025: Description"
-        content = content.replace(
-            new RegExp(`^// Test ${this.formatTestNumber(oldNumber)}:`, 'gm'),
-            `// Test ${this.formatTestNumber(newNumber)}:`
-        );
-        modified = true;
-        
-        // Update comment lines like "// Test 25: Description" (without leading zeros)
-        content = content.replace(
-            new RegExp(`^// Test ${oldNumber}:`, 'gm'),
-            `// Test ${newNumber}:`
-        );
-        modified = true;
-        
-        // Update comment lines like "// Test 025" (without colon)
-        content = content.replace(
-            new RegExp(`^// Test ${this.formatTestNumber(oldNumber)}$`, 'gm'),
-            `// Test ${this.formatTestNumber(newNumber)}`
-        );
-        modified = true;
-        
-        // Update comment lines like "// Test 25" (without leading zeros, without colon)
-        content = content.replace(
-            new RegExp(`^// Test ${oldNumber}$`, 'gm'),
-            `// Test ${newNumber}`
-        );
-        modified = true;
-        
-        if (modified) {
-            fs.writeFileSync(filePath, content, 'utf8');
-        }
-    }
     
     /**
-     * Rename a single file and update its content
+     * Rename a single file
      */
     renameFile(fileInfo) {
         if (this.dryRun) {
             console.log(`  [DRY RUN] ${fileInfo.originalName} -> ${fileInfo.newName}`);
-            console.log(`    Update content: Test ${fileInfo.number} -> Test ${fileInfo.newNumber}`);
+            console.log(`    Update Test ${fileInfo.number} -> Test ${fileInfo.newNumber}`);
             return;
         }
         
@@ -212,10 +170,7 @@ class TestRenumberer {
                 fs.renameSync(fileInfo.originalPath, fileInfo.newPath);
                 this.undoCommands.push(`mv "${fileInfo.newPath}" "${fileInfo.originalPath}"`);
                 console.log(`  ${fileInfo.originalName} -> ${fileInfo.newName}`);
-            }
-            
-            // Update the file content with new test numbers
-            this.updateFileContent(fileInfo.newPath, fileInfo.number, fileInfo.newNumber);
+            }            
             
         } catch (error) {
             throw new Error(`Failed to rename ${fileInfo.originalName}: ${error.message}`);
@@ -397,7 +352,6 @@ EXAMPLES:
 
 WHAT IT DOES:
   - Renames test files (e.g., 025-test.js -> 026-test.js)
-  - Updates internal test number comments (// Test 25: -> // Test 26:)
   - Preserves git history when possible
   - Generates undo script for reverting changes
   - Checks for conflicts before making changes

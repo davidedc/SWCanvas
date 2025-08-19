@@ -1,7 +1,6 @@
-// Test 60: Line Dash with Complex Paths
+// Test: Line Dash with Complex Paths
 // This file will be concatenated into the main visual test suite
 
-// Test 60
 registerVisualTest('line-dash-complex-paths', {
     name: 'Line dash - complex paths and shapes',
     width: 350, height: 300,
@@ -13,7 +12,7 @@ registerVisualTest('line-dash-complex-paths', {
         ctx.fillStyle = 'white';
         ctx.fillRect(0, 0, 350, 300);
         
-        // Test 1: Dashed rectangle  
+        // Test: Dashed rectangle  
         ctx.strokeStyle = 'red';
         ctx.lineWidth = 3;
         ctx.setLineDash([8, 4]);
@@ -22,7 +21,7 @@ registerVisualTest('line-dash-complex-paths', {
         ctx.rect(20, 20, 80, 60);
         ctx.stroke();
         
-        // Test 2: Dashed circle
+        // Test: Dashed circle
         ctx.strokeStyle = 'green';
         ctx.lineWidth = 2;
         ctx.setLineDash([5, 5]);
@@ -31,7 +30,7 @@ registerVisualTest('line-dash-complex-paths', {
         ctx.arc(180, 50, 35, 0, 2 * Math.PI);
         ctx.stroke();
         
-        // Test 3: Dashed triangle with odd-length pattern
+        // Test: Dashed triangle with odd-length pattern
         ctx.strokeStyle = 'blue';
         ctx.lineWidth = 4;
         ctx.setLineDash([12, 8, 4]); // Odd length - should duplicate to [12,8,4,12,8,4]
@@ -43,7 +42,7 @@ registerVisualTest('line-dash-complex-paths', {
         ctx.closePath();
         ctx.stroke();
         
-        // Test 4: Dashed bezier curve
+        // Test: Dashed bezier curve
         ctx.strokeStyle = 'purple';
         ctx.lineWidth = 3;
         ctx.setLineDash([10, 5]);
@@ -53,7 +52,7 @@ registerVisualTest('line-dash-complex-paths', {
         ctx.bezierCurveTo(50, 90, 80, 150, 110, 120);
         ctx.stroke();
         
-        // Test 5: Dashed quadratic curve
+        // Test: Dashed quadratic curve
         ctx.strokeStyle = 'orange';
         ctx.lineWidth = 2;
         ctx.setLineDash([6, 3]);
@@ -63,7 +62,7 @@ registerVisualTest('line-dash-complex-paths', {
         ctx.quadraticCurveTo(165, 90, 200, 120);
         ctx.stroke();
         
-        // Test 6: Complex path with multiple segments and transforms
+        // Test: Complex path with multiple segments and transforms
         ctx.save();
         ctx.translate(250, 150);
         ctx.rotate(Math.PI / 6);
@@ -82,7 +81,7 @@ registerVisualTest('line-dash-complex-paths', {
         ctx.stroke();
         ctx.restore();
         
-        // Test 7: Star shape with dashed outline
+        // Test: Star shape with dashed outline
         ctx.strokeStyle = 'darkgreen';
         ctx.lineWidth = 2;
         ctx.setLineDash([4, 2]);
@@ -108,7 +107,7 @@ registerVisualTest('line-dash-complex-paths', {
         ctx.closePath();
         ctx.stroke();
         
-        // Test 8: Arc with dashed stroke
+        // Test: Arc with dashed stroke
         ctx.strokeStyle = 'darkblue';
         ctx.lineWidth = 3;
         ctx.setLineDash([12, 6]);
