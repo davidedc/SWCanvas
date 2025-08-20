@@ -149,19 +149,13 @@
     
     <div class="test-section">
         <h2>Core Functionality Tests</h2>
-        <p>These are the same modular core functionality tests (31 tests) that run in Node.js, now running in the browser:</p>
-        <div class="controls">
-            <button onclick="runSharedTests()">Run Core Functionality Tests</button>
-        </div>
-        <div id="shared-test-output" class="test-output" style="display: none;"></div>
+        <p>These are the same modular core functionality tests (31 tests) that run in Node.js, automatically running in the browser:</p>
+        <div id="shared-test-output" class="test-output"></div>
     </div>
 
     <div class="test-section">
         <h2>Visual Rendering Tests</h2>
         <p>Side-by-side comparison of HTML5 Canvas vs SWCanvas for all visual rendering test cases:</p>
-        <div class="controls">
-            <button onclick="runVisualComparison()">Run All Visual Rendering Tests</button>
-        </div>
         <div id="visual-comparisons"></div>
     </div>
 
@@ -174,14 +168,18 @@
         let browserVisualTests;
 
         function initializeTests() {
-            // Initialize browser visual tests
-            browserVisualTests = createBrowserVisualTests(SWCanvas);
-            browserVisualTests.initSWCanvas();
+            // Initialize browser visual tests (if needed)
+            if (typeof createBrowserVisualTests === 'function') {
+                browserVisualTests = createBrowserVisualTests(SWCanvas);
+            }
+            
+            // Automatically run both test suites
+            runSharedTests();
+            runVisualComparison();
         }
 
         function runSharedTests() {
             const outputDiv = document.getElementById('shared-test-output');
-            outputDiv.style.display = 'block';
             outputDiv.innerHTML = '';
 
             // Capture console.log output
@@ -296,6 +294,9 @@
                 throw error;
             }
         }
+
+        // Initialize and run tests when page loads
+        window.addEventListener('load', initializeTests);
 
     </script>
 </body>
