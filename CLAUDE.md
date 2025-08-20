@@ -13,7 +13,7 @@ This file provides Claude with essential context about the SWCanvas project for 
 - **Drop-in replacement**: True HTML5 Canvas 2D Context compatibility
 - **Memory efficient**: 1-bit stencil clipping, optimized algorithms
 - **Sub-pixel accurate**: Thin strokes render with proportional opacity (no anti-aliasing)
-- **Well-tested**: 32 core tests + 75 visual tests with pixel-perfect validation
+- **Well-tested**: 32 core tests + 78 visual tests with pixel-perfect validation
 - **Paint Sources**: Full HTML5-compatible gradients (linear, radial, conic) and patterns
 
 ## API Usage
@@ -95,6 +95,13 @@ src/ColorParser.js            # CSS color string parsing (hex, rgb, named colors
 - **Visual consistency**: Maintains deterministic pixel-perfect output across platforms
 - **Browser compatibility**: Matches modern HTML5Canvas behavior for edge cases
 
+#### Thick Polyline Join Testing
+- **Systematic join testing**: Tests 076-078 provide comprehensive coverage of lineJoin behaviors
+- **Join types covered**: bevel, miter (with miterLimit), round - each with multiple angle combinations
+- **Dash pattern integration**: Each join type tested with no dash, thin, medium, and thick dash patterns
+- **Canvas dimensions**: 600x500-550px to accommodate multiple test patterns per canvas
+- **Visual markers**: Small colored rectangles used instead of text for Core API compatibility
+
 #### Line Dashing System
 - **HTML5 Canvas-compatible API**: `setLineDash()`, `getLineDash()`, `lineDashOffset` property
 - **Deterministic dash patterns**: Consistent dash spacing across all platforms 
@@ -160,12 +167,15 @@ if (fs.existsSync('./tests/dist/core-functionality-tests.js')) {
 │   ├── 015-alpha-blending-test.js
 │   ├── 032-line-dash-api-test.js
 │   └── ... (29 more files)
-├── visual/                             # 75 individual visual test files
+├── visual/                             # 78 individual visual test files
 │   ├── 001-simple-rectangle-test.js
 │   ├── 058-line-dash-basic-patterns-test.js
 │   ├── 060-line-dash-complex-paths-test.js
 │   ├── 068-gradient-strokes-with-dashes-test.js
 │   ├── 075-gradient-strokes-with-dashes-subpixel-test.js
+├── 076-thick-polyline-bevel-joins-systematic-test.js
+├── 077-thick-polyline-miter-joins-systematic-test.js
+├── 078-thick-polyline-round-joins-systematic-test.js
 │   └── ... (71 more files)
 ├── browser/                            # Browser-specific test files
 │   ├── index.html                      # Main browser test page (moved from examples/)
@@ -183,7 +193,7 @@ if (fs.existsSync('./tests/dist/core-functionality-tests.js')) {
     ├── 001-simple-rectangle-test.bmp
     ├── 058-line-dash-basic-patterns.bmp
     ├── 060-line-dash-complex-paths.bmp
-    └── ... (75+ BMP files)
+    └── ... (78+ BMP files)
 ```
 
 ## Common Tasks
