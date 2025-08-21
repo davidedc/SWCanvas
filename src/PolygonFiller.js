@@ -21,8 +21,9 @@ class PolygonFiller {
      * @param {Uint8Array|null} clipMask - Optional 1-bit stencil buffer for clipping
      * @param {number} globalAlpha - Global alpha value (0-1) for rendering operation
      * @param {number} subPixelOpacity - Sub-pixel opacity for thin strokes (0-1)
+     * @param {string} composite - Composite operation (default: 'source-over')
      */
-    static fillPolygons(surface, polygons, paintSource, fillRule, transform, clipMask, globalAlpha = 1.0, subPixelOpacity = 1.0) {
+    static fillPolygons(surface, polygons, paintSource, fillRule, transform, clipMask, globalAlpha = 1.0, subPixelOpacity = 1.0, composite = 'source-over') {
         if (polygons.length === 0) return;
         if (!PolygonFiller._isValidPaintSource(paintSource)) {
             throw new Error('Paint source must be a Color, Gradient, or Pattern instance');
@@ -39,7 +40,7 @@ class PolygonFiller {
         // Process each scanline
         for (let y = bounds.minY; y <= bounds.maxY; y++) {
             PolygonFiller._fillScanline(
-                surface, y, transformedPolygons, paintSource, fillRule, clipMask, transform, globalAlpha, subPixelOpacity
+                surface, y, transformedPolygons, paintSource, fillRule, clipMask, transform, globalAlpha, subPixelOpacity, composite
             );
         }
     }
@@ -79,9 +80,10 @@ class PolygonFiller {
      * @param {Transform2D} transform - Canvas transform (for gradients/patterns)
      * @param {number} globalAlpha - Global alpha value (0-1)
      * @param {number} subPixelOpacity - Sub-pixel opacity for thin strokes (0-1)
+     * @param {string} composite - Composite operation
      * @private
      */
-    static _fillScanline(surface, y, polygons, paintSource, fillRule, clipMask, transform, globalAlpha, subPixelOpacity = 1.0) {
+    static _fillScanline(surface, y, polygons, paintSource, fillRule, clipMask, transform, globalAlpha, subPixelOpacity = 1.0, composite = 'source-over') {
         const intersections = [];
         
         // Find all intersections with this scanline
@@ -93,7 +95,7 @@ class PolygonFiller {
         intersections.sort((a, b) => a.x - b.x);
         
         // Fill spans based on winding rule
-        PolygonFiller._fillSpans(surface, y, intersections, paintSource, fillRule, clipMask, transform, globalAlpha, subPixelOpacity);
+        PolygonFiller._fillSpans(surface, y, intersections, paintSource, fillRule, clipMask, transform, globalAlpha, subPixelOpacity, composite);
     }
     
     /**
@@ -139,9 +141,10 @@ class PolygonFiller {
      * @param {Transform2D} transform - Canvas transform (for gradients/patterns)
      * @param {number} globalAlpha - Global alpha value (0-1)
      * @param {number} subPixelOpacity - Sub-pixel opacity for thin strokes (0-1)
+     * @param {string} composite - Composite operation
      * @private
      */
-    static _fillSpans(surface, y, intersections, paintSource, fillRule, clipMask, transform, globalAlpha, subPixelOpacity = 1.0) {
+    static _fillSpans(surface, y, intersections, paintSource, fillRule, clipMask, transform, globalAlpha, subPixelOpacity = 1.0, composite = 'source-over') {
         if (intersections.length === 0) return;
         
         let windingNumber = 0;
@@ -167,7 +170,7 @@ class PolygonFiller {
                 const endX = Math.min(surface.width - 1, Math.floor(nextIntersection.x));
                 
                 PolygonFiller._fillPixelSpan(
-                    surface, y, startX, endX, paintSource, clipMask, transform, globalAlpha, subPixelOpacity
+                    surface, y, startX, endX, paintSource, clipMask, transform, globalAlpha, subPixelOpacity, composite
                 );
             }
         }
@@ -184,9 +187,10 @@ class PolygonFiller {
      * @param {Transform2D} transform - Canvas transform (for gradients/patterns)
      * @param {number} globalAlpha - Global alpha value (0-1)
      * @param {number} subPixelOpacity - Sub-pixel opacity for thin strokes (0-1)
+     * @param {string} composite - Composite operation
      * @private
      */
-    static _fillPixelSpan(surface, y, startX, endX, paintSource, clipMask, transform, globalAlpha, subPixelOpacity = 1.0) {
+    static _fillPixelSpan(surface, y, startX, endX, paintSource, clipMask, transform, globalAlpha, subPixelOpacity = 1.0, composite = 'source-over') {
         for (let x = startX; x <= endX; x++) {
             // Check stencil buffer clipping
             if (clipMask && clipMask.isPixelClipped(x, y)) {
@@ -197,58 +201,38 @@ class PolygonFiller {
             const pixelColor = PolygonFiller._evaluatePaintSource(paintSource, x, y, transform, globalAlpha, subPixelOpacity);
             
             const offset = y * surface.stride + x * 4;
-            PolygonFiller._blendPixel(surface, offset, pixelColor);
+            PolygonFiller._blendPixel(surface, offset, pixelColor, composite);
         }
     }
     
     
     /**
-     * Blend a color into a surface pixel using proper alpha compositing
+     * Blend a color into a surface pixel using specified composite operation
      * @param {Surface} surface - Target surface
      * @param {number} offset - Byte offset in surface data
      * @param {Color} color - Source color to blend
+     * @param {string} composite - Composite operation (default: 'source-over')
      * @private
      */
-    static _blendPixel(surface, offset, color) {
-        // Fast paths for common cases
-        if (color.isTransparent) {
-            return; // No change needed
-        }
-        
-        if (color.isOpaque) {
-            // Opaque source - copy non-premultiplied values (surface stores non-premultiplied)
-            surface.data[offset] = color.r;
-            surface.data[offset + 1] = color.g;
-            surface.data[offset + 2] = color.b;
-            surface.data[offset + 3] = color.a;
-            return;
-        }
-        
-        // Alpha blending required (source-over composition)
-        // Surface stores non-premultiplied RGBA, use standard blending formula
+    static _blendPixel(surface, offset, color, composite = 'source-over') {
+        // Get destination pixel
         const dstR = surface.data[offset];
         const dstG = surface.data[offset + 1];
         const dstB = surface.data[offset + 2];
         const dstA = surface.data[offset + 3];
         
-        const srcR = color.r;
-        const srcG = color.g;
-        const srcB = color.b;
-        const srcA = color.a;
+        // Use CompositeOperations for blending
+        const result = CompositeOperations.blendPixel(
+            composite,
+            color.r, color.g, color.b, color.a,  // source
+            dstR, dstG, dstB, dstA               // destination
+        );
         
-        const srcAlpha = srcA / 255;
-        const invSrcAlpha = 1 - srcAlpha;
-        
-        // Use original non-premultiplied blending formula (matches original implementation)
-        const newR = Math.round(srcR * srcAlpha + dstR * invSrcAlpha);
-        const newG = Math.round(srcG * srcAlpha + dstG * invSrcAlpha);
-        const newB = Math.round(srcB * srcAlpha + dstB * invSrcAlpha);
-        const newA = Math.round(srcA + dstA * invSrcAlpha);
-        
-        surface.data[offset] = newR;
-        surface.data[offset + 1] = newG;
-        surface.data[offset + 2] = newB;
-        surface.data[offset + 3] = newA;
+        // Store result
+        surface.data[offset] = result.r;
+        surface.data[offset + 1] = result.g;
+        surface.data[offset + 2] = result.b;
+        surface.data[offset + 3] = result.a;
     }
     
     /**

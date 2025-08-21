@@ -75,8 +75,8 @@ class Rasterizer {
             }
         }
         
-        if (params.composite && !['source-over', 'copy'].includes(params.composite)) {
-            throw new Error('Invalid composite operation. Supported: source-over, copy');
+        if (params.composite && !CompositeOperations.isSupported(params.composite)) {
+            throw new Error(`Invalid composite operation. Supported: ${CompositeOperations.getSupportedOperations().join(', ')}`);
         }
         
         if (params.transform && !(params.transform instanceof Transform2D)) {
@@ -150,9 +150,9 @@ class Rasterizer {
         
         // Find bounding box in device space
         const minX = Math.max(0, Math.floor(Math.min(topLeft.x, topRight.x, bottomLeft.x, bottomRight.x)));
-        const maxX = Math.min(this._surface.width - 1, Math.ceil(Math.max(topLeft.x, topRight.x, bottomLeft.x, bottomRight.x)));
+        const maxX = Math.min(this._surface.width - 1, Math.floor(Math.max(topLeft.x, topRight.x, bottomLeft.x, bottomRight.x) - 1));
         const minY = Math.max(0, Math.floor(Math.min(topLeft.y, topRight.y, bottomLeft.y, bottomRight.y)));
-        const maxY = Math.min(this._surface.height - 1, Math.ceil(Math.max(topLeft.y, topRight.y, bottomLeft.y, bottomRight.y)));
+        const maxY = Math.min(this._surface.height - 1, Math.floor(Math.max(topLeft.y, topRight.y, bottomLeft.y, bottomRight.y) - 1));
         
         // Optimized path for axis-aligned rectangles with solid colors only
         if (this._currentOp.transform.b === 0 && this._currentOp.transform.c === 0 && 
@@ -169,7 +169,7 @@ class Rasterizer {
             
             // Use existing polygon filling system which handles transforms and stencil clipping
             const rectColor = Array.isArray(color) ? new Color(color[0], color[1], color[2], color[3]) : color;
-            PolygonFiller.fillPolygons(this._surface, [rectPolygon], rectColor, 'nonzero', this._currentOp.transform, this._currentOp.clipMask, this._currentOp.globalAlpha);
+            PolygonFiller.fillPolygons(this._surface, [rectPolygon], rectColor, 'nonzero', this._currentOp.transform, this._currentOp.clipMask, this._currentOp.globalAlpha, 1.0, this._currentOp.composite);
         }
     }
 
@@ -207,28 +207,23 @@ class Rasterizer {
                 
                 const offset = py * surface.stride + px * 4;
                 
-                if (this._currentOp.composite === 'copy') {
-                    // Copy mode
-                    surface.data[offset] = srcR;
-                    surface.data[offset + 1] = srcG;
-                    surface.data[offset + 2] = srcB;
-                    surface.data[offset + 3] = srcA;
-                } else {
-                    // Source-over mode (non-premultiplied alpha blending to match surface format)
-                    const dstR = surface.data[offset];
-                    const dstG = surface.data[offset + 1];
-                    const dstB = surface.data[offset + 2];
-                    const dstA = surface.data[offset + 3];
-                    
-                    const srcAlpha = srcA / 255;
-                    const invSrcAlpha = 1 - srcAlpha;
-                    
-                    // Use non-premultiplied formula (matches original and PolygonFiller)
-                    surface.data[offset] = Math.round(srcR * srcAlpha + dstR * invSrcAlpha);
-                    surface.data[offset + 1] = Math.round(srcG * srcAlpha + dstG * invSrcAlpha);
-                    surface.data[offset + 2] = Math.round(srcB * srcAlpha + dstB * invSrcAlpha);
-                    surface.data[offset + 3] = Math.round(srcA + dstA * invSrcAlpha);
-                }
+                // Get destination pixel for blending
+                const dstR = surface.data[offset];
+                const dstG = surface.data[offset + 1];
+                const dstB = surface.data[offset + 2];
+                const dstA = surface.data[offset + 3];
+                
+                // Use CompositeOperations for consistent blending
+                const result = CompositeOperations.blendPixel(
+                    this._currentOp.composite,
+                    srcR, srcG, srcB, srcA,  // source
+                    dstR, dstG, dstB, dstA   // destination
+                );
+                
+                surface.data[offset] = result.r;
+                surface.data[offset + 1] = result.g;
+                surface.data[offset + 2] = result.b;
+                surface.data[offset + 3] = result.a;
             }
         }
     }
@@ -249,7 +244,7 @@ class Rasterizer {
         // Flatten path to polygons
         const polygons = PathFlattener.flattenPath(path);
         // Fill polygons with current transform and stencil clipping
-        PolygonFiller.fillPolygons(this._surface, polygons, fillStyle, fillRule, this._currentOp.transform, this._currentOp.clipMask, this._currentOp.globalAlpha);
+        PolygonFiller.fillPolygons(this._surface, polygons, fillStyle, fillRule, this._currentOp.transform, this._currentOp.clipMask, this._currentOp.globalAlpha, 1.0, this._currentOp.composite);
     }
 
     /**
@@ -280,7 +275,7 @@ class Rasterizer {
         const strokePolygons = StrokeGenerator.generateStrokePolygons(path, adjustedStrokeProps);
         
         // Fill stroke polygons with current transform and stencil clipping
-        PolygonFiller.fillPolygons(this._surface, strokePolygons, strokeStyle, 'nonzero', this._currentOp.transform, this._currentOp.clipMask, this._currentOp.globalAlpha, subPixelOpacity);
+        PolygonFiller.fillPolygons(this._surface, strokePolygons, strokeStyle, 'nonzero', this._currentOp.transform, this._currentOp.clipMask, this._currentOp.globalAlpha, subPixelOpacity, this._currentOp.composite);
     }
 
     /**
@@ -409,33 +404,23 @@ class Rasterizer {
                 // Get destination pixel for blending
                 const destOffset = deviceY * this._surface.stride + deviceX * 4;
                 
-                if (this._currentOp.composite === 'copy' || finalSrcA === 255) {
-                    // Direct copy (no blending needed) - store non-premultiplied
-                    this._surface.data[destOffset] = srcR;
-                    this._surface.data[destOffset + 1] = srcG;
-                    this._surface.data[destOffset + 2] = srcB;
-                    this._surface.data[destOffset + 3] = finalSrcA;
-                } else {
-                    // Alpha blending (source-over) - non-premultiplied formula
-                    const dstR = this._surface.data[destOffset];
-                    const dstG = this._surface.data[destOffset + 1];
-                    const dstB = this._surface.data[destOffset + 2];
-                    const dstA = this._surface.data[destOffset + 3];
-                    
-                    const srcAlpha = effectiveAlpha;
-                    const invSrcAlpha = 1 - srcAlpha;
-                    
-                    // Use non-premultiplied formula (consistent with rest of codebase)
-                    const newR = Math.round(srcR * srcAlpha + dstR * invSrcAlpha);
-                    const newG = Math.round(srcG * srcAlpha + dstG * invSrcAlpha);
-                    const newB = Math.round(srcB * srcAlpha + dstB * invSrcAlpha);
-                    const newA = Math.round(finalSrcA + dstA * invSrcAlpha);
-                    
-                    this._surface.data[destOffset] = newR;
-                    this._surface.data[destOffset + 1] = newG;
-                    this._surface.data[destOffset + 2] = newB;
-                    this._surface.data[destOffset + 3] = newA;
-                }
+                // Get destination pixel for blending
+                const dstR = this._surface.data[destOffset];
+                const dstG = this._surface.data[destOffset + 1];
+                const dstB = this._surface.data[destOffset + 2];
+                const dstA = this._surface.data[destOffset + 3];
+                
+                // Use CompositeOperations for consistent blending
+                const result = CompositeOperations.blendPixel(
+                    this._currentOp.composite,
+                    srcR, srcG, srcB, finalSrcA,  // source
+                    dstR, dstG, dstB, dstA        // destination
+                );
+                
+                this._surface.data[destOffset] = result.r;
+                this._surface.data[destOffset + 1] = result.g;
+                this._surface.data[destOffset + 2] = result.b;
+                this._surface.data[destOffset + 3] = result.a;
             }
         }
     }

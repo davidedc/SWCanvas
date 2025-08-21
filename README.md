@@ -11,7 +11,8 @@ A deterministic 2D raster engine with Canvas-like API. SWCanvas provides pixel-p
 - **Object-Oriented Design**: Clean ES6 classes following effective OO principles
 - **Memory Efficient Clipping**: Stencil-based clipping system with proper intersection support
 - **Sub-pixel Stroke Rendering**: Thin strokes render with proportional opacity, works with all paint sources
-- **Comprehensive Test Coverage**: 32 core tests + 78 visual tests ensuring pixel-perfect accuracy with modular architecture
+- **Composite Operations**: Porter-Duff compositing with `globalCompositeOperation` support (source-over, destination-over, destination-out, xor working correctly)
+- **Comprehensive Test Coverage**: 33 core tests + 82 visual tests ensuring pixel-perfect accuracy with modular architecture
 - **Immutable Value Objects**: Point, Rectangle, Transform2D, Color prevent mutation bugs
 - **Cross-Platform**: Works in Node.js and browsers
 - **No Dependencies**: Pure JavaScript implementation
@@ -171,6 +172,17 @@ ctx.beginPath();
 ctx.moveTo(10, 70);
 ctx.lineTo(100, 70);
 ctx.stroke();
+
+// Composite operations (Porter-Duff blending)
+ctx.fillStyle = 'red';
+ctx.fillRect(30, 30, 40, 40);
+
+ctx.globalCompositeOperation = 'destination-over'; // Draw behind existing content
+ctx.fillStyle = 'blue';
+ctx.fillRect(50, 50, 40, 40);
+
+// Working operations: source-over (default), destination-over, destination-out, xor
+// Note: Some operations have architectural limitations (see documentation)
 
 // ImageData API for pixel manipulation
 const imageData = ctx.createImageData(100, 100);

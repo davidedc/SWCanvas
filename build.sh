@@ -39,6 +39,8 @@ cat src/Surface.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
 
 # Phase 2: Core Service classes (depend on foundation)
+cat src/CompositeOperations.js >> dist/swcanvas.js
+echo "" >> dist/swcanvas.js
 cat src/BitmapEncoder.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
 cat src/PathFlattener.js >> dist/swcanvas.js
@@ -131,6 +133,7 @@ if (typeof window !== 'undefined') {
             BitmapEncoder: BitmapEncoder,
             ClipMask: ClipMask,
             ImageProcessor: ImageProcessor,
+            CompositeOperations: CompositeOperations,
             Rasterizer: Rasterizer,
             PathFlattener: PathFlattener,
             PolygonFiller: PolygonFiller,
@@ -161,6 +164,7 @@ if (typeof window !== 'undefined') {
             BitmapEncoder: BitmapEncoder,
             ClipMask: ClipMask,
             ImageProcessor: ImageProcessor,
+            CompositeOperations: CompositeOperations,
             Rasterizer: Rasterizer,
             PathFlattener: PathFlattener,
             PolygonFiller: PolygonFiller,

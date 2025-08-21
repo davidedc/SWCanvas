@@ -123,6 +123,16 @@ src/ColorParser.js            # CSS color string parsing (hex, rgb, named colors
 - **Sub-pixel stroke integration**: Sub-pixel opacity applied to all paint source types during evaluation
 - **Implementation location**: `PolygonFiller.js` evaluates paint sources via `_evaluatePaintSource()` method
 
+#### Composite Operations System
+- **Porter-Duff compositing**: Implements 10 composite operations beyond basic source-over blending
+- **HTML5 Canvas compatibility**: `globalCompositeOperation` property matches HTML5 Canvas 2D API
+- **Centralized blending**: `CompositeOperations.js` utility class with mathematically correct Porter-Duff formulas
+- **Working operations**: source-over (default), destination-over, destination-out, xor
+- **Architectural limitations**: Some operations (destination-atop, source-in, destination-in, source-out, copy) have known limitations due to pixel-by-pixel processing approach rather than canvas-wide processing
+- **Implementation location**: `CompositeOperations.js` provides blending logic, integrated into `PolygonFiller.js` and `Rasterizer.js`
+- **Usage**: `ctx.globalCompositeOperation = 'destination-over'` (both Core API and HTML5 Canvas-compatible API)
+- **Testing**: Individual visual tests for each working operation, comprehensive core functionality tests
+
 ## Build & Test Commands
 
 See README.md for complete build and test instructions.
