@@ -5921,6 +5921,138 @@
         }
     });
 
+    // Test: source-over Composite Operation
+    // Visual test of the source-over composite operation (default behavior)
+
+    registerVisualTest('composite-source-over', {
+        name: 'Composite Operation: source-over (default)',
+        width: 300, height: 200,
+        draw: function(canvas) {
+            const ctx = canvas.getContext('2d');
+            
+            // Clear to transparent background
+            ctx.clearRect(0, 0, 300, 200);
+            
+            // Title indicator
+            ctx.fillStyle = '#333';
+            ctx.fillRect(10, 10, 100, 15);
+            
+            // Draw red circle (destination)
+            ctx.globalCompositeOperation = 'source-over';
+            ctx.fillStyle = '#FF0000';
+            ctx.beginPath();
+            ctx.arc(100, 100, 40, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Draw blue square with source-over (should appear on top)
+            ctx.globalCompositeOperation = 'source-over';
+            ctx.fillStyle = '#0000FF';
+            ctx.fillRect(120, 80, 60, 40);
+            
+            // Expected result: Blue square appears on top of red circle
+            // Overlap area should be blue
+        }
+    });
+
+    // Test: destination-over Composite Operation
+    // Visual test of the destination-over composite operation
+
+    registerVisualTest('composite-destination-over', {
+        name: 'Composite Operation: destination-over',
+        width: 300, height: 200,
+        draw: function(canvas) {
+            const ctx = canvas.getContext('2d');
+            
+            // Clear to transparent background
+            ctx.clearRect(0, 0, 300, 200);
+            
+            // Title indicator
+            ctx.fillStyle = '#333';
+            ctx.fillRect(10, 10, 120, 15);
+            
+            // Draw red circle (destination)
+            ctx.globalCompositeOperation = 'source-over';
+            ctx.fillStyle = '#FF0000';
+            ctx.beginPath();
+            ctx.arc(100, 100, 40, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Draw blue square with destination-over (should appear behind red circle)
+            ctx.globalCompositeOperation = 'destination-over';
+            ctx.fillStyle = '#0000FF';
+            ctx.fillRect(120, 80, 60, 40);
+            
+            // Expected result: Blue square appears behind red circle
+            // Red circle should be visible on top where they overlap
+        }
+    });
+
+    // Test: destination-out Composite Operation
+    // Visual test of the destination-out composite operation
+
+    registerVisualTest('composite-destination-out', {
+        name: 'Composite Operation: destination-out',
+        width: 300, height: 200,
+        draw: function(canvas) {
+            const ctx = canvas.getContext('2d');
+            
+            // Clear to transparent background
+            ctx.clearRect(0, 0, 300, 200);
+            
+            // Title indicator
+            ctx.fillStyle = '#333';
+            ctx.fillRect(10, 10, 120, 15);
+            
+            // Draw red circle (destination)
+            ctx.globalCompositeOperation = 'source-over';
+            ctx.fillStyle = '#FF0000';
+            ctx.beginPath();
+            ctx.arc(100, 100, 40, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Draw blue square with destination-out (should erase red where blue overlaps)
+            ctx.globalCompositeOperation = 'destination-out';
+            ctx.fillStyle = '#0000FF';
+            ctx.fillRect(120, 80, 60, 40);
+            
+            // Expected result: Red circle with a rectangular hole cut out
+            // Where blue square overlaps, red should be erased (transparent)
+        }
+    });
+
+    // Test: xor Composite Operation
+    // Visual test of the xor composite operation
+
+    registerVisualTest('composite-xor', {
+        name: 'Composite Operation: xor',
+        width: 300, height: 200,
+        draw: function(canvas) {
+            const ctx = canvas.getContext('2d');
+            
+            // Clear to transparent background
+            ctx.clearRect(0, 0, 300, 200);
+            
+            // Title indicator
+            ctx.fillStyle = '#333';
+            ctx.fillRect(10, 10, 80, 15);
+            
+            // Draw red circle (destination)
+            ctx.globalCompositeOperation = 'source-over';
+            ctx.fillStyle = '#FF0000';
+            ctx.beginPath();
+            ctx.arc(100, 100, 40, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Draw blue square with xor (both shapes visible except overlap)
+            ctx.globalCompositeOperation = 'xor';
+            ctx.fillStyle = '#0000FF';
+            ctx.fillRect(120, 80, 60, 40);
+            
+            // Expected result: Both red circle and blue square visible,
+            // but overlap area should be transparent (cut out)
+        }
+    });
+
     const VisualRenderingTests = {
         getTests: function() { return visualTests; },
         getTest: function(name) { return visualTests[name]; },
