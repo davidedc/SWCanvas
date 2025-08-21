@@ -2,6 +2,8 @@
 
 A deterministic 2D raster engine with Canvas-like API. SWCanvas provides pixel-perfect, cross-platform 2D rendering that produces identical results on any system, making it ideal for testing, screenshots, and server-side graphics.
 
+**🎨 [Interactive Demo](examples/showcase.html)** • **🧪 [Visual Tests](tests/browser/index.html)** • **📊 [Simple Test](tests/browser/simple-test.html)**
+
 ## Features
 
 - **Deterministic Rendering**: Identical results across all platforms and browsers
