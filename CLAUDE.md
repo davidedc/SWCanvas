@@ -129,13 +129,26 @@ See README.md for complete build and test instructions.
 
 ### Development Workflow
 
-Standard development cycle:
+**Standard development cycle:**
 1. Edit source files in `src/` or individual test files
 2. `npm run build` to regenerate library and test suites  
 3. `npm test` to verify no regressions
 4. Browser testing via `tests/browser/index.html`
 
-For test development details, see `tests/README.md` and `tests/build/README.md`.
+**Production workflow:**
+1. `npm run build:prod` (builds + minifies in one command)
+2. Test minified version with `examples/showcase.html`
+3. Verify BMP output matches expectations
+
+**Build commands available:**
+- `npm run build` - Development build only
+- `npm run minify` - Minify existing build (requires Terser)
+- `npm run build:prod` - Complete production workflow
+
+**Testing and examples:**
+- See `tests/README.md` for test development details
+- See `examples/README.md` for example development
+- Use `examples/showcase.html` to verify features work with minified build
 
 ## Test System
 
@@ -335,6 +348,43 @@ These scripts are invaluable for:
 - Analyzing sub-pixel rendering effects
 - Comparing stroke and fill operations
 - Debugging coordinate transformations
+
+#### Minified Build Testing
+Test minified builds using the examples:
+
+**Quick Minified Build Verification:**
+```bash
+# Build and minify
+npm run build:prod
+
+# Open showcase example to test minified version
+open examples/showcase.html
+
+# Verify all features work and no console errors appear
+# Check that performance timing displays correctly
+```
+
+**Minified vs Regular Build Comparison:**
+```bash
+# Test with regular build
+node -e "
+const SWCanvas = require('./dist/swcanvas.js');
+// ... test code ...
+"
+
+# Test with minified build  
+node -e "
+const SWCanvas = require('./dist/swcanvas.min.js');
+// ... same test code ...
+"
+```
+
+**Example Development Workflow:**
+1. Create new example in `examples/`
+2. Use HTML5 Canvas-compatible API for broad compatibility
+3. Include fallback script loading: `swcanvas.min.js` → `swcanvas.js`
+4. Test with both builds to ensure identical behavior
+5. Add to `examples/README.md` if significant
 
 ### Making API Changes (OO Structure)
 1. Update `src/Context2D.js` for public API changes

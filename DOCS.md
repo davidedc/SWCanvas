@@ -56,5 +56,6 @@ Each document has a **single responsibility** to avoid duplication:
 - **Understanding the design** → ARCHITECTURE.md  
 - **Adding/running tests** → tests/README.md
 - **Build utilities** → tests/build/README.md
+- **Examples and demos** → examples/README.md
 - **Development with Claude** → CLAUDE.md
 - **Original specifications** → specs-and-high-level-project-plan.md

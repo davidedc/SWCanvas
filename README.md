@@ -19,12 +19,16 @@ A deterministic 2D raster engine with Canvas-like API. SWCanvas provides pixel-p
 ### Building
 
 ```bash
-npm run build
+npm run build      # Build the library
+npm run minify     # Create minified version
+npm run build:prod # Build + minify in one command
 ```
 
 This generates:
-- `dist/swcanvas.js` containing the complete library
-- `tests/dist/core-functionality-tests.js` from 31 individual test files in `/tests/core/`
+- `dist/swcanvas.js` - Complete library for development
+- `dist/swcanvas.min.js` - Minified library for production (71% smaller)
+- `dist/swcanvas.min.js.map` - Source map for debugging
+- `tests/dist/core-functionality-tests.js` from 32 individual test files in `/tests/core/`
 - `tests/dist/visual-rendering-tests.js` from 78 individual test files in `/tests/visual/`
 
 ### Node.js Usage
@@ -81,6 +85,31 @@ ctx.fillRect(50, 50, 100, 100);
 ctx.restore();
 </script>
 ```
+
+## Examples
+
+### Feature Showcase
+
+Open `examples/showcase.html` in a web browser for a comprehensive demonstration of SWCanvas capabilities:
+
+- **Interactive Demo**: All major features demonstrated on a single 800x600 canvas
+- **Live Features**: Redraw button, animation demo, BMP download functionality  
+- **Production Build**: Uses minified version (`swcanvas.min.js`) with automatic fallback
+- **Performance Metrics**: Real-time render timing display
+
+**Features Demonstrated:**
+- Basic shapes, gradients, and patterns
+- Transformations and clipping operations
+- Various stroke styles and line dashing
+- Alpha blending and complex paths
+- Sub-pixel rendering accuracy
+
+```bash
+# View the example
+open examples/showcase.html
+```
+
+See [examples/README.md](examples/README.md) for additional examples and usage instructions.
 
 ## Testing
 

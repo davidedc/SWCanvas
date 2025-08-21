@@ -5,6 +5,8 @@
   "main": "dist/swcanvas.js",
   "scripts": {
     "build": "./build.sh",
+    "minify": "./minify.sh",
+    "build:prod": "npm run build && npm run minify",
     "test": "node tests/run-tests.js"
   },
   "keywords": ["canvas", "2d", "deterministic", "raster"],
