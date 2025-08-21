@@ -258,7 +258,7 @@ Standard HTML5 Canvas API ensures consistent colors:
 - Eliminates need for helper functions or color mapping
 
 ### Comprehensive Modular Test Coverage
-- **31 modular core tests** covering all API functionality with individual files
+- **32 modular core tests** covering all API functionality with individual files
 - **78 modular visual tests** covering all major Canvas2D features with pixel-perfect accuracy
 - **Build-time concatenation** for optimal performance
 - **Smart test runner** with automatic fallback system
