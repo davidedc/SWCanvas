@@ -1075,6 +1075,285 @@ class Surface {
 
 
 /**
+ * CompositeOperations utility class for SWCanvas
+ * 
+ * Centralized implementation of HTML5 Canvas globalCompositeOperation modes.
+ * Provides optimized blending functions for various composite operations.
+ * Supports Porter-Duff compositing operations and follows Canvas 2D API spec.
+ * 
+ * STATUS: Partially implemented with architectural limitations
+ * 
+ * WORKING CORRECTLY:
+ * - source-over (default) - Source drawn on top of destination
+ * - destination-over - Source drawn behind destination  
+ * - destination-out - Destination erased where source exists
+ * - xor - Both visible except in overlap areas
+ * 
+ * ARCHITECTURAL LIMITATIONS:
+ * The following operations have known limitations due to the current rendering
+ * architecture that only processes pixels where source is drawn, rather than
+ * canvas-wide processing required for full Porter-Duff compliance:
+ * 
+ * - destination-atop - Shows full destination instead of masking to source region
+ * - source-in - May act like source-atop in edge cases
+ * - destination-in - Shows full destination instead of masking to source region  
+ * - source-out - Shows incorrect results in some scenarios
+ * - copy - May act like source-over instead of complete replacement
+ * 
+ * The mathematical Porter-Duff formulas in blendPixel() are correct, but full
+ * HTML5 Canvas compatibility would require substantial rendering pipeline changes.
+ */
+class CompositeOperations {
+    
+    /**
+     * Blend two pixels using the specified composite operation
+     * @param {string} operation - Composite operation mode
+     * @param {number} srcR - Source red (0-255)
+     * @param {number} srcG - Source green (0-255)  
+     * @param {number} srcB - Source blue (0-255)
+     * @param {number} srcA - Source alpha (0-255)
+     * @param {number} dstR - Destination red (0-255)
+     * @param {number} dstG - Destination green (0-255)
+     * @param {number} dstB - Destination blue (0-255)
+     * @param {number} dstA - Destination alpha (0-255)
+     * @returns {Object} Result with {r, g, b, a} properties (0-255)
+     */
+    static blendPixel(operation, srcR, srcG, srcB, srcA, dstR, dstG, dstB, dstA) {
+        // Fast path for transparent source
+        if (srcA === 0) {
+            switch (operation) {
+                case 'destination-out':
+                    // Transparent source erases nothing
+                    return { r: dstR, g: dstG, b: dstB, a: dstA };
+                case 'destination-atop':
+                    // destination-atop: destination appears only where source exists
+                    // No source means destination doesn't appear
+                    return { r: 0, g: 0, b: 0, a: 0 };
+                case 'source-in':
+                case 'destination-in':
+                    // No source to blend with
+                    return { r: 0, g: 0, b: 0, a: 0 };
+                default:
+                    // Transparent source doesn't change destination
+                    return { r: dstR, g: dstG, b: dstB, a: dstA };
+            }
+        }
+        
+        // Fast path for transparent destination
+        if (dstA === 0) {
+            switch (operation) {
+                case 'source-over':
+                case 'destination-over':
+                    return { r: srcR, g: srcG, b: srcB, a: srcA };
+                case 'source-atop':
+                case 'destination-out':
+                case 'source-in':
+                case 'destination-in':
+                    // No destination to blend with
+                    return { r: 0, g: 0, b: 0, a: 0 };
+                case 'destination-atop':
+                    // destination-atop: destination appears only where source exists
+                    // No destination to show, so show source
+                    return { r: srcR, g: srcG, b: srcB, a: srcA };
+                case 'source-out':
+                case 'xor':
+                    return { r: srcR, g: srcG, b: srcB, a: srcA };
+                case 'copy':
+                    return { r: srcR, g: srcG, b: srcB, a: srcA };
+                default:
+                    return { r: srcR, g: srcG, b: srcB, a: srcA };
+            }
+        }
+        
+        // Convert to normalized alpha values (0-1)
+        const srcAlpha = srcA / 255;
+        const dstAlpha = dstA / 255;
+        
+        let resultR, resultG, resultB, resultA;
+        
+        switch (operation) {
+            case 'source-over':
+                return CompositeOperations._sourceOver(srcR, srcG, srcB, srcA, dstR, dstG, dstB, dstA);
+                
+            case 'destination-over':
+                // Swap source and destination for destination-over
+                return CompositeOperations._sourceOver(dstR, dstG, dstB, dstA, srcR, srcG, srcB, srcA);
+                
+            case 'source-atop':
+                // Source appears only where destination exists
+                // αo = αb, Co = αs × Cs + (1 - αs) × Cb
+                // NOTE: This operation works correctly with the current architecture
+                resultA = dstA; // Destination alpha
+                if (dstA === 0) {
+                    // No destination, source doesn't appear
+                    return { r: 0, g: 0, b: 0, a: 0 };
+                }
+                resultR = Math.round(srcAlpha * srcR + (1 - srcAlpha) * dstR);
+                resultG = Math.round(srcAlpha * srcG + (1 - srcAlpha) * dstG);
+                resultB = Math.round(srcAlpha * srcB + (1 - srcAlpha) * dstB);
+                break;
+                
+            case 'destination-atop':
+                // Destination appears only where source exists
+                // αo = αs, Co = αb × Cb + (1 - αb) × Cs  
+                // LIMITATION: Only processes pixels where source is drawn.
+                // Should erase destination pixels outside source region, but current
+                // architecture doesn't process those pixels.
+                resultA = srcA; // Source alpha
+                if (srcA === 0) {
+                    // No source, destination doesn't appear
+                    return { r: 0, g: 0, b: 0, a: 0 };
+                }
+                resultR = Math.round(dstAlpha * dstR + (1 - dstAlpha) * srcR);
+                resultG = Math.round(dstAlpha * dstG + (1 - dstAlpha) * srcG);
+                resultB = Math.round(dstAlpha * dstB + (1 - dstAlpha) * srcB);
+                break;
+                
+            case 'source-in':
+                // src * dstAlpha
+                // LIMITATION: Blending formula is correct, but may show unexpected
+                // results due to rendering pipeline processing order
+                resultA = Math.round(srcA * dstAlpha);
+                if (resultA === 0) {
+                    return { r: 0, g: 0, b: 0, a: 0 };
+                }
+                resultR = srcR;
+                resultG = srcG;
+                resultB = srcB;
+                break;
+                
+            case 'destination-in':
+                // dst * srcAlpha  
+                // LIMITATION: Similar to destination-atop, should process entire canvas
+                // to erase destination pixels where no source exists
+                resultA = Math.round(dstA * srcAlpha);
+                if (resultA === 0) {
+                    return { r: 0, g: 0, b: 0, a: 0 };
+                }
+                resultR = dstR;
+                resultG = dstG;
+                resultB = dstB;
+                break;
+                
+            case 'source-out':
+                // src * (1 - dstAlpha)
+                // LIMITATION: Formula is correct but may produce unexpected visual results
+                // due to complex interaction with rendering pipeline
+                resultA = Math.round(srcA * (1 - dstAlpha));
+                if (resultA === 0) {
+                    return { r: 0, g: 0, b: 0, a: 0 };
+                }
+                resultR = srcR;
+                resultG = srcG;
+                resultB = srcB;
+                break;
+                
+            case 'destination-out':
+                // dst * (1 - srcAlpha)
+                resultA = Math.round(dstA * (1 - srcAlpha));
+                if (resultA === 0) {
+                    return { r: 0, g: 0, b: 0, a: 0 };
+                }
+                resultR = dstR;
+                resultG = dstG;
+                resultB = dstB;
+                break;
+                
+            case 'xor':
+                // src * (1 - dstAlpha) + dst * (1 - srcAlpha)
+                const srcXorAlpha = srcAlpha * (1 - dstAlpha);
+                const dstXorAlpha = dstAlpha * (1 - srcAlpha);
+                resultA = Math.round(srcA * (1 - dstAlpha) + dstA * (1 - srcAlpha));
+                
+                if (resultA === 0) {
+                    return { r: 0, g: 0, b: 0, a: 0 };
+                }
+                
+                // Weight colors by their contribution to final alpha
+                const totalContrib = srcXorAlpha + dstXorAlpha;
+                if (totalContrib === 0) {
+                    return { r: 0, g: 0, b: 0, a: 0 };
+                }
+                
+                const srcWeight = srcXorAlpha / totalContrib;
+                const dstWeight = dstXorAlpha / totalContrib;
+                
+                resultR = Math.round(srcR * srcWeight + dstR * dstWeight);
+                resultG = Math.round(srcG * srcWeight + dstG * dstWeight);
+                resultB = Math.round(srcB * srcWeight + dstB * dstWeight);
+                break;
+                
+            case 'copy':
+                // Replace destination completely
+                // LIMITATION: May act like source-over in some rendering contexts
+                // due to how the result is applied to the canvas
+                return { r: srcR, g: srcG, b: srcB, a: srcA };
+                
+            default:
+                // Default to source-over for unknown operations
+                return CompositeOperations._sourceOver(srcR, srcG, srcB, srcA, dstR, dstG, dstB, dstA);
+        }
+        
+        // Clamp results to valid range
+        return {
+            r: Math.max(0, Math.min(255, Math.round(resultR))),
+            g: Math.max(0, Math.min(255, Math.round(resultG))),
+            b: Math.max(0, Math.min(255, Math.round(resultB))),
+            a: Math.max(0, Math.min(255, Math.round(resultA)))
+        };
+    }
+    
+    /**
+     * Optimized source-over implementation
+     * @private
+     */
+    static _sourceOver(srcR, srcG, srcB, srcA, dstR, dstG, dstB, dstA) {
+        // Fast path for opaque source
+        if (srcA === 255) {
+            return { r: srcR, g: srcG, b: srcB, a: srcA };
+        }
+        
+        // Standard source-over blending
+        const srcAlpha = srcA / 255;
+        const invSrcAlpha = 1 - srcAlpha;
+        
+        return {
+            r: Math.round(srcR * srcAlpha + dstR * invSrcAlpha),
+            g: Math.round(srcG * srcAlpha + dstG * invSrcAlpha),
+            b: Math.round(srcB * srcAlpha + dstB * invSrcAlpha),
+            a: Math.round(srcA + dstA * invSrcAlpha)
+        };
+    }
+    
+    /**
+     * Get list of supported composite operations
+     * @returns {string[]} Array of supported operation names
+     */
+    static getSupportedOperations() {
+        return [
+            'source-over',
+            'destination-over', 
+            'source-atop',
+            'destination-atop',
+            'source-in',
+            'destination-in',
+            'source-out',
+            'destination-out',
+            'xor',
+            'copy'
+        ];
+    }
+    
+    /**
+     * Check if a composite operation is supported
+     * @param {string} operation - Operation name to check
+     * @returns {boolean} True if operation is supported
+     */
+    static isSupported(operation) {
+        return CompositeOperations.getSupportedOperations().includes(operation);
+    }
+}
+/**
  * BitmapEncoder class for SWCanvas
  * 
  * Handles encoding of Surface data to BMP (Windows Bitmap) format.
@@ -1837,8 +2116,9 @@ class PolygonFiller {
      * @param {Uint8Array|null} clipMask - Optional 1-bit stencil buffer for clipping
      * @param {number} globalAlpha - Global alpha value (0-1) for rendering operation
      * @param {number} subPixelOpacity - Sub-pixel opacity for thin strokes (0-1)
+     * @param {string} composite - Composite operation (default: 'source-over')
      */
-    static fillPolygons(surface, polygons, paintSource, fillRule, transform, clipMask, globalAlpha = 1.0, subPixelOpacity = 1.0) {
+    static fillPolygons(surface, polygons, paintSource, fillRule, transform, clipMask, globalAlpha = 1.0, subPixelOpacity = 1.0, composite = 'source-over') {
         if (polygons.length === 0) return;
         if (!PolygonFiller._isValidPaintSource(paintSource)) {
             throw new Error('Paint source must be a Color, Gradient, or Pattern instance');
@@ -1855,7 +2135,7 @@ class PolygonFiller {
         // Process each scanline
         for (let y = bounds.minY; y <= bounds.maxY; y++) {
             PolygonFiller._fillScanline(
-                surface, y, transformedPolygons, paintSource, fillRule, clipMask, transform, globalAlpha, subPixelOpacity
+                surface, y, transformedPolygons, paintSource, fillRule, clipMask, transform, globalAlpha, subPixelOpacity, composite
             );
         }
     }
@@ -1895,9 +2175,10 @@ class PolygonFiller {
      * @param {Transform2D} transform - Canvas transform (for gradients/patterns)
      * @param {number} globalAlpha - Global alpha value (0-1)
      * @param {number} subPixelOpacity - Sub-pixel opacity for thin strokes (0-1)
+     * @param {string} composite - Composite operation
      * @private
      */
-    static _fillScanline(surface, y, polygons, paintSource, fillRule, clipMask, transform, globalAlpha, subPixelOpacity = 1.0) {
+    static _fillScanline(surface, y, polygons, paintSource, fillRule, clipMask, transform, globalAlpha, subPixelOpacity = 1.0, composite = 'source-over') {
         const intersections = [];
         
         // Find all intersections with this scanline
@@ -1909,7 +2190,7 @@ class PolygonFiller {
         intersections.sort((a, b) => a.x - b.x);
         
         // Fill spans based on winding rule
-        PolygonFiller._fillSpans(surface, y, intersections, paintSource, fillRule, clipMask, transform, globalAlpha, subPixelOpacity);
+        PolygonFiller._fillSpans(surface, y, intersections, paintSource, fillRule, clipMask, transform, globalAlpha, subPixelOpacity, composite);
     }
     
     /**
@@ -1955,9 +2236,10 @@ class PolygonFiller {
      * @param {Transform2D} transform - Canvas transform (for gradients/patterns)
      * @param {number} globalAlpha - Global alpha value (0-1)
      * @param {number} subPixelOpacity - Sub-pixel opacity for thin strokes (0-1)
+     * @param {string} composite - Composite operation
      * @private
      */
-    static _fillSpans(surface, y, intersections, paintSource, fillRule, clipMask, transform, globalAlpha, subPixelOpacity = 1.0) {
+    static _fillSpans(surface, y, intersections, paintSource, fillRule, clipMask, transform, globalAlpha, subPixelOpacity = 1.0, composite = 'source-over') {
         if (intersections.length === 0) return;
         
         let windingNumber = 0;
@@ -1983,7 +2265,7 @@ class PolygonFiller {
                 const endX = Math.min(surface.width - 1, Math.floor(nextIntersection.x));
                 
                 PolygonFiller._fillPixelSpan(
-                    surface, y, startX, endX, paintSource, clipMask, transform, globalAlpha, subPixelOpacity
+                    surface, y, startX, endX, paintSource, clipMask, transform, globalAlpha, subPixelOpacity, composite
                 );
             }
         }
@@ -2000,9 +2282,10 @@ class PolygonFiller {
      * @param {Transform2D} transform - Canvas transform (for gradients/patterns)
      * @param {number} globalAlpha - Global alpha value (0-1)
      * @param {number} subPixelOpacity - Sub-pixel opacity for thin strokes (0-1)
+     * @param {string} composite - Composite operation
      * @private
      */
-    static _fillPixelSpan(surface, y, startX, endX, paintSource, clipMask, transform, globalAlpha, subPixelOpacity = 1.0) {
+    static _fillPixelSpan(surface, y, startX, endX, paintSource, clipMask, transform, globalAlpha, subPixelOpacity = 1.0, composite = 'source-over') {
         for (let x = startX; x <= endX; x++) {
             // Check stencil buffer clipping
             if (clipMask && clipMask.isPixelClipped(x, y)) {
@@ -2013,58 +2296,38 @@ class PolygonFiller {
             const pixelColor = PolygonFiller._evaluatePaintSource(paintSource, x, y, transform, globalAlpha, subPixelOpacity);
             
             const offset = y * surface.stride + x * 4;
-            PolygonFiller._blendPixel(surface, offset, pixelColor);
+            PolygonFiller._blendPixel(surface, offset, pixelColor, composite);
         }
     }
     
     
     /**
-     * Blend a color into a surface pixel using proper alpha compositing
+     * Blend a color into a surface pixel using specified composite operation
      * @param {Surface} surface - Target surface
      * @param {number} offset - Byte offset in surface data
      * @param {Color} color - Source color to blend
+     * @param {string} composite - Composite operation (default: 'source-over')
      * @private
      */
-    static _blendPixel(surface, offset, color) {
-        // Fast paths for common cases
-        if (color.isTransparent) {
-            return; // No change needed
-        }
-        
-        if (color.isOpaque) {
-            // Opaque source - copy non-premultiplied values (surface stores non-premultiplied)
-            surface.data[offset] = color.r;
-            surface.data[offset + 1] = color.g;
-            surface.data[offset + 2] = color.b;
-            surface.data[offset + 3] = color.a;
-            return;
-        }
-        
-        // Alpha blending required (source-over composition)
-        // Surface stores non-premultiplied RGBA, use standard blending formula
+    static _blendPixel(surface, offset, color, composite = 'source-over') {
+        // Get destination pixel
         const dstR = surface.data[offset];
         const dstG = surface.data[offset + 1];
         const dstB = surface.data[offset + 2];
         const dstA = surface.data[offset + 3];
         
-        const srcR = color.r;
-        const srcG = color.g;
-        const srcB = color.b;
-        const srcA = color.a;
+        // Use CompositeOperations for blending
+        const result = CompositeOperations.blendPixel(
+            composite,
+            color.r, color.g, color.b, color.a,  // source
+            dstR, dstG, dstB, dstA               // destination
+        );
         
-        const srcAlpha = srcA / 255;
-        const invSrcAlpha = 1 - srcAlpha;
-        
-        // Use original non-premultiplied blending formula (matches original implementation)
-        const newR = Math.round(srcR * srcAlpha + dstR * invSrcAlpha);
-        const newG = Math.round(srcG * srcAlpha + dstG * invSrcAlpha);
-        const newB = Math.round(srcB * srcAlpha + dstB * invSrcAlpha);
-        const newA = Math.round(srcA + dstA * invSrcAlpha);
-        
-        surface.data[offset] = newR;
-        surface.data[offset + 1] = newG;
-        surface.data[offset + 2] = newB;
-        surface.data[offset + 3] = newA;
+        // Store result
+        surface.data[offset] = result.r;
+        surface.data[offset + 1] = result.g;
+        surface.data[offset + 2] = result.b;
+        surface.data[offset + 3] = result.a;
     }
     
     /**
@@ -4404,8 +4667,8 @@ class Rasterizer {
             }
         }
         
-        if (params.composite && !['source-over', 'copy'].includes(params.composite)) {
-            throw new Error('Invalid composite operation. Supported: source-over, copy');
+        if (params.composite && !CompositeOperations.isSupported(params.composite)) {
+            throw new Error(`Invalid composite operation. Supported: ${CompositeOperations.getSupportedOperations().join(', ')}`);
         }
         
         if (params.transform && !(params.transform instanceof Transform2D)) {
@@ -4479,9 +4742,9 @@ class Rasterizer {
         
         // Find bounding box in device space
         const minX = Math.max(0, Math.floor(Math.min(topLeft.x, topRight.x, bottomLeft.x, bottomRight.x)));
-        const maxX = Math.min(this._surface.width - 1, Math.ceil(Math.max(topLeft.x, topRight.x, bottomLeft.x, bottomRight.x)));
+        const maxX = Math.min(this._surface.width - 1, Math.floor(Math.max(topLeft.x, topRight.x, bottomLeft.x, bottomRight.x) - 1));
         const minY = Math.max(0, Math.floor(Math.min(topLeft.y, topRight.y, bottomLeft.y, bottomRight.y)));
-        const maxY = Math.min(this._surface.height - 1, Math.ceil(Math.max(topLeft.y, topRight.y, bottomLeft.y, bottomRight.y)));
+        const maxY = Math.min(this._surface.height - 1, Math.floor(Math.max(topLeft.y, topRight.y, bottomLeft.y, bottomRight.y) - 1));
         
         // Optimized path for axis-aligned rectangles with solid colors only
         if (this._currentOp.transform.b === 0 && this._currentOp.transform.c === 0 && 
@@ -4498,7 +4761,7 @@ class Rasterizer {
             
             // Use existing polygon filling system which handles transforms and stencil clipping
             const rectColor = Array.isArray(color) ? new Color(color[0], color[1], color[2], color[3]) : color;
-            PolygonFiller.fillPolygons(this._surface, [rectPolygon], rectColor, 'nonzero', this._currentOp.transform, this._currentOp.clipMask, this._currentOp.globalAlpha);
+            PolygonFiller.fillPolygons(this._surface, [rectPolygon], rectColor, 'nonzero', this._currentOp.transform, this._currentOp.clipMask, this._currentOp.globalAlpha, 1.0, this._currentOp.composite);
         }
     }
 
@@ -4536,28 +4799,23 @@ class Rasterizer {
                 
                 const offset = py * surface.stride + px * 4;
                 
-                if (this._currentOp.composite === 'copy') {
-                    // Copy mode
-                    surface.data[offset] = srcR;
-                    surface.data[offset + 1] = srcG;
-                    surface.data[offset + 2] = srcB;
-                    surface.data[offset + 3] = srcA;
-                } else {
-                    // Source-over mode (non-premultiplied alpha blending to match surface format)
-                    const dstR = surface.data[offset];
-                    const dstG = surface.data[offset + 1];
-                    const dstB = surface.data[offset + 2];
-                    const dstA = surface.data[offset + 3];
-                    
-                    const srcAlpha = srcA / 255;
-                    const invSrcAlpha = 1 - srcAlpha;
-                    
-                    // Use non-premultiplied formula (matches original and PolygonFiller)
-                    surface.data[offset] = Math.round(srcR * srcAlpha + dstR * invSrcAlpha);
-                    surface.data[offset + 1] = Math.round(srcG * srcAlpha + dstG * invSrcAlpha);
-                    surface.data[offset + 2] = Math.round(srcB * srcAlpha + dstB * invSrcAlpha);
-                    surface.data[offset + 3] = Math.round(srcA + dstA * invSrcAlpha);
-                }
+                // Get destination pixel for blending
+                const dstR = surface.data[offset];
+                const dstG = surface.data[offset + 1];
+                const dstB = surface.data[offset + 2];
+                const dstA = surface.data[offset + 3];
+                
+                // Use CompositeOperations for consistent blending
+                const result = CompositeOperations.blendPixel(
+                    this._currentOp.composite,
+                    srcR, srcG, srcB, srcA,  // source
+                    dstR, dstG, dstB, dstA   // destination
+                );
+                
+                surface.data[offset] = result.r;
+                surface.data[offset + 1] = result.g;
+                surface.data[offset + 2] = result.b;
+                surface.data[offset + 3] = result.a;
             }
         }
     }
@@ -4578,7 +4836,7 @@ class Rasterizer {
         // Flatten path to polygons
         const polygons = PathFlattener.flattenPath(path);
         // Fill polygons with current transform and stencil clipping
-        PolygonFiller.fillPolygons(this._surface, polygons, fillStyle, fillRule, this._currentOp.transform, this._currentOp.clipMask, this._currentOp.globalAlpha);
+        PolygonFiller.fillPolygons(this._surface, polygons, fillStyle, fillRule, this._currentOp.transform, this._currentOp.clipMask, this._currentOp.globalAlpha, 1.0, this._currentOp.composite);
     }
 
     /**
@@ -4609,7 +4867,7 @@ class Rasterizer {
         const strokePolygons = StrokeGenerator.generateStrokePolygons(path, adjustedStrokeProps);
         
         // Fill stroke polygons with current transform and stencil clipping
-        PolygonFiller.fillPolygons(this._surface, strokePolygons, strokeStyle, 'nonzero', this._currentOp.transform, this._currentOp.clipMask, this._currentOp.globalAlpha, subPixelOpacity);
+        PolygonFiller.fillPolygons(this._surface, strokePolygons, strokeStyle, 'nonzero', this._currentOp.transform, this._currentOp.clipMask, this._currentOp.globalAlpha, subPixelOpacity, this._currentOp.composite);
     }
 
     /**
@@ -4738,33 +4996,23 @@ class Rasterizer {
                 // Get destination pixel for blending
                 const destOffset = deviceY * this._surface.stride + deviceX * 4;
                 
-                if (this._currentOp.composite === 'copy' || finalSrcA === 255) {
-                    // Direct copy (no blending needed) - store non-premultiplied
-                    this._surface.data[destOffset] = srcR;
-                    this._surface.data[destOffset + 1] = srcG;
-                    this._surface.data[destOffset + 2] = srcB;
-                    this._surface.data[destOffset + 3] = finalSrcA;
-                } else {
-                    // Alpha blending (source-over) - non-premultiplied formula
-                    const dstR = this._surface.data[destOffset];
-                    const dstG = this._surface.data[destOffset + 1];
-                    const dstB = this._surface.data[destOffset + 2];
-                    const dstA = this._surface.data[destOffset + 3];
-                    
-                    const srcAlpha = effectiveAlpha;
-                    const invSrcAlpha = 1 - srcAlpha;
-                    
-                    // Use non-premultiplied formula (consistent with rest of codebase)
-                    const newR = Math.round(srcR * srcAlpha + dstR * invSrcAlpha);
-                    const newG = Math.round(srcG * srcAlpha + dstG * invSrcAlpha);
-                    const newB = Math.round(srcB * srcAlpha + dstB * invSrcAlpha);
-                    const newA = Math.round(finalSrcA + dstA * invSrcAlpha);
-                    
-                    this._surface.data[destOffset] = newR;
-                    this._surface.data[destOffset + 1] = newG;
-                    this._surface.data[destOffset + 2] = newB;
-                    this._surface.data[destOffset + 3] = newA;
-                }
+                // Get destination pixel for blending
+                const dstR = this._surface.data[destOffset];
+                const dstG = this._surface.data[destOffset + 1];
+                const dstB = this._surface.data[destOffset + 2];
+                const dstA = this._surface.data[destOffset + 3];
+                
+                // Use CompositeOperations for consistent blending
+                const result = CompositeOperations.blendPixel(
+                    this._currentOp.composite,
+                    srcR, srcG, srcB, finalSrcA,  // source
+                    dstR, dstG, dstB, dstA        // destination
+                );
+                
+                this._surface.data[destOffset] = result.r;
+                this._surface.data[destOffset + 1] = result.g;
+                this._surface.data[destOffset + 2] = result.b;
+                this._surface.data[destOffset + 3] = result.a;
             }
         }
     }
@@ -6040,6 +6288,7 @@ if (typeof window !== 'undefined') {
             BitmapEncoder: BitmapEncoder,
             ClipMask: ClipMask,
             ImageProcessor: ImageProcessor,
+            CompositeOperations: CompositeOperations,
             Rasterizer: Rasterizer,
             PathFlattener: PathFlattener,
             PolygonFiller: PolygonFiller,
@@ -6070,6 +6319,7 @@ if (typeof window !== 'undefined') {
             BitmapEncoder: BitmapEncoder,
             ClipMask: ClipMask,
             ImageProcessor: ImageProcessor,
+            CompositeOperations: CompositeOperations,
             Rasterizer: Rasterizer,
             PathFlattener: PathFlattener,
             PolygonFiller: PolygonFiller,
