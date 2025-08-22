@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>HTML5 Canvas XOR Analysis</title>
+</head>
+<body>
+    <h2>HTML5 Canvas XOR Step-by-Step Analysis</h2>
+    
+    <div style="display: flex; gap: 20px; margin: 20px 0;">
+        <div>
+            <h3>Step 1: White Background</h3>
+            <canvas id="step1" width="150" height="150"></canvas>
+        </div>
+        <div>
+            <h3>Step 2: Blue Square Added</h3>
+            <canvas id="step2" width="150" height="150"></canvas>
+        </div>
+        <div>
+            <h3>Step 3: Red Circle with XOR</h3>
+            <canvas id="step3" width="150" height="150"></canvas>
+        </div>
+    </div>
+
+    <div id="analysis" style="margin: 20px 0; font-family: monospace; white-space: pre-line;"></div>
+
+    <script>
+    function analyzePixel(ctx, x, y, description) {
+        const imageData = ctx.getImageData(x, y, 1, 1);
+        const r = imageData.data[0];
+        const g = imageData.data[1];
+        const b = imageData.data[2];
+        const a = imageData.data[3];
+        
+        let colorDesc;
+        if (r === 255 && g === 255 && b === 255) {
+            colorDesc = 'WHITE';
+        } else if (r === 0 && g === 0 && b === 255) {
+            colorDesc = 'BLUE';
+        } else if (r === 255 && g === 0 && b === 0) {
+            colorDesc = 'RED';
+        } else {
+            colorDesc = `RGB(${r},${g},${b})`;
+        }
+        
+        return `Pixel (${x},${y}) - ${description}: ${colorDesc} (A=${a})`;
+    }
+
+    // Step 1: White background only
+    const ctx1 = document.getElementById('step1').getContext('2d');
+    ctx1.fillStyle = 'white';
+    ctx1.fillRect(0, 0, 150, 150);
+
+    // Step 2: White background + blue square  
+    const ctx2 = document.getElementById('step2').getContext('2d');
+    ctx2.fillStyle = 'white';
+    ctx2.fillRect(0, 0, 150, 150);
+    ctx2.fillStyle = 'blue';
+    ctx2.fillRect(30, 30, 60, 60);
+
+    // Step 3: Full test with XOR
+    const ctx3 = document.getElementById('step3').getContext('2d');
+    ctx3.fillStyle = 'white';
+    ctx3.fillRect(0, 0, 150, 150);
+    ctx3.fillStyle = 'blue';
+    ctx3.fillRect(30, 30, 60, 60);
+    ctx3.globalCompositeOperation = 'xor';
+    ctx3.fillStyle = 'red';
+    ctx3.beginPath();
+    ctx3.arc(75, 45, 25, 0, Math.PI * 2);
+    ctx3.fill();
+
+    // Analyze pixels
+    const testPoints = [
+        [10, 10, 'Background'],
+        [40, 80, 'Blue only'],
+        [60, 25, 'Red only'],
+        [70, 40, 'Overlap center'],
+        [85, 50, 'Overlap right'],
+        [55, 35, 'Overlap left']
+    ];
+
+    let analysis = "HTML5 Canvas XOR Analysis:\n\n";
+    
+    analysis += "Step 3 (Final XOR Result):\n";
+    testPoints.forEach(([x, y, desc]) => {
+        analysis += analyzePixel(ctx3, x, y, desc) + "\n";
+    });
+
+    analysis += "\nStep 2 (Before XOR - for comparison):\n";
+    testPoints.forEach(([x, y, desc]) => {
+        analysis += analyzePixel(ctx2, x, y, desc) + "\n";
+    });
+
+    document.getElementById('analysis').textContent = analysis;
+    </script>
+</body>
+</html>

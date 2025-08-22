@@ -462,6 +462,8 @@ const bmpData = SWCanvas.Core.BitmapEncoder.encode(surface);
 
 ## Development
 
+**Debug Utilities**: See `debug/README.md` for debugging scripts, templates, and investigation workflows.
+
 ### Project Structure (Object-Oriented Architecture)
 
 ```

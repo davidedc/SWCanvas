@@ -10,6 +10,7 @@ Each document has a **single responsibility** to avoid duplication:
 - **ARCHITECTURE.md**: System design, component organization, architectural patterns, OO design
 - **tests/README.md**: Complete test system documentation, adding tests, build utilities
 - **tests/build/README.md**: Build utility scripts documentation (concat-tests.js, renumber-tests.js)
+- **debug/README.md**: Debug utilities, investigation scripts, and debugging workflows
 - **CLAUDE.md**: Claude-specific development context and workflow tips ONLY
 - **specs-and-high-level-project-plan.md**: Original requirements specification
 
@@ -48,6 +49,7 @@ Each document has a **single responsibility** to avoid duplication:
 - **Architecture details**: ARCHITECTURE.md only
 - **Test documentation**: tests/README.md only
 - **Build utilities**: tests/build/README.md only
+- **Debug utilities**: debug/README.md only
 - **Claude guidance**: CLAUDE.md only (no duplication from other docs)
 
 ## Quick Navigation
@@ -56,6 +58,7 @@ Each document has a **single responsibility** to avoid duplication:
 - **Understanding the design** → ARCHITECTURE.md  
 - **Adding/running tests** → tests/README.md
 - **Build utilities** → tests/build/README.md
+- **Debug utilities** → debug/README.md
 - **Examples and demos** → examples/README.md
 - **Development with Claude** → CLAUDE.md
 - **Original specifications** → specs-and-high-level-project-plan.md

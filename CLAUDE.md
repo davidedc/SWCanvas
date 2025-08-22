@@ -247,6 +247,8 @@ See README.md for complete API usage examples.
 4. Check pixel values manually if needed
 5. Use git to compare before/after BMPs
 
+**See `debug/README.md` for comprehensive debugging utilities, templates, and workflow patterns.**
+
 #### Quick Node.js Analysis Scripts
 Use one-liner Node.js scripts for rapid debugging and pixel-level analysis:
 
