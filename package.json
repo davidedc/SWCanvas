@@ -7,7 +7,7 @@
     "build": "./build.sh",
     "minify": "./minify.sh",
     "build:prod": "npm run build && npm run minify",
-    "test": "node tests/run-tests.js"
+    "test": "node tests/run-tests.js",
     "debug:source-out": "npm run build && node debug-composite-source-out.js",
     "debug:xor": "npm run build && node debug-composite-xor.js",
     "debug:composite": "npm run debug:source-out && npm run debug:xor"
