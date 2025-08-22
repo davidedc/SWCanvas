@@ -1,0 +1,50 @@
+// Test: Composite Operation: destination-in - destination visible only where source exists
+// This test demonstrates the global compositing fix for destination-in
+
+registerVisualTest('composite-destination-in', {
+    name: 'Composite Operation: destination-in - global effect',
+    width: 300, height: 200,
+    draw: function(canvas) {
+        const ctx = canvas.getContext('2d');
+        
+        // White background
+        ctx.fillStyle = 'white';
+        ctx.fillRect(0, 0, 300, 200);
+        
+        // Draw green rectangle as destination
+        ctx.fillStyle = '#00cc66';
+        ctx.fillRect(50, 50, 100, 100);
+        
+        // Switch to destination-in and draw blue triangle
+        // This should keep the green only where the blue triangle overlaps
+        // and erase green outside the triangle (the key global effect)
+        ctx.globalCompositeOperation = 'destination-in';
+        ctx.fillStyle = '#3366ff';
+        ctx.beginPath();
+        ctx.moveTo(100, 60);
+        ctx.lineTo(140, 140);
+        ctx.lineTo(60, 140);
+        ctx.closePath();
+        ctx.fill();
+        
+        // Add labels for clarity
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.fillStyle = 'black';
+        ctx.font = '12px monospace';
+        
+        // Show a comparison: draw the same shapes with source-over
+        ctx.fillStyle = '#00cc66';
+        ctx.fillRect(200, 50, 100, 100);
+        
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.fillStyle = '#3366ff';
+        ctx.beginPath();
+        ctx.moveTo(250, 60);
+        ctx.lineTo(290, 140);
+        ctx.lineTo(210, 140);
+        ctx.closePath();
+        ctx.fill();
+        
+        ctx.fillStyle = 'black';
+    }
+});

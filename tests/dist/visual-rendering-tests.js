@@ -41,19 +41,12 @@
             const b = swSurface.data[i + 2];
             const a = swSurface.data[i + 3];
             
-            // Always unpremultiply for display (HTML5 ImageData expects non-premultiplied)
-            if (a === 0) {
-                imageData.data[i] = 0;
-                imageData.data[i + 1] = 0;
-                imageData.data[i + 2] = 0;
-                imageData.data[i + 3] = 0;
-            } else {
-                // Unpremultiply: non_premult = premult * 255 / alpha
-                imageData.data[i] = Math.round((r * 255) / a);
-                imageData.data[i + 1] = Math.round((g * 255) / a);
-                imageData.data[i + 2] = Math.round((b * 255) / a);
-                imageData.data[i + 3] = a;
-            }
+            // SWCanvas Surface data is already non-premultiplied, just copy directly
+            // HTML5 ImageData expects non-premultiplied RGBA
+            imageData.data[i] = r;
+            imageData.data[i + 1] = g;  
+            imageData.data[i + 2] = b;
+            imageData.data[i + 3] = a;
         }
         
         ctx.putImageData(imageData, 0, 0);
@@ -5930,8 +5923,9 @@
         draw: function(canvas) {
             const ctx = canvas.getContext('2d');
             
-            // Clear to transparent background
-            ctx.clearRect(0, 0, 300, 200);
+            // White background for visibility
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, 300, 200);
             
             // Title indicator
             ctx.fillStyle = '#333';
@@ -5963,27 +5957,58 @@
         draw: function(canvas) {
             const ctx = canvas.getContext('2d');
             
-            // Clear to transparent background
-            ctx.clearRect(0, 0, 300, 200);
+            // Gray background to distinguish transparent areas
+            ctx.fillStyle = '#F0F0F0';
+            ctx.fillRect(0, 0, 300, 200);
             
-            // Title indicator
+            // Title indicator 
             ctx.fillStyle = '#333';
-            ctx.fillRect(10, 10, 120, 15);
+            ctx.fillRect(10, 10, 150, 15);
             
-            // Draw red circle (destination)
+            // Left example: Basic destination-over behavior
+            // Clear area to create transparency
+            ctx.globalCompositeOperation = 'destination-out';
+            ctx.fillStyle = 'black'; // color doesn't matter
+            ctx.fillRect(40, 40, 100, 80);
+            
+            // Draw blue rectangle (destination)
             ctx.globalCompositeOperation = 'source-over';
-            ctx.fillStyle = '#FF0000';
+            ctx.fillStyle = '#3366FF';
+            ctx.fillRect(60, 50, 40, 40);
+            
+            // Draw red circle with destination-over (goes behind blue, fills transparent)
+            ctx.globalCompositeOperation = 'destination-over';
+            ctx.fillStyle = '#FF3333';
             ctx.beginPath();
-            ctx.arc(100, 100, 40, 0, Math.PI * 2);
+            ctx.arc(80, 70, 30, 0, Math.PI * 2);
             ctx.fill();
             
-            // Draw blue square with destination-over (should appear behind red circle)
-            ctx.globalCompositeOperation = 'destination-over';
-            ctx.fillStyle = '#0000FF';
-            ctx.fillRect(120, 80, 60, 40);
+            // Right example: destination-over with semi-transparent shapes
+            // Clear area for second demo
+            ctx.globalCompositeOperation = 'destination-out';
+            ctx.fillStyle = 'black';
+            ctx.fillRect(170, 40, 120, 100);
             
-            // Expected result: Blue square appears behind red circle
-            // Red circle should be visible on top where they overlap
+            // Draw semi-transparent yellow rectangle (destination)
+            ctx.globalCompositeOperation = 'source-over';
+            ctx.globalAlpha = 0.7;
+            ctx.fillStyle = '#FFFF00';
+            ctx.fillRect(190, 60, 50, 30);
+            
+            // Draw semi-transparent purple circle with destination-over
+            ctx.globalCompositeOperation = 'destination-over';
+            ctx.globalAlpha = 0.8;
+            ctx.fillStyle = '#9933FF';
+            ctx.beginPath();
+            ctx.arc(230, 90, 35, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Reset alpha
+            ctx.globalAlpha = 1.0;
+            
+            // Expected result:
+            // Left: Red circle visible behind blue rectangle and in transparent areas
+            // Right: Purple circle behind yellow rectangle with alpha blending
         }
     });
 
@@ -5996,8 +6021,9 @@
         draw: function(canvas) {
             const ctx = canvas.getContext('2d');
             
-            // Clear to transparent background
-            ctx.clearRect(0, 0, 300, 200);
+            // White background for visibility
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, 300, 200);
             
             // Title indicator
             ctx.fillStyle = '#333';
@@ -6029,27 +6055,441 @@
         draw: function(canvas) {
             const ctx = canvas.getContext('2d');
             
-            // Clear to transparent background
-            ctx.clearRect(0, 0, 300, 200);
+            // Light gray background for visibility
+            ctx.fillStyle = '#f0f0f0';
+            ctx.fillRect(0, 0, 300, 200);
             
             // Title indicator
             ctx.fillStyle = '#333';
             ctx.fillRect(10, 10, 80, 15);
             
-            // Draw red circle (destination)
+            // Clear an area to demonstrate XOR on transparent background
+            ctx.clearRect(50, 50, 200, 100);
+            
+            // Draw red circle on transparent area
             ctx.globalCompositeOperation = 'source-over';
             ctx.fillStyle = '#FF0000';
             ctx.beginPath();
-            ctx.arc(100, 100, 40, 0, Math.PI * 2);
+            ctx.arc(120, 100, 35, 0, Math.PI * 2);
             ctx.fill();
             
-            // Draw blue square with xor (both shapes visible except overlap)
+            // Draw blue square with xor
             ctx.globalCompositeOperation = 'xor';
             ctx.fillStyle = '#0000FF';
-            ctx.fillRect(120, 80, 60, 40);
+            ctx.fillRect(140, 80, 50, 40);
             
-            // Expected result: Both red circle and blue square visible,
-            // but overlap area should be transparent (cut out)
+            // Second example: XOR over opaque background to show cancellation
+            ctx.globalCompositeOperation = 'source-over';
+            ctx.fillStyle = 'yellow';
+            ctx.fillRect(50, 160, 40, 30);
+            
+            ctx.globalCompositeOperation = 'xor';
+            ctx.fillStyle = 'purple';
+            ctx.fillRect(70, 170, 40, 30);
+            
+            // Expected result: Red circle and blue square visible with transparent overlap (top),
+            // yellow/purple cancellation creates holes (bottom)
+        }
+    });
+
+    // Test: Composite Operation: destination-atop - destination visible only where source exists
+    // This test demonstrates the global compositing fix for destination-atop
+
+    registerVisualTest('composite-destination-atop', {
+        name: 'Composite Operation: destination-atop - global effect',
+        width: 300, height: 200,
+        draw: function(canvas) {
+            const ctx = canvas.getContext('2d');
+            
+            // White background
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, 300, 200);
+            
+            // Draw blue rectangle as destination
+            ctx.fillStyle = '#0066ff';
+            ctx.fillRect(50, 50, 100, 100);
+            
+            // Switch to destination-atop and draw red circle
+            // This should keep the blue only where the red circle overlaps
+            // and erase blue outside the circle (the key global effect)
+            ctx.globalCompositeOperation = 'destination-atop';
+            ctx.fillStyle = '#ff0066';
+            ctx.beginPath();
+            ctx.arc(120, 80, 40, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Add label rectangles for clarity (using rectangles instead of text)
+            ctx.globalCompositeOperation = 'source-over';
+            ctx.fillStyle = 'black';
+            ctx.fillRect(10, 15, 5, 5); // Marker for destination-atop test
+            
+            // Show a comparison: draw the same shapes with source-over
+            ctx.fillStyle = '#0066ff';
+            ctx.fillRect(200, 50, 100, 100);
+            
+            ctx.globalCompositeOperation = 'source-over';
+            ctx.fillStyle = '#ff0066';
+            ctx.beginPath();
+            ctx.arc(270, 80, 40, 0, Math.PI * 2);
+            ctx.fill();
+            
+            ctx.fillStyle = 'black';
+            ctx.fillRect(210, 165, 5, 5); // Marker for source-over comparison
+        }
+    });
+
+    // Test: Composite Operation: destination-in - destination visible only where source exists
+    // This test demonstrates the global compositing fix for destination-in
+
+    registerVisualTest('composite-destination-in', {
+        name: 'Composite Operation: destination-in - global effect',
+        width: 300, height: 200,
+        draw: function(canvas) {
+            const ctx = canvas.getContext('2d');
+            
+            // White background
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, 300, 200);
+            
+            // Draw green rectangle as destination
+            ctx.fillStyle = '#00cc66';
+            ctx.fillRect(50, 50, 100, 100);
+            
+            // Switch to destination-in and draw blue triangle
+            // This should keep the green only where the blue triangle overlaps
+            // and erase green outside the triangle (the key global effect)
+            ctx.globalCompositeOperation = 'destination-in';
+            ctx.fillStyle = '#3366ff';
+            ctx.beginPath();
+            ctx.moveTo(100, 60);
+            ctx.lineTo(140, 140);
+            ctx.lineTo(60, 140);
+            ctx.closePath();
+            ctx.fill();
+            
+            // Add labels for clarity
+            ctx.globalCompositeOperation = 'source-over';
+            ctx.fillStyle = 'black';
+            
+            // Show a comparison: draw the same shapes with source-over
+            ctx.fillStyle = '#00cc66';
+            ctx.fillRect(200, 50, 100, 100);
+            
+            ctx.globalCompositeOperation = 'source-over';
+            ctx.fillStyle = '#3366ff';
+            ctx.beginPath();
+            ctx.moveTo(250, 60);
+            ctx.lineTo(290, 140);
+            ctx.lineTo(210, 140);
+            ctx.closePath();
+            ctx.fill();
+            
+            ctx.fillStyle = 'black';
+        }
+    });
+
+    // Test: Composite Operation: source-atop - source drawn only where destination exists
+    // This test demonstrates the source-atop operation (already worked but now optimized)
+
+    registerVisualTest('composite-source-atop', {
+        name: 'Composite Operation: source-atop - masking effect',
+        width: 300, height: 200,
+        draw: function(canvas) {
+            const ctx = canvas.getContext('2d');
+            
+            // White background
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, 300, 200);
+            
+            // Draw purple oval as destination
+            ctx.fillStyle = '#9966cc';
+            ctx.save();
+            ctx.translate(100, 100);
+            ctx.scale(2, 1);
+            ctx.beginPath();
+            ctx.arc(0, 0, 30, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+            
+            // Switch to source-atop and draw orange rectangle
+            // This should draw orange only where purple exists
+            ctx.globalCompositeOperation = 'source-atop';
+            ctx.fillStyle = '#ff9933';
+            ctx.fillRect(60, 70, 80, 60);
+            
+            // Add labels for clarity
+            ctx.globalCompositeOperation = 'source-over';
+            ctx.fillStyle = 'black';
+            
+            // Show a comparison: draw the same shapes with source-over
+            ctx.fillStyle = '#9966cc';
+            ctx.save();
+            ctx.translate(250, 100);
+            ctx.scale(2, 1);
+            ctx.beginPath();
+            ctx.arc(0, 0, 30, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+            
+            ctx.globalCompositeOperation = 'source-over';
+            ctx.fillStyle = '#ff9933';
+            ctx.fillRect(210, 70, 80, 60);
+            
+            ctx.fillStyle = 'black';
+        }
+    });
+
+    // Test: Composite Operation: source-in - source visible only where destination exists
+    // This test demonstrates the source-in operation with global compositing improvements
+
+    registerVisualTest('composite-source-in', {
+        name: 'Composite Operation: source-in - masking effect',
+        width: 300, height: 200,
+        draw: function(canvas) {
+            const ctx = canvas.getContext('2d');
+            
+            // White background
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, 300, 200);
+            
+            // Draw cyan star as destination
+            ctx.fillStyle = '#00cccc';
+            ctx.beginPath();
+            // Draw 5-point star
+            const cx = 100, cy = 100, r1 = 35, r2 = 15;
+            for (let i = 0; i < 10; i++) {
+                const angle = (i * Math.PI) / 5;
+                const r = i % 2 === 0 ? r1 : r2;
+                const x = cx + r * Math.cos(angle - Math.PI / 2);
+                const y = cy + r * Math.sin(angle - Math.PI / 2);
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.closePath();
+            ctx.fill();
+            
+            // Switch to source-in and draw red rectangle
+            // This should show red only where cyan star exists
+            ctx.globalCompositeOperation = 'source-in';
+            ctx.fillStyle = '#ff3333';
+            ctx.fillRect(70, 80, 60, 40);
+            
+            // Add labels for clarity
+            ctx.globalCompositeOperation = 'source-over';
+            ctx.fillStyle = 'black';
+            
+            // Show a comparison: draw the same shapes with source-over
+            ctx.fillStyle = '#00cccc';
+            ctx.beginPath();
+            // Draw 5-point star
+            const cx2 = 250, cy2 = 100;
+            for (let i = 0; i < 10; i++) {
+                const angle = (i * Math.PI) / 5;
+                const r = i % 2 === 0 ? r1 : r2;
+                const x = cx2 + r * Math.cos(angle - Math.PI / 2);
+                const y = cy2 + r * Math.sin(angle - Math.PI / 2);
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.closePath();
+            ctx.fill();
+            
+            ctx.globalCompositeOperation = 'source-over';
+            ctx.fillStyle = '#ff3333';
+            ctx.fillRect(220, 80, 60, 40);
+            
+            ctx.fillStyle = 'black';
+        }
+    });
+
+    // Test: Composite Operation: source-out - source visible only where destination doesn't exist
+    // This test demonstrates the source-out operation with global compositing improvements
+
+    registerVisualTest('composite-source-out', {
+        name: 'Composite Operation: source-out - inverse masking',
+        width: 300, height: 200,
+        draw: function(canvas) {
+            const ctx = canvas.getContext('2d');
+            
+            // White background
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, 300, 200);
+            
+            // Draw yellow hexagon as destination
+            ctx.fillStyle = '#ffcc00';
+            ctx.beginPath();
+            const cx = 100, cy = 100, r = 30;
+            for (let i = 0; i < 6; i++) {
+                const angle = (i * Math.PI) / 3;
+                const x = cx + r * Math.cos(angle);
+                const y = cy + r * Math.sin(angle);
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.closePath();
+            ctx.fill();
+            
+            // Switch to source-out and draw magenta circle
+            // This should show magenta only where yellow hexagon doesn't exist
+            ctx.globalCompositeOperation = 'source-out';
+            ctx.fillStyle = '#ff00cc';
+            ctx.beginPath();
+            ctx.arc(100, 100, 45, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Add labels for clarity
+            ctx.globalCompositeOperation = 'source-over';
+            ctx.fillStyle = 'black';
+            
+            // Show a comparison: draw the same shapes with source-over
+            ctx.fillStyle = '#ffcc00';
+            ctx.beginPath();
+            const cx2 = 250, cy2 = 100;
+            for (let i = 0; i < 6; i++) {
+                const angle = (i * Math.PI) / 3;
+                const x = cx2 + r * Math.cos(angle);
+                const y = cy2 + r * Math.sin(angle);
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.closePath();
+            ctx.fill();
+            
+            ctx.globalCompositeOperation = 'source-over';
+            ctx.fillStyle = '#ff00cc';
+            ctx.beginPath();
+            ctx.arc(250, 100, 45, 0, Math.PI * 2);
+            ctx.fill();
+            
+            ctx.fillStyle = 'black';
+        }
+    });
+
+    // Test: Composite Operation: copy - source replaces destination completely  
+    // This test demonstrates the copy operation with global compositing improvements
+
+    registerVisualTest('composite-copy', {
+        name: 'Composite Operation: copy - complete replacement',
+        width: 300, height: 200,
+        draw: function(canvas) {
+            const ctx = canvas.getContext('2d');
+            
+            // White background
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, 300, 200);
+            
+            // Draw teal background rectangle as destination
+            ctx.fillStyle = '#008080';
+            ctx.fillRect(40, 40, 120, 120);
+            
+            // Switch to copy and draw pink diamond
+            // This should completely replace the teal with pink where the diamond is
+            // and erase teal where diamond doesn't exist (within the drawing region)
+            ctx.globalCompositeOperation = 'copy';
+            ctx.fillStyle = '#ff69b4';
+            ctx.save();
+            ctx.translate(100, 100);
+            ctx.rotate(Math.PI / 4);
+            ctx.fillRect(-25, -25, 50, 50);
+            ctx.restore();
+            
+            // Add labels for clarity
+            ctx.globalCompositeOperation = 'source-over';
+            ctx.fillStyle = 'black';
+            
+            // Show a comparison: draw the same shapes with source-over
+            ctx.fillStyle = '#008080';
+            ctx.fillRect(190, 40, 120, 120);
+            
+            ctx.globalCompositeOperation = 'source-over';
+            ctx.fillStyle = '#ff69b4';
+            ctx.save();
+            ctx.translate(250, 100);
+            ctx.rotate(Math.PI / 4);
+            ctx.fillRect(-25, -25, 50, 50);
+            ctx.restore();
+            
+            ctx.fillStyle = 'black';
+            
+            // Additional test: copy with transparency
+            ctx.globalCompositeOperation = 'source-over';
+            ctx.fillStyle = 'rgba(128, 0, 128, 0.7)';
+            ctx.fillRect(10, 160, 40, 30);
+            
+            ctx.globalCompositeOperation = 'copy';
+            ctx.fillStyle = 'rgba(255, 165, 0, 0.5)';
+            ctx.fillRect(20, 170, 20, 10);
+            
+            ctx.globalCompositeOperation = 'source-over';
+            ctx.fillStyle = 'black';
+        }
+    });
+
+    // Test: Simple XOR Debug Test - Blue Square + Red Circle
+    // This test creates a simple XOR case to debug the purple rectangle issue
+
+    registerVisualTest('simple-xor-debug', {
+        name: 'Simple XOR Debug Test - Blue Square + Red Circle',
+        width: 200, height: 150,
+        draw: function(canvas) {
+            const ctx = canvas.getContext('2d');
+            
+            // White background
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, 200, 150);
+            
+            // Draw blue square as destination
+            ctx.fillStyle = 'blue';
+            ctx.fillRect(50, 40, 60, 60);
+            
+            // Switch to XOR and draw red circle
+            ctx.globalCompositeOperation = 'xor';
+            ctx.fillStyle = 'red';
+            ctx.beginPath();
+            ctx.arc(100, 70, 35, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Expected result:
+            // - Blue square only areas: should be blue
+            // - Red circle only areas: should be red  
+            // - Overlap areas: should be transparent (white background shows through)
+            // - Background: should remain white
+        }
+    });
+
+    // Test: Minimal XOR Corner Test - Blue Square + Red Circle Corner Overlap
+    // This is a truly minimal XOR test with clear corner overlap
+
+    registerVisualTest('minimal-xor-corner', {
+        name: 'Minimal XOR Corner Test - Blue Square + Red Circle Corner Overlap',
+        width: 150, height: 150,
+        draw: function(canvas) {
+            const ctx = canvas.getContext('2d');
+            
+            // White background
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, 150, 150);
+            
+            // Draw blue square as destination
+            ctx.fillStyle = 'blue';
+            ctx.fillRect(30, 30, 60, 60);  // Blue square from (30,30) to (90,90)
+            
+            // Switch to XOR and draw red circle overlapping top-right corner
+            ctx.globalCompositeOperation = 'xor';
+            ctx.fillStyle = 'red';
+            ctx.beginPath();
+            ctx.arc(75, 45, 25, 0, Math.PI * 2);  // Red circle center (75,45), radius 25
+            ctx.fill();
+            
+            // Expected result:
+            // - Blue square areas not covered by circle: blue
+            // - Red circle areas not covering the square: red
+            // - Overlap area (top-right corner): transparent (white background shows)
+            // - Background: white
+            //
+            // The circle center (75,45) with radius 25 covers roughly (50,20) to (100,70)
+            // The square covers (30,30) to (90,90)  
+            // Overlap should be roughly (50,30) to (90,70)
         }
     });
 

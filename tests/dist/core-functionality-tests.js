@@ -1227,12 +1227,12 @@
             // Check area where only blue would be (should be blue) 
             const blueOnlyPixel = surface.getPixel(25, 25);
             assertEquals(blueOnlyPixel.b, 255);
+            assertEquals(blueOnlyPixel.a, 255);
             
-            // Note: destination-atop ideally should erase destination outside source region,
-            // but this requires canvas-wide processing. For now we test the core blending behavior.
-            // The red-only area at (60,60) remains red in our current implementation.
+            // destination-atop should erase destination outside source region
+            // With global compositing implementation, this now works correctly
             const redOnlyPixel = surface.getPixel(60, 60);
-            assertEquals(redOnlyPixel.r, 255); // Red remains (implementation limitation)
+            assertEquals(redOnlyPixel.a, 0); // Red erased (now transparent) - correct behavior
         });
 
         // Test 33F: HTML5 Canvas-compatible API composite operations

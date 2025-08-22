@@ -7,8 +7,9 @@ registerVisualTest('composite-destination-out', {
     draw: function(canvas) {
         const ctx = canvas.getContext('2d');
         
-        // Clear to transparent background
-        ctx.clearRect(0, 0, 300, 200);
+        // White background for visibility
+        ctx.fillStyle = 'white';
+        ctx.fillRect(0, 0, 300, 200);
         
         // Title indicator
         ctx.fillStyle = '#333';

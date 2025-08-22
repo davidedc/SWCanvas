@@ -47,25 +47,27 @@ node tests/run-tests.js  # Smart runner uses built tests when available
 ### Browser Tests
 1. Open `tests/browser/index.html` in a web browser (automatically runs all tests on page load)
 2. Automatically runs 32 modular core functionality tests from `/tests/core/` 
-3. Automatically runs all 78 visual rendering tests with side-by-side HTML5 Canvas vs SWCanvas comparison
+3. Automatically runs all 88 visual rendering tests with side-by-side HTML5 Canvas vs SWCanvas comparison
 4. Use interactive visual comparison tools for real-time testing
 5. Simple test: Open `tests/browser/simple-test.html` for basic visual comparison
+
+**Technical Note**: Browser visual comparisons use `renderSWCanvasToHTML5()` helper function in `build/concat-tests.js` which correctly transfers SWCanvas Surface data (non-premultiplied RGBA) to HTML5 Canvas ImageData without unpremultiplication, ensuring accurate semi-transparent color display.
 
 ## Modular Dual Test Architecture
 
 SWCanvas uses a **modular complementary dual test system** where individual test files are automatically concatenated at build time, maintaining both development flexibility and production performance:
 
-### Core Functionality Tests - 32 Individual Files
+### Core Functionality Tests - 33 Individual Files
 **Location**: `/tests/core/` (individual files) → `/tests/dist/core-functionality-tests.js` (concatenated)
 
 **Modular Structure**:
-- **32 individual test files** numbered 001-032 with descriptive names
+- **33 individual test files** numbered 001-033 with descriptive names
 - **Build-time concatenation** into single optimized file
 - **Smart test runner** automatically uses built version
 - **Development benefit**: No merge conflicts, focused editing
 
 **Characteristics**:
-- **32 unit tests** using `assertEquals()`, `assertThrows()` assertions
+- **33 unit tests** using `assertEquals()`, `assertThrows()` assertions
 - **Output**: Console logs with ✓ pass/✗ fail status + detailed error messages
 - **Environment**: Runs identically in both Node.js and browser
 - **Focus**: API correctness, error handling, data validation, mathematical accuracy
@@ -91,17 +93,17 @@ test('Surface creation with valid dimensions', () => {
 });
 ```
 
-### Visual Rendering Tests - 78 Individual Files
+### Visual Rendering Tests - 88 Individual Files
 **Location**: `/tests/visual/` (individual files) → `/tests/dist/visual-rendering-tests.js` (concatenated)
 
 **Modular Structure**:
-- **78 individual test files** numbered 001-078 with descriptive names
+- **88 individual test files** numbered 001-088 with descriptive names
 - **Build-time concatenation** preserves registerVisualTest pattern
 - **Smart test runner** with automatic fallback to original
 - **Development benefit**: Isolated test development, clear organization
 
 **Characteristics**:
-- **78 visual tests** that generate actual rendered images
+- **88 visual tests** that generate actual rendered images
 - **Output**: BMP files (Node.js) + side-by-side comparison (browser)
 - **Environment**: BMP generation in Node.js, visual comparison in browser
 - **Focus**: Rendering accuracy, visual consistency, pixel-perfect output
@@ -258,8 +260,8 @@ Standard HTML5 Canvas API ensures consistent colors:
 - Eliminates need for helper functions or color mapping
 
 ### Comprehensive Modular Test Coverage
-- **32 modular core tests** covering all API functionality with individual files
-- **78 modular visual tests** covering all major Canvas2D features with pixel-perfect accuracy
+- **33 modular core tests** covering all API functionality with individual files
+- **88 modular visual tests** covering all major Canvas2D features with pixel-perfect accuracy
 - **Build-time concatenation** for optimal performance
 - **Smart test runner** with automatic fallback system
 - **Cross-platform validation** (Node.js + browsers)
