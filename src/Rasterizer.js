@@ -107,7 +107,7 @@ class Rasterizer {
      * @private
      */
     _requiresGlobalCompositing(operation) {
-        const globalOps = ['destination-atop', 'destination-in', 'source-atop', 'source-in', 'source-out', 'copy'];
+        const globalOps = ['destination-atop', 'destination-in', 'source-in', 'source-out', 'copy'];
         return globalOps.includes(operation);
     }
 

@@ -20,8 +20,8 @@
  * - copy - Source replaces destination completely
  * 
  * The implementation uses a dual rendering approach:
- * - Local operations (source-over, destination-over, destination-out, xor) process only source-covered pixels
- * - Global operations (destination-atop, source-atop, source-in, destination-in, source-out, copy) 
+ * - Local operations (source-over, destination-over, destination-out, xor, source-atop) process only source-covered pixels
+ * - Global operations (destination-atop, source-in, destination-in, source-out, copy) 
  *   use source coverage masks and full-region compositing to correctly handle pixels outside the source area
  */
 class CompositeOperations {
