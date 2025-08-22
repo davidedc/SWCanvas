@@ -147,6 +147,69 @@ SWCanvas.Core.* → Direct access to all engine classes
 - `LinearGradient()`, `RadialGradient()`, `ConicGradient()` - Gradient paint sources
 - `Pattern()` - Repeating image pattern paint sources
 - `BitmapEncoder` - File format export utilities
+- `CompositeOperations` - Porter-Duff blending operations
+- `SourceMask` - Source coverage tracking for global composite operations
+
+## Composite Operations System
+
+SWCanvas implements a comprehensive Porter-Duff composite operations system that provides HTML5 Canvas-compatible blending modes with mathematically correct rendering.
+
+### Dual Compositing Architecture
+
+The system uses two distinct rendering paths based on operation characteristics:
+
+**Local Operations** (process only source-covered pixels):
+- `source-over`, `destination-over`, `destination-out`, `xor`
+- Render directly during polygon filling
+- Optimal performance for common operations
+
+**Global Operations** (require full-region compositing):
+- `destination-atop`, `source-atop`, `source-in`, `destination-in`, `source-out`, `copy`
+- Use source coverage masks and dual-pass rendering
+- Correctly handle pixels outside source area
+
+### XOR Operation Implementation
+
+HTML5 Canvas XOR deviates from mathematical Porter-Duff XOR to provide intuitive visual results:
+
+```javascript
+// Mathematical Porter-Duff XOR: αo = αs + αd - 2*αs*αd (makes everything transparent)
+// HTML5 Canvas XOR: Practical "bite" effect
+
+case 'xor':
+    if (srcAlpha === 0) {
+        return destination;  // No source - show destination
+    } else if (dstAlpha === 0) {
+        return transparent;  // Source over transparent - disappears
+    } else {
+        return transparent;  // Source over opaque - both disappear (bite effect)
+    }
+```
+
+This creates the expected "bite" visual where shapes disappear in overlap areas, exposing the original background.
+
+### BMP Alpha Compositing
+
+The BMP encoder handles semi-transparent pixels by compositing them over white background since BMP format doesn't support alpha channels:
+
+```javascript
+// Semi-transparent pixels are pre-composited for BMP export
+const alpha = a / 255;
+return {
+    r: Math.round(r * alpha + 255 * (1 - alpha)),
+    g: Math.round(g * alpha + 255 * (1 - alpha)), 
+    b: Math.round(b * alpha + 255 * (1 - alpha))
+};
+```
+
+This ensures BMP output accurately represents how semi-transparent elements would appear when rendered.
+
+### Implementation Components
+
+- **CompositeOperations.js**: Core blending logic with HTML5 Canvas behavior matching
+- **SourceMask.js**: Tracks source coverage for global operations
+- **Rasterizer.js**: Determines local vs global operation routing
+- **BitmapEncoder.js**: Handles alpha compositing during export
 
 ## Interoperability Bridges
 

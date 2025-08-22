@@ -22,8 +22,9 @@ class PolygonFiller {
      * @param {number} globalAlpha - Global alpha value (0-1) for rendering operation
      * @param {number} subPixelOpacity - Sub-pixel opacity for thin strokes (0-1)
      * @param {string} composite - Composite operation (default: 'source-over')
+     * @param {SourceMask|null} sourceMask - Optional source coverage mask for global compositing
      */
-    static fillPolygons(surface, polygons, paintSource, fillRule, transform, clipMask, globalAlpha = 1.0, subPixelOpacity = 1.0, composite = 'source-over') {
+    static fillPolygons(surface, polygons, paintSource, fillRule, transform, clipMask, globalAlpha = 1.0, subPixelOpacity = 1.0, composite = 'source-over', sourceMask = null) {
         if (polygons.length === 0) return;
         if (!PolygonFiller._isValidPaintSource(paintSource)) {
             throw new Error('Paint source must be a Color, Gradient, or Pattern instance');
@@ -40,7 +41,7 @@ class PolygonFiller {
         // Process each scanline
         for (let y = bounds.minY; y <= bounds.maxY; y++) {
             PolygonFiller._fillScanline(
-                surface, y, transformedPolygons, paintSource, fillRule, clipMask, transform, globalAlpha, subPixelOpacity, composite
+                surface, y, transformedPolygons, paintSource, fillRule, clipMask, transform, globalAlpha, subPixelOpacity, composite, sourceMask
             );
         }
     }
@@ -81,9 +82,10 @@ class PolygonFiller {
      * @param {number} globalAlpha - Global alpha value (0-1)
      * @param {number} subPixelOpacity - Sub-pixel opacity for thin strokes (0-1)
      * @param {string} composite - Composite operation
+     * @param {SourceMask|null} sourceMask - Optional source coverage mask
      * @private
      */
-    static _fillScanline(surface, y, polygons, paintSource, fillRule, clipMask, transform, globalAlpha, subPixelOpacity = 1.0, composite = 'source-over') {
+    static _fillScanline(surface, y, polygons, paintSource, fillRule, clipMask, transform, globalAlpha, subPixelOpacity = 1.0, composite = 'source-over', sourceMask = null) {
         const intersections = [];
         
         // Find all intersections with this scanline
@@ -95,7 +97,7 @@ class PolygonFiller {
         intersections.sort((a, b) => a.x - b.x);
         
         // Fill spans based on winding rule
-        PolygonFiller._fillSpans(surface, y, intersections, paintSource, fillRule, clipMask, transform, globalAlpha, subPixelOpacity, composite);
+        PolygonFiller._fillSpans(surface, y, intersections, paintSource, fillRule, clipMask, transform, globalAlpha, subPixelOpacity, composite, sourceMask);
     }
     
     /**
@@ -142,9 +144,10 @@ class PolygonFiller {
      * @param {number} globalAlpha - Global alpha value (0-1)
      * @param {number} subPixelOpacity - Sub-pixel opacity for thin strokes (0-1)
      * @param {string} composite - Composite operation
+     * @param {SourceMask|null} sourceMask - Optional source coverage mask
      * @private
      */
-    static _fillSpans(surface, y, intersections, paintSource, fillRule, clipMask, transform, globalAlpha, subPixelOpacity = 1.0, composite = 'source-over') {
+    static _fillSpans(surface, y, intersections, paintSource, fillRule, clipMask, transform, globalAlpha, subPixelOpacity = 1.0, composite = 'source-over', sourceMask = null) {
         if (intersections.length === 0) return;
         
         let windingNumber = 0;
@@ -170,7 +173,7 @@ class PolygonFiller {
                 const endX = Math.min(surface.width - 1, Math.floor(nextIntersection.x));
                 
                 PolygonFiller._fillPixelSpan(
-                    surface, y, startX, endX, paintSource, clipMask, transform, globalAlpha, subPixelOpacity, composite
+                    surface, y, startX, endX, paintSource, clipMask, transform, globalAlpha, subPixelOpacity, composite, sourceMask
                 );
             }
         }
@@ -188,13 +191,21 @@ class PolygonFiller {
      * @param {number} globalAlpha - Global alpha value (0-1)
      * @param {number} subPixelOpacity - Sub-pixel opacity for thin strokes (0-1)
      * @param {string} composite - Composite operation
+     * @param {SourceMask|null} sourceMask - Optional source coverage mask to record coverage
      * @private
      */
-    static _fillPixelSpan(surface, y, startX, endX, paintSource, clipMask, transform, globalAlpha, subPixelOpacity = 1.0, composite = 'source-over') {
+    static _fillPixelSpan(surface, y, startX, endX, paintSource, clipMask, transform, globalAlpha, subPixelOpacity = 1.0, composite = 'source-over', sourceMask = null) {
         for (let x = startX; x <= endX; x++) {
             // Check stencil buffer clipping
             if (clipMask && clipMask.isPixelClipped(x, y)) {
                 continue; // Skip pixels clipped by stencil buffer
+            }
+            
+            // Record source coverage if sourceMask is provided
+            if (sourceMask) {
+                sourceMask.setPixel(x, y, true);
+                // For global compositing operations, only build source mask - don't draw to surface
+                continue;
             }
             
             // Evaluate paint source at pixel position

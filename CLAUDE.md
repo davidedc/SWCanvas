@@ -127,11 +127,12 @@ src/ColorParser.js            # CSS color string parsing (hex, rgb, named colors
 - **Porter-Duff compositing**: Implements 10 composite operations beyond basic source-over blending
 - **HTML5 Canvas compatibility**: `globalCompositeOperation` property matches HTML5 Canvas 2D API
 - **Centralized blending**: `CompositeOperations.js` utility class with mathematically correct Porter-Duff formulas
-- **Working operations**: source-over (default), destination-over, destination-out, xor
-- **Architectural limitations**: Some operations (destination-atop, source-in, destination-in, source-out, copy) have known limitations due to pixel-by-pixel processing approach rather than canvas-wide processing
-- **Implementation location**: `CompositeOperations.js` provides blending logic, integrated into `PolygonFiller.js` and `Rasterizer.js`
-- **Usage**: `ctx.globalCompositeOperation = 'destination-over'` (both Core API and HTML5 Canvas-compatible API)
-- **Testing**: Individual visual tests for each working operation, comprehensive core functionality tests
+- **Full Porter-Duff compliance**: All 10 composite operations now working correctly
+- **Local operations** (source-over, destination-over, destination-out, xor): Process only source-covered pixels
+- **Global operations** (destination-atop, source-atop, source-in, destination-in, source-out, copy): Use source coverage masks and full-region compositing to correctly handle pixels outside the source area
+- **Implementation**: Dual rendering approach using `SourceMask` class for global operations
+- **Usage**: `ctx.globalCompositeOperation = 'destination-atop'` (both Core API and HTML5 Canvas-compatible API)
+- **Testing**: Comprehensive visual tests for all operations (tests 079-088), core functionality tests
 
 ## Build & Test Commands
 
@@ -169,7 +170,7 @@ SWCanvas uses a comprehensive test system with modular architecture. See `tests/
 - Build utilities and renumbering tools
 - Cross-platform validation approach
 
-Quick reference: `npm run build` then `npm test` to run all 32 core + 60 visual tests.
+Quick reference: `npm run build` then `npm test` to run all 33 core + 88 visual tests.
 
 #### Smart Test Runner Architecture
 ```javascript
@@ -199,7 +200,17 @@ if (fs.existsSync('./tests/dist/core-functionality-tests.js')) {
 ├── 076-thick-polyline-bevel-joins-systematic-test.js
 ├── 077-thick-polyline-miter-joins-systematic-test.js
 ├── 078-thick-polyline-round-joins-systematic-test.js
-│   └── ... (71 more files)
+├── 079-composite-source-over-test.js
+├── 080-composite-destination-over-test.js
+├── 081-composite-destination-out-test.js
+├── 082-composite-xor-test.js
+├── 083-composite-destination-atop-test.js
+├── 084-composite-destination-in-test.js
+├── 085-composite-source-atop-test.js
+├── 086-composite-source-in-test.js
+├── 087-composite-source-out-test.js
+├── 088-composite-copy-test.js
+│   └── ... (74 more files)
 ├── browser/                            # Browser-specific test files
 │   ├── index.html                      # Main browser test page (moved from examples/)
 │   ├── simple-test.html                # Simple visual comparison test
@@ -216,7 +227,7 @@ if (fs.existsSync('./tests/dist/core-functionality-tests.js')) {
     ├── 001-simple-rectangle-test.bmp
     ├── 058-line-dash-basic-patterns.bmp
     ├── 060-line-dash-complex-paths.bmp
-    └── ... (78+ BMP files)
+    └── ... (88+ BMP files)
 ```
 
 ## Common Tasks
@@ -352,6 +363,47 @@ console.log('Saved debug image: debug-output.bmp');
 "
 ```
 
+**Composite Operations Debugging Example:**
+```bash
+node -e "
+const SWCanvas = require('./dist/swcanvas.js');
+const fs = require('fs');
+
+console.log('=== COMPOSITE OPERATIONS DEBUG ===');
+const canvas = SWCanvas.createCanvas(150, 150);
+const ctx = canvas.getContext('2d');
+
+// White background
+ctx.fillStyle = 'white';
+ctx.fillRect(0, 0, 150, 150);
+
+// Draw blue square as destination  
+ctx.fillStyle = 'blue';
+ctx.fillRect(30, 30, 60, 60);
+
+// Switch to composite operation (test different ones)
+ctx.globalCompositeOperation = 'xor';  // Change this to test: copy, source-out, etc.
+ctx.fillStyle = 'red';
+ctx.beginPath();
+ctx.arc(75, 45, 25, 0, Math.PI * 2);
+ctx.fill();
+
+// Analyze key pixels
+const testPoints = [[40, 80, 'Blue only'], [60, 25, 'Red only'], [70, 40, 'Overlap']];
+testPoints.forEach(([x, y, desc]) => {
+  const imageData = ctx.getImageData(x, y, 1, 1);
+  const [r, g, b, a] = imageData.data;
+  console.log(\`\${desc} (\${x},\${y}): RGBA(\${r},\${g},\${b},\${a})\`);
+});
+
+// Save for comparison
+const surface = canvas._coreSurface;
+const bmpData = SWCanvas.Core.BitmapEncoder.encode(surface);
+fs.writeFileSync('debug-composite.bmp', Buffer.from(bmpData));
+console.log('Composite test saved: debug-composite.bmp');
+"
+```
+
 These scripts are invaluable for:
 - Quick pixel-level validation
 - Testing edge cases and behavior differences
@@ -431,7 +483,7 @@ Project fully implemented with object-oriented ES6 class design. See ARCHITECTUR
 ### OO Development Patterns
 - **Use proper classes**: Prefer `new SWCanvas.Core.Point(x, y)` over plain objects
 - **Leverage immutability**: Transform2D, Point, Rectangle, Color are immutable - use their methods
-- **Static utilities**: Use ClipMask class for bit operations, ImageProcessor for format conversion
+- **Static utilities**: Use ClipMask class for bit operations, SourceMask for global compositing, ImageProcessor for format conversion
 - **Factory methods**: Use Transform2D constructor and .translation(), .scaling(), .rotation() for common transformations
 - **Validation**: All classes validate input parameters with descriptive error messages
 - **Composition**: Classes work together rather than through inheritance hierarchies

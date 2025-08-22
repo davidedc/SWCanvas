@@ -51,6 +51,8 @@ cat src/StrokeGenerator.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
 cat src/ClipMask.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
+cat src/SourceMask.js >> dist/swcanvas.js
+echo "" >> dist/swcanvas.js
 cat src/ImageProcessor.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
 cat src/ColorParser.js >> dist/swcanvas.js
@@ -132,6 +134,7 @@ if (typeof window !== 'undefined') {
             Rectangle: Rectangle,
             BitmapEncoder: BitmapEncoder,
             ClipMask: ClipMask,
+            SourceMask: SourceMask,
             ImageProcessor: ImageProcessor,
             CompositeOperations: CompositeOperations,
             Rasterizer: Rasterizer,
@@ -163,6 +166,7 @@ if (typeof window !== 'undefined') {
             Rectangle: Rectangle,
             BitmapEncoder: BitmapEncoder,
             ClipMask: ClipMask,
+            SourceMask: SourceMask,
             ImageProcessor: ImageProcessor,
             CompositeOperations: CompositeOperations,
             Rasterizer: Rasterizer,

@@ -205,8 +205,8 @@ class BitmapEncoder {
      */
     static _unpremultiplyAlpha(r, g, b, a) {
         if (a === 0) {
-            // Fully transparent - RGB values don't matter
-            return { r: 0, g: 0, b: 0 };
+            // Fully transparent - composite with white background for BMP
+            return { r: 255, g: 255, b: 255 };
         }
         
         if (a === 255) {
@@ -214,11 +214,13 @@ class BitmapEncoder {
             return { r: r, g: g, b: b };
         }
         
-        // Unpremultiply: color_unpremult = color_premult * 255 / alpha
+        // For semi-transparent pixels in BMP, composite with white background
+        // Surface data is non-premultiplied, so use standard alpha compositing
+        const alpha = a / 255;
         return {
-            r: Math.round((r * 255) / a),
-            g: Math.round((g * 255) / a), 
-            b: Math.round((b * 255) / a)
+            r: Math.round(r * alpha + 255 * (1 - alpha)),
+            g: Math.round(g * alpha + 255 * (1 - alpha)), 
+            b: Math.round(b * alpha + 255 * (1 - alpha))
         };
     }
     

@@ -198,19 +198,12 @@ function buildVisualTests() {
             const b = swSurface.data[i + 2];
             const a = swSurface.data[i + 3];
             
-            // Always unpremultiply for display (HTML5 ImageData expects non-premultiplied)
-            if (a === 0) {
-                imageData.data[i] = 0;
-                imageData.data[i + 1] = 0;
-                imageData.data[i + 2] = 0;
-                imageData.data[i + 3] = 0;
-            } else {
-                // Unpremultiply: non_premult = premult * 255 / alpha
-                imageData.data[i] = Math.round((r * 255) / a);
-                imageData.data[i + 1] = Math.round((g * 255) / a);
-                imageData.data[i + 2] = Math.round((b * 255) / a);
-                imageData.data[i + 3] = a;
-            }
+            // SWCanvas Surface data is already non-premultiplied, just copy directly
+            // HTML5 ImageData expects non-premultiplied RGBA
+            imageData.data[i] = r;
+            imageData.data[i + 1] = g;  
+            imageData.data[i + 2] = b;
+            imageData.data[i + 3] = a;
         }
         
         ctx.putImageData(imageData, 0, 0);

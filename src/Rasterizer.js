@@ -52,8 +52,14 @@ class Rasterizer {
             transform: params.transform || new Transform2D(),
             clipMask: params.clipMask || null,  // Stencil-based clipping
             fillStyle: params.fillStyle || null,
-            strokeStyle: params.strokeStyle || null
+            strokeStyle: params.strokeStyle || null,
+            sourceMask: null  // Will be initialized if needed for global compositing
         };
+
+        // Initialize source mask for global-effect operations
+        if (this._requiresGlobalCompositing(this._currentOp.composite)) {
+            this._currentOp.sourceMask = new SourceMask(this._surface.width, this._surface.height);
+        }
     }
     
     /**
@@ -95,6 +101,17 @@ class Rasterizer {
     }
 
     /**
+     * Check if a composite operation requires global compositing (affects pixels outside source)
+     * @param {string} operation - Composite operation name
+     * @returns {boolean} True if operation requires global compositing
+     * @private
+     */
+    _requiresGlobalCompositing(operation) {
+        const globalOps = ['destination-atop', 'destination-in', 'source-atop', 'source-in', 'source-out', 'copy'];
+        return globalOps.includes(operation);
+    }
+
+    /**
      * Check if a pixel should be clipped by stencil buffer
      * @param {number} x - Pixel x coordinate
      * @param {number} y - Pixel y coordinate
@@ -129,14 +146,26 @@ class Rasterizer {
         
         if (width === 0 || height === 0) return; // Nothing to draw
         
-        // If there's stencil clipping, convert the rectangle to a path and use path filling
-        if (this._currentOp.clipMask) {
+        // If there's stencil clipping or global compositing, convert the rectangle to a path and use path filling
+        if (this._currentOp.clipMask || this._requiresGlobalCompositing(this._currentOp.composite)) {
             // Create a path for the rectangle
             const rectPath = new Path2D();
             rectPath.rect(x, y, width, height);
             
-            // Use the existing path filling logic which handles stencil clipping properly
+            // Temporarily override fill style with provided color if specified
+            const originalFillStyle = this._currentOp.fillStyle;
+            if (color && Array.isArray(color)) {
+                // Only override for array colors (like from clearRect)
+                this._currentOp.fillStyle = new Color(color[0], color[1], color[2], color[3]);
+            }
+            
+            // Use the existing path filling logic which handles stencil clipping and global compositing properly
             this.fill(rectPath, 'nonzero');
+            
+            // Restore original fill style
+            if (color && Array.isArray(color)) {
+                this._currentOp.fillStyle = originalFillStyle;
+            }
             return;
         }
         
@@ -229,6 +258,73 @@ class Rasterizer {
     }
 
     /**
+     * Perform global compositing for operations that affect pixels outside the source area
+     * @param {Color|Gradient|Pattern} paintSource - Paint source for source pixels
+     * @param {number} globalAlpha - Global alpha value (0-1)
+     * @param {number} subPixelOpacity - Sub-pixel opacity for thin strokes (0-1)
+     * @private
+     */
+    _performGlobalCompositing(paintSource, globalAlpha = 1.0, subPixelOpacity = 1.0) {
+        if (!this._currentOp || !this._currentOp.sourceMask) {
+            throw new Error('Global compositing requires active operation with source mask');
+        }
+
+        const surface = this._surface;
+        const sourceMask = this._currentOp.sourceMask;
+        const composite = this._currentOp.composite;
+        const transform = this._currentOp.transform;
+        const clipMask = this._currentOp.clipMask;
+
+        // Get optimized iteration bounds (full surface for global compositing)
+        const bounds = sourceMask.getIterationBounds(clipMask, true);
+        if (bounds.isEmpty) {
+            return; // Nothing to composite
+        }
+
+        // Iterate over all pixels in the compositing region
+        for (let y = bounds.minY; y <= bounds.maxY; y++) {
+            for (let x = bounds.minX; x <= bounds.maxX; x++) {
+                // Check stencil buffer clipping
+                if (clipMask && clipMask.isPixelClipped(x, y)) {
+                    continue; // Skip pixels clipped by stencil buffer
+                }
+
+                // Determine source coverage and color
+                const Sa = sourceMask.getPixel(x, y) ? 1 : 0;
+                let srcColor;
+                
+                if (Sa > 0) {
+                    // Evaluate paint source at covered pixel
+                    srcColor = PolygonFiller._evaluatePaintSource(paintSource, x, y, transform, globalAlpha, subPixelOpacity);
+                } else {
+                    // Transparent source for uncovered pixels
+                    srcColor = new Color(0, 0, 0, 0);
+                }
+
+                // Get destination pixel
+                const offset = y * surface.stride + x * 4;
+                const dstR = surface.data[offset];
+                const dstG = surface.data[offset + 1];
+                const dstB = surface.data[offset + 2];
+                const dstA = surface.data[offset + 3];
+
+                // Apply composite operation with explicit source coverage
+                const result = CompositeOperations.blendPixel(
+                    composite,
+                    srcColor.r, srcColor.g, srcColor.b, srcColor.a,  // source
+                    dstR, dstG, dstB, dstA                           // destination
+                );
+
+                // Store result
+                surface.data[offset] = result.r;
+                surface.data[offset + 1] = result.g;
+                surface.data[offset + 2] = result.b;
+                surface.data[offset + 3] = result.a;
+            }
+        }
+    }
+
+    /**
      * Fill a path using the current fill style
      * @param {Path2D} path - Path to fill
      * @param {string} rule - Fill rule ('nonzero' or 'evenodd')
@@ -238,13 +334,21 @@ class Rasterizer {
         
         // Get fill style (Color, Gradient, or Pattern)
         const fillStyle = this._currentOp.fillStyle || new Color(0, 0, 0, 255);
-        // Global alpha will be applied during pixel evaluation
         const fillRule = rule || 'nonzero';
         
         // Flatten path to polygons
         const polygons = PathFlattener.flattenPath(path);
-        // Fill polygons with current transform and stencil clipping
-        PolygonFiller.fillPolygons(this._surface, polygons, fillStyle, fillRule, this._currentOp.transform, this._currentOp.clipMask, this._currentOp.globalAlpha, 1.0, this._currentOp.composite);
+        
+        if (this._requiresGlobalCompositing(this._currentOp.composite)) {
+            // Global compositing path: build source mask then perform global compositing
+            PolygonFiller.fillPolygons(this._surface, polygons, fillStyle, fillRule, this._currentOp.transform, this._currentOp.clipMask, this._currentOp.globalAlpha, 1.0, this._currentOp.composite, this._currentOp.sourceMask);
+            
+            // Perform global compositing pass
+            this._performGlobalCompositing(fillStyle, this._currentOp.globalAlpha, 1.0);
+        } else {
+            // Local compositing path: direct rendering (existing behavior)
+            PolygonFiller.fillPolygons(this._surface, polygons, fillStyle, fillRule, this._currentOp.transform, this._currentOp.clipMask, this._currentOp.globalAlpha, 1.0, this._currentOp.composite);
+        }
     }
 
     /**
@@ -274,8 +378,16 @@ class Rasterizer {
         // Generate stroke polygons using geometric approach
         const strokePolygons = StrokeGenerator.generateStrokePolygons(path, adjustedStrokeProps);
         
-        // Fill stroke polygons with current transform and stencil clipping
-        PolygonFiller.fillPolygons(this._surface, strokePolygons, strokeStyle, 'nonzero', this._currentOp.transform, this._currentOp.clipMask, this._currentOp.globalAlpha, subPixelOpacity, this._currentOp.composite);
+        if (this._requiresGlobalCompositing(this._currentOp.composite)) {
+            // Global compositing path: build source mask then perform global compositing
+            PolygonFiller.fillPolygons(this._surface, strokePolygons, strokeStyle, 'nonzero', this._currentOp.transform, this._currentOp.clipMask, this._currentOp.globalAlpha, subPixelOpacity, this._currentOp.composite, this._currentOp.sourceMask);
+            
+            // Perform global compositing pass
+            this._performGlobalCompositing(strokeStyle, this._currentOp.globalAlpha, subPixelOpacity);
+        } else {
+            // Local compositing path: direct rendering (existing behavior)
+            PolygonFiller.fillPolygons(this._surface, strokePolygons, strokeStyle, 'nonzero', this._currentOp.transform, this._currentOp.clipMask, this._currentOp.globalAlpha, subPixelOpacity, this._currentOp.composite);
+        }
     }
 
     /**
