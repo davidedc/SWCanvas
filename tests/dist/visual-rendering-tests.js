@@ -6502,23 +6502,1827 @@
         draw: function(canvas) {
             const ctx = canvas.getContext('2d');
             
-            // Draw blue square as destination (30x30 at position 30,30)
+            // Draw blue square as destination (55x55 at position 5,5)
             ctx.fillStyle = 'blue';
-            ctx.fillRect(30, 30, 30, 30);
+            ctx.fillRect(5, 5, 55, 55);
             
             // Apply source-atop composite operation
             ctx.globalCompositeOperation = 'source-atop';
             
-            // Draw red circle centered at square's bottom-right corner (60,60)
+            // Draw red circle centered at (65,65) with radius 32
             ctx.fillStyle = 'red';
             ctx.beginPath();
-            ctx.arc(60, 60, 15, 0, Math.PI * 2);
+            ctx.arc(65, 65, 32, 0, Math.PI * 2);
             ctx.fill();
             
             // Expected result:
             // - Red appears only where it overlaps the blue square
             // - Outside the blue square, red should not appear
             // - Blue square remains blue where red doesn't overlap
+        }
+    });
+
+    // Test: Source-over minimal test - classic blue square with red circle
+    // Demonstrates source-over (default) draws source over destination
+
+    registerVisualTest('source-over-minimal', {
+        name: 'Source-over minimal - blue square then red circle with source-over',
+        width: 100, height: 100,
+        draw: function(canvas) {
+            const ctx = canvas.getContext('2d');
+            
+            // Draw blue square as destination (55x55 at position 5,5)
+            ctx.fillStyle = 'blue';
+            ctx.fillRect(5, 5, 55, 55);
+            
+            // Apply source-over composite operation (default)
+            ctx.globalCompositeOperation = 'source-over';
+            
+            // Draw red circle centered at (65,65) with radius 32
+            ctx.fillStyle = 'red';
+            ctx.beginPath();
+            ctx.arc(65, 65, 32, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Expected result:
+            // - Red circle appears on top of blue square in overlap area
+            // - Blue square remains blue where red doesn't overlap
+            // - Red circle extends beyond the blue square
+        }
+    });
+
+    // Test: Destination-over minimal test - classic blue square with red circle
+    // Demonstrates destination-over draws source behind destination
+
+    registerVisualTest('destination-over-minimal', {
+        name: 'Destination-over minimal - blue square then red circle with destination-over',
+        width: 100, height: 100,
+        draw: function(canvas) {
+            const ctx = canvas.getContext('2d');
+            
+            // Draw blue square as destination (55x55 at position 5,5)
+            ctx.fillStyle = 'blue';
+            ctx.fillRect(5, 5, 55, 55);
+            
+            // Apply destination-over composite operation
+            ctx.globalCompositeOperation = 'destination-over';
+            
+            // Draw red circle centered at (65,65) with radius 32
+            ctx.fillStyle = 'red';
+            ctx.beginPath();
+            ctx.arc(65, 65, 32, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Expected result:
+            // - Blue square remains on top in overlap area
+            // - Red circle appears behind blue square where they overlap
+            // - Red circle shows in areas where there's no blue square
+        }
+    });
+
+    // Test: Destination-atop minimal test - classic blue square with red circle
+    // Demonstrates destination-atop only shows destination where source exists
+
+    registerVisualTest('destination-atop-minimal', {
+        name: 'Destination-atop minimal - blue square then red circle with destination-atop',
+        width: 100, height: 100,
+        draw: function(canvas) {
+            const ctx = canvas.getContext('2d');
+            
+            // Draw blue square as destination (55x55 at position 5,5)
+            ctx.fillStyle = 'blue';
+            ctx.fillRect(5, 5, 55, 55);
+            
+            // Apply destination-atop composite operation
+            ctx.globalCompositeOperation = 'destination-atop';
+            
+            // Draw red circle centered at (65,65) with radius 32
+            ctx.fillStyle = 'red';
+            ctx.beginPath();
+            ctx.arc(65, 65, 32, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Expected result:
+            // - Blue square appears only where red circle overlaps it
+            // - Red circle appears in non-overlapping areas
+            // - Blue square parts outside red circle disappear
+        }
+    });
+
+    // Test: Source-in minimal test - classic blue square with red circle
+    // Demonstrates source-in only shows source where destination exists
+
+    registerVisualTest('source-in-minimal', {
+        name: 'Source-in minimal - blue square then red circle with source-in',
+        width: 100, height: 100,
+        draw: function(canvas) {
+            const ctx = canvas.getContext('2d');
+            
+            // Draw blue square as destination (55x55 at position 5,5)
+            ctx.fillStyle = 'blue';
+            ctx.fillRect(5, 5, 55, 55);
+            
+            // Apply source-in composite operation
+            ctx.globalCompositeOperation = 'source-in';
+            
+            // Draw red circle centered at (65,65) with radius 32
+            ctx.fillStyle = 'red';
+            ctx.beginPath();
+            ctx.arc(65, 65, 32, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Expected result:
+            // - Red circle appears only where it overlaps the blue square
+            // - Blue square disappears entirely (replaced by red in overlap)
+            // - Red circle parts outside blue square disappear
+        }
+    });
+
+    // Test: Destination-in minimal test - classic blue square with red circle
+    // Demonstrates destination-in only shows destination where source exists
+
+    registerVisualTest('destination-in-minimal', {
+        name: 'Destination-in minimal - blue square then red circle with destination-in',
+        width: 100, height: 100,
+        draw: function(canvas) {
+            const ctx = canvas.getContext('2d');
+            
+            // Draw blue square as destination (55x55 at position 5,5)
+            ctx.fillStyle = 'blue';
+            ctx.fillRect(5, 5, 55, 55);
+            
+            // Apply destination-in composite operation
+            ctx.globalCompositeOperation = 'destination-in';
+            
+            // Draw red circle centered at (65,65) with radius 32
+            ctx.fillStyle = 'red';
+            ctx.beginPath();
+            ctx.arc(65, 65, 32, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Expected result:
+            // - Blue square appears only where red circle overlaps it
+            // - Red circle disappears entirely (acts as mask for blue)
+            // - Blue square parts outside red circle disappear
+        }
+    });
+
+    // Test: Source-out minimal test - classic blue square with red circle
+    // Demonstrates source-out shows source only where destination doesn't exist
+
+    registerVisualTest('source-out-minimal', {
+        name: 'Source-out minimal - blue square then red circle with source-out',
+        width: 100, height: 100,
+        draw: function(canvas) {
+            const ctx = canvas.getContext('2d');
+            
+            // Draw blue square as destination (55x55 at position 5,5)
+            ctx.fillStyle = 'blue';
+            ctx.fillRect(5, 5, 55, 55);
+            
+            // Apply source-out composite operation
+            ctx.globalCompositeOperation = 'source-out';
+            
+            // Draw red circle centered at (65,65) with radius 32
+            ctx.fillStyle = 'red';
+            ctx.beginPath();
+            ctx.arc(65, 65, 32, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Expected result:
+            // - Red circle appears only where it doesn't overlap blue square
+            // - Blue square disappears entirely
+            // - Overlap area becomes transparent (red punches hole)
+        }
+    });
+
+    // Test: Destination-out minimal test - classic blue square with red circle
+    // Demonstrates destination-out shows destination only where source doesn't exist
+
+    registerVisualTest('destination-out-minimal', {
+        name: 'Destination-out minimal - blue square then red circle with destination-out',
+        width: 100, height: 100,
+        draw: function(canvas) {
+            const ctx = canvas.getContext('2d');
+            
+            // Draw blue square as destination (55x55 at position 5,5)
+            ctx.fillStyle = 'blue';
+            ctx.fillRect(5, 5, 55, 55);
+            
+            // Apply destination-out composite operation
+            ctx.globalCompositeOperation = 'destination-out';
+            
+            // Draw red circle centered at (65,65) with radius 32
+            ctx.fillStyle = 'red';
+            ctx.beginPath();
+            ctx.arc(65, 65, 32, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Expected result:
+            // - Blue square appears only where red circle doesn't overlap it
+            // - Red circle disappears entirely (acts as eraser)
+            // - Overlap area becomes transparent (red cuts hole in blue)
+        }
+    });
+
+    // Test: XOR minimal test - classic blue square with red circle
+    // Demonstrates XOR creates "bite" effect where shapes overlap
+
+    registerVisualTest('xor-minimal', {
+        name: 'XOR minimal - blue square then red circle with xor',
+        width: 100, height: 100,
+        draw: function(canvas) {
+            const ctx = canvas.getContext('2d');
+            
+            // Draw blue square as destination (55x55 at position 5,5)
+            ctx.fillStyle = 'blue';
+            ctx.fillRect(5, 5, 55, 55);
+            
+            // Apply xor composite operation
+            ctx.globalCompositeOperation = 'xor';
+            
+            // Draw red circle centered at (65,65) with radius 32
+            ctx.fillStyle = 'red';
+            ctx.beginPath();
+            ctx.arc(65, 65, 32, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Expected result:
+            // - Blue square appears where red circle doesn't overlap
+            // - Red circle appears where blue square doesn't exist
+            // - Overlap area becomes transparent ("bite" effect)
+        }
+    });
+
+    // Test: Copy minimal test - classic blue square with red circle
+    // Demonstrates copy replaces entire canvas with source
+
+    registerVisualTest('copy-minimal', {
+        name: 'Copy minimal - blue square then red circle with copy',
+        width: 100, height: 100,
+        draw: function(canvas) {
+            const ctx = canvas.getContext('2d');
+            
+            // Draw blue square as destination (55x55 at position 5,5)
+            ctx.fillStyle = 'blue';
+            ctx.fillRect(5, 5, 55, 55);
+            
+            // Apply copy composite operation
+            ctx.globalCompositeOperation = 'copy';
+            
+            // Draw red circle centered at (65,65) with radius 32
+            ctx.fillStyle = 'red';
+            ctx.beginPath();
+            ctx.arc(65, 65, 32, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Expected result:
+            // - Only red circle appears
+            // - Blue square disappears entirely (replaced by transparent)
+            // - Canvas becomes transparent everywhere except red circle
+        }
+    });
+
+    // Test: Source-atop clipped test - verifies composite operations work correctly with clipping
+    // Tests interaction between clipping mask and composite operation masks
+
+    registerVisualTest('source-atop-clipped', {
+        name: 'Source-atop clipped - diagonal lines + rectangular clip + blue square + red circle with source-atop',
+        width: 100, height: 100,
+        draw: function(canvas) {
+            const ctx = canvas.getContext('2d');
+            
+            // Step 1: Draw diagonal orange lines across entire canvas
+            ctx.strokeStyle = 'orange';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            for (let i = -100; i <= 200; i += 10) {
+                ctx.moveTo(i, 0);
+                ctx.lineTo(i + 100, 100);
+            }
+            ctx.stroke();
+            
+            // Step 2: Clip canvas to rectangular path inset by 10px
+            ctx.beginPath();
+            ctx.rect(10, 10, 80, 80);
+            ctx.clip();
+            
+            // Step 3: Draw orthogonal black diagonal lines (only visible in clipped area)
+            ctx.strokeStyle = 'black';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            for (let i = -100; i <= 200; i += 10) {
+                ctx.moveTo(i, 100);
+                ctx.lineTo(i + 100, 0);
+            }
+            ctx.stroke();
+            
+            // Step 4a: Draw blue square as destination (55x55 at position 5,5)
+            ctx.fillStyle = 'blue';
+            ctx.fillRect(5, 5, 55, 55);
+            
+            // Step 4b: Apply source-atop composite operation
+            ctx.globalCompositeOperation = 'source-atop';
+            
+            // Step 4c: Draw red circle centered at (75,75) with radius 25
+            ctx.fillStyle = 'red';
+            ctx.beginPath();
+            ctx.arc(65, 65, 32, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Expected result:
+            // - Orange diagonal lines visible outside 10px inset area
+            // - Black diagonal lines crosshatch pattern visible inside 10px inset area
+            // - Blue square and red circle composite only visible within clipped area
+            // - Red appears only where it overlaps blue square (source-atop behavior)
+            // - All composite operation effects confined to clipped region
+        }
+    });
+
+    // Test: Source-over clipped test - verifies composite operations work correctly with clipping
+    // Tests interaction between clipping mask and composite operation masks
+
+    registerVisualTest('source-over-clipped', {
+        name: 'Source-over clipped - diagonal lines + rectangular clip + blue square + red circle with source-over',
+        width: 100, height: 100,
+        draw: function(canvas) {
+            const ctx = canvas.getContext('2d');
+            
+            // Step 1: Draw diagonal orange lines across entire canvas
+            ctx.strokeStyle = 'orange';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            for (let i = -100; i <= 200; i += 10) {
+                ctx.moveTo(i, 0);
+                ctx.lineTo(i + 100, 100);
+            }
+            ctx.stroke();
+            
+            // Step 2: Clip canvas to rectangular path inset by 10px
+            ctx.beginPath();
+            ctx.rect(10, 10, 80, 80);
+            ctx.clip();
+            
+            // Step 3: Draw orthogonal black diagonal lines (only visible in clipped area)
+            ctx.strokeStyle = 'black';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            for (let i = -100; i <= 200; i += 10) {
+                ctx.moveTo(i, 100);
+                ctx.lineTo(i + 100, 0);
+            }
+            ctx.stroke();
+            
+            // Step 4a: Draw blue square as destination (55x55 at position 5,5)
+            ctx.fillStyle = 'blue';
+            ctx.fillRect(5, 5, 55, 55);
+            
+            // Step 4b: Apply source-over composite operation
+            ctx.globalCompositeOperation = 'source-over';
+            
+            // Step 4c: Draw red circle centered at (65,65) with radius 32
+            ctx.fillStyle = 'red';
+            ctx.beginPath();
+            ctx.arc(65, 65, 32, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Expected result:
+            // - Orange diagonal lines visible outside 10px inset area
+            // - Black diagonal lines crosshatch pattern visible inside 10px inset area
+            // - Blue square and red circle composite only visible within clipped area
+            // - Red circle appears on top of blue square (source-over behavior)
+            // - All composite operation effects confined to clipped region
+        }
+    });
+
+    // Test: Destination-over clipped test - verifies composite operations work correctly with clipping
+    // Tests interaction between clipping mask and composite operation masks
+
+    registerVisualTest('destination-over-clipped', {
+        name: 'Destination-over clipped - diagonal lines + rectangular clip + blue square + red circle with destination-over',
+        width: 100, height: 100,
+        draw: function(canvas) {
+            const ctx = canvas.getContext('2d');
+            
+            // Step 1: Draw diagonal orange lines across entire canvas
+            ctx.strokeStyle = 'orange';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            for (let i = -100; i <= 200; i += 10) {
+                ctx.moveTo(i, 0);
+                ctx.lineTo(i + 100, 100);
+            }
+            ctx.stroke();
+            
+            // Step 2: Clip canvas to rectangular path inset by 10px
+            ctx.beginPath();
+            ctx.rect(10, 10, 80, 80);
+            ctx.clip();
+            
+            // Step 3: Draw orthogonal black diagonal lines (only visible in clipped area)
+            ctx.strokeStyle = 'black';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            for (let i = -100; i <= 200; i += 10) {
+                ctx.moveTo(i, 100);
+                ctx.lineTo(i + 100, 0);
+            }
+            ctx.stroke();
+            
+            // Step 4a: Draw blue square as destination (55x55 at position 5,5)
+            ctx.fillStyle = 'blue';
+            ctx.fillRect(5, 5, 55, 55);
+            
+            // Step 4b: Apply destination-over composite operation
+            ctx.globalCompositeOperation = 'destination-over';
+            
+            // Step 4c: Draw red circle centered at (65,65) with radius 32
+            ctx.fillStyle = 'red';
+            ctx.beginPath();
+            ctx.arc(65, 65, 32, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Expected result:
+            // - Orange diagonal lines visible outside 10px inset area
+            // - Black diagonal lines crosshatch pattern visible inside 10px inset area
+            // - Blue square and red circle composite only visible within clipped area
+            // - Blue square remains on top in overlap area (destination-over behavior)
+            // - All composite operation effects confined to clipped region
+        }
+    });
+
+    // Test: Destination-atop clipped test - verifies composite operations work correctly with clipping
+    // Tests interaction between clipping mask and composite operation masks
+
+    registerVisualTest('destination-atop-clipped', {
+        name: 'Destination-atop clipped - diagonal lines + rectangular clip + blue square + red circle with destination-atop',
+        width: 100, height: 100,
+        draw: function(canvas) {
+            const ctx = canvas.getContext('2d');
+            
+            // Step 1: Draw diagonal orange lines across entire canvas
+            ctx.strokeStyle = 'orange';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            for (let i = -100; i <= 200; i += 10) {
+                ctx.moveTo(i, 0);
+                ctx.lineTo(i + 100, 100);
+            }
+            ctx.stroke();
+            
+            // Step 2: Clip canvas to rectangular path inset by 10px
+            ctx.beginPath();
+            ctx.rect(10, 10, 80, 80);
+            ctx.clip();
+            
+            // Step 3: Draw orthogonal black diagonal lines (only visible in clipped area)
+            ctx.strokeStyle = 'black';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            for (let i = -100; i <= 200; i += 10) {
+                ctx.moveTo(i, 100);
+                ctx.lineTo(i + 100, 0);
+            }
+            ctx.stroke();
+            
+            // Step 4a: Draw blue square as destination (55x55 at position 5,5)
+            ctx.fillStyle = 'blue';
+            ctx.fillRect(5, 5, 55, 55);
+            
+            // Step 4b: Apply destination-atop composite operation
+            ctx.globalCompositeOperation = 'destination-atop';
+            
+            // Step 4c: Draw red circle centered at (65,65) with radius 32
+            ctx.fillStyle = 'red';
+            ctx.beginPath();
+            ctx.arc(65, 65, 32, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Expected result:
+            // - Orange diagonal lines visible outside 10px inset area
+            // - Black diagonal lines crosshatch pattern visible inside 10px inset area
+            // - Blue square and red circle composite only visible within clipped area
+            // - Blue square appears only where red circle overlaps it (destination-atop behavior)
+            // - All composite operation effects confined to clipped region
+        }
+    });
+
+    // Test: Source-in clipped test - verifies composite operations work correctly with clipping
+    // Tests interaction between clipping mask and composite operation masks
+
+    registerVisualTest('source-in-clipped', {
+        name: 'Source-in clipped - diagonal lines + rectangular clip + blue square + red circle with source-in',
+        width: 100, height: 100,
+        draw: function(canvas) {
+            const ctx = canvas.getContext('2d');
+            
+            // Step 1: Draw diagonal orange lines across entire canvas
+            ctx.strokeStyle = 'orange';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            for (let i = -100; i <= 200; i += 10) {
+                ctx.moveTo(i, 0);
+                ctx.lineTo(i + 100, 100);
+            }
+            ctx.stroke();
+            
+            // Step 2: Clip canvas to rectangular path inset by 10px
+            ctx.beginPath();
+            ctx.rect(10, 10, 80, 80);
+            ctx.clip();
+            
+            // Step 3: Draw orthogonal black diagonal lines (only visible in clipped area)
+            ctx.strokeStyle = 'black';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            for (let i = -100; i <= 200; i += 10) {
+                ctx.moveTo(i, 100);
+                ctx.lineTo(i + 100, 0);
+            }
+            ctx.stroke();
+            
+            // Step 4a: Draw blue square as destination (55x55 at position 5,5)
+            ctx.fillStyle = 'blue';
+            ctx.fillRect(5, 5, 55, 55);
+            
+            // Step 4b: Apply source-in composite operation
+            ctx.globalCompositeOperation = 'source-in';
+            
+            // Step 4c: Draw red circle centered at (65,65) with radius 32
+            ctx.fillStyle = 'red';
+            ctx.beginPath();
+            ctx.arc(65, 65, 32, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Expected result:
+            // - Orange diagonal lines visible outside 10px inset area
+            // - Black diagonal lines crosshatch pattern visible inside 10px inset area
+            // - Blue square and red circle composite only visible within clipped area
+            // - Red circle appears only where it overlaps blue square (source-in behavior)
+            // - All composite operation effects confined to clipped region
+        }
+    });
+
+    // Test: Destination-in clipped test - verifies composite operations work correctly with clipping
+    // Tests interaction between clipping mask and composite operation masks
+
+    registerVisualTest('destination-in-clipped', {
+        name: 'Destination-in clipped - diagonal lines + rectangular clip + blue square + red circle with destination-in',
+        width: 100, height: 100,
+        draw: function(canvas) {
+            const ctx = canvas.getContext('2d');
+            
+            // Step 1: Draw diagonal orange lines across entire canvas
+            ctx.strokeStyle = 'orange';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            for (let i = -100; i <= 200; i += 10) {
+                ctx.moveTo(i, 0);
+                ctx.lineTo(i + 100, 100);
+            }
+            ctx.stroke();
+            
+            // Step 2: Clip canvas to rectangular path inset by 10px
+            ctx.beginPath();
+            ctx.rect(10, 10, 80, 80);
+            ctx.clip();
+            
+            // Step 3: Draw orthogonal black diagonal lines (only visible in clipped area)
+            ctx.strokeStyle = 'black';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            for (let i = -100; i <= 200; i += 10) {
+                ctx.moveTo(i, 100);
+                ctx.lineTo(i + 100, 0);
+            }
+            ctx.stroke();
+            
+            // Step 4a: Draw blue square as destination (55x55 at position 5,5)
+            ctx.fillStyle = 'blue';
+            ctx.fillRect(5, 5, 55, 55);
+            
+            // Step 4b: Apply destination-in composite operation
+            ctx.globalCompositeOperation = 'destination-in';
+            
+            // Step 4c: Draw red circle centered at (65,65) with radius 32
+            ctx.fillStyle = 'red';
+            ctx.beginPath();
+            ctx.arc(65, 65, 32, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Expected result:
+            // - Orange diagonal lines visible outside 10px inset area
+            // - Black diagonal lines crosshatch pattern visible inside 10px inset area
+            // - Blue square and red circle composite only visible within clipped area
+            // - Blue square appears only where red circle overlaps it (destination-in behavior)
+            // - All composite operation effects confined to clipped region
+        }
+    });
+
+    // Test: Source-out clipped test - verifies composite operations work correctly with clipping
+    // Tests interaction between clipping mask and composite operation masks
+
+    registerVisualTest('source-out-clipped', {
+        name: 'Source-out clipped - diagonal lines + rectangular clip + blue square + red circle with source-out',
+        width: 100, height: 100,
+        draw: function(canvas) {
+            const ctx = canvas.getContext('2d');
+            
+            // Step 1: Draw diagonal orange lines across entire canvas
+            ctx.strokeStyle = 'orange';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            for (let i = -100; i <= 200; i += 10) {
+                ctx.moveTo(i, 0);
+                ctx.lineTo(i + 100, 100);
+            }
+            ctx.stroke();
+            
+            // Step 2: Clip canvas to rectangular path inset by 10px
+            ctx.beginPath();
+            ctx.rect(10, 10, 80, 80);
+            ctx.clip();
+            
+            // Step 3: Draw orthogonal black diagonal lines (only visible in clipped area)
+            ctx.strokeStyle = 'black';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            for (let i = -100; i <= 200; i += 10) {
+                ctx.moveTo(i, 100);
+                ctx.lineTo(i + 100, 0);
+            }
+            ctx.stroke();
+            
+            // Step 4a: Draw blue square as destination (55x55 at position 5,5)
+            ctx.fillStyle = 'blue';
+            ctx.fillRect(5, 5, 55, 55);
+            
+            // Step 4b: Apply source-out composite operation
+            ctx.globalCompositeOperation = 'source-out';
+            
+            // Step 4c: Draw red circle centered at (65,65) with radius 32
+            ctx.fillStyle = 'red';
+            ctx.beginPath();
+            ctx.arc(65, 65, 32, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Expected result:
+            // - Orange diagonal lines visible outside 10px inset area
+            // - Black diagonal lines crosshatch pattern visible inside 10px inset area
+            // - Blue square and red circle composite only visible within clipped area
+            // - Red circle appears only where it doesn't overlap blue square (source-out behavior)
+            // - All composite operation effects confined to clipped region
+        }
+    });
+
+    // Test: Destination-out clipped test - verifies composite operations work correctly with clipping
+    // Tests interaction between clipping mask and composite operation masks
+
+    registerVisualTest('destination-out-clipped', {
+        name: 'Destination-out clipped - diagonal lines + rectangular clip + blue square + red circle with destination-out',
+        width: 100, height: 100,
+        draw: function(canvas) {
+            const ctx = canvas.getContext('2d');
+            
+            // Step 1: Draw diagonal orange lines across entire canvas
+            ctx.strokeStyle = 'orange';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            for (let i = -100; i <= 200; i += 10) {
+                ctx.moveTo(i, 0);
+                ctx.lineTo(i + 100, 100);
+            }
+            ctx.stroke();
+            
+            // Step 2: Clip canvas to rectangular path inset by 10px
+            ctx.beginPath();
+            ctx.rect(10, 10, 80, 80);
+            ctx.clip();
+            
+            // Step 3: Draw orthogonal black diagonal lines (only visible in clipped area)
+            ctx.strokeStyle = 'black';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            for (let i = -100; i <= 200; i += 10) {
+                ctx.moveTo(i, 100);
+                ctx.lineTo(i + 100, 0);
+            }
+            ctx.stroke();
+            
+            // Step 4a: Draw blue square as destination (55x55 at position 5,5)
+            ctx.fillStyle = 'blue';
+            ctx.fillRect(5, 5, 55, 55);
+            
+            // Step 4b: Apply destination-out composite operation
+            ctx.globalCompositeOperation = 'destination-out';
+            
+            // Step 4c: Draw red circle centered at (65,65) with radius 32
+            ctx.fillStyle = 'red';
+            ctx.beginPath();
+            ctx.arc(65, 65, 32, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Expected result:
+            // - Orange diagonal lines visible outside 10px inset area
+            // - Black diagonal lines crosshatch pattern visible inside 10px inset area
+            // - Blue square and red circle composite only visible within clipped area
+            // - Blue square appears only where red circle doesn't overlap it (destination-out behavior)
+            // - All composite operation effects confined to clipped region
+        }
+    });
+
+    // Test: XOR clipped test - verifies composite operations work correctly with clipping
+    // Tests interaction between clipping mask and composite operation masks
+
+    registerVisualTest('xor-clipped', {
+        name: 'XOR clipped - diagonal lines + rectangular clip + blue square + red circle with xor',
+        width: 100, height: 100,
+        draw: function(canvas) {
+            const ctx = canvas.getContext('2d');
+            
+            // Step 1: Draw diagonal orange lines across entire canvas
+            ctx.strokeStyle = 'orange';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            for (let i = -100; i <= 200; i += 10) {
+                ctx.moveTo(i, 0);
+                ctx.lineTo(i + 100, 100);
+            }
+            ctx.stroke();
+            
+            // Step 2: Clip canvas to rectangular path inset by 10px
+            ctx.beginPath();
+            ctx.rect(10, 10, 80, 80);
+            ctx.clip();
+            
+            // Step 3: Draw orthogonal black diagonal lines (only visible in clipped area)
+            ctx.strokeStyle = 'black';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            for (let i = -100; i <= 200; i += 10) {
+                ctx.moveTo(i, 100);
+                ctx.lineTo(i + 100, 0);
+            }
+            ctx.stroke();
+            
+            // Step 4a: Draw blue square as destination (55x55 at position 5,5)
+            ctx.fillStyle = 'blue';
+            ctx.fillRect(5, 5, 55, 55);
+            
+            // Step 4b: Apply xor composite operation
+            ctx.globalCompositeOperation = 'xor';
+            
+            // Step 4c: Draw red circle centered at (65,65) with radius 32
+            ctx.fillStyle = 'red';
+            ctx.beginPath();
+            ctx.arc(65, 65, 32, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Expected result:
+            // - Orange diagonal lines visible outside 10px inset area
+            // - Black diagonal lines crosshatch pattern visible inside 10px inset area
+            // - Blue square and red circle composite only visible within clipped area
+            // - Overlap area becomes transparent "bite" effect (xor behavior)
+            // - All composite operation effects confined to clipped region
+        }
+    });
+
+    // Test: Copy clipped test - verifies composite operations work correctly with clipping
+    // Tests interaction between clipping mask and composite operation masks
+
+    registerVisualTest('copy-clipped', {
+        name: 'Copy clipped - diagonal lines + rectangular clip + blue square + red circle with copy',
+        width: 100, height: 100,
+        draw: function(canvas) {
+            const ctx = canvas.getContext('2d');
+            
+            // Step 1: Draw diagonal orange lines across entire canvas
+            ctx.strokeStyle = 'orange';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            for (let i = -100; i <= 200; i += 10) {
+                ctx.moveTo(i, 0);
+                ctx.lineTo(i + 100, 100);
+            }
+            ctx.stroke();
+            
+            // Step 2: Clip canvas to rectangular path inset by 10px
+            ctx.beginPath();
+            ctx.rect(10, 10, 80, 80);
+            ctx.clip();
+            
+            // Step 3: Draw orthogonal black diagonal lines (only visible in clipped area)
+            ctx.strokeStyle = 'black';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            for (let i = -100; i <= 200; i += 10) {
+                ctx.moveTo(i, 100);
+                ctx.lineTo(i + 100, 0);
+            }
+            ctx.stroke();
+            
+            // Step 4a: Draw blue square as destination (55x55 at position 5,5)
+            ctx.fillStyle = 'blue';
+            ctx.fillRect(5, 5, 55, 55);
+            
+            // Step 4b: Apply copy composite operation
+            ctx.globalCompositeOperation = 'copy';
+            
+            // Step 4c: Draw red circle centered at (65,65) with radius 32
+            ctx.fillStyle = 'red';
+            ctx.beginPath();
+            ctx.arc(65, 65, 32, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Expected result:
+            // - Orange diagonal lines visible outside 10px inset area
+            // - Black diagonal lines crosshatch pattern visible inside 10px inset area
+            // - Blue square and red circle composite only visible within clipped area
+            // - Only red circle appears, everything else becomes transparent (copy behavior)
+            // - All composite operation effects confined to clipped region
+        }
+    });
+
+    // Test: Source-atop stroked test - classic blue square with red circle and green strokes
+    // Demonstrates that source-atop only draws where destination exists, with green strokes
+
+    registerVisualTest('source-atop-stroked', {
+        name: 'Source-atop stroked - blue square + red circle with green strokes and source-atop',
+        width: 100, height: 100,
+        draw: function(canvas) {
+            const ctx = canvas.getContext('2d');
+            
+            // Draw blue square as destination (55x55 at position 5,5) with 2px green stroke
+            ctx.fillStyle = 'blue';
+            ctx.fillRect(5, 5, 55, 55);
+            ctx.strokeStyle = 'green';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(5, 5, 55, 55);
+            
+            // Apply source-atop composite operation
+            ctx.globalCompositeOperation = 'source-atop';
+            
+            // Draw red circle centered at (65,65) with radius 32 with 2px green stroke
+            ctx.fillStyle = 'red';
+            ctx.beginPath();
+            ctx.arc(65, 65, 32, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = 'green';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            
+            // Expected result:
+            // - Red appears only where it overlaps the blue square (with green stroke)
+            // - Green stroke on circle appears only where it overlaps destination
+            // - Outside the blue square, red and its green stroke should not appear
+            // - Blue square remains blue where red doesn't overlap, with green stroke visible
+        }
+    });
+
+    // Test: Source-over stroked test - classic blue square with red circle and green strokes
+    // Demonstrates source-over (default) draws source over destination, with green strokes
+
+    registerVisualTest('source-over-stroked', {
+        name: 'Source-over stroked - blue square + red circle with green strokes and source-over',
+        width: 100, height: 100,
+        draw: function(canvas) {
+            const ctx = canvas.getContext('2d');
+            
+            // Draw blue square as destination (55x55 at position 5,5) with 2px green stroke
+            ctx.fillStyle = 'blue';
+            ctx.fillRect(5, 5, 55, 55);
+            ctx.strokeStyle = 'green';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(5, 5, 55, 55);
+            
+            // Apply source-over composite operation (default)
+            ctx.globalCompositeOperation = 'source-over';
+            
+            // Draw red circle centered at (65,65) with radius 32 with 2px green stroke
+            ctx.fillStyle = 'red';
+            ctx.beginPath();
+            ctx.arc(65, 65, 32, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = 'green';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            
+            // Expected result:
+            // - Red circle with green stroke appears on top of blue square in overlap area
+            // - Blue square with green stroke remains visible where red doesn't overlap
+            // - Red circle with green stroke extends beyond the blue square
+        }
+    });
+
+    // Test: Destination-over stroked test - classic blue square with red circle and green strokes
+    // Demonstrates destination-over draws source behind destination, with green strokes
+
+    registerVisualTest('destination-over-stroked', {
+        name: 'Destination-over stroked - blue square + red circle with green strokes and destination-over',
+        width: 100, height: 100,
+        draw: function(canvas) {
+            const ctx = canvas.getContext('2d');
+            
+            // Draw blue square as destination (55x55 at position 5,5) with 2px green stroke
+            ctx.fillStyle = 'blue';
+            ctx.fillRect(5, 5, 55, 55);
+            ctx.strokeStyle = 'green';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(5, 5, 55, 55);
+            
+            // Apply destination-over composite operation
+            ctx.globalCompositeOperation = 'destination-over';
+            
+            // Draw red circle centered at (65,65) with radius 32 with 2px green stroke
+            ctx.fillStyle = 'red';
+            ctx.beginPath();
+            ctx.arc(65, 65, 32, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = 'green';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            
+            // Expected result:
+            // - Blue square with green stroke remains on top in overlap area
+            // - Red circle with green stroke appears behind blue square where they overlap
+            // - Red circle with green stroke shows in areas where there's no blue square
+        }
+    });
+
+    // Test: Destination-atop stroked test - classic blue square with red circle and green strokes
+    // Demonstrates destination-atop only shows destination where source exists, with green strokes
+
+    registerVisualTest('destination-atop-stroked', {
+        name: 'Destination-atop stroked - blue square + red circle with green strokes and destination-atop',
+        width: 100, height: 100,
+        draw: function(canvas) {
+            const ctx = canvas.getContext('2d');
+            
+            // Draw blue square as destination (55x55 at position 5,5) with 2px green stroke
+            ctx.fillStyle = 'blue';
+            ctx.fillRect(5, 5, 55, 55);
+            ctx.strokeStyle = 'green';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(5, 5, 55, 55);
+            
+            // Apply destination-atop composite operation
+            ctx.globalCompositeOperation = 'destination-atop';
+            
+            // Draw red circle centered at (65,65) with radius 32 with 2px green stroke
+            ctx.fillStyle = 'red';
+            ctx.beginPath();
+            ctx.arc(65, 65, 32, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = 'green';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            
+            // Expected result:
+            // - Blue square with green stroke appears only where red circle overlaps
+            // - Red circle with green stroke fills the rest of its area
+            // - Blue square parts outside red circle disappear
+        }
+    });
+
+    // Test: Source-in stroked test - classic blue square with red circle and green strokes
+    // Demonstrates source-in only shows source where destination exists, with green strokes
+
+    registerVisualTest('source-in-stroked', {
+        name: 'Source-in stroked - blue square + red circle with green strokes and source-in',
+        width: 100, height: 100,
+        draw: function(canvas) {
+            const ctx = canvas.getContext('2d');
+            
+            // Draw blue square as destination (55x55 at position 5,5) with 2px green stroke
+            ctx.fillStyle = 'blue';
+            ctx.fillRect(5, 5, 55, 55);
+            ctx.strokeStyle = 'green';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(5, 5, 55, 55);
+            
+            // Apply source-in composite operation
+            ctx.globalCompositeOperation = 'source-in';
+            
+            // Draw red circle centered at (65,65) with radius 32 with 2px green stroke
+            ctx.fillStyle = 'red';
+            ctx.beginPath();
+            ctx.arc(65, 65, 32, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = 'green';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            
+            // Expected result:
+            // - Red circle with green stroke appears only where it overlaps the blue square
+            // - Blue square disappears entirely (replaced by red in overlap)
+            // - Red circle parts outside blue square disappear, including green stroke
+        }
+    });
+
+    // Test: Destination-in stroked test - classic blue square with red circle and green strokes
+    // Demonstrates destination-in only shows destination where source exists, with green strokes
+
+    registerVisualTest('destination-in-stroked', {
+        name: 'Destination-in stroked - blue square + red circle with green strokes and destination-in',
+        width: 100, height: 100,
+        draw: function(canvas) {
+            const ctx = canvas.getContext('2d');
+            
+            // Draw blue square as destination (55x55 at position 5,5) with 2px green stroke
+            ctx.fillStyle = 'blue';
+            ctx.fillRect(5, 5, 55, 55);
+            ctx.strokeStyle = 'green';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(5, 5, 55, 55);
+            
+            // Apply destination-in composite operation
+            ctx.globalCompositeOperation = 'destination-in';
+            
+            // Draw red circle centered at (65,65) with radius 32 with 2px green stroke
+            ctx.fillStyle = 'red';
+            ctx.beginPath();
+            ctx.arc(65, 65, 32, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = 'green';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            
+            // Expected result:
+            // - Blue square with green stroke appears only where red circle overlaps
+            // - Red circle disappears entirely
+            // - Blue square parts outside red circle disappear, including green stroke
+        }
+    });
+
+    // Test: Source-out stroked test - classic blue square with red circle and green strokes
+    // Demonstrates source-out shows source only where destination doesn't exist, with green strokes
+
+    registerVisualTest('source-out-stroked', {
+        name: 'Source-out stroked - blue square + red circle with green strokes and source-out',
+        width: 100, height: 100,
+        draw: function(canvas) {
+            const ctx = canvas.getContext('2d');
+            
+            // Draw blue square as destination (55x55 at position 5,5) with 2px green stroke
+            ctx.fillStyle = 'blue';
+            ctx.fillRect(5, 5, 55, 55);
+            ctx.strokeStyle = 'green';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(5, 5, 55, 55);
+            
+            // Apply source-out composite operation
+            ctx.globalCompositeOperation = 'source-out';
+            
+            // Draw red circle centered at (65,65) with radius 32 with 2px green stroke
+            ctx.fillStyle = 'red';
+            ctx.beginPath();
+            ctx.arc(65, 65, 32, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = 'green';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            
+            // Expected result:
+            // - Red circle with green stroke appears only where it doesn't overlap blue square
+            // - Blue square disappears entirely
+            // - Red circle parts overlapping blue square disappear, including green stroke
+        }
+    });
+
+    // Test: Destination-out stroked test - classic blue square with red circle and green strokes
+    // Demonstrates destination-out removes destination where source exists, with green strokes
+
+    registerVisualTest('destination-out-stroked', {
+        name: 'Destination-out stroked - blue square + red circle with green strokes and destination-out',
+        width: 100, height: 100,
+        draw: function(canvas) {
+            const ctx = canvas.getContext('2d');
+            
+            // Draw blue square as destination (55x55 at position 5,5) with 2px green stroke
+            ctx.fillStyle = 'blue';
+            ctx.fillRect(5, 5, 55, 55);
+            ctx.strokeStyle = 'green';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(5, 5, 55, 55);
+            
+            // Apply destination-out composite operation
+            ctx.globalCompositeOperation = 'destination-out';
+            
+            // Draw red circle centered at (65,65) with radius 32 with 2px green stroke
+            ctx.fillStyle = 'red';
+            ctx.beginPath();
+            ctx.arc(65, 65, 32, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = 'green';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            
+            // Expected result:
+            // - Blue square with green stroke appears only where red circle doesn't overlap
+            // - Red circle disappears entirely (acts as eraser)
+            // - Blue square parts overlapping red circle disappear, creating "hole"
+        }
+    });
+
+    // Test: XOR stroked test - classic blue square with red circle and green strokes
+    // Demonstrates XOR creates "bite" effect where shapes overlap, with green strokes
+
+    registerVisualTest('xor-stroked', {
+        name: 'XOR stroked - blue square + red circle with green strokes and xor',
+        width: 100, height: 100,
+        draw: function(canvas) {
+            const ctx = canvas.getContext('2d');
+            
+            // Draw blue square as destination (55x55 at position 5,5) with 2px green stroke
+            ctx.fillStyle = 'blue';
+            ctx.fillRect(5, 5, 55, 55);
+            ctx.strokeStyle = 'green';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(5, 5, 55, 55);
+            
+            // Apply xor composite operation
+            ctx.globalCompositeOperation = 'xor';
+            
+            // Draw red circle centered at (65,65) with radius 32 with 2px green stroke
+            ctx.fillStyle = 'red';
+            ctx.beginPath();
+            ctx.arc(65, 65, 32, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = 'green';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            
+            // Expected result:
+            // - Blue square with green stroke appears where red circle doesn't overlap
+            // - Red circle with green stroke appears where blue square doesn't exist
+            // - Overlap area becomes transparent ("bite" effect), removing both shapes
+        }
+    });
+
+    // Test: Copy stroked test - classic blue square with red circle and green strokes
+    // Demonstrates copy replaces entire canvas with source, with green strokes
+
+    registerVisualTest('copy-stroked', {
+        name: 'Copy stroked - blue square + red circle with green strokes and copy',
+        width: 100, height: 100,
+        draw: function(canvas) {
+            const ctx = canvas.getContext('2d');
+            
+            // Draw blue square as destination (55x55 at position 5,5) with 2px green stroke
+            ctx.fillStyle = 'blue';
+            ctx.fillRect(5, 5, 55, 55);
+            ctx.strokeStyle = 'green';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(5, 5, 55, 55);
+            
+            // Apply copy composite operation
+            ctx.globalCompositeOperation = 'copy';
+            
+            // Draw red circle centered at (65,65) with radius 32 with 2px green stroke
+            ctx.fillStyle = 'red';
+            ctx.beginPath();
+            ctx.arc(65, 65, 32, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = 'green';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            
+            // Expected result:
+            // - Only red circle with green stroke appears
+            // - Blue square with green stroke disappears entirely (replaced by transparent)
+            // - Canvas becomes transparent everywhere except red circle with green stroke
+        }
+    });
+
+    // Test: Source-atop clipped stroked test - composite operations with clipping and strokes
+    // Tests interaction between clipping mask, composite operation masks, and stroked shapes
+
+    registerVisualTest('source-atop-clipped-stroked', {
+        name: 'Source-atop clipped stroked - diagonal lines + rectangular clip + blue square + red circle with green strokes and source-atop',
+        width: 100, height: 100,
+        draw: function(canvas) {
+            const ctx = canvas.getContext('2d');
+            
+            // Step 1: Draw diagonal orange lines across entire canvas
+            ctx.strokeStyle = 'orange';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            for (let i = -100; i <= 200; i += 10) {
+                ctx.moveTo(i, 0);
+                ctx.lineTo(i + 100, 100);
+            }
+            ctx.stroke();
+            
+            // Step 2: Clip canvas to rectangular path inset by 10px
+            ctx.beginPath();
+            ctx.rect(10, 10, 80, 80);
+            ctx.clip();
+            
+            // Step 3: Draw orthogonal black diagonal lines (only visible in clipped area)
+            ctx.strokeStyle = 'black';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            for (let i = -100; i <= 200; i += 10) {
+                ctx.moveTo(i, 100);
+                ctx.lineTo(i + 100, 0);
+            }
+            ctx.stroke();
+            
+            // Step 4: Draw blue square as destination (55x55 at position 5,5) with 2px green stroke
+            ctx.fillStyle = 'blue';
+            ctx.fillRect(5, 5, 55, 55);
+            ctx.strokeStyle = 'green';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(5, 5, 55, 55);
+            
+            // Step 5: Apply source-atop composite operation
+            ctx.globalCompositeOperation = 'source-atop';
+            
+            // Step 6: Draw red circle centered at (65,65) with radius 32 with 2px green stroke
+            ctx.fillStyle = 'red';
+            ctx.beginPath();
+            ctx.arc(65, 65, 32, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = 'green';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            
+            // Expected result:
+            // - Orange diagonal lines visible outside 10px inset area
+            // - Black diagonal lines crosshatch pattern visible inside 10px inset area
+            // - Blue square with green stroke as destination
+            // - Red circle appears only where it overlaps blue square (source-atop behavior)
+            // - Green stroke on circle appears only where it overlaps destination
+            // - All composite operation effects confined to clipped region
+        }
+    });
+
+    // Test: Source-over clipped stroked test - composite operations with clipping and strokes
+    // Tests interaction between clipping mask, composite operation masks, and stroked shapes
+
+    registerVisualTest('source-over-clipped-stroked', {
+        name: 'Source-over clipped stroked - diagonal lines + rectangular clip + blue square + red circle with green strokes and source-over',
+        width: 100, height: 100,
+        draw: function(canvas) {
+            const ctx = canvas.getContext('2d');
+            
+            // Step 1: Draw diagonal orange lines across entire canvas
+            ctx.strokeStyle = 'orange';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            for (let i = -100; i <= 200; i += 10) {
+                ctx.moveTo(i, 0);
+                ctx.lineTo(i + 100, 100);
+            }
+            ctx.stroke();
+            
+            // Step 2: Clip canvas to rectangular path inset by 10px
+            ctx.beginPath();
+            ctx.rect(10, 10, 80, 80);
+            ctx.clip();
+            
+            // Step 3: Draw orthogonal black diagonal lines (only visible in clipped area)
+            ctx.strokeStyle = 'black';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            for (let i = -100; i <= 200; i += 10) {
+                ctx.moveTo(i, 100);
+                ctx.lineTo(i + 100, 0);
+            }
+            ctx.stroke();
+            
+            // Step 4: Draw blue square as destination (55x55 at position 5,5) with 2px green stroke
+            ctx.fillStyle = 'blue';
+            ctx.fillRect(5, 5, 55, 55);
+            ctx.strokeStyle = 'green';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(5, 5, 55, 55);
+            
+            // Step 5: Apply source-over composite operation
+            ctx.globalCompositeOperation = 'source-over';
+            
+            // Step 6: Draw red circle centered at (65,65) with radius 32 with 2px green stroke
+            ctx.fillStyle = 'red';
+            ctx.beginPath();
+            ctx.arc(65, 65, 32, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = 'green';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            
+            // Expected result:
+            // - Orange diagonal lines visible outside 10px inset area
+            // - Black diagonal lines crosshatch pattern visible inside 10px inset area
+            // - Blue square with green stroke as destination
+            // - Red circle with green stroke drawn over blue square (source-over behavior)
+            // - Red circle and stroke fully visible where they overlap destination
+            // - All composite operation effects confined to clipped region
+        }
+    });
+
+    // Test: Destination-over clipped stroked test - composite operations with clipping and strokes
+    // Tests interaction between clipping mask, composite operation masks, and stroked shapes
+
+    registerVisualTest('destination-over-clipped-stroked', {
+        name: 'Destination-over clipped stroked - diagonal lines + rectangular clip + blue square + red circle with green strokes and destination-over',
+        width: 100, height: 100,
+        draw: function(canvas) {
+            const ctx = canvas.getContext('2d');
+            
+            // Step 1: Draw diagonal orange lines across entire canvas
+            ctx.strokeStyle = 'orange';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            for (let i = -100; i <= 200; i += 10) {
+                ctx.moveTo(i, 0);
+                ctx.lineTo(i + 100, 100);
+            }
+            ctx.stroke();
+            
+            // Step 2: Clip canvas to rectangular path inset by 10px
+            ctx.beginPath();
+            ctx.rect(10, 10, 80, 80);
+            ctx.clip();
+            
+            // Step 3: Draw orthogonal black diagonal lines (only visible in clipped area)
+            ctx.strokeStyle = 'black';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            for (let i = -100; i <= 200; i += 10) {
+                ctx.moveTo(i, 100);
+                ctx.lineTo(i + 100, 0);
+            }
+            ctx.stroke();
+            
+            // Step 4: Draw blue square as destination (55x55 at position 5,5) with 2px green stroke
+            ctx.fillStyle = 'blue';
+            ctx.fillRect(5, 5, 55, 55);
+            ctx.strokeStyle = 'green';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(5, 5, 55, 55);
+            
+            // Step 5: Apply destination-over composite operation
+            ctx.globalCompositeOperation = 'destination-over';
+            
+            // Step 6: Draw red circle centered at (65,65) with radius 32 with 2px green stroke
+            ctx.fillStyle = 'red';
+            ctx.beginPath();
+            ctx.arc(65, 65, 32, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = 'green';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            
+            // Expected result:
+            // - Orange diagonal lines visible outside 10px inset area
+            // - Black diagonal lines crosshatch pattern visible inside 10px inset area
+            // - Blue square with green stroke remains on top (destination-over behavior)
+            // - Red circle with green stroke appears behind blue square
+            // - Red circle visible where it doesn't overlap the blue square
+            // - All composite operation effects confined to clipped region
+        }
+    });
+
+    // Test: Destination-atop clipped stroked test - composite operations with clipping and strokes
+    // Tests interaction between clipping mask, composite operation masks, and stroked shapes
+
+    registerVisualTest('destination-atop-clipped-stroked', {
+        name: 'Destination-atop clipped stroked - diagonal lines + rectangular clip + blue square + red circle with green strokes and destination-atop',
+        width: 100, height: 100,
+        draw: function(canvas) {
+            const ctx = canvas.getContext('2d');
+            
+            // Step 1: Draw diagonal orange lines across entire canvas
+            ctx.strokeStyle = 'orange';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            for (let i = -100; i <= 200; i += 10) {
+                ctx.moveTo(i, 0);
+                ctx.lineTo(i + 100, 100);
+            }
+            ctx.stroke();
+            
+            // Step 2: Clip canvas to rectangular path inset by 10px
+            ctx.beginPath();
+            ctx.rect(10, 10, 80, 80);
+            ctx.clip();
+            
+            // Step 3: Draw orthogonal black diagonal lines (only visible in clipped area)
+            ctx.strokeStyle = 'black';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            for (let i = -100; i <= 200; i += 10) {
+                ctx.moveTo(i, 100);
+                ctx.lineTo(i + 100, 0);
+            }
+            ctx.stroke();
+            
+            // Step 4: Draw blue square as destination (55x55 at position 5,5) with 2px green stroke
+            ctx.fillStyle = 'blue';
+            ctx.fillRect(5, 5, 55, 55);
+            ctx.strokeStyle = 'green';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(5, 5, 55, 55);
+            
+            // Step 5: Apply destination-atop composite operation
+            ctx.globalCompositeOperation = 'destination-atop';
+            
+            // Step 6: Draw red circle centered at (65,65) with radius 32 with 2px green stroke
+            ctx.fillStyle = 'red';
+            ctx.beginPath();
+            ctx.arc(65, 65, 32, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = 'green';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            
+            // Expected result:
+            // - Orange diagonal lines visible outside 10px inset area
+            // - Black diagonal lines crosshatch pattern visible inside 10px inset area
+            // - Blue square appears only where it overlaps red circle (destination-atop behavior)
+            // - Green stroke on square appears only where it overlaps the red circle
+            // - Red circle with green stroke fully visible as the source
+            // - All composite operation effects confined to clipped region
+        }
+    });
+
+    // Test: Source-in clipped stroked test - composite operations with clipping and strokes
+    // Tests interaction between clipping mask, composite operation masks, and stroked shapes
+
+    registerVisualTest('source-in-clipped-stroked', {
+        name: 'Source-in clipped stroked - diagonal lines + rectangular clip + blue square + red circle with green strokes and source-in',
+        width: 100, height: 100,
+        draw: function(canvas) {
+            const ctx = canvas.getContext('2d');
+            
+            // Step 1: Draw diagonal orange lines across entire canvas
+            ctx.strokeStyle = 'orange';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            for (let i = -100; i <= 200; i += 10) {
+                ctx.moveTo(i, 0);
+                ctx.lineTo(i + 100, 100);
+            }
+            ctx.stroke();
+            
+            // Step 2: Clip canvas to rectangular path inset by 10px
+            ctx.beginPath();
+            ctx.rect(10, 10, 80, 80);
+            ctx.clip();
+            
+            // Step 3: Draw orthogonal black diagonal lines (only visible in clipped area)
+            ctx.strokeStyle = 'black';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            for (let i = -100; i <= 200; i += 10) {
+                ctx.moveTo(i, 100);
+                ctx.lineTo(i + 100, 0);
+            }
+            ctx.stroke();
+            
+            // Step 4: Draw blue square as destination (55x55 at position 5,5) with 2px green stroke
+            ctx.fillStyle = 'blue';
+            ctx.fillRect(5, 5, 55, 55);
+            ctx.strokeStyle = 'green';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(5, 5, 55, 55);
+            
+            // Step 5: Apply source-in composite operation
+            ctx.globalCompositeOperation = 'source-in';
+            
+            // Step 6: Draw red circle centered at (65,65) with radius 32 with 2px green stroke
+            ctx.fillStyle = 'red';
+            ctx.beginPath();
+            ctx.arc(65, 65, 32, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = 'green';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            
+            // Expected result:
+            // - Orange diagonal lines visible outside 10px inset area
+            // - Black diagonal lines crosshatch pattern visible inside 10px inset area
+            // - Red circle appears only where it overlaps blue square (source-in behavior)
+            // - Green stroke on circle appears only where it overlaps blue square
+            // - Blue square is completely replaced where red circle overlaps
+            // - All composite operation effects confined to clipped region
+        }
+    });
+
+    // Test: Destination-in clipped stroked test - composite operations with clipping and strokes
+    // Tests interaction between clipping mask, composite operation masks, and stroked shapes
+
+    registerVisualTest('destination-in-clipped-stroked', {
+        name: 'Destination-in clipped stroked - diagonal lines + rectangular clip + blue square + red circle with green strokes and destination-in',
+        width: 100, height: 100,
+        draw: function(canvas) {
+            const ctx = canvas.getContext('2d');
+            
+            // Step 1: Draw diagonal orange lines across entire canvas
+            ctx.strokeStyle = 'orange';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            for (let i = -100; i <= 200; i += 10) {
+                ctx.moveTo(i, 0);
+                ctx.lineTo(i + 100, 100);
+            }
+            ctx.stroke();
+            
+            // Step 2: Clip canvas to rectangular path inset by 10px
+            ctx.beginPath();
+            ctx.rect(10, 10, 80, 80);
+            ctx.clip();
+            
+            // Step 3: Draw orthogonal black diagonal lines (only visible in clipped area)
+            ctx.strokeStyle = 'black';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            for (let i = -100; i <= 200; i += 10) {
+                ctx.moveTo(i, 100);
+                ctx.lineTo(i + 100, 0);
+            }
+            ctx.stroke();
+            
+            // Step 4: Draw blue square as destination (55x55 at position 5,5) with 2px green stroke
+            ctx.fillStyle = 'blue';
+            ctx.fillRect(5, 5, 55, 55);
+            ctx.strokeStyle = 'green';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(5, 5, 55, 55);
+            
+            // Step 5: Apply destination-in composite operation
+            ctx.globalCompositeOperation = 'destination-in';
+            
+            // Step 6: Draw red circle centered at (65,65) with radius 32 with 2px green stroke
+            ctx.fillStyle = 'red';
+            ctx.beginPath();
+            ctx.arc(65, 65, 32, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = 'green';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            
+            // Expected result:
+            // - Orange diagonal lines visible outside 10px inset area
+            // - Black diagonal lines crosshatch pattern visible inside 10px inset area
+            // - Blue square appears only where it overlaps red circle (destination-in behavior)
+            // - Green stroke on square appears only where it overlaps red circle
+            // - Red circle is not visible (destination-in only keeps destination inside source)
+            // - All composite operation effects confined to clipped region
+        }
+    });
+
+    // Test: Source-out clipped stroked test - composite operations with clipping and strokes
+    // Tests interaction between clipping mask, composite operation masks, and stroked shapes
+
+    registerVisualTest('source-out-clipped-stroked', {
+        name: 'Source-out clipped stroked - diagonal lines + rectangular clip + blue square + red circle with green strokes and source-out',
+        width: 100, height: 100,
+        draw: function(canvas) {
+            const ctx = canvas.getContext('2d');
+            
+            // Step 1: Draw diagonal orange lines across entire canvas
+            ctx.strokeStyle = 'orange';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            for (let i = -100; i <= 200; i += 10) {
+                ctx.moveTo(i, 0);
+                ctx.lineTo(i + 100, 100);
+            }
+            ctx.stroke();
+            
+            // Step 2: Clip canvas to rectangular path inset by 10px
+            ctx.beginPath();
+            ctx.rect(10, 10, 80, 80);
+            ctx.clip();
+            
+            // Step 3: Draw orthogonal black diagonal lines (only visible in clipped area)
+            ctx.strokeStyle = 'black';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            for (let i = -100; i <= 200; i += 10) {
+                ctx.moveTo(i, 100);
+                ctx.lineTo(i + 100, 0);
+            }
+            ctx.stroke();
+            
+            // Step 4: Draw blue square as destination (55x55 at position 5,5) with 2px green stroke
+            ctx.fillStyle = 'blue';
+            ctx.fillRect(5, 5, 55, 55);
+            ctx.strokeStyle = 'green';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(5, 5, 55, 55);
+            
+            // Step 5: Apply source-out composite operation
+            ctx.globalCompositeOperation = 'source-out';
+            
+            // Step 6: Draw red circle centered at (65,65) with radius 32 with 2px green stroke
+            ctx.fillStyle = 'red';
+            ctx.beginPath();
+            ctx.arc(65, 65, 32, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = 'green';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            
+            // Expected result:
+            // - Orange diagonal lines visible outside 10px inset area
+            // - Black diagonal lines crosshatch pattern visible inside 10px inset area
+            // - Red circle appears only where it doesn't overlap blue square (source-out behavior)
+            // - Green stroke on circle appears only where it doesn't overlap blue square
+            // - Blue square with green stroke remains unchanged
+            // - All composite operation effects confined to clipped region
+        }
+    });
+
+    // Test: Destination-out clipped stroked test - composite operations with clipping and strokes
+    // Tests interaction between clipping mask, composite operation masks, and stroked shapes
+
+    registerVisualTest('destination-out-clipped-stroked', {
+        name: 'Destination-out clipped stroked - diagonal lines + rectangular clip + blue square + red circle with green strokes and destination-out',
+        width: 100, height: 100,
+        draw: function(canvas) {
+            const ctx = canvas.getContext('2d');
+            
+            // Step 1: Draw diagonal orange lines across entire canvas
+            ctx.strokeStyle = 'orange';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            for (let i = -100; i <= 200; i += 10) {
+                ctx.moveTo(i, 0);
+                ctx.lineTo(i + 100, 100);
+            }
+            ctx.stroke();
+            
+            // Step 2: Clip canvas to rectangular path inset by 10px
+            ctx.beginPath();
+            ctx.rect(10, 10, 80, 80);
+            ctx.clip();
+            
+            // Step 3: Draw orthogonal black diagonal lines (only visible in clipped area)
+            ctx.strokeStyle = 'black';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            for (let i = -100; i <= 200; i += 10) {
+                ctx.moveTo(i, 100);
+                ctx.lineTo(i + 100, 0);
+            }
+            ctx.stroke();
+            
+            // Step 4: Draw blue square as destination (55x55 at position 5,5) with 2px green stroke
+            ctx.fillStyle = 'blue';
+            ctx.fillRect(5, 5, 55, 55);
+            ctx.strokeStyle = 'green';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(5, 5, 55, 55);
+            
+            // Step 5: Apply destination-out composite operation
+            ctx.globalCompositeOperation = 'destination-out';
+            
+            // Step 6: Draw red circle centered at (65,65) with radius 32 with 2px green stroke
+            ctx.fillStyle = 'red';
+            ctx.beginPath();
+            ctx.arc(65, 65, 32, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = 'green';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            
+            // Expected result:
+            // - Orange diagonal lines visible outside 10px inset area
+            // - Black diagonal lines crosshatch pattern visible inside 10px inset area
+            // - Blue square appears only where it doesn't overlap red circle (destination-out behavior)
+            // - Green stroke on square appears only where it doesn't overlap red circle
+            // - Red circle is not visible (destination-out removes destination inside source)
+            // - All composite operation effects confined to clipped region
+        }
+    });
+
+    // Test: XOR clipped stroked test - composite operations with clipping and strokes
+    // Tests interaction between clipping mask, composite operation masks, and stroked shapes
+
+    registerVisualTest('xor-clipped-stroked', {
+        name: 'XOR clipped stroked - diagonal lines + rectangular clip + blue square + red circle with green strokes and xor',
+        width: 100, height: 100,
+        draw: function(canvas) {
+            const ctx = canvas.getContext('2d');
+            
+            // Step 1: Draw diagonal orange lines across entire canvas
+            ctx.strokeStyle = 'orange';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            for (let i = -100; i <= 200; i += 10) {
+                ctx.moveTo(i, 0);
+                ctx.lineTo(i + 100, 100);
+            }
+            ctx.stroke();
+            
+            // Step 2: Clip canvas to rectangular path inset by 10px
+            ctx.beginPath();
+            ctx.rect(10, 10, 80, 80);
+            ctx.clip();
+            
+            // Step 3: Draw orthogonal black diagonal lines (only visible in clipped area)
+            ctx.strokeStyle = 'black';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            for (let i = -100; i <= 200; i += 10) {
+                ctx.moveTo(i, 100);
+                ctx.lineTo(i + 100, 0);
+            }
+            ctx.stroke();
+            
+            // Step 4: Draw blue square as destination (55x55 at position 5,5) with 2px green stroke
+            ctx.fillStyle = 'blue';
+            ctx.fillRect(5, 5, 55, 55);
+            ctx.strokeStyle = 'green';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(5, 5, 55, 55);
+            
+            // Step 5: Apply xor composite operation
+            ctx.globalCompositeOperation = 'xor';
+            
+            // Step 6: Draw red circle centered at (65,65) with radius 32 with 2px green stroke
+            ctx.fillStyle = 'red';
+            ctx.beginPath();
+            ctx.arc(65, 65, 32, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = 'green';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            
+            // Expected result:
+            // - Orange diagonal lines visible outside 10px inset area
+            // - Black diagonal lines crosshatch pattern visible inside 10px inset area
+            // - Blue square visible where it doesn't overlap red circle (xor behavior)
+            // - Red circle visible where it doesn't overlap blue square (xor behavior)
+            // - Green strokes visible only where they don't overlap the other shape
+            // - Overlapping areas of both shapes are transparent (xor removes overlaps)
+            // - All composite operation effects confined to clipped region
+        }
+    });
+
+    // Test: Copy clipped stroked test - composite operations with clipping and strokes
+    // Tests interaction between clipping mask, composite operation masks, and stroked shapes
+
+    registerVisualTest('copy-clipped-stroked', {
+        name: 'Copy clipped stroked - diagonal lines + rectangular clip + blue square + red circle with green strokes and copy',
+        width: 100, height: 100,
+        draw: function(canvas) {
+            const ctx = canvas.getContext('2d');
+            
+            // Step 1: Draw diagonal orange lines across entire canvas
+            ctx.strokeStyle = 'orange';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            for (let i = -100; i <= 200; i += 10) {
+                ctx.moveTo(i, 0);
+                ctx.lineTo(i + 100, 100);
+            }
+            ctx.stroke();
+            
+            // Step 2: Clip canvas to rectangular path inset by 10px
+            ctx.beginPath();
+            ctx.rect(10, 10, 80, 80);
+            ctx.clip();
+            
+            // Step 3: Draw orthogonal black diagonal lines (only visible in clipped area)
+            ctx.strokeStyle = 'black';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            for (let i = -100; i <= 200; i += 10) {
+                ctx.moveTo(i, 100);
+                ctx.lineTo(i + 100, 0);
+            }
+            ctx.stroke();
+            
+            // Step 4: Draw blue square as destination (55x55 at position 5,5) with 2px green stroke
+            ctx.fillStyle = 'blue';
+            ctx.fillRect(5, 5, 55, 55);
+            ctx.strokeStyle = 'green';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(5, 5, 55, 55);
+            
+            // Step 5: Apply copy composite operation
+            ctx.globalCompositeOperation = 'copy';
+            
+            // Step 6: Draw red circle centered at (65,65) with radius 32 with 2px green stroke
+            ctx.fillStyle = 'red';
+            ctx.beginPath();
+            ctx.arc(65, 65, 32, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = 'green';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            
+            // Expected result:
+            // - Orange diagonal lines visible outside 10px inset area
+            // - Black diagonal lines crosshatch pattern may be partially visible
+            // - Red circle with green stroke completely replaces all content (copy behavior)
+            // - Blue square is not visible where red circle is drawn
+            // - Background diagonal lines are cleared where red circle is drawn
+            // - Only the red circle with green stroke visible in its area
+            // - All composite operation effects confined to clipped region
         }
     });
 
