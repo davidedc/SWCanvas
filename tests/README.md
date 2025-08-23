@@ -1,6 +1,6 @@
 # SWCanvas Test Suite
 
-This directory contains the comprehensive **modular test infrastructure** for SWCanvas, with 32 core tests + 78 visual tests and cross-platform compatibility.
+This directory contains the comprehensive **modular test infrastructure** for SWCanvas, with 33 core tests + 130 visual tests and cross-platform compatibility.
 
 ## Modular Test Architecture
 
@@ -11,11 +11,11 @@ tests/
 │   ├── 015-alpha-blending-test.js  
 │   ├── 031-transform-matrix-order-dependency.js
 │   └── ... (28 more files)
-├── visual/                        # 78 individual visual test files (001-078)
+├── visual/                        # 130 individual visual test files (001-130)
 │   ├── 001-simple-rectangle-test.js
 │   ├── 027-fill-rule-complex-test.js
 │   ├── 056-stroke-pixel-analysis-test.js
-│   └── ... (53 more files)
+│   └── ... (127 more files)
 ├── browser/                       # Browser-specific test files
 │   ├── index.html                 # Main browser test page (interactive + comparisons)
 │   ├── simple-test.html           # Simple visual comparison test
@@ -28,7 +28,7 @@ tests/
 ├── core-functionality-tests.js          # Original (fallback/reference)
 ├── visual-rendering-tests.js            # Original (fallback/reference)
 ├── run-tests.js                         # Smart test runner with auto-detection
-├── output/                              # Generated BMP test images (78+ files)
+├── output/                              # Generated BMP test images (130+ files)
 └── README.md                            # This file
 ```
 
@@ -47,7 +47,7 @@ node tests/run-tests.js  # Smart runner uses built tests when available
 ### Browser Tests
 1. Open `tests/browser/index.html` in a web browser (automatically runs all tests on page load)
 2. Automatically runs 32 modular core functionality tests from `/tests/core/` 
-3. Automatically runs all 88 visual rendering tests with side-by-side HTML5 Canvas vs SWCanvas comparison
+3. Automatically runs all 130 visual rendering tests with side-by-side HTML5 Canvas vs SWCanvas comparison
 4. Use interactive visual comparison tools for real-time testing
 5. Simple test: Open `tests/browser/simple-test.html` for basic visual comparison
 
@@ -93,17 +93,17 @@ test('Surface creation with valid dimensions', () => {
 });
 ```
 
-### Visual Rendering Tests - 88 Individual Files
+### Visual Rendering Tests - 130 Individual Files
 **Location**: `/tests/visual/` (individual files) → `/tests/dist/visual-rendering-tests.js` (concatenated)
 
 **Modular Structure**:
-- **88 individual test files** numbered 001-088 with descriptive names
+- **130 individual test files** numbered 001-130 with descriptive names
 - **Build-time concatenation** preserves registerVisualTest pattern
 - **Smart test runner** with automatic fallback to original
 - **Development benefit**: Isolated test development, clear organization
 
 **Characteristics**:
-- **88 visual tests** that generate actual rendered images
+- **130 visual tests** that generate actual rendered images
 - **Output**: BMP files (Node.js) + side-by-side comparison (browser)
 - **Environment**: BMP generation in Node.js, visual comparison in browser
 - **Focus**: Rendering accuracy, visual consistency, pixel-perfect output
@@ -118,7 +118,11 @@ test('Surface creation with valid dimensions', () => {
 - ✅ **Line Dashing**: Dash patterns, offsets, complex paths - 3 tests
 - ✅ **Gradient & Pattern Strokes**: All paint sources with sub-pixel strokes - 15 tests
 - ✅ **Thick Polyline Joins**: Systematic testing of bevel, miter, round joins with dash patterns - 3 tests
-- ✅ **Debug & Analysis**: Specific rendering issue investigation - 6 tests
+- ✅ **Composite Operations - Minimal**: All 10 Porter-Duff operations with basic shapes - 10 tests (091-100)
+- ✅ **Composite Operations - Clipped**: All 10 operations with clipping mask interaction - 10 tests (101-110) 
+- ✅ **Composite Operations - Stroked**: All 10 operations with stroke rendering - 10 tests (111-120)
+- ✅ **Composite Operations - Clipped+Stroked**: All 10 operations with clipping + strokes - 10 tests (121-130)
+- ✅ **Debug & Analysis**: Specific rendering issue investigation - 12 tests
 
 **Example Modular Test File** (`/tests/visual/002-alpha-blending-test.js`):
 ```javascript
@@ -261,7 +265,7 @@ Standard HTML5 Canvas API ensures consistent colors:
 
 ### Comprehensive Modular Test Coverage
 - **33 modular core tests** covering all API functionality with individual files
-- **88 modular visual tests** covering all major Canvas2D features with pixel-perfect accuracy
+- **130 modular visual tests** covering all major Canvas2D features with pixel-perfect accuracy
 - **Build-time concatenation** for optimal performance
 - **Smart test runner** with automatic fallback system
 - **Cross-platform validation** (Node.js + browsers)

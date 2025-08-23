@@ -13,7 +13,7 @@ This file provides Claude with essential context about the SWCanvas project for 
 - **Drop-in replacement**: True HTML5 Canvas 2D Context compatibility
 - **Memory efficient**: 1-bit stencil clipping, optimized algorithms
 - **Sub-pixel accurate**: Thin strokes render with proportional opacity (no anti-aliasing)
-- **Well-tested**: 32 core tests + 78 visual tests with pixel-perfect validation
+- **Well-tested**: 33 core tests + 130 visual tests with pixel-perfect validation
 - **Paint Sources**: Full HTML5-compatible gradients (linear, radial, conic) and patterns
 
 ## API Usage
@@ -132,7 +132,12 @@ src/ColorParser.js            # CSS color string parsing (hex, rgb, named colors
 - **Global operations** (destination-atop, source-atop, source-in, destination-in, source-out, copy): Use source coverage masks and full-region compositing to correctly handle pixels outside the source area
 - **Implementation**: Dual rendering approach using `SourceMask` class for global operations
 - **Usage**: `ctx.globalCompositeOperation = 'destination-atop'` (both Core API and HTML5 Canvas-compatible API)
-- **Testing**: Comprehensive visual tests for all operations (tests 079-088), core functionality tests
+- **Testing**: Comprehensive visual test coverage across 5 test suites:
+  - **Basic tests** (079-088): Original comprehensive composite operation tests
+  - **Minimal tests** (091-100): Clean minimal tests with blue square + red circle 
+  - **Clipped tests** (101-110): Tests composite operations with clipping mask interaction
+  - **Stroked tests** (111-120): Tests composite operations with stroke rendering
+  - **Clipped+Stroked tests** (121-130): Tests composite operations with both clipping and strokes
 
 ## Build & Test Commands
 
@@ -170,7 +175,7 @@ SWCanvas uses a comprehensive test system with modular architecture. See `tests/
 - Build utilities and renumbering tools
 - Cross-platform validation approach
 
-Quick reference: `npm run build` then `npm test` to run all 33 core + 88 visual tests.
+Quick reference: `npm run build` then `npm test` to run all 33 core + 130 visual tests.
 
 #### Smart Test Runner Architecture
 ```javascript
@@ -186,31 +191,26 @@ if (fs.existsSync('./tests/dist/core-functionality-tests.js')) {
 ### Modular File Structure
 ```
 /tests/
-├── core/                               # 32 individual core test files
+├── core/                               # 33 individual core test files
 │   ├── 001-surface-creation-valid.js
 │   ├── 015-alpha-blending-test.js
 │   ├── 032-line-dash-api-test.js
-│   └── ... (29 more files)
-├── visual/                             # 78 individual visual test files
+│   └── ... (30 more files)
+├── visual/                             # 130 individual visual test files
 │   ├── 001-simple-rectangle-test.js
 │   ├── 058-line-dash-basic-patterns-test.js
 │   ├── 060-line-dash-complex-paths-test.js
 │   ├── 068-gradient-strokes-with-dashes-test.js
 │   ├── 075-gradient-strokes-with-dashes-subpixel-test.js
-├── 076-thick-polyline-bevel-joins-systematic-test.js
-├── 077-thick-polyline-miter-joins-systematic-test.js
-├── 078-thick-polyline-round-joins-systematic-test.js
-├── 079-composite-source-over-test.js
-├── 080-composite-destination-over-test.js
-├── 081-composite-destination-out-test.js
-├── 082-composite-xor-test.js
-├── 083-composite-destination-atop-test.js
-├── 084-composite-destination-in-test.js
-├── 085-composite-source-atop-test.js
-├── 086-composite-source-in-test.js
-├── 087-composite-source-out-test.js
-├── 088-composite-copy-test.js
-│   └── ... (74 more files)
+│   ├── 076-thick-polyline-bevel-joins-systematic-test.js
+│   ├── 077-thick-polyline-miter-joins-systematic-test.js
+│   ├── 078-thick-polyline-round-joins-systematic-test.js
+│   ├── 079-088-composite-operations-basic-test.js      # Original 10 composite operation tests
+│   ├── 091-100-composite-operations-minimal-test.js    # 10 minimal composite tests
+│   ├── 101-110-composite-operations-clipped-test.js    # 10 clipped composite tests
+│   ├── 111-120-composite-operations-stroked-test.js    # 10 stroked composite tests
+│   ├── 121-130-composite-operations-clipped-stroked.js # 10 clipped+stroked composite tests
+│   └── ... (95 more files)
 ├── browser/                            # Browser-specific test files
 │   ├── index.html                      # Main browser test page (moved from examples/)
 │   ├── simple-test.html                # Simple visual comparison test
@@ -227,7 +227,7 @@ if (fs.existsSync('./tests/dist/core-functionality-tests.js')) {
     ├── 001-simple-rectangle-test.bmp
     ├── 058-line-dash-basic-patterns.bmp
     ├── 060-line-dash-complex-paths.bmp
-    └── ... (88+ BMP files)
+    └── ... (130+ BMP files)
 ```
 
 ## Common Tasks
