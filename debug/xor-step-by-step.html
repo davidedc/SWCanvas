@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>XOR Composite Operation - Step-by-Step Debug</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #333;
+        }
+        .canvases {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 30px;
+            gap: 20px;
+        }
+        .canvas-container {
+            text-align: center;
+            flex: 1;
+        }
+        .canvas-container h3 {
+            margin: 0 0 10px 0;
+            color: #555;
+        }
+        canvas {
+            border: 2px solid #ddd;
+            border-radius: 4px;
+            background: white;
+        }
+        .controls {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        button {
+            padding: 12px 24px;
+            margin: 0 10px;
+            font-size: 16px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .next-btn {
+            background-color: #4CAF50;
+            color: white;
+        }
+        .next-btn:hover {
+            background-color: #45a049;
+        }
+        .prev-btn {
+            background-color: #2196F3;
+            color: white;
+        }
+        .prev-btn:hover {
+            background-color: #1976D2;
+        }
+        .reset-btn {
+            background-color: #ff9800;
+            color: white;
+        }
+        .reset-btn:hover {
+            background-color: #f57c00;
+        }
+        .step-info {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 5px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .step-counter {
+            font-weight: bold;
+            color: #007bff;
+            font-size: 18px;
+        }
+        .step-description {
+            margin: 10px 0;
+            font-size: 16px;
+            color: #333;
+        }
+        .operation-details {
+            background: #e8f4f8;
+            border-left: 4px solid #17a2b8;
+            padding: 10px;
+            margin: 10px 0;
+            font-family: monospace;
+            font-size: 14px;
+        }
+        .difference-alert {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+            display: none;
+        }
+        .pixel-info {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 15px;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .pixel-sample {
+            text-align: center;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+            background: #fff;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>XOR Composite Operation - Step-by-Step Debug</h1>
+            <p>Compare HTML5 Canvas vs SWCanvas at each rendering step</p>
+        </div>
+
+        <div class="controls">
+            <button class="prev-btn" onclick="previousStep()">⬅ Previous Step</button>
+            <button class="next-btn" onclick="nextStep()">Next Step ➡</button>
+            <button class="reset-btn" onclick="resetSteps()">🔄 Reset</button>
+        </div>
+
+        <div class="step-info">
+            <div class="step-counter" id="step-counter">Step 0 of 8</div>
+            <div class="step-description" id="step-description">Ready to start - Click 'Next Step' to begin</div>
+            <div class="operation-details" id="operation-details"></div>
+            <div class="difference-alert" id="difference-alert">
+                <strong>⚠️ Difference Detected!</strong>
+                <div id="difference-details"></div>
+            </div>
+        </div>
+
+        <div class="canvases">
+            <div class="canvas-container">
+                <h3>HTML5 Canvas (Reference)</h3>
+                <canvas id="html5-canvas" width="300" height="200"></canvas>
+                <div class="pixel-info">
+                    <div class="pixel-sample">
+                        <div>Sample Point (150,100)</div>
+                        <div id="html5-pixel">RGBA(255,255,255,255)</div>
+                    </div>
+                </div>
+            </div>
+            <div class="canvas-container">
+                <h3>SWCanvas (Test)</h3>
+                <canvas id="sw-canvas" width="300" height="200"></canvas>
+                <div class="pixel-info">
+                    <div class="pixel-sample">
+                        <div>Sample Point (150,100)</div>
+                        <div id="sw-pixel">RGBA(255,255,255,255)</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Load SWCanvas -->
+    <script src="../dist/swcanvas.js"></script>
+    
+    <script>
+        let currentStep = 0;
+        let html5Canvas, swCanvas, html5Ctx, swCtx, swCanvasElement;
+
+        const steps = [
+            {
+                name: "Initialize canvases",
+                description: "Set up both HTML5 Canvas and SWCanvas - HTML5 starts transparent, SWCanvas starts transparent",
+                operation: "Initial canvas state (HTML5 is transparent by default, SWCanvas surface is transparent by default)",
+                execute: function(ctx, isSW) {
+                    // Do nothing - both should start transparent
+                    // HTML5 Canvas starts with transparent pixels
+                    // SWCanvas Surface also starts with all-zero (transparent) pixels
+                }
+            },
+            {
+                name: "Light gray background",
+                description: "Fill entire canvas with light gray background (#f0f0f0)",
+                operation: "ctx.fillStyle = '#f0f0f0'; ctx.fillRect(0, 0, 300, 200);",
+                execute: function(ctx, isSW) {
+                    ctx.fillStyle = '#f0f0f0';
+                    ctx.fillRect(0, 0, 300, 200);
+                }
+            },
+            {
+                name: "Title indicator",
+                description: "Draw dark gray title indicator rectangle",
+                operation: "ctx.fillStyle = '#333'; ctx.fillRect(10, 10, 80, 15);",
+                execute: function(ctx, isSW) {
+                    ctx.fillStyle = '#333';
+                    ctx.fillRect(10, 10, 80, 15);
+                }
+            },
+            {
+                name: "Clear transparent area",
+                description: "Clear a rectangular area to create transparent background for XOR test",
+                operation: "ctx.clearRect(50, 50, 200, 100);",
+                execute: function(ctx, isSW) {
+                    ctx.clearRect(50, 50, 200, 100);
+                }
+            },
+            {
+                name: "Draw red circle (source-over)",
+                description: "Draw red circle on transparent area using source-over composite operation",
+                operation: "ctx.globalCompositeOperation = 'source-over'; ctx.fillStyle = '#FF0000'; ctx.arc(120, 100, 35, 0, Math.PI * 2); ctx.fill();",
+                execute: function(ctx, isSW) {
+                    ctx.globalCompositeOperation = 'source-over';
+                    ctx.fillStyle = '#FF0000';
+                    ctx.beginPath();
+                    ctx.arc(120, 100, 35, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            },
+            {
+                name: "Draw blue square (XOR)",
+                description: "Draw blue square using XOR composite operation - this should create the difference!",
+                operation: "ctx.globalCompositeOperation = 'xor'; ctx.fillStyle = '#0000FF'; ctx.fillRect(140, 80, 50, 40);",
+                execute: function(ctx, isSW) {
+                    ctx.globalCompositeOperation = 'xor';
+                    ctx.fillStyle = '#0000FF';
+                    ctx.fillRect(140, 80, 50, 40);
+                }
+            },
+            {
+                name: "Yellow rectangle (source-over)",
+                description: "Draw yellow rectangle for second XOR test using source-over",
+                operation: "ctx.globalCompositeOperation = 'source-over'; ctx.fillStyle = 'yellow'; ctx.fillRect(50, 160, 40, 30);",
+                execute: function(ctx, isSW) {
+                    ctx.globalCompositeOperation = 'source-over';
+                    ctx.fillStyle = 'yellow';
+                    ctx.fillRect(50, 160, 40, 30);
+                }
+            },
+            {
+                name: "Purple rectangle (XOR)",
+                description: "Draw purple rectangle using XOR - should cancel with yellow where they overlap",
+                operation: "ctx.globalCompositeOperation = 'xor'; ctx.fillStyle = 'purple'; ctx.fillRect(70, 170, 40, 30);",
+                execute: function(ctx, isSW) {
+                    ctx.globalCompositeOperation = 'xor';
+                    ctx.fillStyle = 'purple';
+                    ctx.fillRect(70, 170, 40, 30);
+                }
+            }
+        ];
+
+        function init() {
+            // Get HTML5 canvas
+            html5Canvas = document.getElementById('html5-canvas');
+            html5Ctx = html5Canvas.getContext('2d');
+
+            // Get SWCanvas
+            swCanvas = document.getElementById('sw-canvas');
+            swCanvasElement = SWCanvas.createCanvas(300, 200);
+            swCtx = swCanvasElement.getContext('2d');
+
+            resetSteps();
+        }
+
+        function executeStep(stepIndex) {
+            if (stepIndex >= 0 && stepIndex < steps.length) {
+                const step = steps[stepIndex];
+                
+                // Execute on HTML5 Canvas
+                step.execute(html5Ctx, false);
+                
+                // Execute on SWCanvas
+                step.execute(swCtx, true);
+                
+                // Copy SWCanvas to display canvas
+                copySWCanvasToDisplay();
+                
+                // Update UI
+                updateStepInfo(stepIndex);
+                
+                // Sample pixels and check for differences
+                checkPixelDifferences();
+            }
+        }
+
+        function copySWCanvasToDisplay() {
+            // Get the SWCanvas surface data
+            const surface = swCanvasElement._coreSurface;
+            const ctx = swCanvas.getContext('2d');
+            const imageData = ctx.createImageData(300, 200);
+            
+            // Copy pixel data (SWCanvas Surface data is already non-premultiplied, just copy directly)
+            // HTML5 ImageData expects non-premultiplied RGBA
+            for (let i = 0; i < surface.data.length; i += 4) {
+                const r = surface.data[i];
+                const g = surface.data[i + 1];
+                const b = surface.data[i + 2];
+                const a = surface.data[i + 3];
+                
+                imageData.data[i] = r;
+                imageData.data[i + 1] = g;  
+                imageData.data[i + 2] = b;
+                imageData.data[i + 3] = a;
+            }
+            
+            // Put the image data on the display canvas
+            ctx.putImageData(imageData, 0, 0);
+        }
+
+        function updateStepInfo(stepIndex) {
+            const step = steps[stepIndex];
+            document.getElementById('step-counter').textContent = `Step ${stepIndex + 1} of ${steps.length}`;
+            document.getElementById('step-description').textContent = step.description;
+            document.getElementById('operation-details').textContent = step.operation;
+        }
+
+        function checkPixelDifferences() {
+            // Sample key pixels to detect differences
+            const samplePoints = [
+                [150, 100, "Center overlap area (inside clearRect)"],
+                [120, 100, "Red circle center (inside clearRect)"],
+                [165, 100, "Blue square center (inside clearRect)"],
+                [75, 175, "Yellow/purple area (outside clearRect - should be gray)"],
+                [25, 25, "Top-left gray area (outside clearRect - should be gray)"],
+                [100, 100, "Transparent area (inside clearRect - should be transparent)"]
+            ];
+
+            let foundDifference = false;
+            let differenceDetails = '';
+
+            for (const [x, y, description] of samplePoints) {
+                const html5Pixel = html5Ctx.getImageData(x, y, 1, 1).data;
+                const swPixel = swCanvas.getContext('2d').getImageData(x, y, 1, 1).data;
+
+                const html5RGBA = `RGBA(${html5Pixel[0]},${html5Pixel[1]},${html5Pixel[2]},${html5Pixel[3]})`;
+                const swRGBA = `RGBA(${swPixel[0]},${swPixel[1]},${swPixel[2]},${swPixel[3]})`;
+
+                if (html5Pixel[0] !== swPixel[0] || html5Pixel[1] !== swPixel[1] || 
+                    html5Pixel[2] !== swPixel[2] || html5Pixel[3] !== swPixel[3]) {
+                    foundDifference = true;
+                    differenceDetails += `<strong>${description}</strong><br>At (${x},${y}): HTML5=${html5RGBA} vs SWCanvas=${swRGBA}<br><br>`;
+                }
+            }
+
+            // Update sample pixel display (using center point)
+            const centerHTML5 = html5Ctx.getImageData(150, 100, 1, 1).data;
+            const centerSW = swCanvas.getContext('2d').getImageData(150, 100, 1, 1).data;
+            
+            document.getElementById('html5-pixel').textContent = 
+                `RGBA(${centerHTML5[0]},${centerHTML5[1]},${centerHTML5[2]},${centerHTML5[3]})`;
+            document.getElementById('sw-pixel').textContent = 
+                `RGBA(${centerSW[0]},${centerSW[1]},${centerSW[2]},${centerSW[3]})`;
+
+            // Show/hide difference alert
+            const alert = document.getElementById('difference-alert');
+            if (foundDifference) {
+                alert.style.display = 'block';
+                document.getElementById('difference-details').innerHTML = differenceDetails;
+            } else {
+                alert.style.display = 'none';
+            }
+        }
+
+        function nextStep() {
+            if (currentStep < steps.length) {
+                executeStep(currentStep);
+                currentStep++;
+            }
+        }
+
+        function previousStep() {
+            if (currentStep > 0) {
+                currentStep--;
+                redrawUpToStep(currentStep - 1);
+            }
+        }
+
+        function resetSteps() {
+            currentStep = 0;
+            
+            // Reset both canvases to initial transparent state
+            // HTML5 Canvas: use clearRect to get back to transparent
+            html5Ctx.clearRect(0, 0, 300, 200);
+            
+            // SWCanvas: use clearRect to get back to transparent  
+            swCtx.clearRect(0, 0, 300, 200);
+            
+            // Clear display canvas to transparent
+            swCanvas.getContext('2d').clearRect(0, 0, 300, 200);
+            
+            // Copy the cleared SWCanvas state to display
+            copySWCanvasToDisplay();
+            
+            // Reset UI
+            document.getElementById('step-counter').textContent = `Step 0 of ${steps.length}`;
+            document.getElementById('step-description').textContent = "Ready to start - Click 'Next Step' to begin";
+            document.getElementById('operation-details').textContent = '';
+            document.getElementById('difference-alert').style.display = 'none';
+            
+            // Reset pixel displays
+            document.getElementById('html5-pixel').textContent = 'RGBA(0,0,0,0)';
+            document.getElementById('sw-pixel').textContent = 'RGBA(0,0,0,0)';
+        }
+
+        function redrawUpToStep(stepIndex) {
+            // Clear and redraw from beginning up to stepIndex
+            html5Ctx.clearRect(0, 0, 300, 200);
+            swCtx.clearRect(0, 0, 300, 200);
+            
+            // Execute steps from 0 to stepIndex (inclusive)
+            for (let i = 0; i <= stepIndex; i++) {
+                if (i < steps.length) {
+                    steps[i].execute(html5Ctx, false);
+                    steps[i].execute(swCtx, true);
+                }
+            }
+            
+            copySWCanvasToDisplay();
+            
+            if (stepIndex >= 0) {
+                updateStepInfo(stepIndex);
+                checkPixelDifferences();
+            } else {
+                document.getElementById('step-counter').textContent = `Step 0 of ${steps.length}`;
+                document.getElementById('step-description').textContent = "Ready to start - Click 'Next Step' to begin";
+                document.getElementById('operation-details').textContent = '';
+            }
+        }
+
+        // Initialize when page loads
+        window.addEventListener('load', init);
+    </script>
+</body>
+</html>

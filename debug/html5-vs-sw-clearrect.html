@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>HTML5 vs SW Canvas ClearRect Test</title>
+</head>
+<body>
+    <h1>HTML5 vs SW Canvas ClearRect Comparison</h1>
+    
+    <div style="display: flex; gap: 20px;">
+        <div>
+            <h3>HTML5 Canvas</h3>
+            <canvas id="html5" width="300" height="200" style="border: 1px solid black;"></canvas>
+        </div>
+        <div>
+            <h3>SWCanvas</h3>
+            <canvas id="sw" width="300" height="200" style="border: 1px solid black;"></canvas>
+        </div>
+    </div>
+
+    <div id="output" style="margin-top: 20px; font-family: monospace;"></div>
+
+    <script src="../dist/swcanvas.js"></script>
+    <script>
+        const output = document.getElementById('output');
+        
+        function log(message) {
+            output.innerHTML += message + '<br>';
+        }
+        
+        // HTML5 Canvas test
+        log('=== HTML5 Canvas Test ===');
+        const html5Canvas = document.getElementById('html5');
+        const html5Ctx = html5Canvas.getContext('2d');
+        
+        // Check initial state
+        let html5InitialPixel = html5Ctx.getImageData(150, 100, 1, 1).data;
+        log(`HTML5 initial pixel: RGBA(${html5InitialPixel[0]}, ${html5InitialPixel[1]}, ${html5InitialPixel[2]}, ${html5InitialPixel[3]})`);
+        
+        // Step 1: Light gray background
+        html5Ctx.fillStyle = '#f0f0f0';
+        html5Ctx.fillRect(0, 0, 300, 200);
+        
+        // Step 2: Title indicator
+        html5Ctx.fillStyle = '#333';
+        html5Ctx.fillRect(10, 10, 80, 15);
+        
+        // Step 3: Clear area
+        html5Ctx.clearRect(50, 50, 200, 100);
+        
+        // Check pixels
+        let html5ClearedPixel = html5Ctx.getImageData(150, 100, 1, 1).data;
+        let html5BackgroundPixel = html5Ctx.getImageData(25, 25, 1, 1).data;
+        
+        log(`HTML5 cleared pixel: RGBA(${html5ClearedPixel[0]}, ${html5ClearedPixel[1]}, ${html5ClearedPixel[2]}, ${html5ClearedPixel[3]})`);
+        log(`HTML5 background pixel: RGBA(${html5BackgroundPixel[0]}, ${html5BackgroundPixel[1]}, ${html5BackgroundPixel[2]}, ${html5BackgroundPixel[3]})`);
+        
+        // SWCanvas test
+        log('<br>=== SWCanvas Test ===');
+        const swCanvasElement = SWCanvas.createCanvas(300, 200);
+        const swCtx = swCanvasElement.getContext('2d');
+        
+        // Check initial state
+        let swInitialPixel = swCtx.getImageData(150, 100, 1, 1).data;
+        log(`SW initial pixel: RGBA(${swInitialPixel[0]}, ${swInitialPixel[1]}, ${swInitialPixel[2]}, ${swInitialPixel[3]})`);
+        
+        // Step 1: Light gray background
+        swCtx.fillStyle = '#f0f0f0';
+        swCtx.fillRect(0, 0, 300, 200);
+        
+        // Step 2: Title indicator
+        swCtx.fillStyle = '#333';
+        swCtx.fillRect(10, 10, 80, 15);
+        
+        // Step 3: Clear area
+        swCtx.clearRect(50, 50, 200, 100);
+        
+        // Check pixels
+        let swClearedPixel = swCtx.getImageData(150, 100, 1, 1).data;
+        let swBackgroundPixel = swCtx.getImageData(25, 25, 1, 1).data;
+        
+        log(`SW cleared pixel: RGBA(${swClearedPixel[0]}, ${swClearedPixel[1]}, ${swClearedPixel[2]}, ${swClearedPixel[3]})`);
+        log(`SW background pixel: RGBA(${swBackgroundPixel[0]}, ${swBackgroundPixel[1]}, ${swBackgroundPixel[2]}, ${swBackgroundPixel[3]})`);
+        
+        // Show on display canvas
+        const swDisplayCanvas = document.getElementById('sw');
+        const swDisplayCtx = swDisplayCanvas.getContext('2d');
+        
+        // Copy SWCanvas surface to display
+        const surface = swCanvasElement._coreSurface;
+        const imageData = swDisplayCtx.createImageData(300, 200);
+        for (let i = 0; i < surface.data.length; i++) {
+            imageData.data[i] = surface.data[i];
+        }
+        swDisplayCtx.putImageData(imageData, 0, 0);
+        
+        // Compare
+        log('<br>=== Comparison ===');
+        if (html5ClearedPixel[3] === swClearedPixel[3]) {
+            log('✓ Cleared areas match');
+        } else {
+            log(`✗ Cleared areas differ: HTML5 alpha=${html5ClearedPixel[3]}, SW alpha=${swClearedPixel[3]}`);
+        }
+    </script>
+</body>
+</html>
