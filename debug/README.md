@@ -27,6 +27,20 @@ Debug utilities help developers:
 - `debug-overlap-analysis.js` - Coordinate overlap calculation and verification
 - `debug-specific-pixel.js` - Individual pixel behavior investigation
 
+### Step-by-Step Interactive Debugging
+
+**Purpose**: Interactive browser-based tools for detailed operation-by-operation analysis.
+
+- `xor-step-by-step.html` - Interactive XOR composite operation debugger with step-by-step canvas rendering comparison
+- `html5-vs-sw-clearrect.html` - HTML5 Canvas vs SWCanvas clearRect behavior comparison
+
+### clearRect Issue Debugging
+
+**Purpose**: Utilities created to investigate and fix clearRect implementation issues.
+
+- `clearrect-test.js` - Node.js clearRect behavior validation
+- `gray-background-test.js` - Validates clearRect boundary behavior with background preservation
+
 ### Coordinate and Coverage Analysis
 
 **Purpose**: Verify geometric calculations, shape coverage, and pixel positioning.
@@ -190,6 +204,43 @@ Create HTML files for visual comparison:
     </script>
 </body>
 </html>
+```
+
+### 5. clearRect Issue Debugging
+
+For investigating clearRect behavior and boundary conditions:
+
+```bash
+# Test clearRect boundary behavior
+node debug/gray-background-test.js
+
+# Interactive step-by-step XOR debugging (includes clearRect step)
+open debug/xor-step-by-step.html
+```
+
+**Interactive Step-by-Step Debugging Usage:**
+1. Open `xor-step-by-step.html` in Safari/Chrome
+2. Click "Next Step" to advance through each rendering operation
+3. Watch for differences between HTML5 Canvas and SWCanvas panels
+4. Check detailed pixel analysis in the difference alert boxes
+5. Use "Previous Step" and "Reset" for thorough investigation
+
+**clearRect Validation Pattern:**
+```javascript
+// Template for testing clearRect behavior
+const canvas = SWCanvas.createCanvas(300, 200);
+const ctx = canvas.getContext('2d');
+
+// 1. Fill background
+ctx.fillStyle = '#f0f0f0';
+ctx.fillRect(0, 0, 300, 200);
+
+// 2. Clear specific area
+ctx.clearRect(50, 50, 200, 100);
+
+// 3. Validate boundaries
+const insideCleared = ctx.getImageData(100, 100, 1, 1).data; // Should be transparent
+const outsideCleared = ctx.getImageData(25, 25, 1, 1).data; // Should be gray
 ```
 
 ## Debug Script Patterns

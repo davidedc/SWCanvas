@@ -211,6 +211,17 @@ This ensures BMP output accurately represents how semi-transparent elements woul
 - **Rasterizer.js**: Determines local vs global operation routing
 - **BitmapEncoder.js**: Handles alpha compositing during export
 
+### Special Case Implementations
+
+**clearRect Architecture**: The `clearRect` operation bypasses the standard composite operation pipeline to avoid global compositing issues. Instead of using the `copy` composite operation (which would affect the entire surface), `clearRect` uses direct pixel manipulation through `Context2D._clearRectDirect()`. This approach:
+
+- Preserves pixels outside the specified rectangle
+- Handles both axis-aligned and transformed rectangles
+- Respects active clipping masks
+- Avoids the performance overhead of global compositing for a localized operation
+
+This architectural decision ensures HTML5 Canvas compatibility while maintaining optimal performance for rectangle clearing operations.
+
 ## Interoperability Bridges
 
 The architecture provides seamless interoperability between layers:

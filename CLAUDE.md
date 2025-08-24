@@ -457,6 +457,10 @@ const SWCanvas = require('./dist/swcanvas.min.js');
 4. Ensure both SWCanvas and HTML5Canvas paths in tests do the same thing
 5. Run full test suite to verify no regressions
 
+#### Special Implementation Notes
+
+**clearRect Implementation**: `clearRect` uses direct pixel manipulation (`Context2D._clearRectDirect`) rather than the standard composite operation pipeline. This avoids global compositing issues that would affect the entire canvas. The implementation handles both axis-aligned and transformed rectangles correctly while respecting clipping masks.
+
 ## Architecture Status
 
 Project fully implemented with object-oriented ES6 class design. See ARCHITECTURE.md for complete architectural details and design patterns.
