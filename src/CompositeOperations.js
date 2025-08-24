@@ -5,7 +5,7 @@
  * Provides optimized blending functions for various composite operations.
  * Supports full Porter-Duff compositing operations and follows Canvas 2D API spec.
  * 
- * STATUS: Fully implemented with global compositing support
+ * STATUS: Fully implemented with canvas-wide compositing support
  * 
  * ALL OPERATIONS WORKING CORRECTLY:
  * - source-over (default) - Source drawn on top of destination
@@ -20,8 +20,8 @@
  * - copy - Source replaces destination completely
  * 
  * The implementation uses a dual rendering approach:
- * - Local operations (source-over, destination-over, destination-out, xor, source-atop) process only source-covered pixels
- * - Global operations (destination-atop, source-in, destination-in, source-out, copy) 
+ * - Source-bounded operations (source-over, destination-over, destination-out, xor, source-atop) process only source-covered pixels
+ * - Canvas-wide operations (destination-atop, source-in, destination-in, source-out, copy) 
  *   use source coverage masks and full-region compositing to correctly handle pixels outside the source area
  */
 class CompositeOperations {

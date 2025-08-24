@@ -158,12 +158,12 @@ SWCanvas implements a comprehensive Porter-Duff composite operations system that
 
 The system uses two distinct rendering paths based on operation characteristics:
 
-**Local Operations** (process only source-covered pixels):
+**Source-bounded Operations** (process only source-covered pixels):
 - `source-over`, `destination-over`, `destination-out`, `xor`
 - Render directly during polygon filling
 - Optimal performance for common operations
 
-**Global Operations** (require full-region compositing):
+**Canvas-wide Operations** (require full-region compositing):
 - `destination-atop`, `source-atop`, `source-in`, `destination-in`, `source-out`, `copy`
 - Use source coverage masks and dual-pass rendering
 - Correctly handle pixels outside source area
@@ -207,8 +207,8 @@ This ensures BMP output accurately represents how semi-transparent elements woul
 ### Implementation Components
 
 - **CompositeOperations.js**: Core blending logic with HTML5 Canvas behavior matching
-- **SourceMask.js**: Tracks source coverage for global operations
-- **Rasterizer.js**: Determines local vs global operation routing
+- **SourceMask.js**: Tracks source coverage for canvas-wide operations
+- **Rasterizer.js**: Determines source-bounded vs canvas-wide operation routing
 - **BitmapEncoder.js**: Handles alpha compositing during export
 
 ### Special Case Implementations

@@ -235,13 +235,13 @@ class Context2D {
     }
 
     clearRect(x, y, width, height) {
-    // clearRect should only affect the specified rectangle, not use global compositing
+    // clearRect should only affect the specified rectangle, not use canvas-wide compositing
     // We'll handle this as a special case by directly clearing the surface pixels
     this._clearRectDirect(x, y, width, height);
     }
     
     /**
-     * Clear rectangle directly without global compositing
+     * Clear rectangle directly without canvas-wide compositing
      * @param {number} x - Rectangle x coordinate
      * @param {number} y - Rectangle y coordinate  
      * @param {number} width - Rectangle width

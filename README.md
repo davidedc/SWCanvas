@@ -182,8 +182,8 @@ ctx.fillStyle = 'blue';
 ctx.fillRect(50, 50, 40, 40);
 
 // All Porter-Duff operations supported:
-// Local operations: source-over (default), destination-over, destination-out, xor
-// Global operations: destination-atop, destination-in, source-atop, source-in, source-out, copy
+// Source-bounded operations: source-over (default), destination-over, destination-out, xor
+// Canvas-wide operations: destination-atop, destination-in, source-atop, source-in, source-out, copy
 
 // ImageData API for pixel manipulation
 const imageData = ctx.createImageData(100, 100);

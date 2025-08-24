@@ -1,9 +1,9 @@
 /**
  * SourceMask class for SWCanvas
  * 
- * Represents a 1-bit source coverage mask for global-effect composite operations.
+ * Represents a 1-bit source coverage mask for canvas-wide composite operations.
  * Tracks which pixels are covered by the current drawing operation and provides
- * efficient bounds for iteration during global compositing passes.
+ * efficient bounds for iteration during canvas-wide compositing passes.
  * 
  * Optimizations:
  * - 1-bit per pixel memory efficiency (same as ClipMask)
@@ -141,17 +141,17 @@ class SourceMask {
     /**
      * Get optimized iteration bounds clamped to surface and intersected with clipMask bounds if provided
      * @param {ClipMask|null} clipMask - Optional clip mask to intersect with  
-     * @param {boolean} isGlobalCompositing - True if this is for global compositing operations
+     * @param {boolean} isCanvasWideCompositing - True if this is for canvas-wide compositing operations
      * @returns {Object} {minX, minY, maxX, maxY, isEmpty} optimized iteration bounds
      */
-    getIterationBounds(clipMask = null, isGlobalCompositing = false) {
+    getIterationBounds(clipMask = null, isCanvasWideCompositing = false) {
         if (this._bounds.isEmpty) {
             return { minX: 0, minY: 0, maxX: -1, maxY: -1, isEmpty: true };
         }
         
-        // For global compositing operations, we need to process the entire surface
+        // For canvas-wide compositing operations, we need to process the entire surface
         // because destination pixels anywhere could be affected
-        if (isGlobalCompositing) {
+        if (isCanvasWideCompositing) {
             if (clipMask && clipMask.hasClipping()) {
                 // With clipping: process entire surface (clipping will filter pixels)
                 return {
@@ -162,7 +162,7 @@ class SourceMask {
                     isEmpty: false
                 };
             } else {
-                // No clipping: process entire surface for global operations
+                // No clipping: process entire surface for canvas-wide operations
                 return {
                     minX: 0,
                     minY: 0,

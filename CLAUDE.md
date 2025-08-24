@@ -128,9 +128,9 @@ src/ColorParser.js            # CSS color string parsing (hex, rgb, named colors
 - **HTML5 Canvas compatibility**: `globalCompositeOperation` property matches HTML5 Canvas 2D API
 - **Centralized blending**: `CompositeOperations.js` utility class with mathematically correct Porter-Duff formulas
 - **Full Porter-Duff compliance**: All 10 composite operations now working correctly
-- **Local operations** (source-over, destination-over, destination-out, xor): Process only source-covered pixels
-- **Global operations** (destination-atop, source-atop, source-in, destination-in, source-out, copy): Use source coverage masks and full-region compositing to correctly handle pixels outside the source area
-- **Implementation**: Dual rendering approach using `SourceMask` class for global operations
+- **Source-bounded operations** (source-over, destination-over, destination-out, xor): Process only source-covered pixels
+- **Canvas-wide operations** (destination-atop, source-atop, source-in, destination-in, source-out, copy): Use source coverage masks and full-region compositing to correctly handle pixels outside the source area
+- **Implementation**: Dual rendering approach using `SourceMask` class for canvas-wide operations
 - **Usage**: `ctx.globalCompositeOperation = 'destination-atop'` (both Core API and HTML5 Canvas-compatible API)
 - **Testing**: Comprehensive visual test coverage across 5 test suites:
   - **Basic tests** (079-088): Original comprehensive composite operation tests

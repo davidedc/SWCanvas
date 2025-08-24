@@ -22,7 +22,7 @@ class PolygonFiller {
      * @param {number} globalAlpha - Global alpha value (0-1) for rendering operation
      * @param {number} subPixelOpacity - Sub-pixel opacity for thin strokes (0-1)
      * @param {string} composite - Composite operation (default: 'source-over')
-     * @param {SourceMask|null} sourceMask - Optional source coverage mask for global compositing
+     * @param {SourceMask|null} sourceMask - Optional source coverage mask for canvas-wide compositing
      */
     static fillPolygons(surface, polygons, paintSource, fillRule, transform, clipMask, globalAlpha = 1.0, subPixelOpacity = 1.0, composite = 'source-over', sourceMask = null) {
         if (polygons.length === 0) return;
@@ -204,7 +204,7 @@ class PolygonFiller {
             // Record source coverage if sourceMask is provided
             if (sourceMask) {
                 sourceMask.setPixel(x, y, true);
-                // For global compositing operations, only build source mask - don't draw to surface
+                // For canvas-wide compositing operations, only build source mask - don't draw to surface
                 continue;
             }
             
