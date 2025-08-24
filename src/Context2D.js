@@ -235,14 +235,104 @@ class Context2D {
     }
 
     clearRect(x, y, width, height) {
-    this.rasterizer.beginOp({
-        composite: 'copy',
-        globalAlpha: 1.0,
-        transform: this._transform
-    });
+    // clearRect should only affect the specified rectangle, not use global compositing
+    // We'll handle this as a special case by directly clearing the surface pixels
+    this._clearRectDirect(x, y, width, height);
+    }
     
-    this.rasterizer.fillRect(x, y, width, height, [0, 0, 0, 0]); // Transparent
-    this.rasterizer.endOp();
+    /**
+     * Clear rectangle directly without global compositing
+     * @param {number} x - Rectangle x coordinate
+     * @param {number} y - Rectangle y coordinate  
+     * @param {number} width - Rectangle width
+     * @param {number} height - Rectangle height
+     * @private
+     */
+    _clearRectDirect(x, y, width, height) {
+        // Validate parameters
+        if (typeof x !== 'number' || typeof y !== 'number' || 
+            typeof width !== 'number' || typeof height !== 'number') {
+            throw new Error('Rectangle coordinates must be numbers');
+        }
+        
+        if (width < 0 || height < 0) {
+            return; // Nothing to clear for negative dimensions
+        }
+        
+        if (width === 0 || height === 0) {
+            return; // Nothing to clear for zero dimensions
+        }
+        
+        const surface = this.surface;
+        const transform = this._transform;
+        
+        // Transform rectangle corners to determine affected region
+        const topLeft = transform.transformPoint({x: x, y: y});
+        const topRight = transform.transformPoint({x: x + width, y: y});
+        const bottomLeft = transform.transformPoint({x: x, y: y + height});
+        const bottomRight = transform.transformPoint({x: x + width, y: y + height});
+        
+        // Get bounding box of transformed rectangle
+        const minX = Math.floor(Math.min(topLeft.x, topRight.x, bottomLeft.x, bottomRight.x));
+        const maxX = Math.ceil(Math.max(topLeft.x, topRight.x, bottomLeft.x, bottomRight.x));
+        const minY = Math.floor(Math.min(topLeft.y, topRight.y, bottomLeft.y, bottomRight.y));
+        const maxY = Math.ceil(Math.max(topLeft.y, topRight.y, bottomLeft.y, bottomRight.y));
+        
+        // Handle simple axis-aligned case (no rotation/skew)
+        if (transform.b === 0 && transform.c === 0) {
+            // Calculate the actual rectangle bounds in surface coordinates
+            const rectLeft = transform.e + x * transform.a; // x coordinate with scaling and translation
+            const rectTop = transform.f + y * transform.d;  // y coordinate with scaling and translation  
+            const rectRight = rectLeft + width * transform.a;
+            const rectBottom = rectTop + height * transform.d;
+            
+            // Get integer pixel bounds
+            const startX = Math.max(0, Math.floor(rectLeft));
+            const endX = Math.min(surface.width - 1, Math.floor(rectRight) - 1); // Exclusive end
+            const startY = Math.max(0, Math.floor(rectTop));
+            const endY = Math.min(surface.height - 1, Math.floor(rectBottom) - 1); // Exclusive end
+            
+            for (let py = startY; py <= endY; py++) {
+                for (let px = startX; px <= endX; px++) {
+                    // Check if this pixel should be clipped by current clip mask
+                    if (this._clipMask && this._clipMask.isPixelClipped(px, py)) {
+                        continue;
+                    }
+                    
+                    const offset = py * surface.stride + px * 4;
+                    surface.data[offset] = 0;     // R
+                    surface.data[offset + 1] = 0; // G  
+                    surface.data[offset + 2] = 0; // B
+                    surface.data[offset + 3] = 0; // A (transparent)
+                }
+            }
+        } else {
+            // For rotated/skewed rectangles, we need to test each pixel 
+            // This is more complex but handles all transformation cases correctly
+            const invTransform = transform.invert();
+            
+            for (let py = Math.max(0, minY); py <= Math.min(surface.height - 1, maxY); py++) {
+                for (let px = Math.max(0, minX); px <= Math.min(surface.width - 1, maxX); px++) {
+                    // Check if this pixel should be clipped by current clip mask
+                    if (this._clipMask && this._clipMask.isPixelClipped(px, py)) {
+                        continue;
+                    }
+                    
+                    // Transform pixel back to path coordinate space
+                    const pathPoint = invTransform.transformPoint({x: px + 0.5, y: py + 0.5});
+                    
+                    // Check if point is inside the clearRect rectangle
+                    if (pathPoint.x >= x && pathPoint.x < x + width &&
+                        pathPoint.y >= y && pathPoint.y < y + height) {
+                        const offset = py * surface.stride + px * 4;
+                        surface.data[offset] = 0;     // R
+                        surface.data[offset + 1] = 0; // G
+                        surface.data[offset + 2] = 0; // B  
+                        surface.data[offset + 3] = 0; // A (transparent)
+                    }
+                }
+            }
+        }
     }
 
     // M2: Path drawing methods
