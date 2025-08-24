@@ -1081,7 +1081,7 @@ class Surface {
  * Provides optimized blending functions for various composite operations.
  * Supports full Porter-Duff compositing operations and follows Canvas 2D API spec.
  * 
- * STATUS: Fully implemented with global compositing support
+ * STATUS: Fully implemented with canvas-wide compositing support
  * 
  * ALL OPERATIONS WORKING CORRECTLY:
  * - source-over (default) - Source drawn on top of destination
@@ -1096,8 +1096,8 @@ class Surface {
  * - copy - Source replaces destination completely
  * 
  * The implementation uses a dual rendering approach:
- * - Local operations (source-over, destination-over, destination-out, xor, source-atop) process only source-covered pixels
- * - Global operations (destination-atop, source-in, destination-in, source-out, copy) 
+ * - Source-bounded operations (source-over, destination-over, destination-out, xor, source-atop) process only source-covered pixels
+ * - Canvas-wide operations (destination-atop, source-in, destination-in, source-out, copy) 
  *   use source coverage masks and full-region compositing to correctly handle pixels outside the source area
  */
 class CompositeOperations {
@@ -2113,7 +2113,7 @@ class PolygonFiller {
      * @param {number} globalAlpha - Global alpha value (0-1) for rendering operation
      * @param {number} subPixelOpacity - Sub-pixel opacity for thin strokes (0-1)
      * @param {string} composite - Composite operation (default: 'source-over')
-     * @param {SourceMask|null} sourceMask - Optional source coverage mask for global compositing
+     * @param {SourceMask|null} sourceMask - Optional source coverage mask for canvas-wide compositing
      */
     static fillPolygons(surface, polygons, paintSource, fillRule, transform, clipMask, globalAlpha = 1.0, subPixelOpacity = 1.0, composite = 'source-over', sourceMask = null) {
         if (polygons.length === 0) return;
@@ -2295,7 +2295,7 @@ class PolygonFiller {
             // Record source coverage if sourceMask is provided
             if (sourceMask) {
                 sourceMask.setPixel(x, y, true);
-                // For global compositing operations, only build source mask - don't draw to surface
+                // For canvas-wide compositing operations, only build source mask - don't draw to surface
                 continue;
             }
             
@@ -3485,9 +3485,9 @@ class ClipMask {
 /**
  * SourceMask class for SWCanvas
  * 
- * Represents a 1-bit source coverage mask for global-effect composite operations.
+ * Represents a 1-bit source coverage mask for canvas-wide composite operations.
  * Tracks which pixels are covered by the current drawing operation and provides
- * efficient bounds for iteration during global compositing passes.
+ * efficient bounds for iteration during canvas-wide compositing passes.
  * 
  * Optimizations:
  * - 1-bit per pixel memory efficiency (same as ClipMask)
@@ -3625,17 +3625,17 @@ class SourceMask {
     /**
      * Get optimized iteration bounds clamped to surface and intersected with clipMask bounds if provided
      * @param {ClipMask|null} clipMask - Optional clip mask to intersect with  
-     * @param {boolean} isGlobalCompositing - True if this is for global compositing operations
+     * @param {boolean} isCanvasWideCompositing - True if this is for canvas-wide compositing operations
      * @returns {Object} {minX, minY, maxX, maxY, isEmpty} optimized iteration bounds
      */
-    getIterationBounds(clipMask = null, isGlobalCompositing = false) {
+    getIterationBounds(clipMask = null, isCanvasWideCompositing = false) {
         if (this._bounds.isEmpty) {
             return { minX: 0, minY: 0, maxX: -1, maxY: -1, isEmpty: true };
         }
         
-        // For global compositing operations, we need to process the entire surface
+        // For canvas-wide compositing operations, we need to process the entire surface
         // because destination pixels anywhere could be affected
-        if (isGlobalCompositing) {
+        if (isCanvasWideCompositing) {
             if (clipMask && clipMask.hasClipping()) {
                 // With clipping: process entire surface (clipping will filter pixels)
                 return {
@@ -3646,7 +3646,7 @@ class SourceMask {
                     isEmpty: false
                 };
             } else {
-                // No clipping: process entire surface for global operations
+                // No clipping: process entire surface for canvas-wide operations
                 return {
                     minX: 0,
                     minY: 0,
@@ -4911,11 +4911,11 @@ class Rasterizer {
             clipMask: params.clipMask || null,  // Stencil-based clipping
             fillStyle: params.fillStyle || null,
             strokeStyle: params.strokeStyle || null,
-            sourceMask: null  // Will be initialized if needed for global compositing
+            sourceMask: null  // Will be initialized if needed for canvas-wide compositing
         };
 
         // Initialize source mask for global-effect operations
-        if (this._requiresGlobalCompositing(this._currentOp.composite)) {
+        if (this._requiresCanvasWideCompositing(this._currentOp.composite)) {
             this._currentOp.sourceMask = new SourceMask(this._surface.width, this._surface.height);
         }
     }
@@ -4959,12 +4959,12 @@ class Rasterizer {
     }
 
     /**
-     * Check if a composite operation requires global compositing (affects pixels outside source)
+     * Check if a composite operation requires canvas-wide compositing (affects pixels outside source)
      * @param {string} operation - Composite operation name
-     * @returns {boolean} True if operation requires global compositing
+     * @returns {boolean} True if operation requires canvas-wide compositing
      * @private
      */
-    _requiresGlobalCompositing(operation) {
+    _requiresCanvasWideCompositing(operation) {
         const globalOps = ['destination-atop', 'destination-in', 'source-in', 'source-out', 'copy'];
         return globalOps.includes(operation);
     }
@@ -5004,8 +5004,8 @@ class Rasterizer {
         
         if (width === 0 || height === 0) return; // Nothing to draw
         
-        // If there's stencil clipping or global compositing, convert the rectangle to a path and use path filling
-        if (this._currentOp.clipMask || this._requiresGlobalCompositing(this._currentOp.composite)) {
+        // If there's stencil clipping or canvas-wide compositing, convert the rectangle to a path and use path filling
+        if (this._currentOp.clipMask || this._requiresCanvasWideCompositing(this._currentOp.composite)) {
             // Create a path for the rectangle
             const rectPath = new Path2D();
             rectPath.rect(x, y, width, height);
@@ -5017,7 +5017,7 @@ class Rasterizer {
                 this._currentOp.fillStyle = new Color(color[0], color[1], color[2], color[3]);
             }
             
-            // Use the existing path filling logic which handles stencil clipping and global compositing properly
+            // Use the existing path filling logic which handles stencil clipping and canvas-wide compositing properly
             this.fill(rectPath, 'nonzero');
             
             // Restore original fill style
@@ -5116,15 +5116,15 @@ class Rasterizer {
     }
 
     /**
-     * Perform global compositing for operations that affect pixels outside the source area
+     * Perform canvas-wide compositing for operations that affect pixels outside the source area
      * @param {Color|Gradient|Pattern} paintSource - Paint source for source pixels
      * @param {number} globalAlpha - Global alpha value (0-1)
      * @param {number} subPixelOpacity - Sub-pixel opacity for thin strokes (0-1)
      * @private
      */
-    _performGlobalCompositing(paintSource, globalAlpha = 1.0, subPixelOpacity = 1.0) {
+    _performCanvasWideCompositing(paintSource, globalAlpha = 1.0, subPixelOpacity = 1.0) {
         if (!this._currentOp || !this._currentOp.sourceMask) {
-            throw new Error('Global compositing requires active operation with source mask');
+            throw new Error('Canvas-wide compositing requires active operation with source mask');
         }
 
         const surface = this._surface;
@@ -5133,7 +5133,7 @@ class Rasterizer {
         const transform = this._currentOp.transform;
         const clipMask = this._currentOp.clipMask;
 
-        // Get optimized iteration bounds (full surface for global compositing)
+        // Get optimized iteration bounds (full surface for canvas-wide compositing)
         const bounds = sourceMask.getIterationBounds(clipMask, true);
         if (bounds.isEmpty) {
             return; // Nothing to composite
@@ -5197,14 +5197,14 @@ class Rasterizer {
         // Flatten path to polygons
         const polygons = PathFlattener.flattenPath(path);
         
-        if (this._requiresGlobalCompositing(this._currentOp.composite)) {
-            // Global compositing path: build source mask then perform global compositing
+        if (this._requiresCanvasWideCompositing(this._currentOp.composite)) {
+            // Canvas-wide compositing path: build source mask then perform canvas-wide compositing
             PolygonFiller.fillPolygons(this._surface, polygons, fillStyle, fillRule, this._currentOp.transform, this._currentOp.clipMask, this._currentOp.globalAlpha, 1.0, this._currentOp.composite, this._currentOp.sourceMask);
             
-            // Perform global compositing pass
-            this._performGlobalCompositing(fillStyle, this._currentOp.globalAlpha, 1.0);
+            // Perform canvas-wide compositing pass
+            this._performCanvasWideCompositing(fillStyle, this._currentOp.globalAlpha, 1.0);
         } else {
-            // Local compositing path: direct rendering (existing behavior)
+            // Source-bounded compositing path: direct rendering (existing behavior)
             PolygonFiller.fillPolygons(this._surface, polygons, fillStyle, fillRule, this._currentOp.transform, this._currentOp.clipMask, this._currentOp.globalAlpha, 1.0, this._currentOp.composite);
         }
     }
@@ -5236,14 +5236,14 @@ class Rasterizer {
         // Generate stroke polygons using geometric approach
         const strokePolygons = StrokeGenerator.generateStrokePolygons(path, adjustedStrokeProps);
         
-        if (this._requiresGlobalCompositing(this._currentOp.composite)) {
-            // Global compositing path: build source mask then perform global compositing
+        if (this._requiresCanvasWideCompositing(this._currentOp.composite)) {
+            // Canvas-wide compositing path: build source mask then perform canvas-wide compositing
             PolygonFiller.fillPolygons(this._surface, strokePolygons, strokeStyle, 'nonzero', this._currentOp.transform, this._currentOp.clipMask, this._currentOp.globalAlpha, subPixelOpacity, this._currentOp.composite, this._currentOp.sourceMask);
             
-            // Perform global compositing pass
-            this._performGlobalCompositing(strokeStyle, this._currentOp.globalAlpha, subPixelOpacity);
+            // Perform canvas-wide compositing pass
+            this._performCanvasWideCompositing(strokeStyle, this._currentOp.globalAlpha, subPixelOpacity);
         } else {
-            // Local compositing path: direct rendering (existing behavior)
+            // Source-bounded compositing path: direct rendering (existing behavior)
             PolygonFiller.fillPolygons(this._surface, strokePolygons, strokeStyle, 'nonzero', this._currentOp.transform, this._currentOp.clipMask, this._currentOp.globalAlpha, subPixelOpacity, this._currentOp.composite);
         }
     }
@@ -5633,13 +5633,13 @@ class Context2D {
     }
 
     clearRect(x, y, width, height) {
-    // clearRect should only affect the specified rectangle, not use global compositing
+    // clearRect should only affect the specified rectangle, not use canvas-wide compositing
     // We'll handle this as a special case by directly clearing the surface pixels
     this._clearRectDirect(x, y, width, height);
     }
     
     /**
-     * Clear rectangle directly without global compositing
+     * Clear rectangle directly without canvas-wide compositing
      * @param {number} x - Rectangle x coordinate
      * @param {number} y - Rectangle y coordinate  
      * @param {number} width - Rectangle width
