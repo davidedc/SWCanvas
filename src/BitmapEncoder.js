@@ -14,9 +14,10 @@ class BitmapEncoder {
     /**
      * Encode a surface to BMP format
      * @param {Surface} surface - Surface to encode
+     * @param {BitmapEncodingOptions} [options=BitmapEncodingOptions.DEFAULT] - Encoding options
      * @returns {ArrayBuffer} BMP file data
      */
-    static encode(surface) {
+    static encode(surface, options = BitmapEncodingOptions.DEFAULT) {
         if (!surface || typeof surface !== 'object') {
             throw new Error('Surface must be a valid Surface object');
         }
@@ -47,7 +48,7 @@ class BitmapEncoder {
         BitmapEncoder._writeBMPHeaders(view, dimensions);
         
         // Convert and write pixel data
-        BitmapEncoder._writePixelData(bytes, data, surface, dimensions);
+        BitmapEncoder._writePixelData(bytes, data, surface, dimensions, options);
         
         return buffer;
     }
@@ -157,9 +158,10 @@ class BitmapEncoder {
      * @param {Uint8ClampedArray} data - Surface RGBA data (premultiplied)
      * @param {Surface} surface - Original surface for stride info
      * @param {Object} dimensions - Dimension information
+     * @param {BitmapEncodingOptions} options - Encoding options
      * @private
      */
-    static _writePixelData(bytes, data, surface, dimensions) {
+    static _writePixelData(bytes, data, surface, dimensions, options) {
         let pixelOffset = BitmapEncoder.BMP_HEADER_SIZE;
         
         for (let y = 0; y < dimensions.height; y++) {
@@ -175,7 +177,7 @@ class BitmapEncoder {
                 const a = data[srcOffset + 3];
                 
                 // Convert premultiplied RGBA to non-premultiplied RGB
-                const rgb = BitmapEncoder._unpremultiplyAlpha(r, g, b, a);
+                const rgb = BitmapEncoder._unpremultiplyAlpha(r, g, b, a, options.backgroundColor);
                 
                 // BMP stores pixels as BGR (not RGB)
                 bytes[rowOffset] = rgb.b;
@@ -200,13 +202,14 @@ class BitmapEncoder {
      * @param {number} g - Green component (0-255, premultiplied)
      * @param {number} b - Blue component (0-255, premultiplied)
      * @param {number} a - Alpha component (0-255)
+     * @param {Object} backgroundColor - Background color for transparent pixels {r, g, b}
      * @returns {Object} {r, g, b} non-premultiplied RGB values
      * @private
      */
-    static _unpremultiplyAlpha(r, g, b, a) {
+    static _unpremultiplyAlpha(r, g, b, a, backgroundColor = { r: 255, g: 255, b: 255 }) {
         if (a === 0) {
-            // Fully transparent - composite with white background for BMP
-            return { r: 255, g: 255, b: 255 };
+            // Fully transparent - composite with configured background for BMP
+            return { r: backgroundColor.r, g: backgroundColor.g, b: backgroundColor.b };
         }
         
         if (a === 255) {
@@ -214,13 +217,13 @@ class BitmapEncoder {
             return { r: r, g: g, b: b };
         }
         
-        // For semi-transparent pixels in BMP, composite with white background
+        // For semi-transparent pixels in BMP, composite with configured background
         // Surface data is non-premultiplied, so use standard alpha compositing
         const alpha = a / 255;
         return {
-            r: Math.round(r * alpha + 255 * (1 - alpha)),
-            g: Math.round(g * alpha + 255 * (1 - alpha)), 
-            b: Math.round(b * alpha + 255 * (1 - alpha))
+            r: Math.round(r * alpha + backgroundColor.r * (1 - alpha)),
+            g: Math.round(g * alpha + backgroundColor.g * (1 - alpha)), 
+            b: Math.round(b * alpha + backgroundColor.b * (1 - alpha))
         };
     }
     

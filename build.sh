@@ -41,6 +41,8 @@ echo "" >> dist/swcanvas.js
 # Phase 2: Core Service classes (depend on foundation)
 cat src/CompositeOperations.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
+cat src/BitmapEncodingOptions.js >> dist/swcanvas.js
+echo "" >> dist/swcanvas.js
 cat src/BitmapEncoder.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
 cat src/PathFlattener.js >> dist/swcanvas.js
@@ -133,6 +135,7 @@ if (typeof window !== 'undefined') {
             Point: Point,
             Rectangle: Rectangle,
             BitmapEncoder: BitmapEncoder,
+            BitmapEncodingOptions: BitmapEncodingOptions,
             ClipMask: ClipMask,
             SourceMask: SourceMask,
             ImageProcessor: ImageProcessor,
@@ -165,6 +168,7 @@ if (typeof window !== 'undefined') {
             Point: Point,
             Rectangle: Rectangle,
             BitmapEncoder: BitmapEncoder,
+            BitmapEncodingOptions: BitmapEncodingOptions,
             ClipMask: ClipMask,
             SourceMask: SourceMask,
             ImageProcessor: ImageProcessor,
