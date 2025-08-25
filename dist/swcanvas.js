@@ -1348,6 +1348,126 @@ class CompositeOperations {
     }
 }
 /**
+ * BitmapEncodingOptions class for SWCanvas BitmapEncoder
+ * 
+ * Provides configuration options for BMP encoding operations.
+ * Follows immutable object-oriented design principles per Joshua Bloch's Effective Java.
+ * 
+ * Key Features:
+ * - Immutable options objects prevent accidental modification
+ * - Static factory methods provide clear API
+ * - Extensible design allows for future encoding options
+ * - Type-safe configuration prevents parameter confusion
+ */
+class BitmapEncodingOptions {
+    /**
+     * Create BitmapEncodingOptions instance
+     * @param {Object} backgroundColor - Background color for transparent pixel compositing
+     * @param {number} backgroundColor.r - Red component (0-255)
+     * @param {number} backgroundColor.g - Green component (0-255)
+     * @param {number} backgroundColor.b - Blue component (0-255)
+     */
+    constructor(backgroundColor = { r: 255, g: 255, b: 255 }) {
+        // Validate background color components
+        if (!backgroundColor || typeof backgroundColor !== 'object') {
+            throw new Error('backgroundColor must be an object with r, g, b properties');
+        }
+        
+        const { r, g, b } = backgroundColor;
+        
+        if (typeof r !== 'number' || typeof g !== 'number' || typeof b !== 'number') {
+            throw new Error('backgroundColor components (r, g, b) must be numbers');
+        }
+        
+        if (r < 0 || r > 255 || g < 0 || g > 255 || b < 0 || b > 255) {
+            throw new Error('backgroundColor components must be in range 0-255');
+        }
+        
+        // Store immutable background color
+        this._backgroundColor = Object.freeze({
+            r: Math.round(r),
+            g: Math.round(g),
+            b: Math.round(b)
+        });
+        
+        // Make this instance immutable
+        Object.freeze(this);
+    }
+    
+    /**
+     * Get background color for transparent pixel compositing
+     * @returns {Object} {r, g, b} background color (0-255 range)
+     */
+    get backgroundColor() {
+        return this._backgroundColor;
+    }
+    
+    /**
+     * Create options with specified background color
+     * @param {number} r - Red component (0-255)
+     * @param {number} g - Green component (0-255) 
+     * @param {number} b - Blue component (0-255)
+     * @returns {BitmapEncodingOptions} New options instance
+     */
+    static withBackgroundColor(r, g, b) {
+        return new BitmapEncodingOptions({ r, g, b });
+    }
+    
+    /**
+     * Create options with white background (default)
+     * @returns {BitmapEncodingOptions} Options with white background
+     */
+    static withWhiteBackground() {
+        return new BitmapEncodingOptions({ r: 255, g: 255, b: 255 });
+    }
+    
+    /**
+     * Create options with black background
+     * @returns {BitmapEncodingOptions} Options with black background
+     */
+    static withBlackBackground() {
+        return new BitmapEncodingOptions({ r: 0, g: 0, b: 0 });
+    }
+    
+    /**
+     * Create options with gray background
+     * @param {number} intensity - Gray intensity (0-255, default 128)
+     * @returns {BitmapEncodingOptions} Options with gray background
+     */
+    static withGrayBackground(intensity = 128) {
+        return new BitmapEncodingOptions({ r: intensity, g: intensity, b: intensity });
+    }
+    
+    /**
+     * Check if two options instances are equal
+     * @param {BitmapEncodingOptions} other - Other options to compare
+     * @returns {boolean} True if options are equivalent
+     */
+    equals(other) {
+        if (!(other instanceof BitmapEncodingOptions)) {
+            return false;
+        }
+        
+        const bg1 = this._backgroundColor;
+        const bg2 = other._backgroundColor;
+        
+        return bg1.r === bg2.r && bg1.g === bg2.g && bg1.b === bg2.b;
+    }
+    
+    /**
+     * Get string representation for debugging
+     * @returns {string} String representation
+     */
+    toString() {
+        const bg = this._backgroundColor;
+        return `BitmapEncodingOptions(backgroundColor: rgb(${bg.r}, ${bg.g}, ${bg.b}))`;
+    }
+}
+
+// Default options instance - white background (maintains backward compatibility)
+BitmapEncodingOptions.DEFAULT = new BitmapEncodingOptions();
+
+/**
  * BitmapEncoder class for SWCanvas
  * 
  * Handles encoding of Surface data to BMP (Windows Bitmap) format.
@@ -1363,9 +1483,10 @@ class BitmapEncoder {
     /**
      * Encode a surface to BMP format
      * @param {Surface} surface - Surface to encode
+     * @param {BitmapEncodingOptions} [options=BitmapEncodingOptions.DEFAULT] - Encoding options
      * @returns {ArrayBuffer} BMP file data
      */
-    static encode(surface) {
+    static encode(surface, options = BitmapEncodingOptions.DEFAULT) {
         if (!surface || typeof surface !== 'object') {
             throw new Error('Surface must be a valid Surface object');
         }
@@ -1396,7 +1517,7 @@ class BitmapEncoder {
         BitmapEncoder._writeBMPHeaders(view, dimensions);
         
         // Convert and write pixel data
-        BitmapEncoder._writePixelData(bytes, data, surface, dimensions);
+        BitmapEncoder._writePixelData(bytes, data, surface, dimensions, options);
         
         return buffer;
     }
@@ -1506,9 +1627,10 @@ class BitmapEncoder {
      * @param {Uint8ClampedArray} data - Surface RGBA data (premultiplied)
      * @param {Surface} surface - Original surface for stride info
      * @param {Object} dimensions - Dimension information
+     * @param {BitmapEncodingOptions} options - Encoding options
      * @private
      */
-    static _writePixelData(bytes, data, surface, dimensions) {
+    static _writePixelData(bytes, data, surface, dimensions, options) {
         let pixelOffset = BitmapEncoder.BMP_HEADER_SIZE;
         
         for (let y = 0; y < dimensions.height; y++) {
@@ -1524,7 +1646,7 @@ class BitmapEncoder {
                 const a = data[srcOffset + 3];
                 
                 // Convert premultiplied RGBA to non-premultiplied RGB
-                const rgb = BitmapEncoder._unpremultiplyAlpha(r, g, b, a);
+                const rgb = BitmapEncoder._unpremultiplyAlpha(r, g, b, a, options.backgroundColor);
                 
                 // BMP stores pixels as BGR (not RGB)
                 bytes[rowOffset] = rgb.b;
@@ -1549,13 +1671,14 @@ class BitmapEncoder {
      * @param {number} g - Green component (0-255, premultiplied)
      * @param {number} b - Blue component (0-255, premultiplied)
      * @param {number} a - Alpha component (0-255)
+     * @param {Object} backgroundColor - Background color for transparent pixels {r, g, b}
      * @returns {Object} {r, g, b} non-premultiplied RGB values
      * @private
      */
-    static _unpremultiplyAlpha(r, g, b, a) {
+    static _unpremultiplyAlpha(r, g, b, a, backgroundColor = { r: 255, g: 255, b: 255 }) {
         if (a === 0) {
-            // Fully transparent - composite with white background for BMP
-            return { r: 255, g: 255, b: 255 };
+            // Fully transparent - composite with configured background for BMP
+            return { r: backgroundColor.r, g: backgroundColor.g, b: backgroundColor.b };
         }
         
         if (a === 255) {
@@ -1563,13 +1686,13 @@ class BitmapEncoder {
             return { r: r, g: g, b: b };
         }
         
-        // For semi-transparent pixels in BMP, composite with white background
+        // For semi-transparent pixels in BMP, composite with configured background
         // Surface data is non-premultiplied, so use standard alpha compositing
         const alpha = a / 255;
         return {
-            r: Math.round(r * alpha + 255 * (1 - alpha)),
-            g: Math.round(g * alpha + 255 * (1 - alpha)), 
-            b: Math.round(b * alpha + 255 * (1 - alpha))
+            r: Math.round(r * alpha + backgroundColor.r * (1 - alpha)),
+            g: Math.round(g * alpha + backgroundColor.g * (1 - alpha)), 
+            b: Math.round(b * alpha + backgroundColor.b * (1 - alpha))
         };
     }
     
@@ -6763,6 +6886,7 @@ if (typeof window !== 'undefined') {
             Point: Point,
             Rectangle: Rectangle,
             BitmapEncoder: BitmapEncoder,
+            BitmapEncodingOptions: BitmapEncodingOptions,
             ClipMask: ClipMask,
             SourceMask: SourceMask,
             ImageProcessor: ImageProcessor,
@@ -6795,6 +6919,7 @@ if (typeof window !== 'undefined') {
             Point: Point,
             Rectangle: Rectangle,
             BitmapEncoder: BitmapEncoder,
+            BitmapEncodingOptions: BitmapEncodingOptions,
             ClipMask: ClipMask,
             SourceMask: SourceMask,
             ImageProcessor: ImageProcessor,
