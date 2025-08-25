@@ -147,6 +147,7 @@ SWCanvas.Core.* → Direct access to all engine classes
 - `LinearGradient()`, `RadialGradient()`, `ConicGradient()` - Gradient paint sources
 - `Pattern()` - Repeating image pattern paint sources
 - `BitmapEncoder` - File format export utilities
+- `BitmapEncodingOptions()` - Immutable encoding configuration (Joshua Bloch patterns)
 - `CompositeOperations` - Porter-Duff blending operations
 - `SourceMask` - Source coverage tracking for global composite operations
 
@@ -277,5 +278,13 @@ The architecture follows several key design principles:
 - Comprehensive parameter validation at layer boundaries
 - Immutable objects prevent accidental state mutations
 - Clear error messages guide developers to correct usage
+
+### Joshua Bloch Effective Java Patterns
+The codebase implements several key patterns from Joshua Bloch's Effective Java:
+
+- **Static Factory Methods** (`BitmapEncodingOptions.withBackgroundColor()`) - Item 1: Provide clear, self-documenting APIs
+- **Immutable Objects** (`BitmapEncodingOptions`, `Color`, `Transform2D`) - Item 17: Minimize mutability for thread safety and prevent bugs
+- **Builder Pattern Alternative** (`BitmapEncodingOptions`) - Item 2: Use static factory methods for complex configuration
+- **Parameter Validation** (all constructors) - Item 49: Check parameters for validity and fail fast with clear messages
 
 This architecture represents a **paradigm bridge** that successfully unifies web standards compliance, performance optimization, and clean API design in a single coherent system.

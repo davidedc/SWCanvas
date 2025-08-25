@@ -45,6 +45,7 @@ src/PolygonFiller.js          # Scanline polygon filling with paint source suppo
 src/PathFlattener.js          # Converts paths to polygons
 src/StrokeGenerator.js        # Geometric stroke path generation with line dashing
 src/BitmapEncoder.js          # BMP file format encoding
+src/BitmapEncodingOptions.js  # BMP encoding configuration (immutable options, Joshua Bloch patterns)
 src/ClipMask.js               # 1-bit stencil buffer clipping implementation
 src/ImageProcessor.js         # ImageLike validation and format conversion
 
@@ -358,10 +359,16 @@ const ctx = new SWCanvas.Core.Context2D(surface);
 ctx.setFillStyle(255, 0, 0, 255);
 ctx.fillRect(25, 25, 50, 50);
 
-// Save for visual inspection
-const bmpData = SWCanvas.Core.BitmapEncoder.encode(surface);
-fs.writeFileSync('debug-output.bmp', Buffer.from(bmpData));
-console.log('Saved debug image: debug-output.bmp');
+// Save for visual inspection with different backgrounds
+const whiteBmp = SWCanvas.Core.BitmapEncoder.encode(surface); // Default white
+fs.writeFileSync('debug-output.bmp', Buffer.from(whiteBmp));
+
+// Use black background to highlight transparent areas
+const blackOptions = SWCanvas.Core.BitmapEncodingOptions.withBlackBackground();
+const blackBmp = SWCanvas.Core.BitmapEncoder.encode(surface, blackOptions);
+fs.writeFileSync('debug-output-black.bmp', Buffer.from(blackBmp));
+
+console.log('Saved debug images: debug-output.bmp (white bg), debug-output-black.bmp (black bg)');
 "
 ```
 
@@ -398,11 +405,17 @@ testPoints.forEach(([x, y, desc]) => {
   console.log(\`\${desc} (\${x},\${y}): RGBA(\${r},\${g},\${b},\${a})\`);
 });
 
-// Save for comparison
+// Save for comparison with different backgrounds to analyze transparency
 const surface = canvas._coreSurface;
-const bmpData = SWCanvas.Core.BitmapEncoder.encode(surface);
-fs.writeFileSync('debug-composite.bmp', Buffer.from(bmpData));
-console.log('Composite test saved: debug-composite.bmp');
+const whiteBmp = SWCanvas.Core.BitmapEncoder.encode(surface);
+fs.writeFileSync('debug-composite-white.bmp', Buffer.from(whiteBmp));
+
+// Use gray background to better see semi-transparent compositing
+const grayOptions = SWCanvas.Core.BitmapEncodingOptions.withGrayBackground(128);
+const grayBmp = SWCanvas.Core.BitmapEncoder.encode(surface, grayOptions);
+fs.writeFileSync('debug-composite-gray.bmp', Buffer.from(grayBmp));
+
+console.log('Composite tests saved: debug-composite-white.bmp, debug-composite-gray.bmp');
 "
 ```
 
@@ -485,10 +498,12 @@ Project fully implemented with object-oriented ES6 class design. See ARCHITECTUR
 - **Verify cross-platform** - test in both Node.js and browser
 - **Check all phases** - changes may affect multiple test categories
 - **Build before testing** - `npm run build` then `npm test`
+- **Test with different backgrounds** - Use `BitmapEncodingOptions` to test transparency handling
 
 ### OO Development Patterns
 - **Use proper classes**: Prefer `new SWCanvas.Core.Point(x, y)` over plain objects
-- **Leverage immutability**: Transform2D, Point, Rectangle, Color are immutable - use their methods
+- **Leverage immutability**: Transform2D, Point, Rectangle, Color, BitmapEncodingOptions are immutable - use their methods
+- **Joshua Bloch patterns**: BitmapEncodingOptions demonstrates static factory methods and immutable configuration objects
 - **Static utilities**: Use ClipMask class for bit operations, SourceMask for global compositing, ImageProcessor for format conversion
 - **Factory methods**: Use Transform2D constructor and .translation(), .scaling(), .rotation() for common transformations
 - **Validation**: All classes validate input parameters with descriptive error messages

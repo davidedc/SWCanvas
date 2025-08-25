@@ -383,6 +383,9 @@ const clipMask = new SWCanvas.Core.ClipMask(800, 600);
 
 // Image processing utilities
 const validImage = SWCanvas.Core.ImageProcessor.validateAndConvert(imageData);
+
+// BMP encoding configuration
+const encodingOptions = SWCanvas.Core.BitmapEncodingOptions.withGrayBackground(128);
 ```
 
 ### Image Rendering
@@ -416,9 +419,30 @@ ctx.drawImage(imagelike, 0, 0);
 ```
 
 ### BMP Export
+
+#### Basic Export (Default White Background)
 ```javascript
 const bmpData = SWCanvas.Core.BitmapEncoder.encode(surface);
 // Returns ArrayBuffer containing BMP file data
+// Transparent pixels composited with white background (default)
+```
+
+#### Configurable Background Colors
+```javascript
+// Custom background colors for transparent pixel compositing
+const grayOptions = SWCanvas.Core.BitmapEncodingOptions.withGrayBackground(128);
+const bmpData = SWCanvas.Core.BitmapEncoder.encode(surface, grayOptions);
+
+// Pre-defined background options
+const blackBmp = SWCanvas.Core.BitmapEncoder.encode(surface, 
+    SWCanvas.Core.BitmapEncodingOptions.withBlackBackground());
+
+const whiteBmp = SWCanvas.Core.BitmapEncoder.encode(surface,
+    SWCanvas.Core.BitmapEncodingOptions.withWhiteBackground());
+
+// Custom RGB background
+const customBmp = SWCanvas.Core.BitmapEncoder.encode(surface,
+    SWCanvas.Core.BitmapEncodingOptions.withBackgroundColor(200, 150, 100));
 ```
 
 ## Architecture
@@ -440,6 +464,7 @@ const bmpData = SWCanvas.Core.BitmapEncoder.encode(surface);
 - **StrokeGenerator**: Geometric stroke generation (static methods)  
 - **PathFlattener**: Path-to-polygon conversion (static methods)
 - **BitmapEncoder**: BMP file format export (static methods)
+- **BitmapEncodingOptions**: Immutable BMP encoding configuration (Joshua Bloch pattern)
 
 ### Key Features
 
@@ -483,6 +508,7 @@ src/              # Source files (ES6 Classes)
 ├── StrokeGenerator.js # Stroke generation (static methods)
 ├── PathFlattener.js # Path to polygon conversion (static methods)
 ├── BitmapEncoder.js # BMP file encoding (static methods)
+├── BitmapEncodingOptions.js # BMP encoding configuration (immutable options)
 ├── ColorParser.js   # CSS color string parsing (static methods)
 └── Path2D.js        # Path definition (class)
 
@@ -522,21 +548,22 @@ The build script (`build.sh`) concatenates source files in dependency order, fol
 6. Surface - Memory buffer management
 
 **Phase 2: Service Classes**
-7. BitmapEncoder - BMP file encoding (static methods)
-8. PathFlattener - Path-to-polygon conversion (static methods)
-9. PolygonFiller - Scanline filling with paint sources (static methods)
-10. StrokeGenerator - Stroke generation (static methods) 
-11. ClipMask - 1-bit stencil buffer management (class)
-12. ImageProcessor - ImageLike validation and conversion (static methods)
-13. ColorParser - CSS color string parsing (static methods)
+7. BitmapEncodingOptions - BMP encoding configuration (immutable options)
+8. BitmapEncoder - BMP file encoding (static methods)
+9. PathFlattener - Path-to-polygon conversion (static methods)
+10. PolygonFiller - Scanline filling with paint sources (static methods)
+11. StrokeGenerator - Stroke generation (static methods) 
+12. ClipMask - 1-bit stencil buffer management (class)
+13. ImageProcessor - ImageLike validation and conversion (static methods)
+14. ColorParser - CSS color string parsing (static methods)
 
 **Phase 2.5: Paint Sources**
-14. Gradient - Linear, radial, and conic gradient paint sources
-15. Pattern - Repeating image pattern paint sources
+15. Gradient - Linear, radial, and conic gradient paint sources
+16. Pattern - Repeating image pattern paint sources
 
 **Phase 3: Rendering Classes**
-16. Rasterizer - Rendering pipeline (class)
-17. Context2D - Main drawing API (class)
+17. Rasterizer - Rendering pipeline (class)
+18. Context2D - Main drawing API (class)
 
 ## License
 
