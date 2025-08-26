@@ -1,6 +1,6 @@
 # SWCanvas Test Suite
 
-This directory contains the comprehensive **modular test infrastructure** for SWCanvas, with 33 core tests + 130 visual tests and cross-platform compatibility.
+This directory contains the comprehensive **modular test infrastructure** for SWCanvas, with 33 core tests + 131 visual tests and cross-platform compatibility.
 
 ## Modular Test Architecture
 
@@ -11,11 +11,11 @@ tests/
 │   ├── 015-alpha-blending-test.js  
 │   ├── 031-transform-matrix-order-dependency.js
 │   └── ... (28 more files)
-├── visual/                        # 130 individual visual test files (001-130)
+├── visual/                        # 131 individual visual test files (001-131)
 │   ├── 001-simple-rectangle-test.js
 │   ├── 027-fill-rule-complex-test.js
 │   ├── 056-stroke-pixel-analysis-test.js
-│   └── ... (127 more files)
+│   └── ... (128 more files)
 ├── browser/                       # Browser-specific test files
 │   ├── index.html                 # Main browser test page (interactive + comparisons)
 │   ├── simple-test.html           # Simple visual comparison test
@@ -28,7 +28,7 @@ tests/
 ├── core-functionality-tests.js          # Original (fallback/reference)
 ├── visual-rendering-tests.js            # Original (fallback/reference)
 ├── run-tests.js                         # Smart test runner with auto-detection
-├── output/                              # Generated BMP test images (130+ files)
+├── output/                              # Generated PNG test images (131+ files)
 └── README.md                            # This file
 ```
 
@@ -93,11 +93,11 @@ test('Surface creation with valid dimensions', () => {
 });
 ```
 
-### Visual Rendering Tests - 130 Individual Files
+### Visual Rendering Tests - 131 Individual Files
 **Location**: `/tests/visual/` (individual files) → `/tests/dist/visual-rendering-tests.js` (concatenated)
 
 **Modular Structure**:
-- **130 individual test files** numbered 001-130 with descriptive names
+- **131 individual test files** numbered 001-131 with descriptive names
 - **Build-time concatenation** preserves registerVisualTest pattern
 - **Smart test runner** with automatic fallback to original
 - **Development benefit**: Isolated test development, clear organization

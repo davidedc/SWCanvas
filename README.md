@@ -12,7 +12,7 @@ A deterministic 2D raster engine with Canvas-like API. SWCanvas provides pixel-p
 - **Memory Efficient Clipping**: Stencil-based clipping system with proper intersection support
 - **Sub-pixel Stroke Rendering**: Thin strokes render with proportional opacity, works with all paint sources
 - **Full Porter-Duff Compositing**: Complete `globalCompositeOperation` support with all 10 standard operations working correctly
-- **Comprehensive Test Coverage**: 33 core tests + 88 visual tests ensuring pixel-perfect accuracy with modular architecture
+- **Comprehensive Test Coverage**: 33 core tests + 131 visual tests ensuring pixel-perfect accuracy with modular architecture
 - **Immutable Value Objects**: Point, Rectangle, Transform2D, Color prevent mutation bugs
 - **Cross-Platform**: Works in Node.js and browsers
 - **No Dependencies**: Pure JavaScript implementation
@@ -56,7 +56,9 @@ const point = new SWCanvas.Point(50, 75);
 const rect = new SWCanvas.Rectangle(0, 0, 200, 150);
 const color = new SWCanvas.Core.Color(255, 128, 0, 200);
 
-// Export as BMP
+// Export as PNG (recommended - preserves transparency)
+const pngData = SWCanvas.Core.PngEncoder.encode(surface);
+// Or export as BMP (legacy - composites with white background)  
 const bmpData = SWCanvas.Core.BitmapEncoder.encode(surface);
 ```
 
@@ -72,6 +74,11 @@ const ctx = new SWCanvas.Core.Context2D(surface);
 // Standard Canvas 2D operations
 ctx.setFillStyle(255, 0, 0, 255); // Red
 ctx.fillRect(10, 10, 100, 50);
+
+// Path operations including ellipses
+ctx.beginPath();
+ctx.ellipse(400, 200, 80, 40, Math.PI / 4, 0, 2 * Math.PI);
+ctx.fill();
 
 // Use immutable geometry classes
 const center = new SWCanvas.Point(400, 300);
@@ -220,6 +227,8 @@ ctx.fillRect(x, y, width, height);
 ctx.beginPath();
 ctx.moveTo(x, y);
 ctx.lineTo(x2, y2);
+ctx.arc(cx, cy, radius, startAngle, endAngle, counterclockwise);
+ctx.ellipse(cx, cy, radiusX, radiusY, rotation, startAngle, endAngle, counterclockwise);
 ctx.fill();
 ctx.stroke();
 
@@ -424,17 +433,25 @@ ctx.rotate(Math.PI / 4);
 ctx.drawImage(imagelike, 0, 0);
 ```
 
-### BMP Export
+### Image Export
 
-#### Basic Export (Default White Background)
+#### PNG Export (Recommended - Supports Transparency)
+```javascript
+const pngData = SWCanvas.Core.PngEncoder.encode(surface);
+// Returns ArrayBuffer containing PNG file data
+// Preserves transparency without background compositing
+
+// PNG with custom options
+const pngOptions = SWCanvas.Core.PngEncodingOptions.withTransparency();
+const pngData = SWCanvas.Core.PngEncoder.encode(surface, pngOptions);
+```
+
+#### BMP Export (Legacy - Background Compositing)
 ```javascript
 const bmpData = SWCanvas.Core.BitmapEncoder.encode(surface);
 // Returns ArrayBuffer containing BMP file data
 // Transparent pixels composited with white background (default)
-```
 
-#### Configurable Background Colors
-```javascript
 // Custom background colors for transparent pixel compositing
 const grayOptions = SWCanvas.Core.BitmapEncodingOptions.withGrayBackground(128);
 const bmpData = SWCanvas.Core.BitmapEncoder.encode(surface, grayOptions);
@@ -442,13 +459,6 @@ const bmpData = SWCanvas.Core.BitmapEncoder.encode(surface, grayOptions);
 // Pre-defined background options
 const blackBmp = SWCanvas.Core.BitmapEncoder.encode(surface, 
     SWCanvas.Core.BitmapEncodingOptions.withBlackBackground());
-
-const whiteBmp = SWCanvas.Core.BitmapEncoder.encode(surface,
-    SWCanvas.Core.BitmapEncodingOptions.withWhiteBackground());
-
-// Custom RGB background
-const customBmp = SWCanvas.Core.BitmapEncoder.encode(surface,
-    SWCanvas.Core.BitmapEncodingOptions.withBackgroundColor(200, 150, 100));
 ```
 
 ## Architecture
@@ -471,7 +481,9 @@ const customBmp = SWCanvas.Core.BitmapEncoder.encode(surface,
 - **PolygonFiller**: Scanline-based polygon filling with paint source support
 - **StrokeGenerator**: Geometric stroke generation (static methods)  
 - **PathFlattener**: Path-to-polygon conversion (static methods)
-- **BitmapEncoder**: BMP file format export (static methods)
+- **PngEncoder**: PNG file format export with transparency support (static methods)
+- **PngEncodingOptions**: Immutable PNG encoding configuration (Joshua Bloch pattern)
+- **BitmapEncoder**: BMP file format export (static methods)  
 - **BitmapEncodingOptions**: Immutable BMP encoding configuration (Joshua Bloch pattern)
 
 ### Key Features

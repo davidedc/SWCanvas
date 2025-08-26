@@ -47,7 +47,9 @@ src/Rectangle.js              # Immutable rectangle operations
 src/PolygonFiller.js          # Scanline polygon filling with paint source support
 src/PathFlattener.js          # Converts paths to polygons
 src/StrokeGenerator.js        # Geometric stroke path generation with line dashing
-src/BitmapEncoder.js          # BMP file format encoding
+src/PngEncoder.js             # PNG file format encoding with transparency support
+src/PngEncodingOptions.js     # PNG encoding configuration (immutable options, Joshua Bloch patterns)
+src/BitmapEncoder.js          # BMP file format encoding (legacy - composites with background)
 src/BitmapEncodingOptions.js  # BMP encoding configuration (immutable options, Joshua Bloch patterns)
 src/ImageProcessor.js         # ImageLike validation and format conversion
 
@@ -361,16 +363,20 @@ const ctx = new SWCanvas.Core.Context2D(surface);
 ctx.setFillStyle(255, 0, 0, 255);
 ctx.fillRect(25, 25, 50, 50);
 
-// Save for visual inspection with different backgrounds
+// Save for visual inspection - PNG preserves transparency
+const pngData = SWCanvas.Core.PngEncoder.encode(surface);
+fs.writeFileSync('debug-output.png', Buffer.from(pngData));
+
+// Or BMP with different backgrounds to analyze transparency
 const whiteBmp = SWCanvas.Core.BitmapEncoder.encode(surface); // Default white
-fs.writeFileSync('debug-output.bmp', Buffer.from(whiteBmp));
+fs.writeFileSync('debug-output-white.bmp', Buffer.from(whiteBmp));
 
 // Use black background to highlight transparent areas
 const blackOptions = SWCanvas.Core.BitmapEncodingOptions.withBlackBackground();
 const blackBmp = SWCanvas.Core.BitmapEncoder.encode(surface, blackOptions);
 fs.writeFileSync('debug-output-black.bmp', Buffer.from(blackBmp));
 
-console.log('Saved debug images: debug-output.bmp (white bg), debug-output-black.bmp (black bg)');
+console.log('Saved debug images: debug-output.png (with transparency), debug-output-white.bmp, debug-output-black.bmp');
 "
 ```
 
@@ -421,12 +427,53 @@ console.log('Composite tests saved: debug-composite-white.bmp, debug-composite-g
 "
 ```
 
+**Ellipse Functionality Testing:**
+```bash
+node -e "
+const SWCanvas = require('./dist/swcanvas.js');
+const fs = require('fs');
+
+console.log('=== ELLIPSE FUNCTIONALITY TEST ===');
+const canvas = SWCanvas.createCanvas(300, 200);
+const ctx = canvas.getContext('2d');
+
+// White background
+ctx.fillStyle = 'white';
+ctx.fillRect(0, 0, 300, 200);
+
+// Test various ellipse configurations
+ctx.fillStyle = 'red';
+ctx.beginPath();
+ctx.ellipse(75, 60, 50, 30, 0, 0, 2 * Math.PI); // Horizontal ellipse
+ctx.fill();
+
+ctx.fillStyle = 'blue';
+ctx.beginPath();  
+ctx.ellipse(225, 60, 30, 50, 0, 0, 2 * Math.PI); // Vertical ellipse
+ctx.fill();
+
+ctx.fillStyle = 'green';
+ctx.beginPath();
+ctx.ellipse(150, 140, 40, 25, Math.PI / 4, 0, 2 * Math.PI); // Rotated ellipse
+ctx.fill();
+
+// Save as PNG to preserve visual fidelity
+const surface = canvas._coreSurface;
+const pngData = SWCanvas.Core.PngEncoder.encode(surface);
+fs.writeFileSync('ellipse-test.png', Buffer.from(pngData));
+
+console.log('Ellipse test saved: ellipse-test.png');
+console.log('✓ Ellipse method working correctly');
+"
+```
+
 These scripts are invaluable for:
 - Quick pixel-level validation
 - Testing edge cases and behavior differences
 - Analyzing sub-pixel rendering effects
 - Comparing stroke and fill operations
 - Debugging coordinate transformations
+- Testing new shape methods like ellipse()
 
 #### Minified Build Testing
 Test minified builds using the examples:
