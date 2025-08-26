@@ -1261,6 +1261,227 @@
             assertEquals(centerPixel.a, 0); // Should be erased by destination-out
         });
 
+        // Test: arcTo API validation
+        // This file will be concatenated into the main core test suite
+
+        // Test 034
+        test('arcTo API parameter validation', () => {
+            const surface = SWCanvas.Core.Surface(200, 200);
+            const ctx = new SWCanvas.Core.Context2D(surface);
+            
+            // Test valid arcTo call - should not throw
+            ctx.beginPath();
+            ctx.moveTo(10, 10);
+            ctx.arcTo(50, 10, 50, 50, 20);
+            // Success if no error thrown
+            
+            // Test negative radius - should throw DOMException
+            assertThrows(() => {
+                const path = new SWCanvas.Core.Path2D();
+                path.arcTo(10, 10, 50, 50, -5);
+            }, 'IndexSizeError');
+            
+            // Test non-number parameters - should throw TypeError
+            assertThrows(() => {
+                const path = new SWCanvas.Core.Path2D();
+                path.arcTo('10', 10, 50, 50, 5);
+            }, 'TypeError');
+            
+            assertThrows(() => {
+                const path = new SWCanvas.Core.Path2D();
+                path.arcTo(10, 10, 50, 50, 'radius');
+            }, 'TypeError');
+            
+            // Test infinite values - should throw TypeError
+            assertThrows(() => {
+                const path = new SWCanvas.Core.Path2D();
+                path.arcTo(Infinity, 10, 50, 50, 5);
+            }, 'TypeError');
+            
+            assertThrows(() => {
+                const path = new SWCanvas.Core.Path2D();
+                path.arcTo(10, 10, 50, 50, Infinity);
+            }, 'TypeError');
+            
+            // Test NaN values - should throw TypeError
+            assertThrows(() => {
+                const path = new SWCanvas.Core.Path2D();
+                path.arcTo(NaN, 10, 50, 50, 5);
+            }, 'TypeError');
+        });
+
+        // Test 034b
+        test('arcTo edge cases handling', () => {
+            const path = new SWCanvas.Core.Path2D();
+            
+            // Test zero radius - should work (creates corner with lines)
+            path.moveTo(10, 10);
+            path.arcTo(50, 10, 50, 50, 0);
+            
+            // Test collinear points - should create line to first control point
+            path.moveTo(10, 10);
+            path.arcTo(30, 10, 50, 10, 5); // All points on horizontal line
+            
+            // Success if no errors thrown
+        });
+
+        // Test 034c 
+        test('arcTo path command recording', () => {
+            const path = new SWCanvas.Core.Path2D();
+            path.moveTo(10, 10);
+            path.arcTo(50, 10, 50, 50, 20);
+            
+            // Verify command was recorded
+            assertEquals(path.commands.length, 2);
+            assertEquals(path.commands[0].type, 'moveTo');
+            assertEquals(path.commands[1].type, 'arcTo');
+            assertEquals(path.commands[1].x1, 50);
+            assertEquals(path.commands[1].y1, 10);
+            assertEquals(path.commands[1].x2, 50);
+            assertEquals(path.commands[1].y2, 50);
+            assertEquals(path.commands[1].radius, 20);
+        });
+
+        // Test 034d
+        test('arcTo HTML5 Canvas compatibility API', () => {
+            const canvas = SWCanvas.createCanvas(200, 200);
+            const ctx = canvas.getContext('2d');
+            
+            // Test method exists and works
+            ctx.beginPath();
+            ctx.moveTo(10, 10);
+            ctx.arcTo(50, 10, 50, 50, 20);
+            
+            // Should not throw error
+            ctx.stroke();
+        });
+
+        // Test: isPointInPath API validation
+        // This file will be concatenated into the main core test suite
+
+        // Test 035
+        test('isPointInPath API overload handling', () => {
+            const surface = SWCanvas.Core.Surface(200, 200);
+            const ctx = new SWCanvas.Core.Context2D(surface);
+            
+            // Create a simple rectangular path
+            ctx.beginPath();
+            ctx.rect(50, 50, 100, 100);
+            
+            // Test 2-argument form: isPointInPath(x, y)
+            assertEquals(ctx.isPointInPath(100, 100), true); // Inside
+            assertEquals(ctx.isPointInPath(25, 25), false); // Outside
+            
+            // Test 3-argument form: isPointInPath(x, y, fillRule)  
+            assertEquals(ctx.isPointInPath(100, 100, 'nonzero'), true);
+            assertEquals(ctx.isPointInPath(100, 100, 'evenodd'), true);
+            assertEquals(ctx.isPointInPath(25, 25, 'nonzero'), false);
+            
+            // Test 3-argument form: isPointInPath(path, x, y)
+            const path = new SWCanvas.Core.Path2D();
+            path.rect(10, 10, 50, 50);
+            assertEquals(ctx.isPointInPath(path, 35, 35), true); // Inside path
+            assertEquals(ctx.isPointInPath(path, 100, 100), false); // Outside path
+            
+            // Test 4-argument form: isPointInPath(path, x, y, fillRule)
+            assertEquals(ctx.isPointInPath(path, 35, 35, 'nonzero'), true);
+            assertEquals(ctx.isPointInPath(path, 35, 35, 'evenodd'), true);
+            assertEquals(ctx.isPointInPath(path, 100, 100, 'evenodd'), false);
+        });
+
+        // Test 035b
+        test('isPointInPath parameter validation', () => {
+            const surface = SWCanvas.Core.Surface(200, 200);
+            const ctx = new SWCanvas.Core.Context2D(surface);
+            
+            ctx.beginPath();
+            ctx.rect(50, 50, 100, 100);
+            
+            // Test non-number coordinates - should return false
+            assertEquals(ctx.isPointInPath('100', 100), false);
+            assertEquals(ctx.isPointInPath(100, '100'), false);
+            assertEquals(ctx.isPointInPath(NaN, 100), false);
+            assertEquals(ctx.isPointInPath(100, NaN), false);
+            
+            // Test empty path - should return false
+            const emptyPath = new SWCanvas.Core.Path2D();
+            assertEquals(ctx.isPointInPath(emptyPath, 100, 100), false);
+            
+            // Test invalid argument count - should throw TypeError
+            assertThrows(() => {
+                ctx.isPointInPath();
+            }, 'TypeError');
+            
+            assertThrows(() => {
+                ctx.isPointInPath(100);
+            }, 'TypeError');
+            
+            assertThrows(() => {
+                ctx.isPointInPath(100, 100, 'evenodd', 'extra');
+            }, 'TypeError');
+        });
+
+        // Test 035c
+        test('isPointInPath fill rule behavior', () => {
+            const surface = SWCanvas.Core.Surface(200, 200);
+            const ctx = new SWCanvas.Core.Context2D(surface);
+            
+            // Create a path with a hole (outer rect with inner rect)
+            const pathWithHole = new SWCanvas.Core.Path2D();
+            pathWithHole.rect(0, 0, 100, 100);    // Outer rectangle
+            pathWithHole.rect(25, 25, 50, 50);    // Inner rectangle (hole)
+            
+            // Point in the hole area
+            const holeX = 50, holeY = 50;
+            
+            // With evenodd rule, hole should be empty (outside)
+            assertEquals(ctx.isPointInPath(pathWithHole, holeX, holeY, 'evenodd'), false);
+            
+            // With nonzero rule, depends on winding direction
+            // Since both rectangles have same winding, point should be inside
+            assertEquals(ctx.isPointInPath(pathWithHole, holeX, holeY, 'nonzero'), true);
+            
+            // Point definitely outside both rectangles
+            assertEquals(ctx.isPointInPath(pathWithHole, 150, 150, 'evenodd'), false);
+            assertEquals(ctx.isPointInPath(pathWithHole, 150, 150, 'nonzero'), false);
+        });
+
+        // Test 035d
+        test('isPointInPath HTML5 Canvas compatibility API', () => {
+            const canvas = SWCanvas.createCanvas(200, 200);
+            const ctx = canvas.getContext('2d');
+            
+            // Test method exists and works
+            ctx.beginPath();
+            ctx.rect(50, 50, 100, 100);
+            
+            // Test basic functionality
+            assertEquals(ctx.isPointInPath(100, 100), true);
+            assertEquals(ctx.isPointInPath(25, 25), false);
+            
+            // Test with external path
+            const path = new Path2D();
+            path.rect(10, 10, 30, 30);
+            assertEquals(ctx.isPointInPath(path, 25, 25), true);
+            assertEquals(ctx.isPointInPath(path, 50, 50), false);
+        });
+
+        // Test 035e  
+        test('isPointInPath with transforms', () => {
+            const surface = SWCanvas.Core.Surface(200, 200);
+            const ctx = new SWCanvas.Core.Context2D(surface);
+            
+            // Create path then transform
+            ctx.beginPath();
+            ctx.rect(0, 0, 50, 50);
+            ctx.translate(50, 50);
+            
+            // Point should be tested against transformed path
+            // Original rect (0,0,50,50) transformed by (50,50) = (50,50,100,100)
+            assertEquals(ctx.isPointInPath(75, 75), true); // Should be inside transformed rect
+            assertEquals(ctx.isPointInPath(25, 25), false); // Should be outside transformed rect
+        });
+
         return testResults;
     }
     

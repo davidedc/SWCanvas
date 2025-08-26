@@ -8376,6 +8376,497 @@
         },
     });
 
+    // Test: arcTo basic functionality
+    // This file will be concatenated into the main visual test suite
+
+    registerVisualTest('arcto-basic', {
+        name: 'arcTo basic rounded corners',
+        width: 400, height: 300,
+        draw: function(canvas) {
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, 400, 300);
+            
+            // Test 1: Basic rounded rectangle using arcTo
+            ctx.strokeStyle = 'red';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(50, 80);
+            ctx.lineTo(120, 80);       // Top edge
+            ctx.arcTo(150, 80, 150, 110, 20);  // Top-right corner
+            ctx.lineTo(150, 140);      // Right edge  
+            ctx.arcTo(150, 170, 120, 170, 20); // Bottom-right corner
+            ctx.lineTo(50, 170);       // Bottom edge
+            ctx.arcTo(20, 170, 20, 140, 20);   // Bottom-left corner
+            ctx.lineTo(20, 110);       // Left edge
+            ctx.arcTo(20, 80, 50, 80, 20);     // Top-left corner
+            ctx.closePath();
+            ctx.stroke();
+            
+            // Test 2: Different radius sizes
+            ctx.strokeStyle = 'blue';
+            ctx.beginPath();
+            ctx.moveTo(200, 50);
+            ctx.lineTo(270, 50);
+            ctx.arcTo(300, 50, 300, 80, 5);   // Small radius
+            ctx.lineTo(300, 120);
+            ctx.arcTo(300, 150, 270, 150, 40); // Large radius
+            ctx.lineTo(200, 150);
+            ctx.arcTo(170, 150, 170, 120, 15); // Medium radius
+            ctx.lineTo(170, 80);
+            ctx.arcTo(170, 50, 200, 50, 25);   // Medium radius
+            ctx.closePath();
+            ctx.stroke();
+            
+            // Test 3: arcTo with fill
+            ctx.fillStyle = 'lightgreen';
+            ctx.strokeStyle = 'darkgreen';
+            ctx.beginPath();
+            ctx.moveTo(50, 200);
+            ctx.lineTo(100, 200);
+            ctx.arcTo(130, 200, 130, 230, 15);
+            ctx.lineTo(130, 250);
+            ctx.arcTo(130, 280, 100, 280, 15);
+            ctx.lineTo(50, 280);
+            ctx.arcTo(20, 280, 20, 250, 15);
+            ctx.lineTo(20, 230);
+            ctx.arcTo(20, 200, 50, 200, 15);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+            
+            // Test 4: Sharp angles
+            ctx.strokeStyle = 'purple';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(250, 200);
+            ctx.lineTo(320, 220);
+            ctx.arcTo(350, 230, 340, 260, 10); // Sharp angle
+            ctx.lineTo(300, 280);
+            ctx.arcTo(280, 290, 250, 270, 15);
+            ctx.lineTo(230, 240);
+            ctx.arcTo(225, 210, 250, 200, 12);
+            ctx.stroke();
+        }
+    });
+
+    // Test: arcTo edge cases
+    // This file will be concatenated into the main visual test suite
+
+    registerVisualTest('arcto-edge-cases', {
+        name: 'arcTo edge cases - zero radius and collinear points',
+        width: 400, height: 300,
+        draw: function(canvas) {
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, 400, 300);
+            
+            // Test 1: Zero radius (should create sharp corners)
+            ctx.strokeStyle = 'red';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(50, 50);
+            ctx.lineTo(120, 50);
+            ctx.arcTo(150, 50, 150, 80, 0);  // Zero radius
+            ctx.lineTo(150, 120);
+            ctx.arcTo(150, 150, 120, 150, 0); // Zero radius
+            ctx.lineTo(50, 150);
+            ctx.arcTo(20, 150, 20, 120, 0);   // Zero radius
+            ctx.lineTo(20, 80);
+            ctx.arcTo(20, 50, 50, 50, 0);     // Zero radius
+            ctx.closePath();
+            ctx.stroke();
+            
+            // Test 2: Collinear points (horizontal line)
+            ctx.strokeStyle = 'blue';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(200, 80);
+            ctx.arcTo(250, 80, 300, 80, 20); // All points on horizontal line
+            ctx.lineTo(350, 80);
+            ctx.stroke();
+            
+            // Test 3: Collinear points (vertical line)
+            ctx.strokeStyle = 'green';
+            ctx.beginPath();
+            ctx.moveTo(220, 100);
+            ctx.arcTo(220, 130, 220, 160, 15); // All points on vertical line
+            ctx.lineTo(220, 190);
+            ctx.stroke();
+            
+            // Test 4: Very small angles (should still work)
+            ctx.strokeStyle = 'orange';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(50, 200);
+            ctx.lineTo(100, 205);  // Very small angle
+            ctx.arcTo(150, 210, 200, 215, 10);
+            ctx.lineTo(250, 220);
+            ctx.stroke();
+            
+            // Test 5: Very large radius (should be clamped)
+            ctx.strokeStyle = 'purple';
+            ctx.beginPath();
+            ctx.moveTo(100, 250);
+            ctx.lineTo(150, 250);
+            ctx.arcTo(200, 250, 200, 280, 100); // Radius larger than available space
+            ctx.lineTo(200, 290);
+            ctx.stroke();
+            
+            // Test 6: Acute angle
+            ctx.strokeStyle = 'brown';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(300, 200);
+            ctx.lineTo(340, 220);
+            ctx.arcTo(360, 230, 350, 260, 8); // Sharp acute angle
+            ctx.lineTo(330, 280);
+            ctx.stroke();
+        }
+    });
+
+    // Test: isPointInPath basic functionality
+    // This file will be concatenated into the main visual test suite
+
+    registerVisualTest('ispointinpath-basic', {
+        name: 'isPointInPath basic point testing with visual indicators',
+        width: 400, height: 300,
+        draw: function(canvas) {
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, 400, 300);
+            
+            // Create test shapes
+            // Shape 1: Rectangle
+            ctx.fillStyle = 'lightblue';
+            ctx.strokeStyle = 'blue';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.rect(50, 50, 100, 80);
+            ctx.fill();
+            ctx.stroke();
+            
+            // Shape 2: Circle
+            ctx.fillStyle = 'lightgreen';
+            ctx.strokeStyle = 'darkgreen';
+            ctx.beginPath();
+            ctx.arc(250, 90, 40, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+            
+            // Shape 3: Complex path with curves
+            ctx.fillStyle = 'lightcoral';
+            ctx.strokeStyle = 'darkred';
+            ctx.beginPath();
+            ctx.moveTo(50, 180);
+            ctx.lineTo(120, 160);
+            ctx.quadraticCurveTo(150, 180, 120, 220);
+            ctx.lineTo(80, 240);
+            ctx.bezierCurveTo(60, 250, 40, 230, 50, 200);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+            
+            // Shape 4: Triangle
+            ctx.fillStyle = 'lightyellow';
+            ctx.strokeStyle = 'orange';
+            ctx.beginPath();
+            ctx.moveTo(250, 180);
+            ctx.lineTo(320, 220);
+            ctx.lineTo(280, 260);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+            
+            // Test points and draw indicators - comprehensive coverage showing both inside and outside points
+            const testPoints = [
+                // Rectangle tests (rect: 50,50,100,80 -> bounds x:50-150, y:50-130)
+                // Edge points (all edges inclusive)
+                {x: 50, y: 60, shape: 'rect', expected: true},     // Left edge (top)
+                {x: 50, y: 90, shape: 'rect', expected: true},     // Left edge (middle)
+                {x: 50, y: 120, shape: 'rect', expected: true},    // Left edge (bottom)
+                {x: 150, y: 60, shape: 'rect', expected: true},    // Right edge (top)
+                {x: 150, y: 90, shape: 'rect', expected: true},    // Right edge (middle)
+                {x: 150, y: 120, shape: 'rect', expected: true},   // Right edge (bottom)
+                {x: 70, y: 50, shape: 'rect', expected: true},     // Top edge (left)
+                {x: 100, y: 50, shape: 'rect', expected: true},    // Top edge (center)
+                {x: 130, y: 50, shape: 'rect', expected: true},    // Top edge (right)
+                {x: 70, y: 130, shape: 'rect', expected: true},    // Bottom edge (left)
+                {x: 100, y: 130, shape: 'rect', expected: true},   // Bottom edge (center)
+                {x: 130, y: 130, shape: 'rect', expected: true},   // Bottom edge (right)
+                // Interior points
+                {x: 100, y: 90, shape: 'rect', expected: true},    // Center
+                {x: 75, y: 70, shape: 'rect', expected: true},     // Upper-left interior
+                {x: 125, y: 110, shape: 'rect', expected: true},   // Lower-right interior
+                // Outside points
+                {x: 30, y: 90, shape: 'rect', expected: false},    // Outside left
+                {x: 170, y: 90, shape: 'rect', expected: false},   // Outside right
+                {x: 100, y: 30, shape: 'rect', expected: false},   // Outside top
+                {x: 100, y: 150, shape: 'rect', expected: false},  // Outside bottom
+                
+                // Circle tests (center: 250,90, radius: 40)
+                // Center and interior
+                {x: 250, y: 90, shape: 'circle', expected: true},  // Center
+                {x: 240, y: 90, shape: 'circle', expected: true},  // Inside (left)
+                {x: 260, y: 90, shape: 'circle', expected: true},  // Inside (right)
+                {x: 250, y: 80, shape: 'circle', expected: true},  // Inside (top)
+                {x: 250, y: 100, shape: 'circle', expected: true}, // Inside (bottom)
+                {x: 235, y: 75, shape: 'circle', expected: true},  // Inside (upper-left)
+                {x: 265, y: 105, shape: 'circle', expected: true}, // Inside (lower-right)
+                // Near edge points (just inside circle edge)
+                {x: 215, y: 90, shape: 'circle', expected: true},  // Near left edge
+                {x: 285, y: 90, shape: 'circle', expected: true},  // Near right edge
+                {x: 250, y: 55, shape: 'circle', expected: true},  // Near top edge
+                {x: 250, y: 125, shape: 'circle', expected: true}, // Near bottom edge
+                // Outside points
+                {x: 200, y: 90, shape: 'circle', expected: false}, // Outside left
+                {x: 300, y: 90, shape: 'circle', expected: false}, // Outside right
+                {x: 250, y: 40, shape: 'circle', expected: false}, // Outside top
+                {x: 250, y: 140, shape: 'circle', expected: false}, // Outside bottom
+                
+                // Complex path tests - irregular shape with curves
+                // Interior points in different regions
+                {x: 70, y: 190, shape: 'complex', expected: true}, // Left region
+                {x: 85, y: 200, shape: 'complex', expected: true}, // Central region
+                {x: 100, y: 185, shape: 'complex', expected: true}, // Upper region
+                {x: 90, y: 215, shape: 'complex', expected: true}, // Lower region
+                {x: 110, y: 200, shape: 'complex', expected: true}, // Right region
+                // Edge points
+                {x: 50, y: 190, shape: 'complex', expected: true}, // Left edge (approximate)
+                {x: 120, y: 170, shape: 'complex', expected: true}, // Top edge (approximate)
+                // Outside points
+                {x: 30, y: 200, shape: 'complex', expected: false}, // Outside left
+                {x: 140, y: 190, shape: 'complex', expected: false}, // Outside right
+                {x: 85, y: 150, shape: 'complex', expected: false}, // Outside top
+                {x: 85, y: 260, shape: 'complex', expected: false}, // Outside bottom
+                
+                // Triangle tests (vertices: 250,180 -> 320,220 -> 280,260)
+                // Interior points
+                {x: 280, y: 200, shape: 'triangle', expected: true}, // Upper interior
+                {x: 285, y: 220, shape: 'triangle', expected: true}, // Central interior
+                {x: 290, y: 240, shape: 'triangle', expected: true}, // Lower interior
+                {x: 270, y: 210, shape: 'triangle', expected: true}, // Left interior
+                {x: 300, y: 230, shape: 'triangle', expected: true}, // Right interior
+                // Edge points (approximate)
+                {x: 285, y: 190, shape: 'triangle', expected: true}, // Top edge
+                {x: 265, y: 220, shape: 'triangle', expected: true}, // Left edge
+                {x: 300, y: 240, shape: 'triangle', expected: true}, // Right edge
+                // Outside points
+                {x: 240, y: 200, shape: 'triangle', expected: false}, // Outside left
+                {x: 330, y: 220, shape: 'triangle', expected: false}, // Outside right
+                {x: 280, y: 170, shape: 'triangle', expected: false}, // Outside top
+                {x: 280, y: 270, shape: 'triangle', expected: false}, // Outside bottom
+            ];
+            
+            // Test points using current path (since we can't rely on Path2D constructor in all browsers)
+            // We'll test by setting the current path and using isPointInPath(x, y)
+            
+            // Test each point and collect results first (separate testing from drawing)
+            const results = testPoints.map(point => {
+                // Set up current path based on shape for testing
+                ctx.beginPath();
+                switch(point.shape) {
+                    case 'rect': 
+                        ctx.rect(50, 50, 100, 80);
+                        break;
+                    case 'circle':
+                        ctx.arc(250, 90, 40, 0, Math.PI * 2);
+                        break;
+                    case 'complex':
+                        ctx.moveTo(50, 180);
+                        ctx.lineTo(120, 160);
+                        ctx.quadraticCurveTo(150, 180, 120, 220);
+                        ctx.lineTo(80, 240);
+                        ctx.bezierCurveTo(60, 250, 40, 230, 50, 200);
+                        ctx.closePath();
+                        break;
+                    case 'triangle':
+                        ctx.moveTo(250, 180);
+                        ctx.lineTo(320, 220);
+                        ctx.lineTo(280, 260);
+                        ctx.closePath();
+                        break;
+                }
+                
+                const isInside = ctx.isPointInPath(point.x, point.y);
+                const isCorrect = isInside === point.expected;
+                
+                return {
+                    x: point.x,
+                    y: point.y,
+                    isCorrect: isCorrect,
+                    expected: point.expected,
+                    actual: isInside
+                };
+            });
+            
+            // Now draw all the indicators without interfering with paths
+            // Color encoding: GREEN = inside path (true), RED = outside path (false)
+            results.forEach(result => {
+                // Draw point indicator circle
+                ctx.beginPath();
+                ctx.arc(result.x, result.y, 4, 0, Math.PI * 2);
+                ctx.fillStyle = result.actual ? 'green' : 'red'; // Green = inside, Red = outside
+                ctx.fill();
+                
+                // Draw black border for visibility
+                ctx.beginPath();
+                ctx.arc(result.x, result.y, 4, 0, Math.PI * 2);
+                ctx.strokeStyle = 'black';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+                
+                // Draw small cross for additional indicator
+                ctx.beginPath();
+                ctx.moveTo(result.x - 2, result.y);
+                ctx.lineTo(result.x + 2, result.y);
+                ctx.moveTo(result.x, result.y - 2);
+                ctx.lineTo(result.x, result.y + 2);
+                ctx.strokeStyle = 'black';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+            });
+            
+            // Add legend showing color encoding
+            ctx.fillStyle = 'green';
+            ctx.beginPath();
+            ctx.arc(330, 65, 6, 0, Math.PI * 2);
+            ctx.fill();
+            
+            ctx.fillStyle = 'red';
+            ctx.beginPath();
+            ctx.arc(330, 85, 6, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Legend: Green circle = inside path, Red circle = outside path
+        }
+    });
+
+    // Test: isPointInPath fill rule comparison
+    // This file will be concatenated into the main visual test suite
+
+    registerVisualTest('ispointinpath-fillrule', {
+        name: 'isPointInPath evenodd vs nonzero fill rules',
+        width: 500, height: 180,
+        draw: function(canvas) {
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, 500, 180);
+            
+            // Create current path with hole (outer rectangle + inner rectangle)  
+            ctx.beginPath();
+            // Outer rectangle
+            ctx.rect(50, 50, 150, 100);
+            // Inner rectangle (hole) - same winding direction
+            ctx.rect(75, 75, 100, 50);
+            
+            // Draw the shapes for reference
+            ctx.strokeStyle = 'black';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            
+            // Fill the path with nonzero rule first (left side)
+            ctx.fillStyle = 'rgba(200, 200, 255, 0.3)';
+            ctx.fill('nonzero');
+            
+            // Create offset path for evenodd visualization (right side)
+            ctx.beginPath();
+            ctx.rect(280, 50, 150, 100);
+            ctx.rect(305, 75, 100, 50);
+            
+            // Draw the offset shapes for reference
+            ctx.strokeStyle = 'black';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            
+            // Fill with evenodd to show hole
+            ctx.fillStyle = 'rgba(255, 200, 200, 0.3)';
+            ctx.fill('evenodd');
+            
+            // Test points in different regions
+            const testPoints = [
+                // Points in outer area (between outer and inner rectangles)
+                {x: 60, y: 80, label: 'Outer area'},
+                {x: 180, y: 100, label: 'Outer area'}, 
+                {x: 100, y: 60, label: 'Outer area'},
+                {x: 150, y: 130, label: 'Outer area'},
+                
+                // Points in hole area (inside inner rectangle)
+                {x: 100, y: 100, label: 'Hole area'},
+                {x: 125, y: 90, label: 'Hole area'},
+                {x: 150, y: 110, label: 'Hole area'},
+                
+                // Points completely outside
+                {x: 30, y: 80, label: 'Outside'},
+                {x: 220, y: 100, label: 'Outside'},
+            ];
+            
+            // Test with nonzero rule (left side) - overlay dots on the shape
+            testPoints.forEach((point, i) => {
+                // Recreate the same path for testing
+                ctx.beginPath();
+                ctx.rect(50, 50, 150, 100);
+                ctx.rect(75, 75, 100, 50);
+                
+                const isInside = ctx.isPointInPath(point.x, point.y, 'nonzero');
+                
+                // Draw indicator dot directly on the shape
+                ctx.fillStyle = isInside ? 'blue' : 'gray';
+                ctx.beginPath();
+                ctx.arc(point.x, point.y, 4, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Add black border for visibility
+                ctx.strokeStyle = 'black';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.arc(point.x, point.y, 4, 0, Math.PI * 2);
+                ctx.stroke();
+            });
+            
+            // Test with evenodd rule (right side) - overlay dots on the shape
+            testPoints.forEach((point, i) => {
+                const offsetX = point.x + 230; // Offset for right side
+                
+                // Recreate the offset path for testing
+                ctx.beginPath();
+                ctx.rect(280, 50, 150, 100);
+                ctx.rect(305, 75, 100, 50);
+                
+                const isInside = ctx.isPointInPath(offsetX, point.y, 'evenodd');
+                
+                // Draw indicator dot directly on the shape
+                ctx.fillStyle = isInside ? 'red' : 'gray';
+                ctx.beginPath();
+                ctx.arc(offsetX, point.y, 4, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Add black border for visibility
+                ctx.strokeStyle = 'black';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.arc(offsetX, point.y, 4, 0, Math.PI * 2);
+                ctx.stroke();
+            });
+            
+            // Simple visual legend at bottom
+            ctx.fillStyle = 'blue';
+            ctx.beginPath();
+            ctx.arc(65, 165, 6, 0, Math.PI * 2);
+            ctx.fill();
+            
+            ctx.fillStyle = 'red';
+            ctx.beginPath();
+            ctx.arc(130, 165, 6, 0, Math.PI * 2);
+            ctx.fill();
+            
+            ctx.fillStyle = 'gray';
+            ctx.beginPath();
+            ctx.arc(195, 165, 6, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    });
+
     const VisualRenderingTests = {
         getTests: function() { return visualTests; },
         getTest: function(name) { return visualTests[name]; },

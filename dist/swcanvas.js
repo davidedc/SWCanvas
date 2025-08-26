@@ -938,6 +938,34 @@ class Path2D {
             counterclockwise: !!counterclockwise
         });
     }
+
+    arcTo(x1, y1, x2, y2, radius) {
+        if (typeof x1 !== 'number' || typeof y1 !== 'number' || 
+            typeof x2 !== 'number' || typeof y2 !== 'number' || typeof radius !== 'number') {
+            const error = new TypeError('All parameters must be numbers');
+            error.message = 'TypeError: ' + error.message;
+            throw error;
+        }
+        
+        if (!isFinite(x1) || !isFinite(y1) || !isFinite(x2) || !isFinite(y2) || !isFinite(radius)) {
+            const error = new TypeError('All parameters must be finite numbers');
+            error.message = 'TypeError: ' + error.message;
+            throw error;
+        }
+        
+        if (radius < 0) {
+            const error = new Error('IndexSizeError');
+            error.name = 'IndexSizeError';
+            throw error;
+        }
+        
+        this.commands.push({
+            type: 'arcTo',
+            x1: x1, y1: y1,
+            x2: x2, y2: y2,
+            radius: radius
+        });
+    }
 }
 /**
  * Surface class for SWCanvas
@@ -2405,6 +2433,17 @@ class PathFlattener {
                         );
                     }
                     break;
+                    
+                case 'arcTo':
+                    const arcToResult = PathFlattener._handleArcTo(
+                        cmd, currentPoly, currentPoint, subpathStart
+                    );
+                    currentPoint = arcToResult.currentPoint;
+                    currentPoly = arcToResult.currentPoly;
+                    if (arcToResult.subpathStart) {
+                        subpathStart = arcToResult.subpathStart;
+                    }
+                    break;
             }
         }
         
@@ -2766,6 +2805,212 @@ class PathFlattener {
         
         return points;
     }
+    
+    /**
+     * Flatten arc to line segments with custom tolerance for higher precision
+     * @param {number} cx - Center x
+     * @param {number} cy - Center y
+     * @param {number} radius - Arc radius
+     * @param {number} startAngle - Start angle in radians
+     * @param {number} endAngle - End angle in radians
+     * @param {boolean} counterclockwise - Direction flag
+     * @param {number} tolerance - Custom tolerance for segment calculation
+     * @returns {Array<Object>} Array of {x, y} points
+     * @private
+     */
+    static _flattenArcWithTolerance(cx, cy, radius, startAngle, endAngle, counterclockwise, tolerance) {
+        if (radius <= 0) return [];
+        
+        // Normalize angles
+        let start = startAngle;
+        let end = endAngle;
+        
+        if (!counterclockwise && end < start) {
+            end += 2 * Math.PI;
+        } else if (counterclockwise && start < end) {
+            start += 2 * Math.PI;
+        }
+        
+        const totalAngle = Math.abs(end - start);
+        
+        // Calculate number of segments needed for tolerance with minimum segments for smooth curves
+        const maxAngleStep = 2 * Math.acos(Math.max(0, 1 - tolerance / radius));
+        const minSegmentsFor90Deg = 16; // Minimum segments for a 90-degree arc
+        const minSegments = Math.ceil((totalAngle / (Math.PI / 2)) * minSegmentsFor90Deg);
+        const toleranceSegments = Math.ceil(totalAngle / maxAngleStep);
+        const segments = Math.max(1, Math.max(minSegments, toleranceSegments));
+        
+        const points = [];
+        const angleStep = (end - start) / segments;
+        
+        for (let i = 0; i <= segments; i++) {
+            const angle = start + i * angleStep;
+            points.push({
+                x: cx + radius * Math.cos(angle),
+                y: cy + radius * Math.sin(angle)
+            });
+        }
+        
+        return points;
+    }
+    
+    /**
+     * Handle arcTo command - creates arc between two tangent lines
+     * @param {Object} cmd - arcTo command {x1, y1, x2, y2, radius}
+     * @param {Array} currentPoly - Current polygon points
+     * @param {Point} currentPoint - Current path position
+     * @param {Point} subpathStart - Subpath start position
+     * @returns {Object} {currentPoint, currentPoly, subpathStart}
+     * @private
+     */
+    static _handleArcTo(cmd, currentPoly, currentPoint, subpathStart) {
+        const {x1, y1, x2, y2, radius} = cmd;
+        
+        // Early outs / degenerates
+        // If no current point has been set yet: moveTo(x1, y1) and return
+        if (currentPoly.length === 0) {
+            const targetPoint = new Point(x1, y1);
+            currentPoly.push(targetPoint.toObject());
+            return {
+                currentPoint: targetPoint,
+                currentPoly,
+                subpathStart: targetPoint
+            };
+        }
+        
+        // If radius <= 0: degrade to lineTo(x1, y1) and return
+        if (radius <= 0) {
+            const targetPoint = new Point(x1, y1);
+            currentPoly.push(targetPoint.toObject());
+            return {
+                currentPoint: targetPoint,
+                currentPoly,
+                subpathStart: null
+            };
+        }
+        
+        const p0 = currentPoint; // Current point
+        const p1 = new Point(x1, y1); // Corner point
+        const p2 = new Point(x2, y2); // End control point
+        
+        // Direction vectors from the corner (pointing OUT of the corner)
+        // v1 = normalize(P0 - P1)
+        // v2 = normalize(P2 - P1)
+        const v1 = new Point(p0.x - p1.x, p0.y - p1.y);
+        const v2 = new Point(p2.x - p1.x, p2.y - p1.y);
+        
+        // Calculate lengths
+        const len1 = Math.sqrt(v1.x * v1.x + v1.y * v1.y);
+        const len2 = Math.sqrt(v2.x * v2.x + v2.y * v2.y);
+        
+        // If any vectors are zero-length (P0==P1, or P1==P2): degrade to lineTo(x1, y1)
+        if (len1 < 1e-10 || len2 < 1e-10) {
+            const targetPoint = new Point(x1, y1);
+            currentPoly.push(targetPoint.toObject());
+            return {
+                currentPoint: targetPoint,
+                currentPoly,
+                subpathStart: null
+            };
+        }
+        
+        // Normalize vectors
+        const u1 = new Point(v1.x / len1, v1.y / len1);
+        const u2 = new Point(v2.x / len2, v2.y / len2);
+        
+        // Turn angle and tangent distance
+        // Compute the turn angle φ between u1 and u2
+        const dot = u1.x * u2.x + u1.y * u2.y;
+        const cross = u1.x * u2.y - u1.y * u2.x;
+        
+        // Clamp dot product to avoid NaN from acos
+        const clampedDot = Math.max(-1, Math.min(1, dot));
+        const turnAngle = Math.acos(clampedDot);
+        
+        // If the three points are collinear (turn angle is ~0° or ~180°): just lineTo(x1, y1)
+        if (Math.abs(Math.sin(turnAngle)) < 1e-10) {
+            const targetPoint = new Point(x1, y1);
+            currentPoly.push(targetPoint.toObject());
+            return {
+                currentPoint: targetPoint,
+                currentPoly,
+                subpathStart: null
+            };
+        }
+        
+        // Compute distance from corner to tangent points along each leg
+        // d = r / tan(φ/2)
+        const halfAngle = turnAngle / 2;
+        const tangentDistance = radius / Math.tan(halfAngle);
+        
+        // Tangent points on each leg
+        // T1 = P1 + u1 * d
+        // T2 = P1 + u2 * d
+        const t1 = new Point(
+            p1.x + u1.x * tangentDistance,
+            p1.y + u1.y * tangentDistance
+        );
+        const t2 = new Point(
+            p1.x + u2.x * tangentDistance,
+            p1.y + u2.y * tangentDistance
+        );
+        
+        // Arc center
+        // Compute unit left normals for u1 and u2 (rotate 90°)
+        // n1 = (-u1.y, u1.x), n2 = (-u2.y, u2.x)
+        const n1 = new Point(-u1.y, u1.x);
+        const n2 = new Point(-u2.y, u2.x);
+        
+        // Decide which side is "inside" using the sign of the cross product
+        // sign = sgn(u1.x*u2.y - u1.y*u2.x)
+        const sign = Math.sign(cross);
+        
+        // The circle's center C is at:
+        // C = T1 + n1 * (sign * r)
+        const center = new Point(
+            t1.x + n1.x * sign * radius,
+            t1.y + n1.y * sign * radius
+        );
+        
+        // Start/end angles and sweep
+        // Start angle: a1 = atan2(T1.y - C.y, T1.x - C.x)
+        // End angle: a2 = atan2(T2.y - C.y, T2.x - C.x)
+        const startAngle = Math.atan2(t1.y - center.y, t1.x - center.x);
+        const endAngle = Math.atan2(t2.y - center.y, t2.x - center.x);
+        
+        // Anticlockwise flag: anticlockwise = (sign > 0) 
+        // Note: Inverted from reference to get correct arc direction
+        const counterclockwise = (sign > 0);
+        
+        // Add line to start of arc if needed
+        const distance = currentPoint.distanceTo(t1);
+        if (distance > 0.01) {
+            currentPoly.push(t1.toObject());
+        }
+        
+        // Generate arc points with higher precision for smooth curves
+        const arcTolerance = Math.min(0.1, PathFlattener.TOLERANCE); // Use finer tolerance for arcTo
+        const arcPoints = PathFlattener._flattenArcWithTolerance(
+            center.x, center.y, radius,
+            startAngle, endAngle,
+            counterclockwise,
+            arcTolerance
+        );
+        
+        // Add arc points (skip first point as it's already added)
+        PathFlattener._appendPoints(currentPoly, arcPoints, 1);
+        
+        // Return end point of arc
+        const endPoint = arcPoints.length > 0 ? 
+            new Point(arcPoints[arcPoints.length - 1].x, arcPoints[arcPoints.length - 1].y) : 
+            t2;
+            
+        return {
+            currentPoint: endPoint,
+            currentPoly,
+            subpathStart: null
+        };
+    }
 }
 
 // Class constants
@@ -3103,6 +3348,120 @@ class PolygonFiller {
         }
         
         return resultColor;
+    }
+    
+    /**
+     * Test if a point is inside a set of polygons using the specified fill rule
+     * @param {number} x - X coordinate of the point
+     * @param {number} y - Y coordinate of the point  
+     * @param {Array<Array<Object>>} polygons - Array of polygons, each polygon is array of {x, y} points
+     * @param {string} fillRule - Fill rule: 'nonzero' or 'evenodd'
+     * @returns {boolean} True if point is inside the polygon set
+     * @static
+     */
+    static isPointInPolygons(x, y, polygons, fillRule = 'nonzero') {
+        if (polygons.length === 0) return false;
+        
+        const epsilon = 1e-10;
+        
+        // First check if point is exactly on any edge (HTML5 Canvas inclusive behavior)
+        for (const polygon of polygons) {
+            if (polygon.length < 3) continue;
+            
+            for (let i = 0; i < polygon.length; i++) {
+                const p1 = polygon[i];
+                const p2 = polygon[(i + 1) % polygon.length];
+                
+                // Check if point lies on this edge
+                if (PolygonFiller._isPointOnEdge(x, y, p1, p2, epsilon)) {
+                    return true; // HTML5 Canvas treats points on edges as inside
+                }
+            }
+        }
+        
+        let windingNumber = 0;
+        
+        // Cast horizontal ray from point to the right
+        // Count intersections with polygon edges
+        for (const polygon of polygons) {
+            if (polygon.length < 3) continue; // Skip degenerate polygons
+            
+            for (let i = 0; i < polygon.length; i++) {
+                const p1 = polygon[i];
+                const p2 = polygon[(i + 1) % polygon.length];
+                
+                // Skip horizontal edges (no intersection with horizontal ray)
+                if (Math.abs(p1.y - p2.y) < epsilon) continue;
+                
+                // Check if ray crosses this edge
+                const minY = Math.min(p1.y, p2.y);
+                const maxY = Math.max(p1.y, p2.y);
+                
+                // Ray is at y level, check if it intersects the edge
+                if (y >= minY && y < maxY) { // Note: < maxY to avoid double-counting vertices
+                    // Calculate intersection point using linear interpolation
+                    const t = (y - p1.y) / (p2.y - p1.y);
+                    const intersectionX = p1.x + t * (p2.x - p1.x);
+                    
+                    // Only count intersections to the right of our point
+                    // Use >= to handle edge case where intersection is exactly at x
+                    if (intersectionX >= x) {
+                        // Determine winding direction
+                        const winding = p2.y > p1.y ? 1 : -1;
+                        windingNumber += winding;
+                    }
+                }
+            }
+        }
+        
+        // Apply fill rule to determine if point is inside
+        if (fillRule === 'evenodd') {
+            return (windingNumber % 2) !== 0;
+        } else { // nonzero
+            return windingNumber !== 0;
+        }
+    }
+
+    /**
+     * Check if a point lies exactly on a line segment (edge)
+     * @param {number} px - Point x coordinate
+     * @param {number} py - Point y coordinate
+     * @param {Object} p1 - First endpoint {x, y}
+     * @param {Object} p2 - Second endpoint {x, y}
+     * @param {number} epsilon - Tolerance for floating point comparison
+     * @returns {boolean} True if point is on the edge
+     * @private
+     */
+    static _isPointOnEdge(px, py, p1, p2, epsilon) {
+        // Handle degenerate case where p1 and p2 are the same point
+        const dx = p2.x - p1.x;
+        const dy = p2.y - p1.y;
+        const edgeLength = Math.sqrt(dx * dx + dy * dy);
+        
+        if (edgeLength < epsilon) {
+            // Degenerate edge - check if point is at the same location
+            return Math.abs(px - p1.x) < epsilon && Math.abs(py - p1.y) < epsilon;
+        }
+        
+        // Vector from p1 to test point
+        const dpx = px - p1.x;
+        const dpy = py - p1.y;
+        
+        // Check if point is collinear with the edge using cross product
+        const crossProduct = Math.abs(dpx * dy - dpy * dx);
+        const lineDistanceThreshold = epsilon * edgeLength; // Scale epsilon by edge length
+        if (crossProduct > lineDistanceThreshold) {
+            return false; // Not on the line containing the edge
+        }
+        
+        // Check if point is within the bounds of the edge segment
+        const dotProduct = dpx * dx + dpy * dy;
+        const lengthSquared = dx * dx + dy * dy;
+        
+        // Parameter t where point = p1 + t * (p2 - p1)
+        // Point is on segment if 0 <= t <= 1
+        const t = dotProduct / lengthSquared;
+        return t >= -epsilon && t <= 1 + epsilon;
     }
 }
 /**
@@ -6375,6 +6734,10 @@ class Context2D {
     ellipse(x, y, radiusX, radiusY, rotation, startAngle, endAngle, counterclockwise) {
     this._currentPath.ellipse(x, y, radiusX, radiusY, rotation, startAngle, endAngle, counterclockwise);
     }
+    
+    arcTo(x1, y1, x2, y2, radius) {
+        this._currentPath.arcTo(x1, y1, x2, y2, radius);
+    }
 
     quadraticCurveTo(cpx, cpy, x, y) {
     this._currentPath.quadraticCurveTo(cpx, cpy, x, y);
@@ -6590,6 +6953,87 @@ class Context2D {
     });
     
     this.rasterizer.endOp();
+    }
+    
+    /**
+     * Test if a point is inside the current path or specified path
+     * Supports all HTML5 Canvas API overloads:
+     * - isPointInPath(x, y)
+     * - isPointInPath(x, y, fillRule)
+     * - isPointInPath(path, x, y)
+     * - isPointInPath(path, x, y, fillRule)
+     * @param {...} arguments - Variable arguments depending on overload
+     * @returns {boolean} True if point is inside the path
+     */
+    isPointInPath() {
+        let path, x, y, fillRule;
+        
+        if (arguments.length < 2) {
+            const error = new TypeError('Invalid number of arguments for isPointInPath');
+            error.message = 'TypeError: ' + error.message;
+            throw error;
+        } else if (arguments.length === 2) {
+            // isPointInPath(x, y)
+            [x, y] = arguments;
+            path = this._currentPath;
+            fillRule = 'nonzero';
+        } else if (arguments.length === 3) {
+            if (typeof arguments[2] === 'string') {
+                // isPointInPath(x, y, fillRule)
+                [x, y, fillRule] = arguments;
+                path = this._currentPath;
+            } else {
+                // isPointInPath(path, x, y)
+                [path, x, y] = arguments;
+                if (!path || typeof path !== 'object' || !path.commands) {
+                    const error = new TypeError('First argument must be a Path2D object');
+                    error.message = 'TypeError: ' + error.message;
+                    throw error;
+                }
+                fillRule = 'nonzero';
+            }
+        } else if (arguments.length === 4) {
+            // isPointInPath(path, x, y, fillRule)
+            [path, x, y, fillRule] = arguments;
+            if (!path || typeof path !== 'object' || !path.commands) {
+                const error = new TypeError('First argument must be a Path2D object');
+                error.message = 'TypeError: ' + error.message;
+                throw error;
+            }
+        } else if (arguments.length > 4) {
+            const error = new TypeError('Invalid number of arguments for isPointInPath');
+            error.message = 'TypeError: ' + error.message;
+            throw error;
+        }
+        
+        // Validate parameters
+        if (typeof x !== 'number' || typeof y !== 'number') {
+            return false;
+        }
+        
+        if (!path || !path.commands || path.commands.length === 0) {
+            return false;
+        }
+        
+        fillRule = fillRule || 'nonzero';
+        
+        // Note: isPointInPath uses untransformed coordinates per HTML5 Canvas spec
+        // The point coordinates are in canvas coordinate space, not transform-adjusted space
+        
+        // Flatten the path to polygons
+        const polygons = PathFlattener.flattenPath(path);
+        
+        if (polygons.length === 0) {
+            return false;
+        }
+        
+        // Transform polygons to match current canvas transform
+        const transformedPolygons = polygons.map(poly => 
+            poly.map(point => this._transform.transformPoint(point))
+        );
+        
+        // Test point against transformed polygons
+        return PolygonFiller.isPointInPolygons(x, y, transformedPolygons, fillRule);
     }
 
 /**
@@ -7109,6 +7553,10 @@ class CanvasCompatibleContext2D {
         this._core.ellipse(x, y, radiusX, radiusY, rotation, startAngle, endAngle, counterclockwise);
     }
     
+    arcTo(x1, y1, x2, y2, radius) {
+        this._core.arcTo(x1, y1, x2, y2, radius);
+    }
+    
     quadraticCurveTo(cpx, cpy, x, y) {
         this._core.quadraticCurveTo(cpx, cpy, x, y);
     }
@@ -7150,6 +7598,10 @@ class CanvasCompatibleContext2D {
         } else {
             this._core.stroke();
         }
+    }
+    
+    isPointInPath() {
+        return this._core.isPointInPath.apply(this._core, arguments);
     }
     
     // Line dash methods
@@ -7543,6 +7995,7 @@ function createImageData(width, height) {
 // Export to global scope with clean dual API architecture
 if (typeof window !== 'undefined') {
     // Browser
+    window.Path2D = Path2D;
     window.SWCanvas = {
         // HTML5 Canvas-compatible API (recommended for portability)
         createCanvas: createCanvas,
@@ -7579,6 +8032,7 @@ if (typeof window !== 'undefined') {
     };
 } else if (typeof module !== 'undefined' && module.exports) {
     // Node.js
+    global.Path2D = Path2D;
     module.exports = {
         // HTML5 Canvas-compatible API (recommended for portability)
         createCanvas: createCanvas,
