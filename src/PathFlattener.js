@@ -86,6 +86,17 @@ class PathFlattener {
                         );
                     }
                     break;
+                    
+                case 'arcTo':
+                    const arcToResult = PathFlattener._handleArcTo(
+                        cmd, currentPoly, currentPoint, subpathStart
+                    );
+                    currentPoint = arcToResult.currentPoint;
+                    currentPoly = arcToResult.currentPoly;
+                    if (arcToResult.subpathStart) {
+                        subpathStart = arcToResult.subpathStart;
+                    }
+                    break;
             }
         }
         
@@ -446,6 +457,212 @@ class PathFlattener {
         }
         
         return points;
+    }
+    
+    /**
+     * Flatten arc to line segments with custom tolerance for higher precision
+     * @param {number} cx - Center x
+     * @param {number} cy - Center y
+     * @param {number} radius - Arc radius
+     * @param {number} startAngle - Start angle in radians
+     * @param {number} endAngle - End angle in radians
+     * @param {boolean} counterclockwise - Direction flag
+     * @param {number} tolerance - Custom tolerance for segment calculation
+     * @returns {Array<Object>} Array of {x, y} points
+     * @private
+     */
+    static _flattenArcWithTolerance(cx, cy, radius, startAngle, endAngle, counterclockwise, tolerance) {
+        if (radius <= 0) return [];
+        
+        // Normalize angles
+        let start = startAngle;
+        let end = endAngle;
+        
+        if (!counterclockwise && end < start) {
+            end += 2 * Math.PI;
+        } else if (counterclockwise && start < end) {
+            start += 2 * Math.PI;
+        }
+        
+        const totalAngle = Math.abs(end - start);
+        
+        // Calculate number of segments needed for tolerance with minimum segments for smooth curves
+        const maxAngleStep = 2 * Math.acos(Math.max(0, 1 - tolerance / radius));
+        const minSegmentsFor90Deg = 16; // Minimum segments for a 90-degree arc
+        const minSegments = Math.ceil((totalAngle / (Math.PI / 2)) * minSegmentsFor90Deg);
+        const toleranceSegments = Math.ceil(totalAngle / maxAngleStep);
+        const segments = Math.max(1, Math.max(minSegments, toleranceSegments));
+        
+        const points = [];
+        const angleStep = (end - start) / segments;
+        
+        for (let i = 0; i <= segments; i++) {
+            const angle = start + i * angleStep;
+            points.push({
+                x: cx + radius * Math.cos(angle),
+                y: cy + radius * Math.sin(angle)
+            });
+        }
+        
+        return points;
+    }
+    
+    /**
+     * Handle arcTo command - creates arc between two tangent lines
+     * @param {Object} cmd - arcTo command {x1, y1, x2, y2, radius}
+     * @param {Array} currentPoly - Current polygon points
+     * @param {Point} currentPoint - Current path position
+     * @param {Point} subpathStart - Subpath start position
+     * @returns {Object} {currentPoint, currentPoly, subpathStart}
+     * @private
+     */
+    static _handleArcTo(cmd, currentPoly, currentPoint, subpathStart) {
+        const {x1, y1, x2, y2, radius} = cmd;
+        
+        // Early outs / degenerates
+        // If no current point has been set yet: moveTo(x1, y1) and return
+        if (currentPoly.length === 0) {
+            const targetPoint = new Point(x1, y1);
+            currentPoly.push(targetPoint.toObject());
+            return {
+                currentPoint: targetPoint,
+                currentPoly,
+                subpathStart: targetPoint
+            };
+        }
+        
+        // If radius <= 0: degrade to lineTo(x1, y1) and return
+        if (radius <= 0) {
+            const targetPoint = new Point(x1, y1);
+            currentPoly.push(targetPoint.toObject());
+            return {
+                currentPoint: targetPoint,
+                currentPoly,
+                subpathStart: null
+            };
+        }
+        
+        const p0 = currentPoint; // Current point
+        const p1 = new Point(x1, y1); // Corner point
+        const p2 = new Point(x2, y2); // End control point
+        
+        // Direction vectors from the corner (pointing OUT of the corner)
+        // v1 = normalize(P0 - P1)
+        // v2 = normalize(P2 - P1)
+        const v1 = new Point(p0.x - p1.x, p0.y - p1.y);
+        const v2 = new Point(p2.x - p1.x, p2.y - p1.y);
+        
+        // Calculate lengths
+        const len1 = Math.sqrt(v1.x * v1.x + v1.y * v1.y);
+        const len2 = Math.sqrt(v2.x * v2.x + v2.y * v2.y);
+        
+        // If any vectors are zero-length (P0==P1, or P1==P2): degrade to lineTo(x1, y1)
+        if (len1 < 1e-10 || len2 < 1e-10) {
+            const targetPoint = new Point(x1, y1);
+            currentPoly.push(targetPoint.toObject());
+            return {
+                currentPoint: targetPoint,
+                currentPoly,
+                subpathStart: null
+            };
+        }
+        
+        // Normalize vectors
+        const u1 = new Point(v1.x / len1, v1.y / len1);
+        const u2 = new Point(v2.x / len2, v2.y / len2);
+        
+        // Turn angle and tangent distance
+        // Compute the turn angle φ between u1 and u2
+        const dot = u1.x * u2.x + u1.y * u2.y;
+        const cross = u1.x * u2.y - u1.y * u2.x;
+        
+        // Clamp dot product to avoid NaN from acos
+        const clampedDot = Math.max(-1, Math.min(1, dot));
+        const turnAngle = Math.acos(clampedDot);
+        
+        // If the three points are collinear (turn angle is ~0° or ~180°): just lineTo(x1, y1)
+        if (Math.abs(Math.sin(turnAngle)) < 1e-10) {
+            const targetPoint = new Point(x1, y1);
+            currentPoly.push(targetPoint.toObject());
+            return {
+                currentPoint: targetPoint,
+                currentPoly,
+                subpathStart: null
+            };
+        }
+        
+        // Compute distance from corner to tangent points along each leg
+        // d = r / tan(φ/2)
+        const halfAngle = turnAngle / 2;
+        const tangentDistance = radius / Math.tan(halfAngle);
+        
+        // Tangent points on each leg
+        // T1 = P1 + u1 * d
+        // T2 = P1 + u2 * d
+        const t1 = new Point(
+            p1.x + u1.x * tangentDistance,
+            p1.y + u1.y * tangentDistance
+        );
+        const t2 = new Point(
+            p1.x + u2.x * tangentDistance,
+            p1.y + u2.y * tangentDistance
+        );
+        
+        // Arc center
+        // Compute unit left normals for u1 and u2 (rotate 90°)
+        // n1 = (-u1.y, u1.x), n2 = (-u2.y, u2.x)
+        const n1 = new Point(-u1.y, u1.x);
+        const n2 = new Point(-u2.y, u2.x);
+        
+        // Decide which side is "inside" using the sign of the cross product
+        // sign = sgn(u1.x*u2.y - u1.y*u2.x)
+        const sign = Math.sign(cross);
+        
+        // The circle's center C is at:
+        // C = T1 + n1 * (sign * r)
+        const center = new Point(
+            t1.x + n1.x * sign * radius,
+            t1.y + n1.y * sign * radius
+        );
+        
+        // Start/end angles and sweep
+        // Start angle: a1 = atan2(T1.y - C.y, T1.x - C.x)
+        // End angle: a2 = atan2(T2.y - C.y, T2.x - C.x)
+        const startAngle = Math.atan2(t1.y - center.y, t1.x - center.x);
+        const endAngle = Math.atan2(t2.y - center.y, t2.x - center.x);
+        
+        // Anticlockwise flag: anticlockwise = (sign > 0) 
+        // Note: Inverted from reference to get correct arc direction
+        const counterclockwise = (sign > 0);
+        
+        // Add line to start of arc if needed
+        const distance = currentPoint.distanceTo(t1);
+        if (distance > 0.01) {
+            currentPoly.push(t1.toObject());
+        }
+        
+        // Generate arc points with higher precision for smooth curves
+        const arcTolerance = Math.min(0.1, PathFlattener.TOLERANCE); // Use finer tolerance for arcTo
+        const arcPoints = PathFlattener._flattenArcWithTolerance(
+            center.x, center.y, radius,
+            startAngle, endAngle,
+            counterclockwise,
+            arcTolerance
+        );
+        
+        // Add arc points (skip first point as it's already added)
+        PathFlattener._appendPoints(currentPoly, arcPoints, 1);
+        
+        // Return end point of arc
+        const endPoint = arcPoints.length > 0 ? 
+            new Point(arcPoints[arcPoints.length - 1].x, arcPoints[arcPoints.length - 1].y) : 
+            t2;
+            
+        return {
+            currentPoint: endPoint,
+            currentPoly,
+            subpathStart: null
+        };
     }
 }
 

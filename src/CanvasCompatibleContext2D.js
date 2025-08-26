@@ -191,6 +191,10 @@ class CanvasCompatibleContext2D {
         this._core.ellipse(x, y, radiusX, radiusY, rotation, startAngle, endAngle, counterclockwise);
     }
     
+    arcTo(x1, y1, x2, y2, radius) {
+        this._core.arcTo(x1, y1, x2, y2, radius);
+    }
+    
     quadraticCurveTo(cpx, cpy, x, y) {
         this._core.quadraticCurveTo(cpx, cpy, x, y);
     }
@@ -232,6 +236,10 @@ class CanvasCompatibleContext2D {
         } else {
             this._core.stroke();
         }
+    }
+    
+    isPointInPath() {
+        return this._core.isPointInPath.apply(this._core, arguments);
     }
     
     // Line dash methods

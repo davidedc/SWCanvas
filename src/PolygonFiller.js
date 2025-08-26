@@ -332,4 +332,118 @@ class PolygonFiller {
         
         return resultColor;
     }
+    
+    /**
+     * Test if a point is inside a set of polygons using the specified fill rule
+     * @param {number} x - X coordinate of the point
+     * @param {number} y - Y coordinate of the point  
+     * @param {Array<Array<Object>>} polygons - Array of polygons, each polygon is array of {x, y} points
+     * @param {string} fillRule - Fill rule: 'nonzero' or 'evenodd'
+     * @returns {boolean} True if point is inside the polygon set
+     * @static
+     */
+    static isPointInPolygons(x, y, polygons, fillRule = 'nonzero') {
+        if (polygons.length === 0) return false;
+        
+        const epsilon = 1e-10;
+        
+        // First check if point is exactly on any edge (HTML5 Canvas inclusive behavior)
+        for (const polygon of polygons) {
+            if (polygon.length < 3) continue;
+            
+            for (let i = 0; i < polygon.length; i++) {
+                const p1 = polygon[i];
+                const p2 = polygon[(i + 1) % polygon.length];
+                
+                // Check if point lies on this edge
+                if (PolygonFiller._isPointOnEdge(x, y, p1, p2, epsilon)) {
+                    return true; // HTML5 Canvas treats points on edges as inside
+                }
+            }
+        }
+        
+        let windingNumber = 0;
+        
+        // Cast horizontal ray from point to the right
+        // Count intersections with polygon edges
+        for (const polygon of polygons) {
+            if (polygon.length < 3) continue; // Skip degenerate polygons
+            
+            for (let i = 0; i < polygon.length; i++) {
+                const p1 = polygon[i];
+                const p2 = polygon[(i + 1) % polygon.length];
+                
+                // Skip horizontal edges (no intersection with horizontal ray)
+                if (Math.abs(p1.y - p2.y) < epsilon) continue;
+                
+                // Check if ray crosses this edge
+                const minY = Math.min(p1.y, p2.y);
+                const maxY = Math.max(p1.y, p2.y);
+                
+                // Ray is at y level, check if it intersects the edge
+                if (y >= minY && y < maxY) { // Note: < maxY to avoid double-counting vertices
+                    // Calculate intersection point using linear interpolation
+                    const t = (y - p1.y) / (p2.y - p1.y);
+                    const intersectionX = p1.x + t * (p2.x - p1.x);
+                    
+                    // Only count intersections to the right of our point
+                    // Use >= to handle edge case where intersection is exactly at x
+                    if (intersectionX >= x) {
+                        // Determine winding direction
+                        const winding = p2.y > p1.y ? 1 : -1;
+                        windingNumber += winding;
+                    }
+                }
+            }
+        }
+        
+        // Apply fill rule to determine if point is inside
+        if (fillRule === 'evenodd') {
+            return (windingNumber % 2) !== 0;
+        } else { // nonzero
+            return windingNumber !== 0;
+        }
+    }
+
+    /**
+     * Check if a point lies exactly on a line segment (edge)
+     * @param {number} px - Point x coordinate
+     * @param {number} py - Point y coordinate
+     * @param {Object} p1 - First endpoint {x, y}
+     * @param {Object} p2 - Second endpoint {x, y}
+     * @param {number} epsilon - Tolerance for floating point comparison
+     * @returns {boolean} True if point is on the edge
+     * @private
+     */
+    static _isPointOnEdge(px, py, p1, p2, epsilon) {
+        // Handle degenerate case where p1 and p2 are the same point
+        const dx = p2.x - p1.x;
+        const dy = p2.y - p1.y;
+        const edgeLength = Math.sqrt(dx * dx + dy * dy);
+        
+        if (edgeLength < epsilon) {
+            // Degenerate edge - check if point is at the same location
+            return Math.abs(px - p1.x) < epsilon && Math.abs(py - p1.y) < epsilon;
+        }
+        
+        // Vector from p1 to test point
+        const dpx = px - p1.x;
+        const dpy = py - p1.y;
+        
+        // Check if point is collinear with the edge using cross product
+        const crossProduct = Math.abs(dpx * dy - dpy * dx);
+        const lineDistanceThreshold = epsilon * edgeLength; // Scale epsilon by edge length
+        if (crossProduct > lineDistanceThreshold) {
+            return false; // Not on the line containing the edge
+        }
+        
+        // Check if point is within the bounds of the edge segment
+        const dotProduct = dpx * dx + dpy * dy;
+        const lengthSquared = dx * dx + dy * dy;
+        
+        // Parameter t where point = p1 + t * (p2 - p1)
+        // Point is on segment if 0 <= t <= 1
+        const t = dotProduct / lengthSquared;
+        return t >= -epsilon && t <= 1 + epsilon;
+    }
 }

@@ -63,4 +63,32 @@ class Path2D {
             counterclockwise: !!counterclockwise
         });
     }
+
+    arcTo(x1, y1, x2, y2, radius) {
+        if (typeof x1 !== 'number' || typeof y1 !== 'number' || 
+            typeof x2 !== 'number' || typeof y2 !== 'number' || typeof radius !== 'number') {
+            const error = new TypeError('All parameters must be numbers');
+            error.message = 'TypeError: ' + error.message;
+            throw error;
+        }
+        
+        if (!isFinite(x1) || !isFinite(y1) || !isFinite(x2) || !isFinite(y2) || !isFinite(radius)) {
+            const error = new TypeError('All parameters must be finite numbers');
+            error.message = 'TypeError: ' + error.message;
+            throw error;
+        }
+        
+        if (radius < 0) {
+            const error = new Error('IndexSizeError');
+            error.name = 'IndexSizeError';
+            throw error;
+        }
+        
+        this.commands.push({
+            type: 'arcTo',
+            x1: x1, y1: y1,
+            x2: x2, y2: y2,
+            radius: radius
+        });
+    }
 }

@@ -126,6 +126,7 @@ cat >> dist/swcanvas.js << 'EOF'
 // Export to global scope with clean dual API architecture
 if (typeof window !== 'undefined') {
     // Browser
+    window.Path2D = Path2D;
     window.SWCanvas = {
         // HTML5 Canvas-compatible API (recommended for portability)
         createCanvas: createCanvas,
@@ -162,6 +163,7 @@ if (typeof window !== 'undefined') {
     };
 } else if (typeof module !== 'undefined' && module.exports) {
     // Node.js
+    global.Path2D = Path2D;
     module.exports = {
         // HTML5 Canvas-compatible API (recommended for portability)
         createCanvas: createCanvas,

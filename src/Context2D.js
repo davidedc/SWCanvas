@@ -181,6 +181,10 @@ class Context2D {
     ellipse(x, y, radiusX, radiusY, rotation, startAngle, endAngle, counterclockwise) {
     this._currentPath.ellipse(x, y, radiusX, radiusY, rotation, startAngle, endAngle, counterclockwise);
     }
+    
+    arcTo(x1, y1, x2, y2, radius) {
+        this._currentPath.arcTo(x1, y1, x2, y2, radius);
+    }
 
     quadraticCurveTo(cpx, cpy, x, y) {
     this._currentPath.quadraticCurveTo(cpx, cpy, x, y);
@@ -396,6 +400,87 @@ class Context2D {
     });
     
     this.rasterizer.endOp();
+    }
+    
+    /**
+     * Test if a point is inside the current path or specified path
+     * Supports all HTML5 Canvas API overloads:
+     * - isPointInPath(x, y)
+     * - isPointInPath(x, y, fillRule)
+     * - isPointInPath(path, x, y)
+     * - isPointInPath(path, x, y, fillRule)
+     * @param {...} arguments - Variable arguments depending on overload
+     * @returns {boolean} True if point is inside the path
+     */
+    isPointInPath() {
+        let path, x, y, fillRule;
+        
+        if (arguments.length < 2) {
+            const error = new TypeError('Invalid number of arguments for isPointInPath');
+            error.message = 'TypeError: ' + error.message;
+            throw error;
+        } else if (arguments.length === 2) {
+            // isPointInPath(x, y)
+            [x, y] = arguments;
+            path = this._currentPath;
+            fillRule = 'nonzero';
+        } else if (arguments.length === 3) {
+            if (typeof arguments[2] === 'string') {
+                // isPointInPath(x, y, fillRule)
+                [x, y, fillRule] = arguments;
+                path = this._currentPath;
+            } else {
+                // isPointInPath(path, x, y)
+                [path, x, y] = arguments;
+                if (!path || typeof path !== 'object' || !path.commands) {
+                    const error = new TypeError('First argument must be a Path2D object');
+                    error.message = 'TypeError: ' + error.message;
+                    throw error;
+                }
+                fillRule = 'nonzero';
+            }
+        } else if (arguments.length === 4) {
+            // isPointInPath(path, x, y, fillRule)
+            [path, x, y, fillRule] = arguments;
+            if (!path || typeof path !== 'object' || !path.commands) {
+                const error = new TypeError('First argument must be a Path2D object');
+                error.message = 'TypeError: ' + error.message;
+                throw error;
+            }
+        } else if (arguments.length > 4) {
+            const error = new TypeError('Invalid number of arguments for isPointInPath');
+            error.message = 'TypeError: ' + error.message;
+            throw error;
+        }
+        
+        // Validate parameters
+        if (typeof x !== 'number' || typeof y !== 'number') {
+            return false;
+        }
+        
+        if (!path || !path.commands || path.commands.length === 0) {
+            return false;
+        }
+        
+        fillRule = fillRule || 'nonzero';
+        
+        // Note: isPointInPath uses untransformed coordinates per HTML5 Canvas spec
+        // The point coordinates are in canvas coordinate space, not transform-adjusted space
+        
+        // Flatten the path to polygons
+        const polygons = PathFlattener.flattenPath(path);
+        
+        if (polygons.length === 0) {
+            return false;
+        }
+        
+        // Transform polygons to match current canvas transform
+        const transformedPolygons = polygons.map(poly => 
+            poly.map(point => this._transform.transformPoint(point))
+        );
+        
+        // Test point against transformed polygons
+        return PolygonFiller.isPointInPolygons(x, y, transformedPolygons, fillRule);
     }
 
 /**
