@@ -51,6 +51,8 @@ cat src/PolygonFiller.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
 cat src/StrokeGenerator.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
+cat src/BitBuffer.js >> dist/swcanvas.js
+echo "" >> dist/swcanvas.js
 cat src/ClipMask.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
 cat src/SourceMask.js >> dist/swcanvas.js
@@ -136,6 +138,7 @@ if (typeof window !== 'undefined') {
             Rectangle: Rectangle,
             BitmapEncoder: BitmapEncoder,
             BitmapEncodingOptions: BitmapEncodingOptions,
+            BitBuffer: BitBuffer,
             ClipMask: ClipMask,
             SourceMask: SourceMask,
             ImageProcessor: ImageProcessor,
@@ -169,6 +172,7 @@ if (typeof window !== 'undefined') {
             Rectangle: Rectangle,
             BitmapEncoder: BitmapEncoder,
             BitmapEncodingOptions: BitmapEncodingOptions,
+            BitBuffer: BitBuffer,
             ClipMask: ClipMask,
             SourceMask: SourceMask,
             ImageProcessor: ImageProcessor,
