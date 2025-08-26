@@ -137,7 +137,7 @@
         <div class="buttons">
             <button onclick="drawShowcase()">🎯 Redraw Showcase</button>
             <button id="animateBtn" onclick="toggleAnimation()">🎬 Animate Demo</button>
-            <button onclick="downloadImage()">💾 Download as BMP</button>
+            <button onclick="downloadImage()">💾 Download as PNG</button>
         </div>
         
         <div class="performance" id="performance">
@@ -709,17 +709,17 @@
         }
         
         function downloadImage() {
-            // Use SWCanvas BMP encoder for deterministic output
-            if (SWCanvas.Core && SWCanvas.Core.BitmapEncoder) {
-                // Use SWCanvas BMP encoder
+            // Use SWCanvas PNG encoder for deterministic output with transparency
+            if (SWCanvas.Core && SWCanvas.Core.PngEncoder) {
+                // Use SWCanvas PNG encoder
                 const surface = canvas._coreSurface || canvas._surface;
                 if (surface) {
-                    const bmpData = SWCanvas.Core.BitmapEncoder.encode(surface);
-                    const blob = new Blob([bmpData], { type: 'image/bmp' });
+                    const pngData = SWCanvas.Core.PngEncoder.encode(surface);
+                    const blob = new Blob([pngData], { type: 'image/png' });
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement('a');
                     a.href = url;
-                    a.download = 'swcanvas-showcase.bmp';
+                    a.download = 'swcanvas-showcase.png';
                     a.click();
                     URL.revokeObjectURL(url);
                 }
