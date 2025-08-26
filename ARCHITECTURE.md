@@ -236,8 +236,8 @@ The architecture provides seamless interoperability between layers:
 ```javascript
 // From HTML5 API to Core API
 const canvas = SWCanvas.createCanvas(800, 600);
-const coreSurface = canvas._coreSurface;           // Access Core Surface
-const coreContext = canvas.getContext('2d')._core; // Access Core Context
+const coreSurface = canvas._coreSurface;                // Access Core Surface
+const coreContext = canvas.getContext('2d')._coreContext; // Access Core Context
 
 // From Core API to HTML5 API  
 const surface = SWCanvas.Core.Surface(800, 600);
