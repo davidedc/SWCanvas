@@ -7,7 +7,7 @@ test('Create and save a simple test image', () => {
         const visualTest = VisualRenderingTests.getTest('simple-test');
         if (visualTest) {
             const surface = visualTest.drawSWCanvas(SWCanvas);
-            saveBMP(surface, 'test-output.bmp', 'test image', SWCanvas);
+            savePNG(surface, 'test-output.basic.png', 'test image', SWCanvas);
             return;
         }
     }
@@ -25,5 +25,5 @@ test('Create and save a simple test image', () => {
     ctx.fillRect(25, 25, 50, 50);
     
     // Save test image
-    saveBMP(surface, 'test-output.bmp', 'test image', SWCanvas);
+    savePNG(surface, 'test-output.basic.png', 'test image', SWCanvas);
 });

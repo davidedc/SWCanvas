@@ -6,7 +6,7 @@ test('Basic transform - scale operations', () => {
         const visualTest = VisualRenderingTests.getTest('transform-basic-scale');
         if (visualTest) {
             const surface = visualTest.drawSWCanvas(SWCanvas);
-            saveBMP(surface, 'transform-basic-scale.bmp', 'basic scale test', SWCanvas);
+            savePNG(surface, 'transform-basic-scale.basic.png', 'basic scale test', SWCanvas);
             
             // Verify scaling worked - blue square should be 2x size
             let bluePixelCount = 0;

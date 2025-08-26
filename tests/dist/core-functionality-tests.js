@@ -42,10 +42,10 @@
         console.log(`  ${message}`);
     }
     
-    // Helper function to save BMP files (Node.js only)
-    function saveBMP(surface, filename, description, SWCanvas) {
+    // Helper function to save PNG files (Node.js only)
+    function savePNG(surface, filename, description, SWCanvas) {
         try {
-            const bmpData = SWCanvas.Core.BitmapEncoder.encode(surface);
+            const pngData = SWCanvas.Core.PngEncoder.encode(surface);
             const fs = require('fs');
             const path = require('path');
             
@@ -57,7 +57,7 @@
             
             const filePath = path.join(outputDir, filename);
             // Convert ArrayBuffer to Buffer for Node.js
-            const buffer = Buffer.from(bmpData);
+            const buffer = Buffer.from(pngData);
             fs.writeFileSync(filePath, buffer);
             console.log(`  Saved ${description}: ${filePath}`);
         } catch (error) {
@@ -230,7 +230,7 @@
                 const visualTest = VisualRenderingTests.getTest('simple-test');
                 if (visualTest) {
                     const surface = visualTest.drawSWCanvas(SWCanvas);
-                    saveBMP(surface, 'test-output.bmp', 'test image', SWCanvas);
+                    savePNG(surface, 'test-output.basic.png', 'test image', SWCanvas);
                     return;
                 }
             }
@@ -248,7 +248,7 @@
             ctx.fillRect(25, 25, 50, 50);
             
             // Save test image
-            saveBMP(surface, 'test-output.bmp', 'test image', SWCanvas);
+            savePNG(surface, 'test-output.basic.png', 'test image', SWCanvas);
         });
 
         // Test: Alpha blending test - semi-transparent rectangles
@@ -276,7 +276,7 @@
                     log(`  Green over white: R=${surface.data[greenOverWhiteOffset]}, G=${surface.data[greenOverWhiteOffset+1]}, B=${surface.data[greenOverWhiteOffset+2]}, A=${surface.data[greenOverWhiteOffset+3]}`);
                     
                     // Save alpha blending test image
-                    saveBMP(surface, 'alpha-test.bmp', 'alpha test image', SWCanvas);
+                    savePNG(surface, 'alpha-test.basic.png', 'alpha test image', SWCanvas);
                     
                     // Expected values for 50% green over white:
                     // 50% green (128) over white: src=[0,64,0,128] dst=[255,255,255,255] 
@@ -335,7 +335,7 @@
             log(`  Green over white: R=${surface.data[greenOverWhiteOffset]}, G=${surface.data[greenOverWhiteOffset+1]}, B=${surface.data[greenOverWhiteOffset+2]}, A=${surface.data[greenOverWhiteOffset+3]}`);
             
             // Save alpha blending test image
-            saveBMP(surface, 'alpha-test.bmp', 'alpha test image', SWCanvas);
+            savePNG(surface, 'alpha-test.basic.png', 'alpha test image', SWCanvas);
             
             // Expected values for 50% green over white:
             // 50% green (128) over white: src=[0,64,0,128] dst=[255,255,255,255] 
@@ -389,7 +389,7 @@
                 throw new Error(`Expected red pixel inside triangle, got R=${r}, G=${g}, B=${b}`);
             }
             
-            saveBMP(surface, 'triangle-test.bmp', 'triangle path test', SWCanvas);
+            savePNG(surface, 'triangle-test.basic.png', 'triangle path test', SWCanvas);
         });
 
         // Test: Path filling - evenodd vs nonzero
@@ -424,7 +424,7 @@
                 throw new Error('Expected white center with evenodd rule');
             }
             
-            saveBMP(surface, 'evenodd-test.bmp', 'evenodd fill test', SWCanvas);
+            savePNG(surface, 'evenodd-test.basic.png', 'evenodd fill test', SWCanvas);
         });
 
         // Test: Basic clipping test
@@ -457,7 +457,7 @@
                 throw new Error('Clipping not working - expected white outside clip region');
             }
             
-            saveBMP(surface, 'clipping-test.bmp', 'basic clipping test', SWCanvas);
+            savePNG(surface, 'clipping-test.basic.png', 'basic clipping test', SWCanvas);
         });
 
         // Test: Basic stroke - simple line
@@ -488,7 +488,7 @@
                 throw new Error('Expected red stroke line');
             }
             
-            saveBMP(surface, 'stroke-basic-line.bmp', 'basic stroke line', SWCanvas);
+            savePNG(surface, 'stroke-basic-line.basic.png', 'basic stroke line', SWCanvas);
         });
 
         // Test: Stroke joins - miter, bevel, round
@@ -529,7 +529,7 @@
             ctx.lineTo(280, 20);
             ctx.stroke();
             
-            saveBMP(surface, 'stroke-joins.bmp', 'stroke joins test', SWCanvas);
+            savePNG(surface, 'stroke-joins.basic.png', 'stroke joins test', SWCanvas);
         });
 
         // Test: Stroke caps - butt, square, round
@@ -567,7 +567,7 @@
             ctx.lineTo(250, 70);
             ctx.stroke();
             
-            saveBMP(surface, 'stroke-caps.bmp', 'stroke caps test', SWCanvas);
+            savePNG(surface, 'stroke-caps.basic.png', 'stroke caps test', SWCanvas);
         });
 
         // Test: Stroke with different line widths
@@ -593,7 +593,7 @@
                 ctx.stroke();
             }
             
-            saveBMP(surface, 'stroke-widths.bmp', 'stroke widths test', SWCanvas);
+            savePNG(surface, 'stroke-widths.basic.png', 'stroke widths test', SWCanvas);
         });
 
         // Test: Complex path stroke with curves
@@ -620,7 +620,7 @@
             ctx.lineTo(20, 100);
             ctx.stroke();
             
-            saveBMP(surface, 'stroke-curves.bmp', 'stroke curves test', SWCanvas);
+            savePNG(surface, 'stroke-curves.basic.png', 'stroke curves test', SWCanvas);
         });
 
         // Test: Miter limit test
@@ -654,7 +654,7 @@
             ctx.lineTo(160, 20);
             ctx.stroke();
             
-            saveBMP(surface, 'stroke-miter-limit.bmp', 'stroke miter limit test', SWCanvas);
+            savePNG(surface, 'stroke-miter-limit.basic.png', 'stroke miter limit test', SWCanvas);
         });
 
         // Test: Miter limit property and basic functionality
@@ -719,7 +719,7 @@
             
             log('  ✓ Miter joins rendered with different miterLimit values');
             
-            saveBMP(surface, 'miter-limits-basic.bmp', 'miter limits basic test', SWCanvas);
+            savePNG(surface, 'miter-limits-basic.basic.png', 'miter limits basic test', SWCanvas);
         });
 
         // Test: Basic transform - translate operations
@@ -730,7 +730,7 @@
                 const visualTest = VisualRenderingTests.getTest('transform-basic-translate');
                 if (visualTest) {
                     const surface = visualTest.drawSWCanvas(SWCanvas);
-                    saveBMP(surface, 'transform-basic-translate.bmp', 'basic translate test', SWCanvas);
+                    savePNG(surface, 'transform-basic-translate.basic.png', 'basic translate test', SWCanvas);
                     
                     // Verify translated squares are in correct positions
                     // Red square: fillRect(10,10,30,30) at origin -> (10,10) to (40,40)
@@ -770,7 +770,7 @@
                 const visualTest = VisualRenderingTests.getTest('transform-basic-scale');
                 if (visualTest) {
                     const surface = visualTest.drawSWCanvas(SWCanvas);
-                    saveBMP(surface, 'transform-basic-scale.bmp', 'basic scale test', SWCanvas);
+                    savePNG(surface, 'transform-basic-scale.basic.png', 'basic scale test', SWCanvas);
                     
                     // Verify scaling worked - blue square should be 2x size
                     let bluePixelCount = 0;
@@ -810,7 +810,7 @@
                 const visualTest = VisualRenderingTests.getTest('transform-basic-rotate');
                 if (visualTest) {
                     const surface = visualTest.drawSWCanvas(SWCanvas);
-                    saveBMP(surface, 'transform-basic-rotate.bmp', 'basic rotate test', SWCanvas);
+                    savePNG(surface, 'transform-basic-rotate.basic.png', 'basic rotate test', SWCanvas);
                     
                     // Just verify rotation doesn't crash and produces pixels
                     let pixelCount = 0;
@@ -850,7 +850,7 @@
                 const visualTest = VisualRenderingTests.getTest('transform-setTransform-vs-transform');
                 if (visualTest) {
                     const surface = visualTest.drawSWCanvas(SWCanvas);
-                    saveBMP(surface, 'transform-setTransform-vs-transform.bmp', 'setTransform vs transform test', SWCanvas);
+                    savePNG(surface, 'transform-setTransform-vs-transform.basic.png', 'setTransform vs transform test', SWCanvas);
                     return;
                 }
             }
@@ -888,7 +888,7 @@
                 const visualTest = VisualRenderingTests.getTest('transform-resetTransform');
                 if (visualTest) {
                     const surface = visualTest.drawSWCanvas(SWCanvas);
-                    saveBMP(surface, 'transform-resetTransform.bmp', 'resetTransform test', SWCanvas);
+                    savePNG(surface, 'transform-resetTransform.basic.png', 'resetTransform test', SWCanvas);
                     return;
                 }
             }
@@ -921,7 +921,7 @@
                 const visualTest = VisualRenderingTests.getTest('transform-matrix-order');
                 if (visualTest) {
                     const surface = visualTest.drawSWCanvas(SWCanvas);
-                    saveBMP(surface, 'transform-matrix-order.bmp', 'transform matrix order test', SWCanvas);
+                    savePNG(surface, 'transform-matrix-order.basic.png', 'transform matrix order test', SWCanvas);
                     
                     // Check that red and blue squares are in different positions
                     // Red square: translate(40,40) then scale(2,2) then fillRect(0,0,15,15)

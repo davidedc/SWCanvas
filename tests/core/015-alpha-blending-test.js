@@ -23,7 +23,7 @@ test('Alpha blending test - semi-transparent rectangles', () => {
             log(`  Green over white: R=${surface.data[greenOverWhiteOffset]}, G=${surface.data[greenOverWhiteOffset+1]}, B=${surface.data[greenOverWhiteOffset+2]}, A=${surface.data[greenOverWhiteOffset+3]}`);
             
             // Save alpha blending test image
-            saveBMP(surface, 'alpha-test.bmp', 'alpha test image', SWCanvas);
+            savePNG(surface, 'alpha-test.basic.png', 'alpha test image', SWCanvas);
             
             // Expected values for 50% green over white:
             // 50% green (128) over white: src=[0,64,0,128] dst=[255,255,255,255] 
@@ -82,7 +82,7 @@ test('Alpha blending test - semi-transparent rectangles', () => {
     log(`  Green over white: R=${surface.data[greenOverWhiteOffset]}, G=${surface.data[greenOverWhiteOffset+1]}, B=${surface.data[greenOverWhiteOffset+2]}, A=${surface.data[greenOverWhiteOffset+3]}`);
     
     // Save alpha blending test image
-    saveBMP(surface, 'alpha-test.bmp', 'alpha test image', SWCanvas);
+    savePNG(surface, 'alpha-test.basic.png', 'alpha test image', SWCanvas);
     
     // Expected values for 50% green over white:
     // 50% green (128) over white: src=[0,64,0,128] dst=[255,255,255,255] 

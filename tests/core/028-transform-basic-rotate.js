@@ -6,7 +6,7 @@ test('Basic transform - rotate operations', () => {
         const visualTest = VisualRenderingTests.getTest('transform-basic-rotate');
         if (visualTest) {
             const surface = visualTest.drawSWCanvas(SWCanvas);
-            saveBMP(surface, 'transform-basic-rotate.bmp', 'basic rotate test', SWCanvas);
+            savePNG(surface, 'transform-basic-rotate.basic.png', 'basic rotate test', SWCanvas);
             
             // Just verify rotation doesn't crash and produces pixels
             let pixelCount = 0;

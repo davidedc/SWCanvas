@@ -26,5 +26,5 @@ test('Basic stroke - simple line', () => {
         throw new Error('Expected red stroke line');
     }
     
-    saveBMP(surface, 'stroke-basic-line.bmp', 'basic stroke line', SWCanvas);
+    savePNG(surface, 'stroke-basic-line.basic.png', 'basic stroke line', SWCanvas);
 });

@@ -78,10 +78,10 @@ function buildCoreTests() {
         console.log(\`  \${message}\`);
     }
     
-    // Helper function to save BMP files (Node.js only)
-    function saveBMP(surface, filename, description, SWCanvas) {
+    // Helper function to save PNG files (Node.js only)
+    function savePNG(surface, filename, description, SWCanvas) {
         try {
-            const bmpData = SWCanvas.Core.BitmapEncoder.encode(surface);
+            const pngData = SWCanvas.Core.PngEncoder.encode(surface);
             const fs = require('fs');
             const path = require('path');
             
@@ -93,7 +93,7 @@ function buildCoreTests() {
             
             const filePath = path.join(outputDir, filename);
             // Convert ArrayBuffer to Buffer for Node.js
-            const buffer = Buffer.from(bmpData);
+            const buffer = Buffer.from(pngData);
             fs.writeFileSync(filePath, buffer);
             console.log(\`  Saved \${description}: \${filePath}\`);
         } catch (error) {

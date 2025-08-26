@@ -36,5 +36,5 @@ test('Stroke joins - miter, bevel, round', () => {
     ctx.lineTo(280, 20);
     ctx.stroke();
     
-    saveBMP(surface, 'stroke-joins.bmp', 'stroke joins test', SWCanvas);
+    savePNG(surface, 'stroke-joins.basic.png', 'stroke joins test', SWCanvas);
 });

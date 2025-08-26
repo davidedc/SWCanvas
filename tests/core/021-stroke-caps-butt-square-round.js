@@ -33,5 +33,5 @@ test('Stroke caps - butt, square, round', () => {
     ctx.lineTo(250, 70);
     ctx.stroke();
     
-    saveBMP(surface, 'stroke-caps.bmp', 'stroke caps test', SWCanvas);
+    savePNG(surface, 'stroke-caps.basic.png', 'stroke caps test', SWCanvas);
 });

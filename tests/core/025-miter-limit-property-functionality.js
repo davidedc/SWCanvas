@@ -60,5 +60,5 @@ test('Miter limit property and basic functionality', () => {
     
     log('  ✓ Miter joins rendered with different miterLimit values');
     
-    saveBMP(surface, 'miter-limits-basic.bmp', 'miter limits basic test', SWCanvas);
+    savePNG(surface, 'miter-limits-basic.basic.png', 'miter limits basic test', SWCanvas);
 });

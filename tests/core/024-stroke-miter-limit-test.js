@@ -29,5 +29,5 @@ test('Miter limit test', () => {
     ctx.lineTo(160, 20);
     ctx.stroke();
     
-    saveBMP(surface, 'stroke-miter-limit.bmp', 'stroke miter limit test', SWCanvas);
+    savePNG(surface, 'stroke-miter-limit.basic.png', 'stroke miter limit test', SWCanvas);
 });

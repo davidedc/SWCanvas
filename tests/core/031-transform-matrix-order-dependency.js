@@ -6,7 +6,7 @@ test('Transform matrix order dependency (A*B ≠ B*A)', () => {
         const visualTest = VisualRenderingTests.getTest('transform-matrix-order');
         if (visualTest) {
             const surface = visualTest.drawSWCanvas(SWCanvas);
-            saveBMP(surface, 'transform-matrix-order.bmp', 'transform matrix order test', SWCanvas);
+            savePNG(surface, 'transform-matrix-order.basic.png', 'transform matrix order test', SWCanvas);
             
             // Check that red and blue squares are in different positions
             // Red square: translate(40,40) then scale(2,2) then fillRect(0,0,15,15)

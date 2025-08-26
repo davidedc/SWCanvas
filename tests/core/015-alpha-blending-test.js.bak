@@ -1,0 +1,104 @@
+// Test: Alpha blending test - semi-transparent rectangles
+// This file will be concatenated into the main test suite
+
+test('Alpha blending test - semi-transparent rectangles', () => {
+    // Use visual test registry if available
+    if (typeof VisualRenderingTests !== 'undefined') {
+        const visualTest = VisualRenderingTests.getTest('alpha-test');
+        if (visualTest) {
+            const surface = visualTest.drawSWCanvas(SWCanvas);
+            
+            // Continue with original test verification logic...
+            // Check specific pixel values to verify alpha blending
+            const redPixelOffset = (30 * surface.stride) + (30 * 4); // Red area
+            const bluePixelOffset = (80 * surface.stride) + (80 * 4); // Blue area
+            const greenOverRedOffset = (50 * surface.stride) + (50 * 4); // Green over red
+            const greenOverWhiteOffset = (50 * surface.stride) + (110 * 4); // Green over white
+            const whiteOnlyOffset = (10 * surface.stride) + (10 * 4); // Pure white background
+            
+            log(`  Pure white background: R=${surface.data[whiteOnlyOffset]}, G=${surface.data[whiteOnlyOffset+1]}, B=${surface.data[whiteOnlyOffset+2]}, A=${surface.data[whiteOnlyOffset+3]}`);
+            log(`  Red pixel: R=${surface.data[redPixelOffset]}, G=${surface.data[redPixelOffset+1]}, B=${surface.data[redPixelOffset+2]}, A=${surface.data[redPixelOffset+3]}`);
+            log(`  Blue pixel: R=${surface.data[bluePixelOffset]}, G=${surface.data[bluePixelOffset+1]}, B=${surface.data[bluePixelOffset+2]}, A=${surface.data[bluePixelOffset+3]}`);
+            log(`  Green over red: R=${surface.data[greenOverRedOffset]}, G=${surface.data[greenOverRedOffset+1]}, B=${surface.data[greenOverRedOffset+2]}, A=${surface.data[greenOverRedOffset+3]}`);
+            log(`  Green over white: R=${surface.data[greenOverWhiteOffset]}, G=${surface.data[greenOverWhiteOffset+1]}, B=${surface.data[greenOverWhiteOffset+2]}, A=${surface.data[greenOverWhiteOffset+3]}`);
+            
+            // Save alpha blending test image
+            savePNG(surface, 'alpha-test.bmp', 'alpha test image', SWCanvas);
+            
+            // Expected values for 50% green over white:
+            // 50% green (128) over white: src=[0,64,0,128] dst=[255,255,255,255] 
+            // Result should be: [127, 191, 127, 255]
+            const expectedR = 127;
+            const expectedG = 191;  
+            const expectedB = 127;
+            const actualR = surface.data[greenOverWhiteOffset];
+            const actualG = surface.data[greenOverWhiteOffset + 1];
+            const actualB = surface.data[greenOverWhiteOffset + 2];
+            
+            log(`  Expected green over white: [${expectedR}, ${expectedG}, ${expectedB}]`);
+            log(`  Actual green over white:   [${actualR}, ${actualG}, ${actualB}]`);
+            
+            // Allow ±1 tolerance for rounding differences
+            if (Math.abs(actualR - expectedR) > 1 || Math.abs(actualG - expectedG) > 1 || Math.abs(actualB - expectedB) > 1) {
+                throw new Error(`Alpha blending mismatch! Expected [${expectedR}, ${expectedG}, ${expectedB}], got [${actualR}, ${actualG}, ${actualB}]`);
+            }
+            return;
+        }
+    }
+    
+    // Fallback inline test
+    const surface = SWCanvas.Core.Surface(200, 150);
+    const ctx = new SWCanvas.Core.Context2D(surface);
+    
+    // White background
+    ctx.setFillStyle(255, 255, 255, 255);
+    ctx.fillRect(0, 0, 200, 150);
+    
+    // Red rectangle (opaque)
+    ctx.setFillStyle(255, 0, 0, 255);
+    ctx.fillRect(20, 20, 80, 60);
+    
+    // Blue rectangle (opaque) with overlap
+    ctx.setFillStyle(0, 0, 255, 255);
+    ctx.fillRect(60, 60, 80, 60);
+    
+    // Semi-transparent green rectangle (this is the key test)
+    ctx.globalAlpha = 0.5;
+    ctx.setFillStyle(0, 128, 0, 255);
+    ctx.fillRect(40, 40, 80, 60);
+    ctx.globalAlpha = 1.0;
+    
+    // Check specific pixel values to verify alpha blending
+    const redPixelOffset = (30 * surface.stride) + (30 * 4); // Red area
+    const bluePixelOffset = (80 * surface.stride) + (80 * 4); // Blue area
+    const greenOverRedOffset = (50 * surface.stride) + (50 * 4); // Green over red
+    const greenOverWhiteOffset = (50 * surface.stride) + (110 * 4); // Green over white
+    const whiteOnlyOffset = (10 * surface.stride) + (10 * 4); // Pure white background
+    
+    log(`  Pure white background: R=${surface.data[whiteOnlyOffset]}, G=${surface.data[whiteOnlyOffset+1]}, B=${surface.data[whiteOnlyOffset+2]}, A=${surface.data[whiteOnlyOffset+3]}`);
+    log(`  Red pixel: R=${surface.data[redPixelOffset]}, G=${surface.data[redPixelOffset+1]}, B=${surface.data[redPixelOffset+2]}, A=${surface.data[redPixelOffset+3]}`);
+    log(`  Blue pixel: R=${surface.data[bluePixelOffset]}, G=${surface.data[bluePixelOffset+1]}, B=${surface.data[bluePixelOffset+2]}, A=${surface.data[bluePixelOffset+3]}`);
+    log(`  Green over red: R=${surface.data[greenOverRedOffset]}, G=${surface.data[greenOverRedOffset+1]}, B=${surface.data[greenOverRedOffset+2]}, A=${surface.data[greenOverRedOffset+3]}`);
+    log(`  Green over white: R=${surface.data[greenOverWhiteOffset]}, G=${surface.data[greenOverWhiteOffset+1]}, B=${surface.data[greenOverWhiteOffset+2]}, A=${surface.data[greenOverWhiteOffset+3]}`);
+    
+    // Save alpha blending test image
+    savePNG(surface, 'alpha-test.bmp', 'alpha test image', SWCanvas);
+    
+    // Expected values for 50% green over white:
+    // 50% green (128) over white: src=[0,64,0,128] dst=[255,255,255,255] 
+    // Result should be: [127, 191, 127, 255]
+    const expectedR = 127;
+    const expectedG = 191;  
+    const expectedB = 127;
+    const actualR = surface.data[greenOverWhiteOffset];
+    const actualG = surface.data[greenOverWhiteOffset + 1];
+    const actualB = surface.data[greenOverWhiteOffset + 2];
+    
+    log(`  Expected green over white: [${expectedR}, ${expectedG}, ${expectedB}]`);
+    log(`  Actual green over white:   [${actualR}, ${actualG}, ${actualB}]`);
+    
+    // Allow ±1 tolerance for rounding differences
+    if (Math.abs(actualR - expectedR) > 1 || Math.abs(actualG - expectedG) > 1 || Math.abs(actualB - expectedB) > 1) {
+        throw new Error(`Alpha blending mismatch! Expected [${expectedR}, ${expectedG}, ${expectedB}], got [${actualR}, ${actualG}, ${actualB}]`);
+    }
+});

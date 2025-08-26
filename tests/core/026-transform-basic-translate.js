@@ -6,7 +6,7 @@ test('Basic transform - translate operations', () => {
         const visualTest = VisualRenderingTests.getTest('transform-basic-translate');
         if (visualTest) {
             const surface = visualTest.drawSWCanvas(SWCanvas);
-            saveBMP(surface, 'transform-basic-translate.bmp', 'basic translate test', SWCanvas);
+            savePNG(surface, 'transform-basic-translate.basic.png', 'basic translate test', SWCanvas);
             
             // Verify translated squares are in correct positions
             // Red square: fillRect(10,10,30,30) at origin -> (10,10) to (40,40)

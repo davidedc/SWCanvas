@@ -31,5 +31,5 @@ test('Path filling - simple triangle', () => {
         throw new Error(`Expected red pixel inside triangle, got R=${r}, G=${g}, B=${b}`);
     }
     
-    saveBMP(surface, 'triangle-test.bmp', 'triangle path test', SWCanvas);
+    savePNG(surface, 'triangle-test.basic.png', 'triangle path test', SWCanvas);
 });

@@ -6,7 +6,7 @@ test('resetTransform functionality', () => {
         const visualTest = VisualRenderingTests.getTest('transform-resetTransform');
         if (visualTest) {
             const surface = visualTest.drawSWCanvas(SWCanvas);
-            saveBMP(surface, 'transform-resetTransform.bmp', 'resetTransform test', SWCanvas);
+            savePNG(surface, 'transform-resetTransform.basic.png', 'resetTransform test', SWCanvas);
             return;
         }
     }

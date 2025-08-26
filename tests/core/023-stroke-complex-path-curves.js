@@ -22,5 +22,5 @@ test('Complex path stroke with curves', () => {
     ctx.lineTo(20, 100);
     ctx.stroke();
     
-    saveBMP(surface, 'stroke-curves.bmp', 'stroke curves test', SWCanvas);
+    savePNG(surface, 'stroke-curves.basic.png', 'stroke curves test', SWCanvas);
 });

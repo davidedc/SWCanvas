@@ -30,5 +30,5 @@ test('Path filling - evenodd vs nonzero', () => {
         throw new Error('Expected white center with evenodd rule');
     }
     
-    saveBMP(surface, 'evenodd-test.bmp', 'evenodd fill test', SWCanvas);
+    savePNG(surface, 'evenodd-test.basic.png', 'evenodd fill test', SWCanvas);
 });

@@ -6,7 +6,7 @@ test('setTransform vs transform behavior', () => {
         const visualTest = VisualRenderingTests.getTest('transform-setTransform-vs-transform');
         if (visualTest) {
             const surface = visualTest.drawSWCanvas(SWCanvas);
-            saveBMP(surface, 'transform-setTransform-vs-transform.bmp', 'setTransform vs transform test', SWCanvas);
+            savePNG(surface, 'transform-setTransform-vs-transform.basic.png', 'setTransform vs transform test', SWCanvas);
             return;
         }
     }

@@ -28,5 +28,5 @@ test('Basic clipping test', () => {
         throw new Error('Clipping not working - expected white outside clip region');
     }
     
-    saveBMP(surface, 'clipping-test.bmp', 'basic clipping test', SWCanvas);
+    savePNG(surface, 'clipping-test.basic.png', 'basic clipping test', SWCanvas);
 });

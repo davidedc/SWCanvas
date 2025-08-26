@@ -21,5 +21,5 @@ test('Stroke with different line widths', () => {
         ctx.stroke();
     }
     
-    saveBMP(surface, 'stroke-widths.bmp', 'stroke widths test', SWCanvas);
+    savePNG(surface, 'stroke-widths.basic.png', 'stroke widths test', SWCanvas);
 });
