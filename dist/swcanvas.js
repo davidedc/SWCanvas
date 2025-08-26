@@ -6245,15 +6245,6 @@ class Context2D {
         this._clipMask = null;  // ClipMask instance for 1-bit per pixel clipping
     }
 
-    // Composite operation convenience property
-    get composite() {
-        return this.globalCompositeOperation;
-    }
-    
-    set composite(value) {
-        this.globalCompositeOperation = value;
-    }
-
     // State management
     save() {
         // Deep copy clipMask if it exists
