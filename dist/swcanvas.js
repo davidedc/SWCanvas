@@ -6372,6 +6372,10 @@ class Context2D {
     this._currentPath.arc(x, y, radius, startAngle, endAngle, counterclockwise);
     }
 
+    ellipse(x, y, radiusX, radiusY, rotation, startAngle, endAngle, counterclockwise) {
+    this._currentPath.ellipse(x, y, radiusX, radiusY, rotation, startAngle, endAngle, counterclockwise);
+    }
+
     quadraticCurveTo(cpx, cpy, x, y) {
     this._currentPath.quadraticCurveTo(cpx, cpy, x, y);
     }
@@ -7099,6 +7103,10 @@ class CanvasCompatibleContext2D {
     
     arc(x, y, radius, startAngle, endAngle, counterclockwise = false) {
         this._core.arc(x, y, radius, startAngle, endAngle, counterclockwise);
+    }
+    
+    ellipse(x, y, radiusX, radiusY, rotation, startAngle, endAngle, counterclockwise = false) {
+        this._core.ellipse(x, y, radiusX, radiusY, rotation, startAngle, endAngle, counterclockwise);
     }
     
     quadraticCurveTo(cpx, cpy, x, y) {
