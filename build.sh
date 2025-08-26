@@ -45,6 +45,10 @@ cat src/BitmapEncodingOptions.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
 cat src/BitmapEncoder.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
+cat src/PngEncodingOptions.js >> dist/swcanvas.js
+echo "" >> dist/swcanvas.js
+cat src/PngEncoder.js >> dist/swcanvas.js
+echo "" >> dist/swcanvas.js
 cat src/PathFlattener.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
 cat src/PolygonFiller.js >> dist/swcanvas.js
@@ -138,6 +142,8 @@ if (typeof window !== 'undefined') {
             Rectangle: Rectangle,
             BitmapEncoder: BitmapEncoder,
             BitmapEncodingOptions: BitmapEncodingOptions,
+            PngEncoder: PngEncoder,
+            PngEncodingOptions: PngEncodingOptions,
             BitBuffer: BitBuffer,
             ClipMask: ClipMask,
             SourceMask: SourceMask,
@@ -172,6 +178,8 @@ if (typeof window !== 'undefined') {
             Rectangle: Rectangle,
             BitmapEncoder: BitmapEncoder,
             BitmapEncodingOptions: BitmapEncodingOptions,
+            PngEncoder: PngEncoder,
+            PngEncodingOptions: PngEncodingOptions,
             BitBuffer: BitBuffer,
             ClipMask: ClipMask,
             SourceMask: SourceMask,

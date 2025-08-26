@@ -12,10 +12,10 @@ const VisualRenderingTests = require('./dist/visual-rendering-tests.js');
 
 console.log('Running SWCanvas Tests in Node.js...\n');
 
-// Helper function to save BMP files (same as in core-functionality-tests.js)
-function saveBMP(surface, filename, description, SWCanvasRef) {
+// Helper function to save PNG files (same as in core-functionality-tests.js)
+function savePNG(surface, filename, description, SWCanvasRef) {
     try {
-        const bmpData = SWCanvasRef.Core.BitmapEncoder.encode(surface);
+        const pngData = SWCanvasRef.Core.PngEncoder.encode(surface);
         const fs = require('fs');
         const path = require('path');
         
@@ -27,7 +27,7 @@ function saveBMP(surface, filename, description, SWCanvasRef) {
         
         const filePath = path.join(outputDir, filename);
         // Convert ArrayBuffer to Buffer for Node.js
-        const buffer = Buffer.from(bmpData);
+        const buffer = Buffer.from(pngData);
         fs.writeFileSync(filePath, buffer);
         console.log(`  Saved ${description}: ${filePath}`);
     } catch (error) {
@@ -39,16 +39,16 @@ try {
     // Run the core functionality test suite
     const results = CoreFunctionalityTests.runSharedTests(SWCanvas);
     
-    console.log(`\nGenerating Visual Test BMPs...\n`);
+    console.log(`\nGenerating Visual Test PNGs...\n`);
     
-    // Generate BMPs for all visual tests
+    // Generate PNGs for all visual tests
     const visualTests = VisualRenderingTests.getTests();
     const visualTestNames = Object.keys(visualTests);
     
     visualTestNames.forEach(testName => {
         const visualTest = visualTests[testName];
         try {
-            console.log(`Generating BMP for: ${visualTest.name}`);
+            console.log(`Generating PNG for: ${visualTest.name}`);
             
             let surface;
             if (visualTest.draw && typeof visualTest.draw === 'function') {
@@ -63,13 +63,13 @@ try {
                 throw new Error('No valid draw function found');
             }
             
-            saveBMP(surface, `${testName}.bmp`, visualTest.name, SWCanvas);
+            savePNG(surface, `${testName}.basic.png`, visualTest.name, SWCanvas);
         } catch (error) {
-            console.log(`  Warning: Failed to generate ${testName}.bmp - ${error.message}`);
+            console.log(`  Warning: Failed to generate ${testName}.basic.png - ${error.message}`);
         }
     });
     
-    console.log(`\nGenerated BMPs for ${visualTestNames.length} visual tests`);
+    console.log(`\nGenerated PNGs for ${visualTestNames.length} visual tests`);
     
     if (results.failed > 0) {
         console.log(`\n❌ ${results.failed} tests failed`);
