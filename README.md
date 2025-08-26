@@ -378,8 +378,14 @@ const transform = new SWCanvas.Core.Transform2D()
 // Apply to points
 const transformed = transform.transformPoint(point);
 
-// Utility classes
+// Bit manipulation utility (used by mask classes)
+const bitBuffer = new SWCanvas.Core.BitBuffer(100, 100, 0); // Default to 0s
+bitBuffer.setPixel(50, 50, true);
+console.log(bitBuffer.getPixel(50, 50)); // true
+
+// Mask classes (use BitBuffer composition internally)
 const clipMask = new SWCanvas.Core.ClipMask(800, 600);
+const sourceMask = new SWCanvas.Core.SourceMask(800, 600);
 
 // Image processing utilities
 const validImage = SWCanvas.Core.ImageProcessor.validateAndConvert(imageData);
@@ -451,14 +457,16 @@ const customBmp = SWCanvas.Core.BitmapEncoder.encode(surface,
 
 - **Surface**: Memory buffer for pixel data
 - **Context2D**: Drawing API and state management
-- **Matrix**: Transformation mathematics (immutable value object)
+- **Transform2D**: Transformation mathematics (immutable value object)
 - **Path2D**: Path definition and flattening
 - **Rasterizer**: Low-level pixel operations
 - **Color**: Immutable color handling with premultiplied alpha support
 - **Gradients**: Paint source objects for linear, radial, and conic gradients with color stops
 - **Pattern**: Paint source objects for repeating image patterns with repetition modes
 - **Geometry**: Point and Rectangle value objects
-- **StencilBuffer**: 1-bit clipping buffer management
+- **BitBuffer**: 1-bit per pixel utility for efficient bit manipulation (composition component)
+- **ClipMask**: 1-bit clipping buffer using BitBuffer composition
+- **SourceMask**: 1-bit source coverage tracking using BitBuffer composition
 - **DrawingState**: Context state stack management
 - **PolygonFiller**: Scanline-based polygon filling with paint source support
 - **StrokeGenerator**: Geometric stroke generation (static methods)  

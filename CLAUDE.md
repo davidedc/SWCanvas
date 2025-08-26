@@ -37,6 +37,9 @@ src/Surface.js                # Memory buffer management - RGBA pixel data
 src/Transform2D.js            # Immutable transformation matrix mathematics
 src/Path2D.js                 # Path definition and command recording
 src/Color.js                  # Immutable color handling with premultiplied alpha
+src/BitBuffer.js              # 1-bit per pixel utility for mask operations (composition component)
+src/ClipMask.js               # 1-bit stencil buffer using BitBuffer composition
+src/SourceMask.js             # 1-bit source coverage tracking using BitBuffer composition
 src/Gradient.js               # Linear, radial, and conic gradient paint sources
 src/Pattern.js                # Repeating image pattern paint sources
 src/Point.js                  # Immutable 2D point operations
@@ -46,7 +49,6 @@ src/PathFlattener.js          # Converts paths to polygons
 src/StrokeGenerator.js        # Geometric stroke path generation with line dashing
 src/BitmapEncoder.js          # BMP file format encoding
 src/BitmapEncodingOptions.js  # BMP encoding configuration (immutable options, Joshua Bloch patterns)
-src/ClipMask.js               # 1-bit stencil buffer clipping implementation
 src/ImageProcessor.js         # ImageLike validation and format conversion
 
 # HTML5 Canvas Compatibility Layer
@@ -504,11 +506,13 @@ Project fully implemented with object-oriented ES6 class design. See ARCHITECTUR
 - **Use proper classes**: Prefer `new SWCanvas.Core.Point(x, y)` over plain objects
 - **Leverage immutability**: Transform2D, Point, Rectangle, Color, BitmapEncodingOptions are immutable - use their methods
 - **Joshua Bloch patterns**: BitmapEncodingOptions demonstrates static factory methods and immutable configuration objects
-- **Static utilities**: Use ClipMask class for bit operations, SourceMask for global compositing, ImageProcessor for format conversion
+- **Composition over inheritance**: BitBuffer utility composed by ClipMask and SourceMask classes (Item 18)
+- **Static utilities**: Use ImageProcessor for format conversion, CompositeOperations for blending
 - **Factory methods**: Use Transform2D constructor and .translation(), .scaling(), .rotation() for common transformations
 - **Validation**: All classes validate input parameters with descriptive error messages
 - **Composition**: Classes work together rather than through inheritance hierarchies
 - **Encapsulation**: Use public APIs, private methods marked with underscore prefix
+- **Utility classes**: BitBuffer provides reusable bit manipulation for mask operations
 
 ### Key Architecture Principles
 - **Single Responsibility**: Each class handles one specific concern

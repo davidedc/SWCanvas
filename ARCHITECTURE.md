@@ -31,6 +31,9 @@ Context2D.js        → High-performance rendering engine
 Transform2D.js      → Immutable transformation mathematics
 Point/Rectangle.js  → Pure geometric value objects
 Color.js            → Immutable color handling
+BitBuffer.js        → 1-bit per pixel utility for memory-efficient mask operations
+ClipMask.js         → Stencil-based clipping using BitBuffer composition
+SourceMask.js       → Source coverage tracking using BitBuffer composition
 Gradient.js         → Linear, radial, and conic gradient paint sources
 Pattern.js          → Repeating image pattern paint sources
 Path2D.js           → Path definition and command recording
@@ -144,12 +147,14 @@ SWCanvas.Core.* → Direct access to all engine classes
 - `Transform2D()` - Immutable transformation matrices
 - `Point()`, `Rectangle()` - Geometric value objects
 - `Color()` - Immutable color handling
+- `BitBuffer()` - 1-bit per pixel utility for efficient bit manipulation
+- `ClipMask()` - Stencil-based clipping using BitBuffer composition
+- `SourceMask()` - Source coverage tracking using BitBuffer composition
 - `LinearGradient()`, `RadialGradient()`, `ConicGradient()` - Gradient paint sources
 - `Pattern()` - Repeating image pattern paint sources
 - `BitmapEncoder` - File format export utilities
 - `BitmapEncodingOptions()` - Immutable encoding configuration (Joshua Bloch patterns)
 - `CompositeOperations` - Porter-Duff blending operations
-- `SourceMask` - Source coverage tracking for global composite operations
 
 ## Composite Operations System
 
@@ -286,5 +291,71 @@ The codebase implements several key patterns from Joshua Bloch's Effective Java:
 - **Immutable Objects** (`BitmapEncodingOptions`, `Color`, `Transform2D`) - Item 17: Minimize mutability for thread safety and prevent bugs
 - **Builder Pattern Alternative** (`BitmapEncodingOptions`) - Item 2: Use static factory methods for complex configuration
 - **Parameter Validation** (all constructors) - Item 49: Check parameters for validity and fail fast with clear messages
+
+## Composition Pattern for Mask Classes
+
+SWCanvas implements a sophisticated composition pattern for mask classes, following Joshua Bloch's **Item 18: "Favor composition over inheritance"** principle to eliminate code duplication while maintaining clear separation of concerns.
+
+### The Problem: Similar Implementation, Different Semantics
+
+`ClipMask` and `SourceMask` shared significant bit manipulation code but represented fundamentally different abstractions:
+
+- **ClipMask**: Controls which pixels **can be rendered** (default: all visible, 1s)
+- **SourceMask**: Tracks which pixels **were covered** by drawing operations (default: none covered, 0s)
+
+### The Solution: BitBuffer Composition Component
+
+Instead of forced inheritance (which would violate the Liskov Substitution Principle), SWCanvas uses **composition with a utility class**:
+
+```javascript
+// BitBuffer: Reusable bit manipulation utility
+class BitBuffer {
+    constructor(width, height, defaultValue) { /* configurable defaults */ }
+    getPixel(x, y) { /* common bit operations */ }
+    setPixel(x, y, value) { /* common bit operations */ }
+    // ... shared implementation
+}
+
+// ClipMask: Composed with BitBuffer, clipping-specific behavior
+class ClipMask {
+    constructor(width, height) {
+        this._bitBuffer = new BitBuffer(width, height, 1); // Default: visible
+    }
+    
+    intersectWith(other) { /* clipping-specific logic */ }
+    hasClipping() { /* clipping-specific logic */ }
+    // Delegates basic operations to BitBuffer
+}
+
+// SourceMask: Composed with BitBuffer, coverage-tracking behavior  
+class SourceMask {
+    constructor(width, height) {
+        this._bitBuffer = new BitBuffer(width, height, 0); // Default: not covered
+        this._bounds = { /* bounds tracking */ };
+    }
+    
+    getBounds() { /* coverage-specific logic */ }
+    getIterationBounds() { /* coverage-specific logic */ }
+    // Delegates basic operations to BitBuffer
+}
+```
+
+### Benefits of This Architecture
+
+1. **Code Reuse Without Inheritance**: Eliminates 200+ lines of duplicated bit manipulation code
+2. **Clear Separation of Concerns**: BitBuffer handles bits, masks handle domain logic
+3. **No LSP Violations**: ClipMask and SourceMask maintain their distinct semantics
+4. **Flexible Design**: Easy to add new mask types or modify bit operations independently
+5. **Better Testability**: Can test bit operations and mask logic separately
+6. **Joshua Bloch Compliance**: Follows effective OO design patterns
+
+### Implementation Details
+
+- **BitBuffer**: Configurable default values (0 or 1) support different mask semantics
+- **Memory Efficiency**: Maintains 1-bit per pixel storage (87.5% memory reduction)
+- **Performance**: No overhead compared to original implementation
+- **API Compatibility**: All existing mask APIs preserved unchanged
+
+This composition pattern demonstrates how to eliminate code duplication through clean object-oriented design while avoiding the pitfalls of inappropriate inheritance hierarchies.
 
 This architecture represents a **paradigm bridge** that successfully unifies web standards compliance, performance optimization, and clean API design in a single coherent system.
