@@ -77,9 +77,9 @@ testPoints.forEach(([x, y, description]) => {
 });
 
 // Save debug image
-const bmpData = SWCanvas.Core.BitmapEncoder.encode(surface);
-fs.writeFileSync('debug-minimal-xor.bmp', Buffer.from(bmpData));
-console.log('\n✅ Debug image saved: debug-minimal-xor.bmp');
+const pngData = SWCanvas.Core.PngEncoder.encode(surface);
+fs.writeFileSync('debug-minimal-xor.basic.png', Buffer.from(pngData));
+console.log('\n✅ Debug image saved: debug-minimal-xor.basic.png');
 
 console.log('\n=== EXPECTED vs ACTUAL ===');
 console.log('Expected:');

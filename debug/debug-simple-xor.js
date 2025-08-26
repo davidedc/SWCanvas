@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Debug the simple XOR test case step by step
-const SWCanvas = require('./dist/swcanvas.js');
+const SWCanvas = require('../dist/swcanvas.js');
 const fs = require('fs');
 
 console.log('=== Simple XOR Debug: Blue Square + Red Circle ===\n');
@@ -50,9 +50,9 @@ const rightBg = checkPixel(150, 70, 'Right background (white, no changes)');
 
 // Save debug image
 const surface = canvas._coreSurface;
-const bmpData = SWCanvas.Core.BitmapEncoder.encode(surface);
-fs.writeFileSync('debug-simple-xor-analysis.bmp', Buffer.from(bmpData));
-console.log('\n7. Saved debug-simple-xor-analysis.bmp');
+const pngData = SWCanvas.Core.PngEncoder.encode(surface);
+fs.writeFileSync('debug-simple-xor-analysis.basic.png', Buffer.from(pngData));
+console.log('\n7. Saved debug-simple-xor-analysis.basic.png');
 
 console.log('\n=== ANALYSIS ===');
 console.log('Expected results for proper XOR:');

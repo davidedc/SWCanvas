@@ -62,6 +62,6 @@ testColors.forEach(color => {
 
 // Save debug image
 const surface = canvas._coreSurface;
-const bmpData = SWCanvas.Core.BitmapEncoder.encode(surface);
-fs.writeFileSync('debug-copy-color.bmp', Buffer.from(bmpData));
-console.log('\n✅ Debug image saved: debug-copy-color.bmp');
+const pngData = SWCanvas.Core.PngEncoder.encode(surface);
+fs.writeFileSync('debug-copy-color.basic.png', Buffer.from(pngData));
+console.log('\n✅ Debug image saved: debug-copy-color.basic.png');

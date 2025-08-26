@@ -58,9 +58,9 @@ const yellowArea = checkPixel(100, 140, 'Yellow triangle (should be unchanged)')
 
 // Save debug image
 const surface = canvas._coreSurface;
-const bmpData = SWCanvas.Core.BitmapEncoder.encode(surface);
-require('fs').writeFileSync('debug-complex-xor-fixed.bmp', Buffer.from(bmpData));
-console.log('8. Saved debug-complex-xor-fixed.bmp');
+const pngData = SWCanvas.Core.PngEncoder.encode(surface);
+require('fs').writeFileSync('debug-complex-xor-fixed.basic.png', Buffer.from(pngData));
+console.log('8. Saved debug-complex-xor-fixed.basic.png');
 
 console.log('\n=== VERIFICATION ===');
 console.log('Key test: Purple rectangle over white background');

@@ -81,9 +81,9 @@ testCtx.fillRect(130, 30, 40, 40);
 
 // Save comparison
 const testSurface = testCanvas._coreSurface;
-const testBmpData = SWCanvas.Core.BitmapEncoder.encode(testSurface);
-fs.writeFileSync('debug-copy-vs-sourceover.bmp', Buffer.from(testBmpData));
-console.log('\n✅ Comparison image saved: debug-copy-vs-sourceover.bmp');
+const testPngData = SWCanvas.Core.PngEncoder.encode(testSurface);
+fs.writeFileSync('debug-copy-vs-sourceover.basic.png', Buffer.from(testPngData));
+console.log('\n✅ Comparison image saved: debug-copy-vs-sourceover.basic.png');
 
 // Check both results
 const copyResult = testCtx.getImageData(50, 50, 1, 1);
