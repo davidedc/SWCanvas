@@ -3345,41 +3345,49 @@ class StrokeGenerator {
     }
 }
 /**
- * ClipMask class for SWCanvas
+ * BitBuffer class for SWCanvas
  * 
- * Represents a 1-bit stencil buffer for memory-efficient clipping operations.
- * Encapsulates bit manipulation and provides proper domain object interface
- * following Joshua Bloch's principles of clear responsibility and encapsulation.
+ * A utility class for managing 1-bit per pixel data structures.
+ * Used as a composition component by ClipMask and SourceMask to eliminate
+ * code duplication while maintaining clear separation of concerns.
+ * 
+ * Following Joshua Bloch's principle: "Favor composition over inheritance" (Item 18)
  * 
  * Memory Layout:
- * - Each pixel is represented by 1 bit (1 = visible, 0 = clipped)
+ * - Each pixel is represented by 1 bit
  * - Bits are packed into Uint8Array (8 pixels per byte)
- * - Memory usage: width × height ÷ 8 bytes (87.5% reduction vs full coverage)
+ * - Memory usage: width × height ÷ 8 bytes
  */
-class ClipMask {
+class BitBuffer {
     /**
-     * Create a ClipMask
-     * @param {number} width - Surface width in pixels
-     * @param {number} height - Surface height in pixels
+     * Create a BitBuffer
+     * @param {number} width - Buffer width in pixels
+     * @param {number} height - Buffer height in pixels
+     * @param {number} defaultValue - Default bit value (0 or 1)
      */
-    constructor(width, height) {
+    constructor(width, height, defaultValue = 0) {
         // Validate parameters
         if (typeof width !== 'number' || !Number.isInteger(width) || width <= 0) {
-            throw new Error('ClipMask width must be a positive integer');
+            throw new Error('BitBuffer width must be a positive integer');
         }
         
         if (typeof height !== 'number' || !Number.isInteger(height) || height <= 0) {
-            throw new Error('ClipMask height must be a positive integer');
+            throw new Error('BitBuffer height must be a positive integer');
+        }
+        
+        if (defaultValue !== 0 && defaultValue !== 1) {
+            throw new Error('BitBuffer defaultValue must be 0 or 1');
         }
         
         this._width = width;
         this._height = height;
         this._numPixels = width * height;
         this._numBytes = Math.ceil(this._numPixels / 8);
+        this._defaultValue = defaultValue;
         
-        // Initialize to all 1s (no clipping by default)
+        // Create buffer and initialize to default value
         this._buffer = new Uint8Array(this._numBytes);
-        this._initializeNoClipping();
+        this._initializeToDefault();
         
         // Make dimensions immutable
         Object.defineProperty(this, 'width', { value: width, writable: false });
@@ -3387,13 +3395,73 @@ class ClipMask {
     }
     
     /**
-     * Initialize buffer to "no clipping" state (all 1s)
+     * Initialize buffer to default value
      * @private
      */
-    _initializeNoClipping() {
+    _initializeToDefault() {
+        if (this._defaultValue === 1) {
+            // Initialize to all 1s
+            this._buffer.fill(0xFF);
+            
+            // Handle partial last byte if width*height is not divisible by 8
+            const remainderBits = this._numPixels % 8;
+            if (remainderBits !== 0) {
+                const lastByteIndex = this._numBytes - 1;
+                const lastByteMask = (1 << remainderBits) - 1;
+                this._buffer[lastByteIndex] = lastByteMask;
+            }
+        } else {
+            // Initialize to all 0s (default for Uint8Array)
+            this._buffer.fill(0);
+        }
+    }
+    
+    /**
+     * Get bit value for a pixel
+     * @param {number} x - X coordinate
+     * @param {number} y - Y coordinate
+     * @returns {boolean} True if bit is 1, false if bit is 0
+     */
+    getPixel(x, y) {
+        // Bounds checking
+        if (x < 0 || x >= this._width || y < 0 || y >= this._height) {
+            return false; // Out of bounds pixels return 0
+        }
+        
+        const pixelIndex = y * this._width + x;
+        return this._getBit(pixelIndex) === 1;
+    }
+    
+    /**
+     * Set bit value for a pixel
+     * @param {number} x - X coordinate
+     * @param {number} y - Y coordinate
+     * @param {boolean} value - True to set bit to 1, false to set to 0
+     */
+    setPixel(x, y, value) {
+        // Bounds checking
+        if (x < 0 || x >= this._width || y < 0 || y >= this._height) {
+            return; // Ignore out of bounds
+        }
+        
+        const pixelIndex = y * this._width + x;
+        this._setBit(pixelIndex, value ? 1 : 0);
+    }
+    
+    /**
+     * Clear all bits (set to 0)
+     */
+    clear() {
+        this._buffer.fill(0);
+    }
+    
+    /**
+     * Fill all bits (set to 1)
+     */
+    fill() {
         this._buffer.fill(0xFF);
         
-        // Handle partial last byte if width*height is not divisible by 8
+        // Handle partial last byte
         const remainderBits = this._numPixels % 8;
         if (remainderBits !== 0) {
             const lastByteIndex = this._numBytes - 1;
@@ -3403,73 +3471,23 @@ class ClipMask {
     }
     
     /**
-     * Get clip state for a pixel
-     * @param {number} x - X coordinate
-     * @param {number} y - Y coordinate
-     * @returns {boolean} True if pixel is visible (not clipped)
+     * Reset buffer to its default value
      */
-    getPixel(x, y) {
-        // Bounds checking
-        if (x < 0 || x >= this._width || y < 0 || y >= this._height) {
-            return false; // Out of bounds pixels are clipped
-        }
-        
-        const pixelIndex = y * this._width + x;
-        return this._getBit(pixelIndex) === 1;
+    reset() {
+        this._initializeToDefault();
     }
     
     /**
-     * Set clip state for a pixel
-     * @param {number} x - X coordinate
-     * @param {number} y - Y coordinate
-     * @param {boolean} visible - True if pixel should be visible
+     * Perform bitwise AND with another BitBuffer
+     * @param {BitBuffer} other - Other BitBuffer to AND with
      */
-    setPixel(x, y, visible) {
-        // Bounds checking
-        if (x < 0 || x >= this._width || y < 0 || y >= this._height) {
-            return; // Ignore out of bounds
-        }
-        
-        const pixelIndex = y * this._width + x;
-        this._setBit(pixelIndex, visible ? 1 : 0);
-    }
-    
-    /**
-     * Check if a pixel is clipped (convenience method)
-     * @param {number} x - X coordinate
-     * @param {number} y - Y coordinate
-     * @returns {boolean} True if pixel is clipped out
-     */
-    isPixelClipped(x, y) {
-        return !this.getPixel(x, y);
-    }
-    
-    /**
-     * Clear all clipping (set all pixels to visible)
-     */
-    clear() {
-        this._initializeNoClipping();
-    }
-    
-    /**
-     * Set all pixels to clipped state
-     */
-    clipAll() {
-        this._buffer.fill(0);
-    }
-    
-    /**
-     * Intersect this clip mask with another (AND operation)
-     * Only pixels visible in BOTH masks will remain visible
-     * @param {ClipMask} other - Other clip mask to intersect with
-     */
-    intersectWith(other) {
-        if (!(other instanceof ClipMask)) {
-            throw new Error('Argument must be a ClipMask instance');
+    and(other) {
+        if (!(other instanceof BitBuffer)) {
+            throw new Error('Argument must be a BitBuffer instance');
         }
         
         if (other._width !== this._width || other._height !== this._height) {
-            throw new Error('ClipMask dimensions must match for intersection');
+            throw new Error('BitBuffer dimensions must match for AND operation');
         }
         
         // Perform bitwise AND on each byte
@@ -3479,58 +3497,62 @@ class ClipMask {
     }
     
     /**
-     * Create a deep copy of this clip mask
-     * @returns {ClipMask} New ClipMask with copied data
+     * Copy data from another BitBuffer
+     * @param {BitBuffer} other - Source BitBuffer to copy from
      */
-    clone() {
-        const clone = new ClipMask(this._width, this._height);
-        clone._buffer.set(this._buffer);
-        return clone;
+    copyFrom(other) {
+        if (!(other instanceof BitBuffer)) {
+            throw new Error('Argument must be a BitBuffer instance');
+        }
+        
+        if (other._width !== this._width || other._height !== this._height) {
+            throw new Error('BitBuffer dimensions must match for copy operation');
+        }
+        
+        this._buffer.set(other._buffer);
     }
     
     /**
-     * Create a clip pixel writer function for path rendering
-     * @returns {Function} clipPixel function for coverage-based rendering
+     * Check if buffer is completely filled (all 1s)
+     * @returns {boolean} True if all bits are 1
      */
-    createPixelWriter() {
-        return (x, y, coverage) => {
-            // Bounds checking
-            if (x < 0 || x >= this._width || y < 0 || y >= this._height) return;
-            
-            // Convert coverage to binary: >0.5 means inside, <=0.5 means outside
-            const isInside = coverage > 0.5;
-            this.setPixel(x, y, isInside);
-        };
-    }
-    
-    /**
-     * Get memory usage in bytes
-     * @returns {number} Memory usage of the clip mask
-     */
-    getMemoryUsage() {
-        return this._buffer.byteLength;
-    }
-    
-    /**
-     * Check if mask has any clipping (optimization)
-     * @returns {boolean} True if any pixels are clipped
-     */
-    hasClipping() {
-        // Quick check: if all bytes are 0xFF, no clipping
+    isFull() {
+        // Quick check: if all bytes are 0xFF except possibly the last one
         for (let i = 0; i < this._numBytes - 1; i++) {
             if (this._buffer[i] !== 0xFF) {
-                return true;
+                return false;
             }
         }
         
         // Check last byte accounting for partial bits
         const remainderBits = this._numPixels % 8;
         if (remainderBits === 0) {
-            return this._buffer[this._numBytes - 1] !== 0xFF;
+            return this._buffer[this._numBytes - 1] === 0xFF;
         } else {
             const lastByteMask = (1 << remainderBits) - 1;
-            return this._buffer[this._numBytes - 1] !== lastByteMask;
+            return this._buffer[this._numBytes - 1] === lastByteMask;
         }
+    }
+    
+    /**
+     * Check if buffer is completely empty (all 0s)
+     * @returns {boolean} True if all bits are 0
+     */
+    isEmpty() {
+        for (let i = 0; i < this._numBytes; i++) {
+            if (this._buffer[i] !== 0) {
+                return false;
+            }
+        }
+        return true;
+    }
+    
+    /**
+     * Get memory usage in bytes
+     * @returns {number} Memory usage of the buffer
+     */
+    getMemoryUsage() {
+        return this._buffer.byteLength;
     }
     
     /**
@@ -3544,7 +3566,7 @@ class ClipMask {
         const bitIndex = pixelIndex % 8;
         
         if (byteIndex >= this._buffer.length) {
-            return 0; // Out of bounds pixels are clipped
+            return 0; // Out of bounds pixels return 0
         }
         
         return (this._buffer[byteIndex] & (1 << bitIndex)) !== 0 ? 1 : 0;
@@ -3573,21 +3595,21 @@ class ClipMask {
     
     /**
      * String representation for debugging
-     * @returns {string} ClipMask description
+     * @returns {string} BitBuffer description
      */
     toString() {
         const memoryKB = (this.getMemoryUsage() / 1024).toFixed(2);
-        const clippingStatus = this.hasClipping() ? 'with clipping' : 'no clipping';
-        return `ClipMask(${this._width}×${this._height}, ${memoryKB}KB, ${clippingStatus})`;
+        const state = this.isEmpty() ? 'empty' : this.isFull() ? 'full' : 'mixed';
+        return `BitBuffer(${this._width}×${this._height}, ${memoryKB}KB, ${state})`;
     }
     
     /**
-     * Check equality with another ClipMask
-     * @param {ClipMask} other - Other ClipMask to compare
-     * @returns {boolean} True if masks are identical
+     * Check equality with another BitBuffer
+     * @param {BitBuffer} other - Other BitBuffer to compare
+     * @returns {boolean} True if buffers are identical
      */
     equals(other) {
-        if (!(other instanceof ClipMask)) {
+        if (!(other instanceof BitBuffer)) {
             return false;
         }
         
@@ -3606,9 +3628,160 @@ class ClipMask {
     }
 }
 /**
+ * ClipMask class for SWCanvas
+ * 
+ * Represents a 1-bit stencil buffer for memory-efficient clipping operations.
+ * Uses composition with BitBuffer to eliminate code duplication while maintaining
+ * clear separation of concerns (Joshua Bloch Item 18: Favor composition over inheritance).
+ * 
+ * Memory Layout:
+ * - Each pixel is represented by 1 bit (1 = visible, 0 = clipped)
+ * - Bits are packed into Uint8Array (8 pixels per byte)
+ * - Memory usage: width × height ÷ 8 bytes (87.5% reduction vs full coverage)
+ */
+class ClipMask {
+    /**
+     * Create a ClipMask
+     * @param {number} width - Surface width in pixels
+     * @param {number} height - Surface height in pixels
+     */
+    constructor(width, height) {
+        // BitBuffer validates parameters and handles bit manipulation
+        // Default to 1 (no clipping by default)
+        this._bitBuffer = new BitBuffer(width, height, 1);
+        
+        // Make dimensions immutable
+        Object.defineProperty(this, 'width', { value: width, writable: false });
+        Object.defineProperty(this, 'height', { value: height, writable: false });
+    }
+    
+    /**
+     * Get clip state for a pixel
+     * @param {number} x - X coordinate
+     * @param {number} y - Y coordinate
+     * @returns {boolean} True if pixel is visible (not clipped)
+     */
+    getPixel(x, y) {
+        return this._bitBuffer.getPixel(x, y);
+    }
+    
+    /**
+     * Set clip state for a pixel
+     * @param {number} x - X coordinate
+     * @param {number} y - Y coordinate
+     * @param {boolean} visible - True if pixel should be visible
+     */
+    setPixel(x, y, visible) {
+        this._bitBuffer.setPixel(x, y, visible);
+    }
+    
+    /**
+     * Check if a pixel is clipped (convenience method)
+     * @param {number} x - X coordinate
+     * @param {number} y - Y coordinate
+     * @returns {boolean} True if pixel is clipped out
+     */
+    isPixelClipped(x, y) {
+        return !this.getPixel(x, y);
+    }
+    
+    /**
+     * Clear all clipping (set all pixels to visible)
+     */
+    clear() {
+        this._bitBuffer.fill(); // Fill with 1s (visible)
+    }
+    
+    /**
+     * Set all pixels to clipped state
+     */
+    clipAll() {
+        this._bitBuffer.clear(); // Clear to 0s (clipped)
+    }
+    
+    /**
+     * Intersect this clip mask with another (AND operation)
+     * Only pixels visible in BOTH masks will remain visible
+     * @param {ClipMask} other - Other clip mask to intersect with
+     */
+    intersectWith(other) {
+        if (!(other instanceof ClipMask)) {
+            throw new Error('Argument must be a ClipMask instance');
+        }
+        
+        this._bitBuffer.and(other._bitBuffer);
+    }
+    
+    /**
+     * Create a deep copy of this clip mask
+     * @returns {ClipMask} New ClipMask with copied data
+     */
+    clone() {
+        const clone = new ClipMask(this.width, this.height);
+        clone._bitBuffer.copyFrom(this._bitBuffer);
+        return clone;
+    }
+    
+    /**
+     * Create a clip pixel writer function for path rendering
+     * @returns {Function} clipPixel function for coverage-based rendering
+     */
+    createPixelWriter() {
+        return (x, y, coverage) => {
+            // Bounds checking
+            if (x < 0 || x >= this._width || y < 0 || y >= this._height) return;
+            
+            // Convert coverage to binary: >0.5 means inside, <=0.5 means outside
+            const isInside = coverage > 0.5;
+            this.setPixel(x, y, isInside);
+        };
+    }
+    
+    /**
+     * Get memory usage in bytes
+     * @returns {number} Memory usage of the clip mask
+     */
+    getMemoryUsage() {
+        return this._bitBuffer.getMemoryUsage();
+    }
+    
+    /**
+     * Check if mask has any clipping (optimization)
+     * @returns {boolean} True if any pixels are clipped
+     */
+    hasClipping() {
+        return !this._bitBuffer.isFull();
+    }
+    
+    /**
+     * String representation for debugging
+     * @returns {string} ClipMask description
+     */
+    toString() {
+        const memoryKB = (this.getMemoryUsage() / 1024).toFixed(2);
+        const clippingStatus = this.hasClipping() ? 'with clipping' : 'no clipping';
+        return `ClipMask(${this.width}×${this.height}, ${memoryKB}KB, ${clippingStatus})`;
+    }
+    
+    /**
+     * Check equality with another ClipMask
+     * @param {ClipMask} other - Other ClipMask to compare
+     * @returns {boolean} True if masks are identical
+     */
+    equals(other) {
+        if (!(other instanceof ClipMask)) {
+            return false;
+        }
+        
+        return this._bitBuffer.equals(other._bitBuffer);
+    }
+}
+/**
  * SourceMask class for SWCanvas
  * 
  * Represents a 1-bit source coverage mask for canvas-wide composite operations.
+ * Uses composition with BitBuffer to eliminate code duplication while maintaining
+ * clear separation of concerns (Joshua Bloch Item 18: Favor composition over inheritance).
  * Tracks which pixels are covered by the current drawing operation and provides
  * efficient bounds for iteration during canvas-wide compositing passes.
  * 
@@ -3625,22 +3798,9 @@ class SourceMask {
      * @param {number} height - Surface height in pixels
      */
     constructor(width, height) {
-        // Validate parameters
-        if (typeof width !== 'number' || !Number.isInteger(width) || width <= 0) {
-            throw new Error('SourceMask width must be a positive integer');
-        }
-        
-        if (typeof height !== 'number' || !Number.isInteger(height) || height <= 0) {
-            throw new Error('SourceMask height must be a positive integer');
-        }
-        
-        this._width = width;
-        this._height = height;
-        this._numPixels = width * height;
-        this._numBytes = Math.ceil(this._numPixels / 8);
-        
-        // Initialize to all 0s (no coverage by default)
-        this._buffer = new Uint8Array(this._numBytes);
+        // BitBuffer validates parameters and handles bit manipulation
+        // Default to 0 (no coverage by default)
+        this._bitBuffer = new BitBuffer(width, height, 0);
         
         // Bounds tracking for optimization
         this._bounds = {
@@ -3663,13 +3823,7 @@ class SourceMask {
      * @returns {boolean} True if pixel is covered by source
      */
     getPixel(x, y) {
-        // Bounds checking
-        if (x < 0 || x >= this._width || y < 0 || y >= this._height) {
-            return false; // Out of bounds pixels are not covered
-        }
-        
-        const pixelIndex = y * this._width + x;
-        return this._getBit(pixelIndex) === 1;
+        return this._bitBuffer.getPixel(x, y);
     }
     
     /**
@@ -3680,15 +3834,14 @@ class SourceMask {
      */
     setPixel(x, y, covered) {
         // Bounds checking
-        if (x < 0 || x >= this._width || y < 0 || y >= this._height) {
+        if (x < 0 || x >= this.width || y < 0 || y >= this.height) {
             return; // Ignore out of bounds
         }
         
-        const pixelIndex = y * this._width + x;
-        const wasCovered = this._getBit(pixelIndex) === 1;
+        const wasCovered = this._bitBuffer.getPixel(x, y);
         
         // Update pixel state
-        this._setBit(pixelIndex, covered ? 1 : 0);
+        this._bitBuffer.setPixel(x, y, covered);
         
         // Update bounds if pixel became covered
         if (covered && !wasCovered) {
@@ -3713,7 +3866,7 @@ class SourceMask {
      * Clear all coverage (set all pixels to not covered)
      */
     clear() {
-        this._buffer.fill(0);
+        this._bitBuffer.clear();
         this._bounds = {
             minX: Infinity,
             minY: Infinity,
@@ -3764,8 +3917,8 @@ class SourceMask {
                 return {
                     minX: 0,
                     minY: 0,
-                    maxX: this._width - 1,
-                    maxY: this._height - 1,
+                    maxX: this.width - 1,
+                    maxY: this.height - 1,
                     isEmpty: false
                 };
             } else {
@@ -3773,8 +3926,8 @@ class SourceMask {
                 return {
                     minX: 0,
                     minY: 0,
-                    maxX: this._width - 1,
-                    maxY: this._height - 1,
+                    maxX: this.width - 1,
+                    maxY: this.height - 1,
                     isEmpty: false
                 };
             }
@@ -3784,8 +3937,8 @@ class SourceMask {
         let bounds = {
             minX: Math.max(0, this._bounds.minX),
             minY: Math.max(0, this._bounds.minY),
-            maxX: Math.min(this._width - 1, this._bounds.maxX),
-            maxY: Math.min(this._height - 1, this._bounds.maxY),
+            maxX: Math.min(this.width - 1, this._bounds.maxX),
+            maxY: Math.min(this.height - 1, this._bounds.maxY),
             isEmpty: false
         };
         
@@ -3799,7 +3952,7 @@ class SourceMask {
     createPixelWriter() {
         return (x, y, coverage) => {
             // Bounds checking
-            if (x < 0 || x >= this._width || y < 0 || y >= this._height) return;
+            if (x < 0 || x >= this.width || y < 0 || y >= this.height) return;
             
             // Convert coverage to binary: >0.5 means covered, <=0.5 means not covered
             const isCovered = coverage > 0.5;
@@ -3812,45 +3965,7 @@ class SourceMask {
      * @returns {number} Memory usage of the source mask
      */
     getMemoryUsage() {
-        return this._buffer.byteLength;
-    }
-    
-    /**
-     * Get bit value at linear pixel index
-     * @param {number} pixelIndex - Linear pixel index
-     * @returns {number} 0 or 1
-     * @private
-     */
-    _getBit(pixelIndex) {
-        const byteIndex = Math.floor(pixelIndex / 8);
-        const bitIndex = pixelIndex % 8;
-        
-        if (byteIndex >= this._buffer.length) {
-            return 0; // Out of bounds pixels are not covered
-        }
-        
-        return (this._buffer[byteIndex] & (1 << bitIndex)) !== 0 ? 1 : 0;
-    }
-    
-    /**
-     * Set bit value at linear pixel index
-     * @param {number} pixelIndex - Linear pixel index
-     * @param {number} value - 0 or 1
-     * @private
-     */
-    _setBit(pixelIndex, value) {
-        const byteIndex = Math.floor(pixelIndex / 8);
-        const bitIndex = pixelIndex % 8;
-        
-        if (byteIndex >= this._buffer.length) {
-            return; // Ignore out of bounds
-        }
-        
-        if (value) {
-            this._buffer[byteIndex] |= (1 << bitIndex);
-        } else {
-            this._buffer[byteIndex] &= ~(1 << bitIndex);
-        }
+        return this._bitBuffer.getMemoryUsage();
     }
     
     /**
@@ -3861,7 +3976,7 @@ class SourceMask {
         const memoryKB = (this.getMemoryUsage() / 1024).toFixed(2);
         const boundsStr = this._bounds.isEmpty ? 'empty' : 
             `(${this._bounds.minX},${this._bounds.minY})-(${this._bounds.maxX},${this._bounds.maxY})`;
-        return `SourceMask(${this._width}×${this._height}, ${memoryKB}KB, bounds: ${boundsStr})`;
+        return `SourceMask(${this.width}×${this.height}, ${memoryKB}KB, bounds: ${boundsStr})`;
     }
 }
 /**
@@ -6887,6 +7002,7 @@ if (typeof window !== 'undefined') {
             Rectangle: Rectangle,
             BitmapEncoder: BitmapEncoder,
             BitmapEncodingOptions: BitmapEncodingOptions,
+            BitBuffer: BitBuffer,
             ClipMask: ClipMask,
             SourceMask: SourceMask,
             ImageProcessor: ImageProcessor,
@@ -6920,6 +7036,7 @@ if (typeof window !== 'undefined') {
             Rectangle: Rectangle,
             BitmapEncoder: BitmapEncoder,
             BitmapEncodingOptions: BitmapEncodingOptions,
+            BitBuffer: BitBuffer,
             ClipMask: ClipMask,
             SourceMask: SourceMask,
             ImageProcessor: ImageProcessor,
