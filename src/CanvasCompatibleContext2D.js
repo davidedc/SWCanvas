@@ -187,6 +187,10 @@ class CanvasCompatibleContext2D {
         this._core.arc(x, y, radius, startAngle, endAngle, counterclockwise);
     }
     
+    ellipse(x, y, radiusX, radiusY, rotation, startAngle, endAngle, counterclockwise = false) {
+        this._core.ellipse(x, y, radiusX, radiusY, rotation, startAngle, endAngle, counterclockwise);
+    }
+    
     quadraticCurveTo(cpx, cpy, x, y) {
         this._core.quadraticCurveTo(cpx, cpy, x, y);
     }
