@@ -180,6 +180,28 @@ ctx.moveTo(10, 70);
 ctx.lineTo(100, 70);
 ctx.stroke();
 
+// Rounded corners with arcTo
+ctx.beginPath();
+ctx.moveTo(50, 100);
+ctx.lineTo(150, 100);
+ctx.arcTo(200, 100, 200, 150, 25); // 25px radius rounded corner
+ctx.lineTo(200, 200);
+ctx.stroke();
+
+// Path hit testing
+ctx.beginPath();
+ctx.rect(10, 120, 100, 60);
+ctx.fillStyle = 'blue';
+ctx.fill();
+
+// Test if points are inside the filled rectangle
+if (ctx.isPointInPath(60, 150)) {
+    console.log('Point (60, 150) is inside the rectangle');
+}
+if (ctx.isPointInPath(60, 150, 'evenodd')) {
+    console.log('Point is inside using evenodd fill rule');
+}
+
 // Composite operations (Porter-Duff blending)
 ctx.fillStyle = 'red';
 ctx.fillRect(30, 30, 40, 40);
@@ -229,8 +251,12 @@ ctx.moveTo(x, y);
 ctx.lineTo(x2, y2);
 ctx.arc(cx, cy, radius, startAngle, endAngle, counterclockwise);
 ctx.ellipse(cx, cy, radiusX, radiusY, rotation, startAngle, endAngle, counterclockwise);
+ctx.arcTo(x1, y1, x2, y2, radius); // Rounded corners between lines
 ctx.fill();
 ctx.stroke();
+
+// Path testing
+const isInside = ctx.isPointInPath(x, y, fillRule); // Test if point is inside current path
 
 // Transforms
 ctx.translate(x, y);
