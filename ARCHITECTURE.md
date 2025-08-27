@@ -36,7 +36,7 @@ ClipMask.js         → Stencil-based clipping using BitBuffer composition
 SourceMask.js       → Source coverage tracking using BitBuffer composition
 Gradient.js         → Linear, radial, and conic gradient paint sources
 Pattern.js          → Repeating image pattern paint sources
-Path2D.js           → Path definition and command recording
+SWPath2D.js         → Path definition and command recording
 ```
 
 **Purpose**: Maximum performance graphics operations with zero overhead.
@@ -75,6 +75,7 @@ HTML5 Canvas has a fundamental dual nature that SWCanvas preserves through archi
 - **Style Properties**: `fillStyle`, `strokeStyle`, `lineWidth`
 - **Paint Sources**: `createLinearGradient()`, `createRadialGradient()`, `createConicGradient()`, `createPattern()`
 - **Transform Operations**: `translate()`, `rotate()`, `scale()`
+- **Path Hit Testing**: `isPointInPath()`, `isPointInStroke()` with geometric accuracy
 - **ImageData API**: `getImageData()`, `createImageData()`, `putImageData()`
 
 This separation maintains the HTML5 Canvas conceptual model while enabling performance optimizations.
@@ -155,6 +156,30 @@ SWCanvas.Core.* → Direct access to all engine classes
 - `BitmapEncoder` - File format export utilities
 - `BitmapEncodingOptions()` - Immutable encoding configuration (Joshua Bloch patterns)
 - `CompositeOperations` - Porter-Duff blending operations
+
+## Path Hit Testing System
+
+SWCanvas implements complete geometric path hit testing through `isPointInPath()` and `isPointInStroke()` methods that provide accurate point-in-polygon and point-on-stroke detection.
+
+### Geometric Implementation
+
+- **`isPointInPath()`**: Uses polygon flattening and mathematical point-in-polygon algorithms supporting both `evenodd` and `nonzero` fill rules
+- **`isPointInStroke()`**: Converts strokes to polygons using `StrokeGenerator`, then applies point-in-polygon testing with proper line cap, join, and dash pattern support
+- **Zero-width stroke handling**: Special case using distance-to-line-segment calculation for pixel-perfect accuracy
+- **Transform awareness**: All hit testing operates in the correct coordinate space respecting current transformation matrix
+
+### API Overloads
+
+Both methods support the complete HTML5 Canvas API surface:
+```javascript
+// Test against current path
+ctx.isPointInPath(x, y, fillRule?)
+ctx.isPointInStroke(x, y)
+
+// Test against external SWPath2D
+ctx.isPointInPath(path, x, y, fillRule?)
+ctx.isPointInStroke(path, x, y)
+```
 
 ## Composite Operations System
 

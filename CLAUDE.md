@@ -35,7 +35,7 @@ src/Context2D.js              # Core 2D rendering context (explicit RGBA API)
 src/Rasterizer.js             # Low-level pixel operations and rendering pipeline
 src/Surface.js                # Memory buffer management - RGBA pixel data
 src/Transform2D.js            # Immutable transformation matrix mathematics
-src/Path2D.js                 # Path definition and command recording
+src/SWPath2D.js               # Path definition and command recording
 src/Color.js                  # Immutable color handling with premultiplied alpha
 src/BitBuffer.js              # 1-bit per pixel utility for mask operations (composition component)
 src/ClipMask.js               # 1-bit stencil buffer using BitBuffer composition

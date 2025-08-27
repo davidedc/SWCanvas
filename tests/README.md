@@ -76,7 +76,7 @@ SWCanvas uses a **modular complementary dual test system** where individual test
 - ✅ **API Validation**: Surface creation, dimension validation, error handling
 - ✅ **Mathematical Correctness**: Matrix operations, coordinate transformations
 - ✅ **State Management**: Context save/restore, property persistence  
-- ✅ **Data Structures**: Path2D command recording, parameter validation
+- ✅ **Data Structures**: SWPath2D command recording, parameter validation
 - ✅ **Integration Points**: BMP generation, cross-platform consistency
 
 **Example Modular Test File** (`/tests/core/001-surface-creation-valid.js`):

@@ -9,6 +9,7 @@ A deterministic 2D raster engine with Canvas-like API. SWCanvas provides pixel-p
 - **Deterministic Rendering**: Identical results across all platforms and browsers
 - **HTML5 Canvas Compatibility**: Drop-in replacement with familiar API  
 - **Object-Oriented Design**: Clean ES6 classes following effective OO principles
+- **Geometric Path Hit Testing**: Complete `isPointInPath` and `isPointInStroke` implementation with accurate geometric calculation
 - **Memory Efficient Clipping**: Stencil-based clipping system with proper intersection support
 - **Sub-pixel Stroke Rendering**: Thin strokes render with proportional opacity, works with all paint sources
 - **Full Porter-Duff Compositing**: Complete `globalCompositeOperation` support with all 10 standard operations working correctly
@@ -202,6 +203,13 @@ if (ctx.isPointInPath(60, 150, 'evenodd')) {
     console.log('Point is inside using evenodd fill rule');
 }
 
+// Test if points are on the stroke outline
+ctx.lineWidth = 5;
+ctx.stroke();
+if (ctx.isPointInStroke(48, 150)) { // On stroke edge
+    console.log('Point (48, 150) is on the stroke outline');
+}
+
 // Composite operations (Porter-Duff blending)
 ctx.fillStyle = 'red';
 ctx.fillRect(30, 30, 40, 40);
@@ -255,8 +263,9 @@ ctx.arcTo(x1, y1, x2, y2, radius); // Rounded corners between lines
 ctx.fill();
 ctx.stroke();
 
-// Path testing
+// Path testing  
 const isInside = ctx.isPointInPath(x, y, fillRule); // Test if point is inside current path
+const isOnStroke = ctx.isPointInStroke(x, y); // Test if point is on stroke outline
 
 // Transforms
 ctx.translate(x, y);
@@ -494,7 +503,7 @@ const blackBmp = SWCanvas.Core.BitmapEncoder.encode(surface,
 - **Surface**: Memory buffer for pixel data
 - **Context2D**: Drawing API and state management
 - **Transform2D**: Transformation mathematics (immutable value object)
-- **Path2D**: Path definition and flattening
+- **SWPath2D**: Path definition and flattening
 - **Rasterizer**: Low-level pixel operations
 - **Color**: Immutable color handling with premultiplied alpha support
 - **Gradients**: Paint source objects for linear, radial, and conic gradients with color stops
@@ -556,7 +565,7 @@ src/              # Source files (ES6 Classes)
 ├── BitmapEncoder.js # BMP file encoding (static methods)
 ├── BitmapEncodingOptions.js # BMP encoding configuration (immutable options)
 ├── ColorParser.js   # CSS color string parsing (static methods)
-└── Path2D.js        # Path definition (class)
+└── SWPath2D.js      # Path definition (class)
 
 tests/            # Test suite
 ├── core-functionality-tests.js # Core functionality tests
@@ -590,7 +599,7 @@ The build script (`build.sh`) concatenates source files in dependency order, fol
 2. Point - Immutable 2D point operations
 3. Rectangle - Immutable rectangle operations
 4. Transform2D - Transformation mathematics
-5. Path2D - Path definitions
+5. SWPath2D - Path definitions
 6. Surface - Memory buffer management
 
 **Phase 2: Service Classes**
