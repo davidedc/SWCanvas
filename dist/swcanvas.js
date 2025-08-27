@@ -4897,6 +4897,608 @@ class SourceMask {
     }
 }
 /**
+ * ShadowBuffer class for SWCanvas
+ * 
+ * Manages shadow rendering with extended bounds to handle blur overflow.
+ * Uses sparse array storage for efficiency when shadows only cover part of the canvas.
+ * 
+ * The shadow buffer extends beyond the original canvas bounds to accommodate
+ * blur effects that spread pixels beyond the original shape boundary.
+ */
+class ShadowBuffer {
+    /**
+     * Create a ShadowBuffer
+     * @param {number} width - Original surface width
+     * @param {number} height - Original surface height
+     * @param {number} maxBlurRadius - Maximum blur radius for bounds calculation
+     */
+    constructor(width, height, maxBlurRadius = 0) {
+        // Validate parameters
+        if (typeof width !== 'number' || !Number.isInteger(width) || width <= 0) {
+            throw new Error('ShadowBuffer width must be a positive integer');
+        }
+        
+        if (typeof height !== 'number' || !Number.isInteger(height) || height <= 0) {
+            throw new Error('ShadowBuffer height must be a positive integer');
+        }
+        
+        if (typeof maxBlurRadius !== 'number' || maxBlurRadius < 0) {
+            throw new Error('ShadowBuffer maxBlurRadius must be a non-negative number');
+        }
+        
+        // Original surface dimensions
+        this._originalWidth = width;
+        this._originalHeight = height;
+        this._maxBlurRadius = Math.ceil(maxBlurRadius);
+        
+        // Extended bounds to accommodate blur spillover
+        const blurPadding = this._maxBlurRadius;
+        this._extendedWidth = width + (blurPadding * 2);
+        this._extendedHeight = height + (blurPadding * 2);
+        this._extendedOffsetX = blurPadding;
+        this._extendedOffsetY = blurPadding;
+        
+        // Sparse storage for alpha values (only stores non-zero pixels)
+        // Key format: "x,y" -> alpha value (0-1)
+        this._alphaData = {};
+        
+        // Bounding box of actual data (for optimization)
+        this._bounds = {
+            minX: Infinity,
+            maxX: -Infinity,
+            minY: Infinity,
+            maxY: -Infinity,
+            isEmpty: true
+        };
+        
+        // Make properties immutable
+        Object.defineProperty(this, 'originalWidth', { value: width, writable: false });
+        Object.defineProperty(this, 'originalHeight', { value: height, writable: false });
+        Object.defineProperty(this, 'extendedWidth', { value: this._extendedWidth, writable: false });
+        Object.defineProperty(this, 'extendedHeight', { value: this._extendedHeight, writable: false });
+        Object.defineProperty(this, 'extendedOffsetX', { value: this._extendedOffsetX, writable: false });
+        Object.defineProperty(this, 'extendedOffsetY', { value: this._extendedOffsetY, writable: false });
+    }
+    
+    /**
+     * Add alpha value to the buffer at specified coordinates
+     * @param {number} x - X coordinate (in original surface space)
+     * @param {number} y - Y coordinate (in original surface space) 
+     * @param {number} alpha - Alpha value (0-1)
+     */
+    addAlpha(x, y, alpha) {
+        if (alpha <= 0) return; // No need to store zero/negative alpha
+        
+        // Convert to extended buffer coordinates
+        const extX = x + this._extendedOffsetX;
+        const extY = y + this._extendedOffsetY;
+        
+        // Bounds check for extended buffer
+        if (extX < 0 || extX >= this._extendedWidth || extY < 0 || extY >= this._extendedHeight) {
+            return; // Outside extended bounds
+        }
+        
+        const key = `${extX},${extY}`;
+        
+        // Accumulate alpha values (for overlapping shapes)
+        const currentAlpha = this._alphaData[key] || 0;
+        this._alphaData[key] = Math.min(1.0, currentAlpha + alpha);
+        
+        // Update bounds
+        if (this._bounds.isEmpty) {
+            this._bounds.minX = this._bounds.maxX = extX;
+            this._bounds.minY = this._bounds.maxY = extY;
+            this._bounds.isEmpty = false;
+        } else {
+            this._bounds.minX = Math.min(this._bounds.minX, extX);
+            this._bounds.maxX = Math.max(this._bounds.maxX, extX);
+            this._bounds.minY = Math.min(this._bounds.minY, extY);
+            this._bounds.maxY = Math.max(this._bounds.maxY, extY);
+        }
+    }
+    
+    /**
+     * Get alpha value at specified coordinates
+     * @param {number} x - X coordinate (in extended buffer space)
+     * @param {number} y - Y coordinate (in extended buffer space)
+     * @returns {number} Alpha value (0-1)
+     */
+    getAlpha(x, y) {
+        if (x < 0 || x >= this._extendedWidth || y < 0 || y >= this._extendedHeight) {
+            return 0;
+        }
+        
+        const key = `${x},${y}`;
+        return this._alphaData[key] || 0;
+    }
+    
+    /**
+     * Set alpha value at specified coordinates
+     * @param {number} x - X coordinate (in extended buffer space)
+     * @param {number} y - Y coordinate (in extended buffer space)
+     * @param {number} alpha - Alpha value (0-1)
+     */
+    setAlpha(x, y, alpha) {
+        if (x < 0 || x >= this._extendedWidth || y < 0 || y >= this._extendedHeight) {
+            return; // Outside bounds
+        }
+        
+        const key = `${x},${y}`;
+        
+        if (alpha <= 0) {
+            // Remove zero alpha values to keep sparse storage efficient
+            delete this._alphaData[key];
+        } else {
+            this._alphaData[key] = Math.min(1.0, alpha);
+            
+            // Update bounds if needed
+            if (this._bounds.isEmpty) {
+                this._bounds.minX = this._bounds.maxX = x;
+                this._bounds.minY = this._bounds.maxY = y;
+                this._bounds.isEmpty = false;
+            } else {
+                this._bounds.minX = Math.min(this._bounds.minX, x);
+                this._bounds.maxX = Math.max(this._bounds.maxX, x);
+                this._bounds.minY = Math.min(this._bounds.minY, y);
+                this._bounds.maxY = Math.max(this._bounds.maxY, y);
+            }
+        }
+    }
+    
+    /**
+     * Clear all alpha data
+     */
+    clear() {
+        this._alphaData = {};
+        this._bounds = {
+            minX: Infinity,
+            maxX: -Infinity,
+            minY: Infinity,
+            maxY: -Infinity,
+            isEmpty: true
+        };
+    }
+    
+    /**
+     * Get bounding box of actual shadow data
+     * @returns {Object} Bounds object with minX, maxX, minY, maxY, isEmpty
+     */
+    getBounds() {
+        return {
+            minX: this._bounds.minX,
+            maxX: this._bounds.maxX,
+            minY: this._bounds.minY,
+            maxY: this._bounds.maxY,
+            isEmpty: this._bounds.isEmpty
+        };
+    }
+    
+    /**
+     * Get all non-zero alpha pixels as an iterator
+     * @returns {Iterator} Iterator over {x, y, alpha} objects
+     */
+    *getPixels() {
+        for (const key in this._alphaData) {
+            const alpha = this._alphaData[key];
+            if (alpha > 0) {
+                const coords = key.split(',');
+                const x = parseInt(coords[0], 10);
+                const y = parseInt(coords[1], 10);
+                yield { x, y, alpha };
+            }
+        }
+    }
+    
+    /**
+     * Get the number of non-zero alpha pixels
+     * @returns {number} Count of pixels with alpha > 0
+     */
+    getPixelCount() {
+        let count = 0;
+        for (const key in this._alphaData) {
+            if (this._alphaData[key] > 0) {
+                count++;
+            }
+        }
+        return count;
+    }
+    
+    /**
+     * Create a copy of this shadow buffer
+     * @returns {ShadowBuffer} New ShadowBuffer with copied data
+     */
+    clone() {
+        const clone = new ShadowBuffer(this._originalWidth, this._originalHeight, this._maxBlurRadius);
+        
+        // Copy alpha data
+        for (const key in this._alphaData) {
+            clone._alphaData[key] = this._alphaData[key];
+        }
+        
+        // Copy bounds
+        clone._bounds = {
+            minX: this._bounds.minX,
+            maxX: this._bounds.maxX,
+            minY: this._bounds.minY,
+            maxY: this._bounds.maxY,
+            isEmpty: this._bounds.isEmpty
+        };
+        
+        return clone;
+    }
+    
+    /**
+     * Convert shadow buffer to a dense Float32Array for blur processing
+     * @returns {Object} Object with {data: Float32Array, width, height, offsetX, offsetY}
+     */
+    toDenseArray() {
+        // Only create dense array for the actual bounds (plus blur padding)
+        if (this._bounds.isEmpty) {
+            return {
+                data: new Float32Array(0),
+                width: 0,
+                height: 0,
+                offsetX: 0,
+                offsetY: 0
+            };
+        }
+        
+        // Expand bounds by blur radius for blur processing
+        const padding = this._maxBlurRadius;
+        const minX = Math.max(0, this._bounds.minX - padding);
+        const maxX = Math.min(this._extendedWidth - 1, this._bounds.maxX + padding);
+        const minY = Math.max(0, this._bounds.minY - padding);
+        const maxY = Math.min(this._extendedHeight - 1, this._bounds.maxY + padding);
+        
+        const width = maxX - minX + 1;
+        const height = maxY - minY + 1;
+        const data = new Float32Array(width * height);
+        
+        // Copy sparse data to dense array
+        for (let y = minY; y <= maxY; y++) {
+            for (let x = minX; x <= maxX; x++) {
+                const alpha = this.getAlpha(x, y);
+                if (alpha > 0) {
+                    const denseIndex = (y - minY) * width + (x - minX);
+                    data[denseIndex] = alpha;
+                }
+            }
+        }
+        
+        return {
+            data: data,
+            width: width,
+            height: height,
+            offsetX: minX,
+            offsetY: minY
+        };
+    }
+    
+    /**
+     * Update shadow buffer from dense array after blur processing
+     * @param {Float32Array} data - Dense array data
+     * @param {number} width - Dense array width
+     * @param {number} height - Dense array height
+     * @param {number} offsetX - Offset X in extended buffer space
+     * @param {number} offsetY - Offset Y in extended buffer space
+     */
+    fromDenseArray(data, width, height, offsetX, offsetY) {
+        // Clear existing data
+        this.clear();
+        
+        // Copy dense data back to sparse storage
+        for (let y = 0; y < height; y++) {
+            for (let x = 0; x < width; x++) {
+                const denseIndex = y * width + x;
+                const alpha = data[denseIndex];
+                
+                if (alpha > 0) {
+                    const extX = x + offsetX;
+                    const extY = y + offsetY;
+                    this.setAlpha(extX, extY, alpha);
+                }
+            }
+        }
+    }
+}
+/**
+ * BoxBlur class for SWCanvas
+ * 
+ * Implements multi-pass box blur using Summed Area Tables (SAT) for efficient
+ * O(1) box filtering. Multiple box blur passes approximate Gaussian blur
+ * based on the Central Limit Theorem.
+ * 
+ * This approach matches the reference implementation and provides good
+ * performance characteristics for shadow blur effects.
+ */
+class BoxBlur {
+    /**
+     * Apply box blur to image data using multi-pass SAT approach
+     * @param {Float32Array} data - Image data (alpha values 0-1)
+     * @param {number} width - Image width
+     * @param {number} height - Image height  
+     * @param {number} blurRadius - Blur radius in pixels
+     * @param {number} passes - Number of blur passes (default: 3)
+     * @returns {Float32Array} Blurred image data
+     */
+    static blur(data, width, height, blurRadius, passes = 3) {
+        // Validate parameters
+        if (!data || !(data instanceof Float32Array)) {
+            throw new Error('BoxBlur requires Float32Array data');
+        }
+        
+        if (typeof width !== 'number' || width <= 0 || typeof height !== 'number' || height <= 0) {
+            throw new Error('BoxBlur width and height must be positive numbers');
+        }
+        
+        if (data.length !== width * height) {
+            throw new Error('BoxBlur data length must match width * height');
+        }
+        
+        if (typeof blurRadius !== 'number' || blurRadius < 0) {
+            throw new Error('BoxBlur radius must be a non-negative number');
+        }
+        
+        if (typeof passes !== 'number' || passes < 1) {
+            throw new Error('BoxBlur passes must be at least 1');
+        }
+        
+        // No blur needed for zero radius
+        if (blurRadius === 0) {
+            return new Float32Array(data); // Return copy
+        }
+        
+        // Calculate equivalent box filter width for Gaussian approximation
+        // Based on Central Limit Theorem: multiple box filters -> Gaussian
+        const sigma = blurRadius / 2.0;
+        const boxWidth = Math.floor(Math.max(
+            Math.sqrt(12 * sigma * sigma / passes + 1), 3
+        ));
+        
+        // Ensure odd width for symmetric filter
+        const finalBoxWidth = boxWidth % 2 === 0 ? boxWidth + 1 : boxWidth;
+        
+        // Apply multiple blur passes
+        let currentData = new Float32Array(data);
+        
+        for (let pass = 0; pass < passes; pass++) {
+            currentData = BoxBlur._singleBoxBlurPass(currentData, width, height, finalBoxWidth);
+        }
+        
+        return currentData;
+    }
+    
+    /**
+     * Apply single box blur pass using Summed Area Table
+     * @param {Float32Array} data - Input image data
+     * @param {number} width - Image width
+     * @param {number} height - Image height
+     * @param {number} boxWidth - Box filter width (should be odd)
+     * @returns {Float32Array} Blurred image data
+     * @private
+     */
+    static _singleBoxBlurPass(data, width, height, boxWidth) {
+        const halfBox = Math.floor(boxWidth / 2);
+        
+        // First pass: horizontal box blur
+        const horizontalData = BoxBlur._horizontalBoxBlur(data, width, height, halfBox);
+        
+        // Second pass: vertical box blur on horizontally blurred data
+        const verticalData = BoxBlur._verticalBoxBlur(horizontalData, width, height, halfBox);
+        
+        return verticalData;
+    }
+    
+    /**
+     * Apply horizontal box blur using running sum
+     * @param {Float32Array} data - Input image data
+     * @param {number} width - Image width
+     * @param {number} height - Image height
+     * @param {number} radius - Half-width of box filter
+     * @returns {Float32Array} Horizontally blurred data
+     * @private
+     */
+    static _horizontalBoxBlur(data, width, height, radius) {
+        const result = new Float32Array(data.length);
+        
+        for (let y = 0; y < height; y++) {
+            const rowOffset = y * width;
+            
+            // Initialize running sum for first pixel
+            let sum = 0;
+            let count = 0;
+            
+            // Build initial sum
+            for (let x = -radius; x <= radius; x++) {
+                const srcX = Math.max(0, Math.min(width - 1, x));
+                sum += data[rowOffset + srcX];
+                count++;
+            }
+            
+            result[rowOffset] = sum / count;
+            
+            // Slide the box across the row
+            for (let x = 1; x < width; x++) {
+                // Remove leftmost pixel from sum
+                const leftX = Math.max(0, Math.min(width - 1, x - radius - 1));
+                const rightX = Math.max(0, Math.min(width - 1, x + radius));
+                
+                if (x - radius - 1 >= 0) {
+                    sum -= data[rowOffset + leftX];
+                    count--;
+                }
+                
+                if (x + radius < width) {
+                    sum += data[rowOffset + rightX];
+                    count++;
+                }
+                
+                result[rowOffset + x] = sum / count;
+            }
+        }
+        
+        return result;
+    }
+    
+    /**
+     * Apply vertical box blur using running sum
+     * @param {Float32Array} data - Input image data
+     * @param {number} width - Image width
+     * @param {number} height - Image height
+     * @param {number} radius - Half-height of box filter
+     * @returns {Float32Array} Vertically blurred data
+     * @private
+     */
+    static _verticalBoxBlur(data, width, height, radius) {
+        const result = new Float32Array(data.length);
+        
+        for (let x = 0; x < width; x++) {
+            // Initialize running sum for first pixel
+            let sum = 0;
+            let count = 0;
+            
+            // Build initial sum
+            for (let y = -radius; y <= radius; y++) {
+                const srcY = Math.max(0, Math.min(height - 1, y));
+                sum += data[srcY * width + x];
+                count++;
+            }
+            
+            result[x] = sum / count;
+            
+            // Slide the box down the column
+            for (let y = 1; y < height; y++) {
+                // Remove topmost pixel from sum
+                const topY = Math.max(0, Math.min(height - 1, y - radius - 1));
+                const bottomY = Math.max(0, Math.min(height - 1, y + radius));
+                
+                if (y - radius - 1 >= 0) {
+                    sum -= data[topY * width + x];
+                    count--;
+                }
+                
+                if (y + radius < height) {
+                    sum += data[bottomY * width + x];
+                    count++;
+                }
+                
+                result[y * width + x] = sum / count;
+            }
+        }
+        
+        return result;
+    }
+    
+    /**
+     * Alternative implementation using full Summed Area Table
+     * More memory intensive but demonstrates the SAT approach from reference
+     * @param {Float32Array} data - Input image data
+     * @param {number} width - Image width
+     * @param {number} height - Image height
+     * @param {number} boxWidth - Box filter width
+     * @returns {Float32Array} Blurred image data
+     * @private
+     */
+    static _boxBlurWithSAT(data, width, height, boxWidth) {
+        const halfBox = Math.floor(boxWidth / 2);
+        
+        // Build Summed Area Table
+        const sat = BoxBlur._buildSAT(data, width, height);
+        
+        // Apply box filtering using SAT for O(1) lookups
+        const result = new Float32Array(data.length);
+        
+        for (let y = 0; y < height; y++) {
+            for (let x = 0; x < width; x++) {
+                // Calculate box bounds
+                const x1 = Math.max(0, x - halfBox);
+                const y1 = Math.max(0, y - halfBox);
+                const x2 = Math.min(width - 1, x + halfBox);
+                const y2 = Math.min(height - 1, y + halfBox);
+                
+                // Use SAT to calculate sum in O(1)
+                const sum = BoxBlur._getSATSum(sat, width, x1, y1, x2, y2);
+                const area = (x2 - x1 + 1) * (y2 - y1 + 1);
+                
+                result[y * width + x] = sum / area;
+            }
+        }
+        
+        return result;
+    }
+    
+    /**
+     * Build Summed Area Table for O(1) rectangular sum queries
+     * @param {Float32Array} data - Input image data
+     * @param {number} width - Image width
+     * @param {number} height - Image height
+     * @returns {Float32Array} Summed Area Table
+     * @private
+     */
+    static _buildSAT(data, width, height) {
+        const sat = new Float32Array(width * height);
+        
+        // Fill first row
+        sat[0] = data[0];
+        for (let x = 1; x < width; x++) {
+            sat[x] = data[x] + sat[x - 1];
+        }
+        
+        // Fill remaining rows
+        for (let y = 1; y < height; y++) {
+            const rowOffset = y * width;
+            const prevRowOffset = (y - 1) * width;
+            
+            // First column
+            sat[rowOffset] = data[rowOffset] + sat[prevRowOffset];
+            
+            // Remaining columns
+            for (let x = 1; x < width; x++) {
+                sat[rowOffset + x] = data[rowOffset + x] + 
+                                    sat[rowOffset + x - 1] +
+                                    sat[prevRowOffset + x] -
+                                    sat[prevRowOffset + x - 1];
+            }
+        }
+        
+        return sat;
+    }
+    
+    /**
+     * Get sum of rectangular region using SAT in O(1) time
+     * @param {Float32Array} sat - Summed Area Table
+     * @param {number} width - Image width
+     * @param {number} x1 - Left boundary (inclusive)
+     * @param {number} y1 - Top boundary (inclusive)
+     * @param {number} x2 - Right boundary (inclusive)
+     * @param {number} y2 - Bottom boundary (inclusive)
+     * @returns {number} Sum of values in rectangle
+     * @private
+     */
+    static _getSATSum(sat, width, x1, y1, x2, y2) {
+        // Handle edge cases
+        if (x1 > x2 || y1 > y2) return 0;
+        
+        const bottomRight = sat[y2 * width + x2];
+        const topRight = (y1 > 0) ? sat[(y1 - 1) * width + x2] : 0;
+        const bottomLeft = (x1 > 0) ? sat[y2 * width + (x1 - 1)] : 0;
+        const topLeft = (x1 > 0 && y1 > 0) ? sat[(y1 - 1) * width + (x1 - 1)] : 0;
+        
+        return bottomRight - topRight - bottomLeft + topLeft;
+    }
+    
+    /**
+     * Calculate optimal box width for Gaussian approximation
+     * @param {number} sigma - Standard deviation of desired Gaussian
+     * @param {number} passes - Number of box blur passes
+     * @returns {number} Optimal box width (odd integer)
+     */
+    static calculateBoxWidth(sigma, passes) {
+        const width = Math.floor(Math.sqrt(12 * sigma * sigma / passes + 1));
+        return width % 2 === 0 ? width + 1 : width;
+    }
+}
+/**
  * ImageProcessor class for SWCanvas
  * 
  * Handles ImageLike interface validation and format conversions.
@@ -6066,7 +6668,12 @@ class Rasterizer {
             clipMask: params.clipMask || null,  // Stencil-based clipping
             fillStyle: params.fillStyle || null,
             strokeStyle: params.strokeStyle || null,
-            sourceMask: null  // Will be initialized if needed for canvas-wide compositing
+            sourceMask: null,  // Will be initialized if needed for canvas-wide compositing
+            // Shadow properties
+            shadowColor: params.shadowColor || new Color(0, 0, 0, 0),
+            shadowBlur: params.shadowBlur || 0,
+            shadowOffsetX: params.shadowOffsetX || 0,
+            shadowOffsetY: params.shadowOffsetY || 0
         };
 
         // Initialize source mask for global-effect operations
@@ -6137,6 +6744,195 @@ class Rasterizer {
     }
 
     /**
+     * Check if shadows are needed for current operation
+     * @returns {boolean} True if shadows should be rendered
+     * @private
+     */
+    _needsShadow() {
+        if (!this._currentOp) return false;
+        
+        const op = this._currentOp;
+        return op.shadowColor.a > 0 && 
+               (op.shadowBlur > 0 || op.shadowOffsetX !== 0 || op.shadowOffsetY !== 0);
+    }
+
+    /**
+     * Render with shadow support - main shadow pipeline
+     * @param {Function} renderFunc - Function that performs the actual rendering
+     * @private
+     */
+    _renderWithShadow(renderFunc) {
+        if (!this._needsShadow()) {
+            // No shadow needed - render normally
+            renderFunc();
+            return;
+        }
+
+        // Shadow pipeline:
+        // 1. Create shadow buffer
+        // 2. Render shape alpha to shadow buffer (with offset)
+        // 3. Apply blur to shadow buffer
+        // 4. Composite shadow to surface
+        // 5. Render actual shape on top
+
+        const op = this._currentOp;
+        const maxBlurRadius = Math.ceil(op.shadowBlur);
+        const shadowBuffer = new ShadowBuffer(this._surface.width, this._surface.height, maxBlurRadius);
+
+        // Step 1: Render shape to shadow buffer
+        this._renderToShadowBuffer(shadowBuffer, renderFunc);
+
+        // Step 2: Apply blur if needed
+        let blurredShadow = shadowBuffer;
+        if (op.shadowBlur > 0) {
+            blurredShadow = this._applyShadowBlur(shadowBuffer, op.shadowBlur);
+        }
+
+        // Step 3: Composite shadow to surface
+        this._compositeShadowToSurface(blurredShadow, op.shadowColor, op.shadowOffsetX, op.shadowOffsetY);
+
+        // Step 4: Render actual shape on top
+        renderFunc();
+    }
+
+    /**
+     * Render shape alpha to shadow buffer
+     * @param {ShadowBuffer} shadowBuffer - Target shadow buffer
+     * @param {Function} renderFunc - Function that performs the actual rendering
+     * @private
+     */
+    _renderToShadowBuffer(shadowBuffer, renderFunc) {
+        // This is a simplified approach - we render normally and extract alpha
+        // A more sophisticated implementation would render directly to the shadow buffer
+        
+        // For now, create a temporary surface to capture the shape
+        const tempSurface = new Surface(this._surface.width, this._surface.height);
+        const tempRasterizer = new Rasterizer(tempSurface);
+        
+        // Set up operation for temp rendering (without shadow)
+        const opCopy = Object.assign({}, this._currentOp);
+        opCopy.shadowColor = new Color(0, 0, 0, 0); // No shadow for temp render
+        opCopy.shadowBlur = 0;
+        opCopy.shadowOffsetX = 0;
+        opCopy.shadowOffsetY = 0;
+        
+        tempRasterizer._currentOp = opCopy;
+        
+        // Render to temp surface
+        const originalSurface = this._surface;
+        const originalCurrentOp = this._currentOp;
+        this._surface = tempSurface;
+        this._currentOp = opCopy;
+        
+        try {
+            renderFunc();
+        } finally {
+            // Restore original surface and operation
+            this._surface = originalSurface;
+            this._currentOp = originalCurrentOp;
+        }
+        
+        // Extract alpha from temp surface to shadow buffer
+        for (let y = 0; y < tempSurface.height; y++) {
+            for (let x = 0; x < tempSurface.width; x++) {
+                const offset = y * tempSurface.stride + x * 4;
+                const alpha = tempSurface.data[offset + 3] / 255.0; // Normalize to 0-1
+                
+                if (alpha > 0) {
+                    shadowBuffer.addAlpha(x, y, alpha);
+                }
+            }
+        }
+    }
+
+    /**
+     * Apply blur to shadow buffer
+     * @param {ShadowBuffer} shadowBuffer - Shadow buffer to blur
+     * @param {number} blurRadius - Blur radius
+     * @returns {ShadowBuffer} New blurred shadow buffer
+     * @private
+     */
+    _applyShadowBlur(shadowBuffer, blurRadius) {
+        // Convert shadow buffer to dense array for blur processing
+        const denseData = shadowBuffer.toDenseArray();
+        
+        if (denseData.width === 0 || denseData.height === 0) {
+            return shadowBuffer; // Nothing to blur
+        }
+        
+        // Apply box blur
+        const blurredData = BoxBlur.blur(denseData.data, denseData.width, denseData.height, blurRadius);
+        
+        // Create new shadow buffer with blurred data
+        const blurredBuffer = new ShadowBuffer(shadowBuffer.originalWidth, shadowBuffer.originalHeight, Math.ceil(blurRadius));
+        blurredBuffer.fromDenseArray(blurredData, denseData.width, denseData.height, denseData.offsetX, denseData.offsetY);
+        
+        return blurredBuffer;
+    }
+
+    /**
+     * Composite shadow buffer to surface
+     * @param {ShadowBuffer} shadowBuffer - Shadow buffer to composite
+     * @param {Color} shadowColor - Shadow color
+     * @param {number} offsetX - Shadow X offset
+     * @param {number} offsetY - Shadow Y offset
+     * @private
+     */
+    _compositeShadowToSurface(shadowBuffer, shadowColor, offsetX, offsetY) {
+        const surface = this._surface;
+        const globalAlpha = this._currentOp.globalAlpha;
+        
+        // Apply global alpha to shadow color using the standard method
+        const effectiveShadowColor = shadowColor.withGlobalAlpha(globalAlpha);
+        
+        // Iterate over shadow pixels and composite to surface
+        for (const pixel of shadowBuffer.getPixels()) {
+            // Convert from extended buffer coordinates to surface coordinates
+            // ShadowBuffer stores pixels in extended coordinates, we need to convert back to surface coordinates
+            const surfaceX = Math.round(pixel.x - shadowBuffer.extendedOffsetX + offsetX);
+            const surfaceY = Math.round(pixel.y - shadowBuffer.extendedOffsetY + offsetY);
+            
+            // Bounds check
+            if (surfaceX < 0 || surfaceX >= surface.width || surfaceY < 0 || surfaceY >= surface.height) {
+                continue;
+            }
+            
+            // Check clipping
+            if (this._isPixelClipped(surfaceX, surfaceY)) {
+                continue;
+            }
+            
+            // Calculate final shadow alpha by combining pixel alpha with shadow color alpha
+            // pixel.alpha is 0-1, but we need final result in 0-255 range for CompositeOperations
+            // effectiveShadowColor.a is already in 0-255 range
+            // Apply 2x multiplier to match HTML5 Canvas shadow opacity behavior
+            const finalShadowAlpha = Math.min(255, Math.round(pixel.alpha * effectiveShadowColor.a * 8));
+            
+            if (finalShadowAlpha <= 0) continue;
+            
+            // Get surface pixel
+            const offset = surfaceY * surface.stride + surfaceX * 4;
+            const dstR = surface.data[offset];
+            const dstG = surface.data[offset + 1];
+            const dstB = surface.data[offset + 2];
+            const dstA = surface.data[offset + 3];
+            
+            // Composite shadow (using source-over blending)
+            const result = CompositeOperations.blendPixel(
+                'source-over',
+                effectiveShadowColor.r, effectiveShadowColor.g, effectiveShadowColor.b, finalShadowAlpha,
+                dstR, dstG, dstB, dstA
+            );
+            
+            // Write result
+            surface.data[offset] = result.r;
+            surface.data[offset + 1] = result.g;
+            surface.data[offset + 2] = result.b;
+            surface.data[offset + 3] = result.a;
+        }
+    }
+
+    /**
      * Fill a rectangle with solid color
      * @param {number} x - Rectangle x coordinate
      * @param {number} y - Rectangle y coordinate
@@ -6158,7 +6954,23 @@ class Rasterizer {
         }
         
         if (width === 0 || height === 0) return; // Nothing to draw
-        
+
+        // Wrap the actual rectangle filling logic with shadow pipeline
+        this._renderWithShadow(() => {
+            this._fillRectInternal(x, y, width, height, color);
+        });
+    }
+
+    /**
+     * Internal rectangle filling logic (without shadow processing)
+     * @param {number} x - Rectangle x coordinate
+     * @param {number} y - Rectangle y coordinate
+     * @param {number} width - Rectangle width
+     * @param {number} height - Rectangle height
+     * @param {Array|Color} color - Fill color
+     * @private
+     */
+    _fillRectInternal(x, y, width, height, color) {
         // If there's stencil clipping or canvas-wide compositing, convert the rectangle to a path and use path filling
         if (this._currentOp.clipMask || this._requiresCanvasWideCompositing(this._currentOp.composite)) {
             // Create a path for the rectangle
@@ -6173,7 +6985,7 @@ class Rasterizer {
             }
             
             // Use the existing path filling logic which handles stencil clipping and canvas-wide compositing properly
-            this.fill(rectPath, 'nonzero');
+            this._fillInternal(rectPath, 'nonzero');
             
             // Restore original fill style
             if (color && Array.isArray(color)) {
@@ -6344,7 +7156,20 @@ class Rasterizer {
      */
     fill(path, rule) {
         this._requireActiveOp();
-        
+
+        // Wrap the actual path filling logic with shadow pipeline
+        this._renderWithShadow(() => {
+            this._fillInternal(path, rule);
+        });
+    }
+
+    /**
+     * Internal path filling logic (without shadow processing)
+     * @param {Path2D} path - Path to fill
+     * @param {string} rule - Fill rule
+     * @private
+     */
+    _fillInternal(path, rule) {
         // Get fill style (Color, Gradient, or Pattern)
         const fillStyle = this._currentOp.fillStyle || new Color(0, 0, 0, 255);
         const fillRule = rule || 'nonzero';
@@ -6371,7 +7196,20 @@ class Rasterizer {
      */
     stroke(path, strokeProps) {
         this._requireActiveOp();
-        
+
+        // Wrap the actual stroke logic with shadow pipeline
+        this._renderWithShadow(() => {
+            this._strokeInternal(path, strokeProps);
+        });
+    }
+
+    /**
+     * Internal stroke logic (without shadow processing)
+     * @param {Path2D} path - Path to stroke
+     * @param {Object} strokeProps - Stroke properties
+     * @private
+     */
+    _strokeInternal(path, strokeProps) {
         // Get stroke style (Color, Gradient, or Pattern)
         const strokeStyle = this._currentOp.strokeStyle || new Color(0, 0, 0, 255);
         
@@ -6417,7 +7255,27 @@ class Rasterizer {
      */
     drawImage(img, sx, sy, sw, sh, dx, dy, dw, dh) {
         this._requireActiveOp();
-        
+
+        // Wrap the actual image drawing logic with shadow pipeline
+        this._renderWithShadow(() => {
+            this._drawImageInternal.apply(this, arguments);
+        });
+    }
+
+    /**
+     * Internal image drawing logic (without shadow processing)
+     * @param {Object} img - ImageLike object to draw
+     * @param {number} sx - Source x (optional)
+     * @param {number} sy - Source y (optional)
+     * @param {number} sw - Source width (optional)
+     * @param {number} sh - Source height (optional)
+     * @param {number} dx - Destination x
+     * @param {number} dy - Destination y
+     * @param {number} dw - Destination width (optional)
+     * @param {number} dh - Destination height (optional)
+     * @private
+     */
+    _drawImageInternal(img, sx, sy, sw, sh, dx, dy, dw, dh) {
         // Validate and convert ImageLike (handles RGB→RGBA conversion)
         const imageData = ImageProcessor.validateAndConvert(img);
         
@@ -6597,6 +7455,12 @@ class Context2D {
         this._originalLineDash = []; // Original pattern as set by user
         this._lineDashOffset = 0;    // Starting offset into dash pattern
         
+        // Shadow properties - HTML5 Canvas compatible defaults
+        this.shadowColor = new Color(0, 0, 0, 0); // Transparent black (no shadow)
+        this.shadowBlur = 0;       // No blur
+        this.shadowOffsetX = 0;    // No horizontal offset
+        this.shadowOffsetY = 0;    // No vertical offset
+        
         // Internal path and clipping
         this._currentPath = new SWPath2D();
         
@@ -6626,7 +7490,12 @@ class Context2D {
             miterLimit: this.miterLimit,
             lineDash: this._lineDash.slice(),    // Copy working dash pattern array
             originalLineDash: this._originalLineDash.slice(), // Copy original pattern
-            lineDashOffset: this._lineDashOffset
+            lineDashOffset: this._lineDashOffset,
+            // Shadow properties
+            shadowColor: this.shadowColor, // Color is immutable, safe to share
+            shadowBlur: this.shadowBlur,
+            shadowOffsetX: this.shadowOffsetX,
+            shadowOffsetY: this.shadowOffsetY
         });
     }
 
@@ -6650,6 +7519,12 @@ class Context2D {
     this._lineDash = state.lineDash || [];
     this._originalLineDash = state.originalLineDash || [];
     this._lineDashOffset = state.lineDashOffset || 0;
+    
+    // Restore shadow properties
+    this.shadowColor = state.shadowColor || new Color(0, 0, 0, 0);
+    this.shadowBlur = state.shadowBlur || 0;
+    this.shadowOffsetX = state.shadowOffsetX || 0;
+    this.shadowOffsetY = state.shadowOffsetY || 0;
     }
 
     // Transform methods
@@ -6706,6 +7581,40 @@ class Context2D {
         }
     }
 
+    // Shadow property setters with validation
+    setShadowColor(r, g, b, a) {
+        if (arguments.length === 1 && r instanceof Color) {
+            this.shadowColor = r;
+        } else {
+            a = a !== undefined ? a : 255;
+            this.shadowColor = new Color(r, g, b, a);
+        }
+    }
+
+    setShadowBlur(blur) {
+        if (typeof blur !== 'number' || isNaN(blur)) {
+            throw new Error('Shadow blur must be a number');
+        }
+        if (blur < 0) {
+            throw new Error('Shadow blur must be non-negative');
+        }
+        this.shadowBlur = blur;
+    }
+
+    setShadowOffsetX(offset) {
+        if (typeof offset !== 'number' || isNaN(offset)) {
+            throw new Error('Shadow offsetX must be a number');
+        }
+        this.shadowOffsetX = offset;
+    }
+
+    setShadowOffsetY(offset) {
+        if (typeof offset !== 'number' || isNaN(offset)) {
+            throw new Error('Shadow offsetY must be a number');
+        }
+        this.shadowOffsetY = offset;
+    }
+
     // Path methods (delegated to internal path)
     beginPath() {
     this._currentPath = new SWPath2D();
@@ -6754,7 +7663,12 @@ class Context2D {
         globalAlpha: this.globalAlpha,
         transform: this._transform,
         clipMask: this._clipMask,
-        fillStyle: this._fillStyle
+        fillStyle: this._fillStyle,
+        // Shadow properties
+        shadowColor: this.shadowColor,
+        shadowBlur: this.shadowBlur,
+        shadowOffsetX: this.shadowOffsetX,
+        shadowOffsetY: this.shadowOffsetY
     });
     
     this.rasterizer.fillRect(x, y, width, height, this._fillStyle);
@@ -6773,7 +7687,12 @@ class Context2D {
         globalAlpha: this.globalAlpha,
         transform: this._transform,
         clipMask: this._clipMask,
-        strokeStyle: this._strokeStyle
+        strokeStyle: this._strokeStyle,
+        // Shadow properties
+        shadowColor: this.shadowColor,
+        shadowBlur: this.shadowBlur,
+        shadowOffsetX: this.shadowOffsetX,
+        shadowOffsetY: this.shadowOffsetY
     });
     
     this.rasterizer.stroke(rectPath, {
@@ -6924,7 +7843,12 @@ class Context2D {
         globalAlpha: this.globalAlpha,
         transform: this._transform,
         clipMask: this._clipMask,
-        fillStyle: this._fillStyle
+        fillStyle: this._fillStyle,
+        // Shadow properties
+        shadowColor: this.shadowColor,
+        shadowBlur: this.shadowBlur,
+        shadowOffsetX: this.shadowOffsetX,
+        shadowOffsetY: this.shadowOffsetY
     });
     
     this.rasterizer.fill(pathToFill, fillRule);
@@ -6940,7 +7864,12 @@ class Context2D {
         globalAlpha: this.globalAlpha,
         transform: this._transform,
         clipMask: this._clipMask,
-        strokeStyle: this._strokeStyle
+        strokeStyle: this._strokeStyle,
+        // Shadow properties
+        shadowColor: this.shadowColor,
+        shadowBlur: this.shadowBlur,
+        shadowOffsetX: this.shadowOffsetX,
+        shadowOffsetY: this.shadowOffsetY
     });
     
     this.rasterizer.stroke(pathToStroke, {
@@ -7374,7 +8303,12 @@ class Context2D {
             this._transform.c, this._transform.d, 
             this._transform.e, this._transform.f
         ]),
-        clipMask: this._clipMask
+        clipMask: this._clipMask,
+        // Shadow properties
+        shadowColor: this.shadowColor,
+        shadowBlur: this.shadowBlur,
+        shadowOffsetX: this.shadowOffsetX,
+        shadowOffsetY: this.shadowOffsetY
     });
     
     // Delegate to rasterizer
@@ -7508,6 +8442,7 @@ class CanvasCompatibleContext2D {
         // Property state (mirroring HTML5 Canvas behavior)
         this._fillStyle = '#000000';
         this._strokeStyle = '#000000';
+        this._shadowColor = 'rgba(0, 0, 0, 0)'; // Transparent black (no shadow)
     }
     
     /**
@@ -7521,6 +8456,7 @@ class CanvasCompatibleContext2D {
         // Reapply current styles to new context
         this._applyFillStyle();
         this._applyStrokeStyle();
+        this._applyShadowProperties();
     }
     
     // ===== STYLE PROPERTIES =====
@@ -7596,6 +8532,19 @@ class CanvasCompatibleContext2D {
             this._core.setStrokeStyle(rgba.r, rgba.g, rgba.b, rgba.a);
         }
     }
+
+    /**
+     * Apply current shadow properties to core context
+     * @private
+     */
+    _applyShadowProperties() {
+        // Re-apply shadow color
+        if (this._shadowColor) {
+            const rgba = this._colorParser.parse(this._shadowColor);
+            this._core.setShadowColor(rgba.r, rgba.g, rgba.b, rgba.a);
+        }
+        // Other shadow properties are stored directly in core, no need to reapply
+    }
     
     // ===== DIRECT PROPERTY DELEGATION =====
     
@@ -7619,6 +8568,47 @@ class CanvasCompatibleContext2D {
     
     get lineDashOffset() { return this._core.lineDashOffset; }
     set lineDashOffset(value) { this._core.lineDashOffset = value; }
+
+    // ===== SHADOW PROPERTIES =====
+    
+    get shadowColor() { 
+        return this._shadowColor;
+    }
+    
+    set shadowColor(value) { 
+        if (typeof value === 'string') {
+            this._shadowColor = value;
+            // Parse CSS color string and apply to core
+            const rgba = this._colorParser.parse(value);
+            this._core.setShadowColor(rgba.r, rgba.g, rgba.b, rgba.a);
+        } else {
+            // Silently ignore invalid values (matches HTML5 Canvas behavior)
+        }
+    }
+    
+    get shadowBlur() { return this._core.shadowBlur; }
+    set shadowBlur(value) { 
+        if (typeof value === 'number' && !isNaN(value) && value >= 0) {
+            this._core.setShadowBlur(value);
+        }
+        // Silently ignore invalid values (matches HTML5 Canvas behavior)
+    }
+    
+    get shadowOffsetX() { return this._core.shadowOffsetX; }
+    set shadowOffsetX(value) { 
+        if (typeof value === 'number' && !isNaN(value)) {
+            this._core.setShadowOffsetX(value);
+        }
+        // Silently ignore invalid values (matches HTML5 Canvas behavior)
+    }
+    
+    get shadowOffsetY() { return this._core.shadowOffsetY; }
+    set shadowOffsetY(value) { 
+        if (typeof value === 'number' && !isNaN(value)) {
+            this._core.setShadowOffsetY(value);
+        }
+        // Silently ignore invalid values (matches HTML5 Canvas behavior)
+    }
     
     // ===== STATE MANAGEMENT =====
     
@@ -8153,6 +9143,8 @@ if (typeof window !== 'undefined') {
             BitBuffer: BitBuffer,
             ClipMask: ClipMask,
             SourceMask: SourceMask,
+            ShadowBuffer: ShadowBuffer,
+            BoxBlur: BoxBlur,
             ImageProcessor: ImageProcessor,
             CompositeOperations: CompositeOperations,
             Rasterizer: Rasterizer,
@@ -8189,6 +9181,8 @@ if (typeof window !== 'undefined') {
             BitBuffer: BitBuffer,
             ClipMask: ClipMask,
             SourceMask: SourceMask,
+            ShadowBuffer: ShadowBuffer,
+            BoxBlur: BoxBlur,
             ImageProcessor: ImageProcessor,
             CompositeOperations: CompositeOperations,
             Rasterizer: Rasterizer,
