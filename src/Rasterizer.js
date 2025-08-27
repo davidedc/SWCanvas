@@ -53,7 +53,12 @@ class Rasterizer {
             clipMask: params.clipMask || null,  // Stencil-based clipping
             fillStyle: params.fillStyle || null,
             strokeStyle: params.strokeStyle || null,
-            sourceMask: null  // Will be initialized if needed for canvas-wide compositing
+            sourceMask: null,  // Will be initialized if needed for canvas-wide compositing
+            // Shadow properties
+            shadowColor: params.shadowColor || new Color(0, 0, 0, 0),
+            shadowBlur: params.shadowBlur || 0,
+            shadowOffsetX: params.shadowOffsetX || 0,
+            shadowOffsetY: params.shadowOffsetY || 0
         };
 
         // Initialize source mask for global-effect operations
@@ -124,6 +129,195 @@ class Rasterizer {
     }
 
     /**
+     * Check if shadows are needed for current operation
+     * @returns {boolean} True if shadows should be rendered
+     * @private
+     */
+    _needsShadow() {
+        if (!this._currentOp) return false;
+        
+        const op = this._currentOp;
+        return op.shadowColor.a > 0 && 
+               (op.shadowBlur > 0 || op.shadowOffsetX !== 0 || op.shadowOffsetY !== 0);
+    }
+
+    /**
+     * Render with shadow support - main shadow pipeline
+     * @param {Function} renderFunc - Function that performs the actual rendering
+     * @private
+     */
+    _renderWithShadow(renderFunc) {
+        if (!this._needsShadow()) {
+            // No shadow needed - render normally
+            renderFunc();
+            return;
+        }
+
+        // Shadow pipeline:
+        // 1. Create shadow buffer
+        // 2. Render shape alpha to shadow buffer (with offset)
+        // 3. Apply blur to shadow buffer
+        // 4. Composite shadow to surface
+        // 5. Render actual shape on top
+
+        const op = this._currentOp;
+        const maxBlurRadius = Math.ceil(op.shadowBlur);
+        const shadowBuffer = new ShadowBuffer(this._surface.width, this._surface.height, maxBlurRadius);
+
+        // Step 1: Render shape to shadow buffer
+        this._renderToShadowBuffer(shadowBuffer, renderFunc);
+
+        // Step 2: Apply blur if needed
+        let blurredShadow = shadowBuffer;
+        if (op.shadowBlur > 0) {
+            blurredShadow = this._applyShadowBlur(shadowBuffer, op.shadowBlur);
+        }
+
+        // Step 3: Composite shadow to surface
+        this._compositeShadowToSurface(blurredShadow, op.shadowColor, op.shadowOffsetX, op.shadowOffsetY);
+
+        // Step 4: Render actual shape on top
+        renderFunc();
+    }
+
+    /**
+     * Render shape alpha to shadow buffer
+     * @param {ShadowBuffer} shadowBuffer - Target shadow buffer
+     * @param {Function} renderFunc - Function that performs the actual rendering
+     * @private
+     */
+    _renderToShadowBuffer(shadowBuffer, renderFunc) {
+        // This is a simplified approach - we render normally and extract alpha
+        // A more sophisticated implementation would render directly to the shadow buffer
+        
+        // For now, create a temporary surface to capture the shape
+        const tempSurface = new Surface(this._surface.width, this._surface.height);
+        const tempRasterizer = new Rasterizer(tempSurface);
+        
+        // Set up operation for temp rendering (without shadow)
+        const opCopy = Object.assign({}, this._currentOp);
+        opCopy.shadowColor = new Color(0, 0, 0, 0); // No shadow for temp render
+        opCopy.shadowBlur = 0;
+        opCopy.shadowOffsetX = 0;
+        opCopy.shadowOffsetY = 0;
+        
+        tempRasterizer._currentOp = opCopy;
+        
+        // Render to temp surface
+        const originalSurface = this._surface;
+        const originalCurrentOp = this._currentOp;
+        this._surface = tempSurface;
+        this._currentOp = opCopy;
+        
+        try {
+            renderFunc();
+        } finally {
+            // Restore original surface and operation
+            this._surface = originalSurface;
+            this._currentOp = originalCurrentOp;
+        }
+        
+        // Extract alpha from temp surface to shadow buffer
+        for (let y = 0; y < tempSurface.height; y++) {
+            for (let x = 0; x < tempSurface.width; x++) {
+                const offset = y * tempSurface.stride + x * 4;
+                const alpha = tempSurface.data[offset + 3] / 255.0; // Normalize to 0-1
+                
+                if (alpha > 0) {
+                    shadowBuffer.addAlpha(x, y, alpha);
+                }
+            }
+        }
+    }
+
+    /**
+     * Apply blur to shadow buffer
+     * @param {ShadowBuffer} shadowBuffer - Shadow buffer to blur
+     * @param {number} blurRadius - Blur radius
+     * @returns {ShadowBuffer} New blurred shadow buffer
+     * @private
+     */
+    _applyShadowBlur(shadowBuffer, blurRadius) {
+        // Convert shadow buffer to dense array for blur processing
+        const denseData = shadowBuffer.toDenseArray();
+        
+        if (denseData.width === 0 || denseData.height === 0) {
+            return shadowBuffer; // Nothing to blur
+        }
+        
+        // Apply box blur
+        const blurredData = BoxBlur.blur(denseData.data, denseData.width, denseData.height, blurRadius);
+        
+        // Create new shadow buffer with blurred data
+        const blurredBuffer = new ShadowBuffer(shadowBuffer.originalWidth, shadowBuffer.originalHeight, Math.ceil(blurRadius));
+        blurredBuffer.fromDenseArray(blurredData, denseData.width, denseData.height, denseData.offsetX, denseData.offsetY);
+        
+        return blurredBuffer;
+    }
+
+    /**
+     * Composite shadow buffer to surface
+     * @param {ShadowBuffer} shadowBuffer - Shadow buffer to composite
+     * @param {Color} shadowColor - Shadow color
+     * @param {number} offsetX - Shadow X offset
+     * @param {number} offsetY - Shadow Y offset
+     * @private
+     */
+    _compositeShadowToSurface(shadowBuffer, shadowColor, offsetX, offsetY) {
+        const surface = this._surface;
+        const globalAlpha = this._currentOp.globalAlpha;
+        
+        // Apply global alpha to shadow color using the standard method
+        const effectiveShadowColor = shadowColor.withGlobalAlpha(globalAlpha);
+        
+        // Iterate over shadow pixels and composite to surface
+        for (const pixel of shadowBuffer.getPixels()) {
+            // Convert from extended buffer coordinates to surface coordinates
+            // ShadowBuffer stores pixels in extended coordinates, we need to convert back to surface coordinates
+            const surfaceX = Math.round(pixel.x - shadowBuffer.extendedOffsetX + offsetX);
+            const surfaceY = Math.round(pixel.y - shadowBuffer.extendedOffsetY + offsetY);
+            
+            // Bounds check
+            if (surfaceX < 0 || surfaceX >= surface.width || surfaceY < 0 || surfaceY >= surface.height) {
+                continue;
+            }
+            
+            // Check clipping
+            if (this._isPixelClipped(surfaceX, surfaceY)) {
+                continue;
+            }
+            
+            // Calculate final shadow alpha by combining pixel alpha with shadow color alpha
+            // pixel.alpha is 0-1, but we need final result in 0-255 range for CompositeOperations
+            // effectiveShadowColor.a is already in 0-255 range
+            // Apply 2x multiplier to match HTML5 Canvas shadow opacity behavior
+            const finalShadowAlpha = Math.min(255, Math.round(pixel.alpha * effectiveShadowColor.a * 8));
+            
+            if (finalShadowAlpha <= 0) continue;
+            
+            // Get surface pixel
+            const offset = surfaceY * surface.stride + surfaceX * 4;
+            const dstR = surface.data[offset];
+            const dstG = surface.data[offset + 1];
+            const dstB = surface.data[offset + 2];
+            const dstA = surface.data[offset + 3];
+            
+            // Composite shadow (using source-over blending)
+            const result = CompositeOperations.blendPixel(
+                'source-over',
+                effectiveShadowColor.r, effectiveShadowColor.g, effectiveShadowColor.b, finalShadowAlpha,
+                dstR, dstG, dstB, dstA
+            );
+            
+            // Write result
+            surface.data[offset] = result.r;
+            surface.data[offset + 1] = result.g;
+            surface.data[offset + 2] = result.b;
+            surface.data[offset + 3] = result.a;
+        }
+    }
+
+    /**
      * Fill a rectangle with solid color
      * @param {number} x - Rectangle x coordinate
      * @param {number} y - Rectangle y coordinate
@@ -145,7 +339,23 @@ class Rasterizer {
         }
         
         if (width === 0 || height === 0) return; // Nothing to draw
-        
+
+        // Wrap the actual rectangle filling logic with shadow pipeline
+        this._renderWithShadow(() => {
+            this._fillRectInternal(x, y, width, height, color);
+        });
+    }
+
+    /**
+     * Internal rectangle filling logic (without shadow processing)
+     * @param {number} x - Rectangle x coordinate
+     * @param {number} y - Rectangle y coordinate
+     * @param {number} width - Rectangle width
+     * @param {number} height - Rectangle height
+     * @param {Array|Color} color - Fill color
+     * @private
+     */
+    _fillRectInternal(x, y, width, height, color) {
         // If there's stencil clipping or canvas-wide compositing, convert the rectangle to a path and use path filling
         if (this._currentOp.clipMask || this._requiresCanvasWideCompositing(this._currentOp.composite)) {
             // Create a path for the rectangle
@@ -160,7 +370,7 @@ class Rasterizer {
             }
             
             // Use the existing path filling logic which handles stencil clipping and canvas-wide compositing properly
-            this.fill(rectPath, 'nonzero');
+            this._fillInternal(rectPath, 'nonzero');
             
             // Restore original fill style
             if (color && Array.isArray(color)) {
@@ -331,7 +541,20 @@ class Rasterizer {
      */
     fill(path, rule) {
         this._requireActiveOp();
-        
+
+        // Wrap the actual path filling logic with shadow pipeline
+        this._renderWithShadow(() => {
+            this._fillInternal(path, rule);
+        });
+    }
+
+    /**
+     * Internal path filling logic (without shadow processing)
+     * @param {Path2D} path - Path to fill
+     * @param {string} rule - Fill rule
+     * @private
+     */
+    _fillInternal(path, rule) {
         // Get fill style (Color, Gradient, or Pattern)
         const fillStyle = this._currentOp.fillStyle || new Color(0, 0, 0, 255);
         const fillRule = rule || 'nonzero';
@@ -358,7 +581,20 @@ class Rasterizer {
      */
     stroke(path, strokeProps) {
         this._requireActiveOp();
-        
+
+        // Wrap the actual stroke logic with shadow pipeline
+        this._renderWithShadow(() => {
+            this._strokeInternal(path, strokeProps);
+        });
+    }
+
+    /**
+     * Internal stroke logic (without shadow processing)
+     * @param {Path2D} path - Path to stroke
+     * @param {Object} strokeProps - Stroke properties
+     * @private
+     */
+    _strokeInternal(path, strokeProps) {
         // Get stroke style (Color, Gradient, or Pattern)
         const strokeStyle = this._currentOp.strokeStyle || new Color(0, 0, 0, 255);
         
@@ -404,7 +640,27 @@ class Rasterizer {
      */
     drawImage(img, sx, sy, sw, sh, dx, dy, dw, dh) {
         this._requireActiveOp();
-        
+
+        // Wrap the actual image drawing logic with shadow pipeline
+        this._renderWithShadow(() => {
+            this._drawImageInternal.apply(this, arguments);
+        });
+    }
+
+    /**
+     * Internal image drawing logic (without shadow processing)
+     * @param {Object} img - ImageLike object to draw
+     * @param {number} sx - Source x (optional)
+     * @param {number} sy - Source y (optional)
+     * @param {number} sw - Source width (optional)
+     * @param {number} sh - Source height (optional)
+     * @param {number} dx - Destination x
+     * @param {number} dy - Destination y
+     * @param {number} dw - Destination width (optional)
+     * @param {number} dh - Destination height (optional)
+     * @private
+     */
+    _drawImageInternal(img, sx, sy, sw, sh, dx, dy, dw, dh) {
         // Validate and convert ImageLike (handles RGB→RGBA conversion)
         const imageData = ImageProcessor.validateAndConvert(img);
         

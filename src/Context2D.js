@@ -44,6 +44,12 @@ class Context2D {
         this._originalLineDash = []; // Original pattern as set by user
         this._lineDashOffset = 0;    // Starting offset into dash pattern
         
+        // Shadow properties - HTML5 Canvas compatible defaults
+        this.shadowColor = new Color(0, 0, 0, 0); // Transparent black (no shadow)
+        this.shadowBlur = 0;       // No blur
+        this.shadowOffsetX = 0;    // No horizontal offset
+        this.shadowOffsetY = 0;    // No vertical offset
+        
         // Internal path and clipping
         this._currentPath = new SWPath2D();
         
@@ -73,7 +79,12 @@ class Context2D {
             miterLimit: this.miterLimit,
             lineDash: this._lineDash.slice(),    // Copy working dash pattern array
             originalLineDash: this._originalLineDash.slice(), // Copy original pattern
-            lineDashOffset: this._lineDashOffset
+            lineDashOffset: this._lineDashOffset,
+            // Shadow properties
+            shadowColor: this.shadowColor, // Color is immutable, safe to share
+            shadowBlur: this.shadowBlur,
+            shadowOffsetX: this.shadowOffsetX,
+            shadowOffsetY: this.shadowOffsetY
         });
     }
 
@@ -97,6 +108,12 @@ class Context2D {
     this._lineDash = state.lineDash || [];
     this._originalLineDash = state.originalLineDash || [];
     this._lineDashOffset = state.lineDashOffset || 0;
+    
+    // Restore shadow properties
+    this.shadowColor = state.shadowColor || new Color(0, 0, 0, 0);
+    this.shadowBlur = state.shadowBlur || 0;
+    this.shadowOffsetX = state.shadowOffsetX || 0;
+    this.shadowOffsetY = state.shadowOffsetY || 0;
     }
 
     // Transform methods
@@ -153,6 +170,40 @@ class Context2D {
         }
     }
 
+    // Shadow property setters with validation
+    setShadowColor(r, g, b, a) {
+        if (arguments.length === 1 && r instanceof Color) {
+            this.shadowColor = r;
+        } else {
+            a = a !== undefined ? a : 255;
+            this.shadowColor = new Color(r, g, b, a);
+        }
+    }
+
+    setShadowBlur(blur) {
+        if (typeof blur !== 'number' || isNaN(blur)) {
+            throw new Error('Shadow blur must be a number');
+        }
+        if (blur < 0) {
+            throw new Error('Shadow blur must be non-negative');
+        }
+        this.shadowBlur = blur;
+    }
+
+    setShadowOffsetX(offset) {
+        if (typeof offset !== 'number' || isNaN(offset)) {
+            throw new Error('Shadow offsetX must be a number');
+        }
+        this.shadowOffsetX = offset;
+    }
+
+    setShadowOffsetY(offset) {
+        if (typeof offset !== 'number' || isNaN(offset)) {
+            throw new Error('Shadow offsetY must be a number');
+        }
+        this.shadowOffsetY = offset;
+    }
+
     // Path methods (delegated to internal path)
     beginPath() {
     this._currentPath = new SWPath2D();
@@ -201,7 +252,12 @@ class Context2D {
         globalAlpha: this.globalAlpha,
         transform: this._transform,
         clipMask: this._clipMask,
-        fillStyle: this._fillStyle
+        fillStyle: this._fillStyle,
+        // Shadow properties
+        shadowColor: this.shadowColor,
+        shadowBlur: this.shadowBlur,
+        shadowOffsetX: this.shadowOffsetX,
+        shadowOffsetY: this.shadowOffsetY
     });
     
     this.rasterizer.fillRect(x, y, width, height, this._fillStyle);
@@ -220,7 +276,12 @@ class Context2D {
         globalAlpha: this.globalAlpha,
         transform: this._transform,
         clipMask: this._clipMask,
-        strokeStyle: this._strokeStyle
+        strokeStyle: this._strokeStyle,
+        // Shadow properties
+        shadowColor: this.shadowColor,
+        shadowBlur: this.shadowBlur,
+        shadowOffsetX: this.shadowOffsetX,
+        shadowOffsetY: this.shadowOffsetY
     });
     
     this.rasterizer.stroke(rectPath, {
@@ -371,7 +432,12 @@ class Context2D {
         globalAlpha: this.globalAlpha,
         transform: this._transform,
         clipMask: this._clipMask,
-        fillStyle: this._fillStyle
+        fillStyle: this._fillStyle,
+        // Shadow properties
+        shadowColor: this.shadowColor,
+        shadowBlur: this.shadowBlur,
+        shadowOffsetX: this.shadowOffsetX,
+        shadowOffsetY: this.shadowOffsetY
     });
     
     this.rasterizer.fill(pathToFill, fillRule);
@@ -387,7 +453,12 @@ class Context2D {
         globalAlpha: this.globalAlpha,
         transform: this._transform,
         clipMask: this._clipMask,
-        strokeStyle: this._strokeStyle
+        strokeStyle: this._strokeStyle,
+        // Shadow properties
+        shadowColor: this.shadowColor,
+        shadowBlur: this.shadowBlur,
+        shadowOffsetX: this.shadowOffsetX,
+        shadowOffsetY: this.shadowOffsetY
     });
     
     this.rasterizer.stroke(pathToStroke, {
@@ -821,7 +892,12 @@ class Context2D {
             this._transform.c, this._transform.d, 
             this._transform.e, this._transform.f
         ]),
-        clipMask: this._clipMask
+        clipMask: this._clipMask,
+        // Shadow properties
+        shadowColor: this.shadowColor,
+        shadowBlur: this.shadowBlur,
+        shadowOffsetX: this.shadowOffsetX,
+        shadowOffsetY: this.shadowOffsetY
     });
     
     // Delegate to rasterizer

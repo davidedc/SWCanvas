@@ -13,6 +13,7 @@ class CanvasCompatibleContext2D {
         // Property state (mirroring HTML5 Canvas behavior)
         this._fillStyle = '#000000';
         this._strokeStyle = '#000000';
+        this._shadowColor = 'rgba(0, 0, 0, 0)'; // Transparent black (no shadow)
     }
     
     /**
@@ -26,6 +27,7 @@ class CanvasCompatibleContext2D {
         // Reapply current styles to new context
         this._applyFillStyle();
         this._applyStrokeStyle();
+        this._applyShadowProperties();
     }
     
     // ===== STYLE PROPERTIES =====
@@ -101,6 +103,19 @@ class CanvasCompatibleContext2D {
             this._core.setStrokeStyle(rgba.r, rgba.g, rgba.b, rgba.a);
         }
     }
+
+    /**
+     * Apply current shadow properties to core context
+     * @private
+     */
+    _applyShadowProperties() {
+        // Re-apply shadow color
+        if (this._shadowColor) {
+            const rgba = this._colorParser.parse(this._shadowColor);
+            this._core.setShadowColor(rgba.r, rgba.g, rgba.b, rgba.a);
+        }
+        // Other shadow properties are stored directly in core, no need to reapply
+    }
     
     // ===== DIRECT PROPERTY DELEGATION =====
     
@@ -124,6 +139,47 @@ class CanvasCompatibleContext2D {
     
     get lineDashOffset() { return this._core.lineDashOffset; }
     set lineDashOffset(value) { this._core.lineDashOffset = value; }
+
+    // ===== SHADOW PROPERTIES =====
+    
+    get shadowColor() { 
+        return this._shadowColor;
+    }
+    
+    set shadowColor(value) { 
+        if (typeof value === 'string') {
+            this._shadowColor = value;
+            // Parse CSS color string and apply to core
+            const rgba = this._colorParser.parse(value);
+            this._core.setShadowColor(rgba.r, rgba.g, rgba.b, rgba.a);
+        } else {
+            // Silently ignore invalid values (matches HTML5 Canvas behavior)
+        }
+    }
+    
+    get shadowBlur() { return this._core.shadowBlur; }
+    set shadowBlur(value) { 
+        if (typeof value === 'number' && !isNaN(value) && value >= 0) {
+            this._core.setShadowBlur(value);
+        }
+        // Silently ignore invalid values (matches HTML5 Canvas behavior)
+    }
+    
+    get shadowOffsetX() { return this._core.shadowOffsetX; }
+    set shadowOffsetX(value) { 
+        if (typeof value === 'number' && !isNaN(value)) {
+            this._core.setShadowOffsetX(value);
+        }
+        // Silently ignore invalid values (matches HTML5 Canvas behavior)
+    }
+    
+    get shadowOffsetY() { return this._core.shadowOffsetY; }
+    set shadowOffsetY(value) { 
+        if (typeof value === 'number' && !isNaN(value)) {
+            this._core.setShadowOffsetY(value);
+        }
+        // Silently ignore invalid values (matches HTML5 Canvas behavior)
+    }
     
     // ===== STATE MANAGEMENT =====
     
