@@ -483,6 +483,139 @@ class Context2D {
         return PolygonFiller.isPointInPolygons(x, y, transformedPolygons, fillRule);
     }
 
+    /**
+     * Test if a point is inside the stroke of current path or specified path
+     * Supports all HTML5 Canvas API overloads:
+     * - isPointInStroke(x, y)
+     * - isPointInStroke(path, x, y)
+     * @param {...} arguments - Variable arguments depending on overload
+     * @returns {boolean} True if point is inside the stroke
+     */
+    isPointInStroke() {
+        let path, x, y;
+        
+        if (arguments.length < 2) {
+            const error = new TypeError('Invalid number of arguments for isPointInStroke');
+            error.message = 'TypeError: ' + error.message;
+            throw error;
+        } else if (arguments.length === 2) {
+            // isPointInStroke(x, y)
+            [x, y] = arguments;
+            path = this._currentPath;
+        } else if (arguments.length === 3) {
+            // isPointInStroke(path, x, y)
+            [path, x, y] = arguments;
+            if (!path || typeof path !== 'object' || !path.commands) {
+                const error = new TypeError('First argument must be a Path2D object');
+                error.message = 'TypeError: ' + error.message;
+                throw error;
+            }
+        } else if (arguments.length > 3) {
+            const error = new TypeError('Invalid number of arguments for isPointInStroke');
+            error.message = 'TypeError: ' + error.message;
+            throw error;
+        }
+        
+        // Validate parameters
+        if (typeof x !== 'number' || typeof y !== 'number') {
+            return false;
+        }
+        
+        if (!path || !path.commands || path.commands.length === 0) {
+            return false;
+        }
+        
+        // Note: isPointInStroke uses untransformed coordinates per HTML5 Canvas spec
+        // The point coordinates are in canvas coordinate space, not transform-adjusted space
+        
+        // Create stroke properties object from current context state
+        const strokeProps = {
+            lineWidth: this.lineWidth,
+            lineJoin: this.lineJoin,
+            lineCap: this.lineCap,
+            miterLimit: this.miterLimit,
+            lineDash: this._lineDash,
+            lineDashOffset: this._lineDashOffset
+        };
+        
+        // Handle zero-width strokes specially - they should be detectable when point is on path
+        if (strokeProps.lineWidth === 0) {
+            // For zero-width strokes, test if point is on the path itself
+            // Use path hit testing but with a very small tolerance
+            const epsilon = 0.5;
+            
+            // Flatten the path to polygons (line segments)
+            const polygons = PathFlattener.flattenPath(path);
+            const transformedPolygons = polygons.map(poly => 
+                poly.map(point => this._transform.transformPoint(point))
+            );
+            
+            // Test if point is very close to any line segment in the path
+            for (const polygon of transformedPolygons) {
+                if (polygon.length < 2) continue;
+                
+                for (let i = 0; i < polygon.length - 1; i++) {
+                    const p1 = polygon[i];
+                    const p2 = polygon[i + 1];
+                    
+                    // Calculate distance from point to line segment
+                    const distance = this._distanceToLineSegment(x, y, p1.x, p1.y, p2.x, p2.y);
+                    if (distance <= epsilon) {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+        
+        // Generate stroke polygons using StrokeGenerator
+        const strokePolygons = StrokeGenerator.generateStrokePolygons(path, strokeProps);
+        
+        if (strokePolygons.length === 0) {
+            return false;
+        }
+        
+        // Transform stroke polygons to match current canvas transform
+        const transformedPolygons = strokePolygons.map(poly => 
+            poly.map(point => this._transform.transformPoint(point))
+        );
+        
+        // Test point against transformed stroke polygons using nonzero winding rule
+        // (stroke hit testing doesn't use fill rules like path filling does)
+        return PolygonFiller.isPointInPolygons(x, y, transformedPolygons, 'nonzero');
+    }
+
+    /**
+     * Calculate distance from a point to a line segment
+     * @param {number} px - Point x coordinate
+     * @param {number} py - Point y coordinate
+     * @param {number} x1 - Line segment start x
+     * @param {number} y1 - Line segment start y
+     * @param {number} x2 - Line segment end x
+     * @param {number} y2 - Line segment end y
+     * @returns {number} Shortest distance from point to line segment
+     * @private
+     */
+    _distanceToLineSegment(px, py, x1, y1, x2, y2) {
+        const dx = x2 - x1;
+        const dy = y2 - y1;
+        
+        // If line segment is actually a point
+        if (dx === 0 && dy === 0) {
+            return Math.sqrt((px - x1) * (px - x1) + (py - y1) * (py - y1));
+        }
+        
+        // Calculate parameter t for closest point on line
+        const t = Math.max(0, Math.min(1, ((px - x1) * dx + (py - y1) * dy) / (dx * dx + dy * dy)));
+        
+        // Find closest point on line segment
+        const closestX = x1 + t * dx;
+        const closestY = y1 + t * dy;
+        
+        // Return distance from point to closest point on segment
+        return Math.sqrt((px - closestX) * (px - closestX) + (py - closestY) * (py - closestY));
+    }
+
 /**
  * Enhanced clipping support with stencil buffer intersection
  * 

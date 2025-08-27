@@ -242,6 +242,10 @@ class CanvasCompatibleContext2D {
         return this._core.isPointInPath.apply(this._core, arguments);
     }
     
+    isPointInStroke() {
+        return this._core.isPointInStroke.apply(this._core, arguments);
+    }
+    
     // Line dash methods
     setLineDash(segments) {
         this._core.setLineDash(segments);
