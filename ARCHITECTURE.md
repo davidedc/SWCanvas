@@ -170,7 +170,7 @@ SWCanvas implements complete geometric path hit testing through `isPointInPath()
 
 - **`isPointInPath()`**: Uses polygon flattening and mathematical point-in-polygon algorithms supporting both `evenodd` and `nonzero` fill rules
 - **`isPointInStroke()`**: Converts strokes to polygons using `StrokeGenerator`, then applies point-in-polygon testing with proper line cap, join, and dash pattern support
-- **Zero-width stroke handling**: Special case using distance-to-line-segment calculation for pixel-perfect accuracy
+- **HTML5 Canvas compliance**: Invalid lineWidth values (zero, negative, Infinity, NaN) are ignored per specification
 - **Transform awareness**: All hit testing operates in the correct coordinate space respecting current transformation matrix
 
 ### API Overloads

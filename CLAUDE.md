@@ -94,11 +94,11 @@ src/ColorParser.js            # CSS color string parsing (hex, rgb, named colors
 
 #### Sub-pixel Stroke System
 - **Deterministic sub-pixel rendering**: Strokes thinner than 1px render with proportional opacity
-- **Zero-width stroke handling**: `lineWidth = 0` renders at full opacity (matches HTML5Canvas behavior)
+- **HTML5Canvas compliance**: `lineWidth = 0` values are ignored per HTML5 Canvas specification
 - **Opacity-based thinning**: 0.5px stroke = 1px stroke at 50% opacity (no anti-aliasing)
 - **Universal paint source support**: Works with Colors, Gradients, and Patterns seamlessly
 - **Implementation location**: `Rasterizer.js:270-277` calculates opacity, `PolygonFiller.js` applies during paint evaluation
-- **Formula**: `subPixelOpacity = lineWidth === 0 ? 1.0 : lineWidth`
+- **Formula**: `subPixelOpacity = lineWidth` (for strokes < 1px)
 - **Visual consistency**: Maintains deterministic pixel-perfect output across platforms
 - **Browser compatibility**: Matches modern HTML5Canvas behavior for edge cases
 
@@ -350,17 +350,18 @@ const ctx = new SWCanvas.Core.Context2D(surface);
 ctx.setFillStyle(255, 255, 255, 255);
 ctx.fillRect(0, 0, 100, 100);
 
-try {
-  ctx.lineWidth = 0;  // Test edge case
-  ctx.setStrokeStyle(255, 0, 0, 255);
-  ctx.beginPath();
-  ctx.moveTo(20, 50);
-  ctx.lineTo(80, 50);
-  ctx.stroke();
-  console.log('✓ Zero-width stroke accepted');
-} catch (e) {
-  console.log('✗ Zero-width stroke rejected:', e.message);
-}
+// Test HTML5 Canvas compliance: lineWidth = 0 should be ignored
+ctx.lineWidth = 2;  // Set valid lineWidth
+console.log('Before:', ctx.lineWidth); // Should be 2
+
+ctx.lineWidth = 0;  // Invalid value - should be ignored
+console.log('After setting to 0:', ctx.lineWidth); // Should still be 2
+
+ctx.lineWidth = -5; // Invalid value - should be ignored  
+console.log('After setting to -5:', ctx.lineWidth); // Should still be 2
+
+ctx.lineWidth = 1.5; // Valid value
+console.log('After setting to 1.5:', ctx.lineWidth); // Should be 1.5
 "
 ```
 
