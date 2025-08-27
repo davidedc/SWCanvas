@@ -95,10 +95,12 @@ test('isPointInStroke stroke properties', () => {
     assertEquals(ctx.isPointInStroke(path, 100, 90), true); // Inside thick stroke
     assertEquals(ctx.isPointInStroke(path, 100, 80), false); // Outside thick stroke
     
-    // Test zero width stroke (should still be detectable per HTML5 Canvas spec)
-    ctx.lineWidth = 0;
-    assertEquals(ctx.isPointInStroke(path, 100, 100), true); // On the path line
-    assertEquals(ctx.isPointInStroke(path, 100, 101), false); // Off the path line
+    // Test HTML5 Canvas compliance: zero width should be ignored (keep previous lineWidth=20)
+    const previousWidth = ctx.lineWidth; // Should be 20 from above
+    ctx.lineWidth = 0; // This should be ignored per HTML5 Canvas spec
+    assertEquals(ctx.lineWidth, previousWidth); // lineWidth should remain unchanged
+    assertEquals(ctx.isPointInStroke(path, 100, 90), true); // Inside thick stroke (lineWidth=20)
+    assertEquals(ctx.isPointInStroke(path, 100, 80), false); // Outside thick stroke
 });
 
 // Test 036d
