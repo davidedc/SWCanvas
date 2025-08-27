@@ -288,10 +288,17 @@ class Rasterizer {
             }
             
             // Calculate final shadow alpha by combining pixel alpha with shadow color alpha
-            // pixel.alpha is 0-1, but we need final result in 0-255 range for CompositeOperations
-            // effectiveShadowColor.a is already in 0-255 range
-            // Apply 2x multiplier to match HTML5 Canvas shadow opacity behavior
-            const finalShadowAlpha = Math.min(255, Math.round(pixel.alpha * effectiveShadowColor.a * 8));
+            // pixel.alpha is 0-1 (from blurred shadow buffer)
+            // effectiveShadowColor.a is 0-255 range
+            // 
+            // The 8x multiplier compensates for alpha dilution caused by box blur averaging.
+            // When blur spreads a single pixel over a larger area, the average alpha drops
+            // significantly (e.g., 3x3 kernel reduces to ~1/9). The multiplier restores
+            // the visual intensity to match HTML5 Canvas shadow behavior.
+            const BLUR_DILUTION_COMPENSATION = 8;
+            const finalShadowAlpha = Math.min(255, Math.round(
+                pixel.alpha * effectiveShadowColor.a * BLUR_DILUTION_COMPENSATION
+            ));
             
             if (finalShadowAlpha <= 0) continue;
             
