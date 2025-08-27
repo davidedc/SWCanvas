@@ -873,7 +873,7 @@ class Transform2D {
 }
 
 
-class Path2D {
+class SWPath2D {
     constructor() {
         this.commands = [];
     }
@@ -6162,7 +6162,7 @@ class Rasterizer {
         // If there's stencil clipping or canvas-wide compositing, convert the rectangle to a path and use path filling
         if (this._currentOp.clipMask || this._requiresCanvasWideCompositing(this._currentOp.composite)) {
             // Create a path for the rectangle
-            const rectPath = new Path2D();
+            const rectPath = new SWPath2D();
             rectPath.rect(x, y, width, height);
             
             // Temporarily override fill style with provided color if specified
@@ -6598,7 +6598,7 @@ class Context2D {
         this._lineDashOffset = 0;    // Starting offset into dash pattern
         
         // Internal path and clipping
-        this._currentPath = new Path2D();
+        this._currentPath = new SWPath2D();
         
         // Stencil-based clipping system (only clipping mechanism)
         this._clipMask = null;  // ClipMask instance for 1-bit per pixel clipping
@@ -6708,7 +6708,7 @@ class Context2D {
 
     // Path methods (delegated to internal path)
     beginPath() {
-    this._currentPath = new Path2D();
+    this._currentPath = new SWPath2D();
     }
 
     closePath() {
@@ -6763,7 +6763,7 @@ class Context2D {
 
     strokeRect(x, y, width, height) {
     // Create a rectangular path
-    const rectPath = new Path2D();
+    const rectPath = new SWPath2D();
     rectPath.rect(x, y, width, height);
     rectPath.closePath();
     
@@ -7034,6 +7034,139 @@ class Context2D {
         
         // Test point against transformed polygons
         return PolygonFiller.isPointInPolygons(x, y, transformedPolygons, fillRule);
+    }
+
+    /**
+     * Test if a point is inside the stroke of current path or specified path
+     * Supports all HTML5 Canvas API overloads:
+     * - isPointInStroke(x, y)
+     * - isPointInStroke(path, x, y)
+     * @param {...} arguments - Variable arguments depending on overload
+     * @returns {boolean} True if point is inside the stroke
+     */
+    isPointInStroke() {
+        let path, x, y;
+        
+        if (arguments.length < 2) {
+            const error = new TypeError('Invalid number of arguments for isPointInStroke');
+            error.message = 'TypeError: ' + error.message;
+            throw error;
+        } else if (arguments.length === 2) {
+            // isPointInStroke(x, y)
+            [x, y] = arguments;
+            path = this._currentPath;
+        } else if (arguments.length === 3) {
+            // isPointInStroke(path, x, y)
+            [path, x, y] = arguments;
+            if (!path || typeof path !== 'object' || !path.commands) {
+                const error = new TypeError('First argument must be a Path2D object');
+                error.message = 'TypeError: ' + error.message;
+                throw error;
+            }
+        } else if (arguments.length > 3) {
+            const error = new TypeError('Invalid number of arguments for isPointInStroke');
+            error.message = 'TypeError: ' + error.message;
+            throw error;
+        }
+        
+        // Validate parameters
+        if (typeof x !== 'number' || typeof y !== 'number') {
+            return false;
+        }
+        
+        if (!path || !path.commands || path.commands.length === 0) {
+            return false;
+        }
+        
+        // Note: isPointInStroke uses untransformed coordinates per HTML5 Canvas spec
+        // The point coordinates are in canvas coordinate space, not transform-adjusted space
+        
+        // Create stroke properties object from current context state
+        const strokeProps = {
+            lineWidth: this.lineWidth,
+            lineJoin: this.lineJoin,
+            lineCap: this.lineCap,
+            miterLimit: this.miterLimit,
+            lineDash: this._lineDash,
+            lineDashOffset: this._lineDashOffset
+        };
+        
+        // Handle zero-width strokes specially - they should be detectable when point is on path
+        if (strokeProps.lineWidth === 0) {
+            // For zero-width strokes, test if point is on the path itself
+            // Use path hit testing but with a very small tolerance
+            const epsilon = 0.5;
+            
+            // Flatten the path to polygons (line segments)
+            const polygons = PathFlattener.flattenPath(path);
+            const transformedPolygons = polygons.map(poly => 
+                poly.map(point => this._transform.transformPoint(point))
+            );
+            
+            // Test if point is very close to any line segment in the path
+            for (const polygon of transformedPolygons) {
+                if (polygon.length < 2) continue;
+                
+                for (let i = 0; i < polygon.length - 1; i++) {
+                    const p1 = polygon[i];
+                    const p2 = polygon[i + 1];
+                    
+                    // Calculate distance from point to line segment
+                    const distance = this._distanceToLineSegment(x, y, p1.x, p1.y, p2.x, p2.y);
+                    if (distance <= epsilon) {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+        
+        // Generate stroke polygons using StrokeGenerator
+        const strokePolygons = StrokeGenerator.generateStrokePolygons(path, strokeProps);
+        
+        if (strokePolygons.length === 0) {
+            return false;
+        }
+        
+        // Transform stroke polygons to match current canvas transform
+        const transformedPolygons = strokePolygons.map(poly => 
+            poly.map(point => this._transform.transformPoint(point))
+        );
+        
+        // Test point against transformed stroke polygons using nonzero winding rule
+        // (stroke hit testing doesn't use fill rules like path filling does)
+        return PolygonFiller.isPointInPolygons(x, y, transformedPolygons, 'nonzero');
+    }
+
+    /**
+     * Calculate distance from a point to a line segment
+     * @param {number} px - Point x coordinate
+     * @param {number} py - Point y coordinate
+     * @param {number} x1 - Line segment start x
+     * @param {number} y1 - Line segment start y
+     * @param {number} x2 - Line segment end x
+     * @param {number} y2 - Line segment end y
+     * @returns {number} Shortest distance from point to line segment
+     * @private
+     */
+    _distanceToLineSegment(px, py, x1, y1, x2, y2) {
+        const dx = x2 - x1;
+        const dy = y2 - y1;
+        
+        // If line segment is actually a point
+        if (dx === 0 && dy === 0) {
+            return Math.sqrt((px - x1) * (px - x1) + (py - y1) * (py - y1));
+        }
+        
+        // Calculate parameter t for closest point on line
+        const t = Math.max(0, Math.min(1, ((px - x1) * dx + (py - y1) * dy) / (dx * dx + dy * dy)));
+        
+        // Find closest point on line segment
+        const closestX = x1 + t * dx;
+        const closestY = y1 + t * dy;
+        
+        // Return distance from point to closest point on segment
+        return Math.sqrt((px - closestX) * (px - closestX) + (py - closestY) * (py - closestY));
     }
 
 /**
@@ -7583,7 +7716,7 @@ class CanvasCompatibleContext2D {
         if (typeof pathOrFillRule === 'string') {
             // fill(fillRule)
             this._core.fill(pathOrFillRule);
-        } else if (pathOrFillRule && pathOrFillRule instanceof Path2D) {
+        } else if (pathOrFillRule && pathOrFillRule instanceof SWPath2D) {
             // fill(path, fillRule)
             this._core.fill(pathOrFillRule, fillRule);
         } else {
@@ -7593,7 +7726,7 @@ class CanvasCompatibleContext2D {
     }
     
     stroke(path) {
-        if (path && path instanceof Path2D) {
+        if (path && path instanceof SWPath2D) {
             this._core.stroke(path);
         } else {
             this._core.stroke();
@@ -7602,6 +7735,10 @@ class CanvasCompatibleContext2D {
     
     isPointInPath() {
         return this._core.isPointInPath.apply(this._core, arguments);
+    }
+    
+    isPointInStroke() {
+        return this._core.isPointInStroke.apply(this._core, arguments);
     }
     
     // Line dash methods
@@ -7617,7 +7754,7 @@ class CanvasCompatibleContext2D {
         if (typeof pathOrFillRule === 'string') {
             // clip(fillRule)
             this._core.clip(pathOrFillRule);
-        } else if (pathOrFillRule && pathOrFillRule instanceof Path2D) {
+        } else if (pathOrFillRule && pathOrFillRule instanceof SWPath2D) {
             // clip(path, fillRule)
             this._core.clip(pathOrFillRule, fillRule);
         } else {
@@ -7995,7 +8132,6 @@ function createImageData(width, height) {
 // Export to global scope with clean dual API architecture
 if (typeof window !== 'undefined') {
     // Browser
-    window.Path2D = Path2D;
     window.SWCanvas = {
         // HTML5 Canvas-compatible API (recommended for portability)
         createCanvas: createCanvas,
@@ -8006,7 +8142,7 @@ if (typeof window !== 'undefined') {
             Surface: CoreSurfaceFactory,
             Context2D: Context2D,
             Transform2D: Transform2D,
-            Path2D: Path2D,
+            SWPath2D: SWPath2D,
             Color: Color,
             Point: Point,
             Rectangle: Rectangle,
@@ -8032,7 +8168,6 @@ if (typeof window !== 'undefined') {
     };
 } else if (typeof module !== 'undefined' && module.exports) {
     // Node.js
-    global.Path2D = Path2D;
     module.exports = {
         // HTML5 Canvas-compatible API (recommended for portability)
         createCanvas: createCanvas,
@@ -8043,7 +8178,7 @@ if (typeof window !== 'undefined') {
             Surface: CoreSurfaceFactory,
             Context2D: Context2D,
             Transform2D: Transform2D,
-            Path2D: Path2D,
+            SWPath2D: SWPath2D,
             Color: Color,
             Point: Point,
             Rectangle: Rectangle,

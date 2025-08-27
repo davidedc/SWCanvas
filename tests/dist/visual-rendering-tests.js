@@ -168,6 +168,37 @@
         return imagelike;
     }
 
+    // Helper function to create Path2D objects compatible with both environments
+    //
+    // This function bridges the fundamental incompatibility between:
+    // - Native HTML5 Canvas: Requires browser's built-in Path2D class
+    // - SWCanvas: Uses its own Path2D implementation
+    //
+    // The issue: Browser Canvas API strictly type-checks Path2D arguments and rejects
+    // duck-typed objects, even if they have the same interface. This helper detects
+    // the environment and creates the appropriate Path2D type.
+    //
+    // This divergence exists because:
+    // 1. Browsers enforce strict instanceof checks for Path2D in native code
+    // 2. SWCanvas implements its own Path2D for cross-platform consistency
+    // 3. There's no way to make SWCanvas's Path2D pass browser's instanceof check
+    //
+    // Detection method: SWCanvas contexts have a _core property, HTML5 contexts don't
+    function createCompatiblePath2D(ctx) {
+        // Detection: Check if we're using SWCanvas or native HTML5 Canvas
+        if (ctx._core) {
+            // SWCanvas context (has _core property)
+            // Use SWCanvas's SWPath2D implementation
+            return new SWCanvas.Core.SWPath2D();
+        } else if (typeof window !== 'undefined' && window.Path2D) {
+            // Browser environment with native HTML5 Canvas
+            // Use browser's native Path2D class
+            return new window.Path2D();
+        } else {
+            // Fallback - should not happen in normal use
+            throw new Error('No Path2D implementation available');
+        }
+    }
 
     // Helper function to register a visual test with unified API
     function registerVisualTest(testName, testConfig) {
@@ -8864,6 +8895,516 @@
             ctx.beginPath();
             ctx.arc(195, 165, 6, 0, Math.PI * 2);
             ctx.fill();
+        }
+    });
+
+    // Test: isPointInStroke Visual Test
+    // This file will be concatenated into the main visual test suite
+
+    // Test 136
+    registerVisualTest('ispointinstroke-visual', {
+        name: 'isPointInStroke visual verification - stroke hit testing',
+        width: 400, height: 300,
+        draw: function(canvas) {
+            const ctx = canvas.getContext('2d');
+            
+            // White background
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, 400, 300);
+            
+            // Test 1: Basic rectangular stroke with different widths
+            ctx.strokeStyle = 'blue';
+            ctx.lineWidth = 8;
+            ctx.beginPath();
+            ctx.rect(50, 50, 100, 60);
+            ctx.stroke();
+            
+            // Test points around the rectangular stroke
+            const testPoints1 = [
+                {x: 46, y: 80},   // On left edge of stroke
+                {x: 154, y: 80},  // On right edge of stroke  
+                {x: 100, y: 46},  // On top edge of stroke
+                {x: 100, y: 114}, // On bottom edge of stroke
+                {x: 100, y: 80},  // Inside path, not in stroke
+                {x: 30, y: 80},   // Outside stroke
+            ];
+            
+            // Draw test points for rectangular stroke
+            testPoints1.forEach(point => {
+                const isInStroke = ctx.isPointInStroke(point.x, point.y);
+                ctx.fillStyle = isInStroke ? 'red' : 'blue';
+                ctx.fillRect(point.x - 2, point.y - 2, 4, 4);
+            });
+            
+            // Test 2: Line with different caps
+            ctx.strokeStyle = 'red';
+            ctx.lineWidth = 12;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.moveTo(220, 80);
+            ctx.lineTo(320, 80);
+            ctx.stroke();
+            
+            // Test points for line with round caps
+            const testPoints2 = [
+                {x: 214, y: 80}, // Within round cap
+                {x: 326, y: 80}, // Within round cap
+                {x: 270, y: 74}, // On line stroke
+                {x: 270, y: 70}, // Outside line stroke
+            ];
+            
+            // Draw test points for line stroke
+            testPoints2.forEach(point => {
+                const isInStroke = ctx.isPointInStroke(point.x, point.y);
+                ctx.fillStyle = isInStroke ? 'red' : 'blue';
+                ctx.fillRect(point.x - 2, point.y - 2, 4, 4);
+            });
+            
+            // Test 3: Dashed line stroke
+            ctx.strokeStyle = 'purple';
+            ctx.lineWidth = 6;
+            ctx.setLineDash([15, 10]); // 15px dash, 10px gap
+            ctx.lineDashOffset = 0;
+            ctx.beginPath();
+            ctx.moveTo(50, 150);
+            ctx.lineTo(200, 150);
+            ctx.stroke();
+            
+            // Test points for dashed line
+            const testPoints3 = [
+                {x: 60, y: 150}, // In first dash segment
+                {x: 75, y: 150}, // In first gap
+                {x: 90, y: 150}, // In second dash segment
+                {x: 105, y: 150}, // In second gap
+            ];
+            
+            // Draw test points for dashed stroke
+            testPoints3.forEach(point => {
+                const isInStroke = ctx.isPointInStroke(point.x, point.y);
+                ctx.fillStyle = isInStroke ? 'red' : 'blue';
+                ctx.fillRect(point.x - 2, point.y - 2, 4, 4);
+            });
+            
+            // Test 4: Path with joins
+            ctx.strokeStyle = 'orange';
+            ctx.lineWidth = 8;
+            ctx.lineJoin = 'miter';
+            ctx.setLineDash([]); // Remove dashing
+            ctx.beginPath();
+            ctx.moveTo(250, 180);
+            ctx.lineTo(300, 200);
+            ctx.lineTo(350, 180);
+            ctx.stroke();
+            
+            // Test points around the join
+            const testPoints4 = [
+                {x: 300, y: 196}, // At miter join
+                {x: 300, y: 190}, // Inside the angle
+                {x: 275, y: 190}, // On left line stroke
+                {x: 325, y: 190}, // On right line stroke
+            ];
+            
+            // Draw test points for join stroke
+            testPoints4.forEach(point => {
+                const isInStroke = ctx.isPointInStroke(point.x, point.y);
+                ctx.fillStyle = isInStroke ? 'red' : 'blue';
+                ctx.fillRect(point.x - 2, point.y - 2, 4, 4);
+            });
+            
+            // Test 5: External path stroke (skip external path test in browser due to Path2D compatibility)
+            ctx.strokeStyle = 'green';
+            ctx.lineWidth = 5;
+            
+            // Draw circle stroke using current path method (compatible with both environments)
+            ctx.beginPath();
+            ctx.arc(100, 230, 30, 0, Math.PI * 2);
+            ctx.stroke();
+            
+            // Test points for circle stroke using current path (2-argument form)
+            const testPoints5 = [
+                {x: 130, y: 230}, // On circle stroke (right)
+                {x: 70, y: 230},  // On circle stroke (left)
+                {x: 100, y: 200}, // On circle stroke (top)
+                {x: 100, y: 230}, // Inside circle
+                {x: 150, y: 230}, // Outside circle
+            ];
+            
+            // Draw test points for circle stroke using 2-argument form
+            testPoints5.forEach(point => {
+                const isInStroke = ctx.isPointInStroke(point.x, point.y);
+                ctx.fillStyle = isInStroke ? 'red' : 'blue';
+                ctx.fillRect(point.x - 2, point.y - 2, 4, 4);
+            });
+        }
+    });
+
+    // Test: isPointInPath with Path2D objects
+    // This file will be concatenated into the main visual test suite
+
+    // Test 137
+    registerVisualTest('ispointinpath-path2d', {
+        name: 'isPointInPath with Path2D objects - external path testing',
+        width: 500, height: 400,
+        draw: function(canvas) {
+            const ctx = canvas.getContext('2d');
+            
+            // White background
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, 500, 400);
+            
+            // Test 1: Rectangle Path2D
+            const rectPath = createCompatiblePath2D(ctx);
+            rectPath.rect(50, 50, 100, 80);
+            
+            ctx.fillStyle = 'lightblue';
+            ctx.strokeStyle = 'blue';
+            ctx.lineWidth = 2;
+            
+            // Use Path2D object directly for rendering (works in both environments)
+            ctx.fill(rectPath);
+            ctx.stroke(rectPath);
+            
+            // Test points for rectangle path
+            const rectTestPoints = [
+                {x: 100, y: 90},  // Inside rectangle
+                {x: 30, y: 90},   // Outside rectangle (left)
+                {x: 170, y: 90},  // Outside rectangle (right)
+                {x: 100, y: 30},  // Outside rectangle (top)
+                {x: 100, y: 150}, // Outside rectangle (bottom)
+                {x: 50, y: 50},   // On rectangle edge
+            ];
+            
+            rectTestPoints.forEach(point => {
+                const isInPath = ctx.isPointInPath(rectPath, point.x, point.y);
+                ctx.fillStyle = isInPath ? 'red' : 'blue';
+                ctx.fillRect(point.x - 3, point.y - 3, 6, 6);
+            });
+            
+            // Test 2: Circle Path2D
+            const circlePath = createCompatiblePath2D(ctx);
+            circlePath.arc(250, 90, 40, 0, Math.PI * 2);
+            
+            ctx.fillStyle = 'lightgreen';
+            ctx.strokeStyle = 'darkgreen';
+            ctx.lineWidth = 2;
+            
+            // Use Path2D object directly for rendering (works in both environments)
+            ctx.fill(circlePath);
+            ctx.stroke(circlePath);
+            
+            // Test points for circle path
+            const circleTestPoints = [
+                {x: 250, y: 90},  // Center of circle
+                {x: 280, y: 90},  // Inside circle (right)
+                {x: 220, y: 90},  // Inside circle (left)
+                {x: 250, y: 60},  // Inside circle (top)
+                {x: 250, y: 120}, // Inside circle (bottom)
+                {x: 300, y: 90},  // Outside circle
+                {x: 200, y: 90},  // Outside circle
+            ];
+            
+            circleTestPoints.forEach(point => {
+                const isInPath = ctx.isPointInPath(circlePath, point.x, point.y);
+                ctx.fillStyle = isInPath ? 'red' : 'blue';
+                ctx.fillRect(point.x - 3, point.y - 3, 6, 6);
+            });
+            
+            // Test 3: Complex Path2D with curves
+            const complexPath = createCompatiblePath2D(ctx);
+            complexPath.moveTo(400, 50);
+            complexPath.lineTo(450, 100);
+            complexPath.quadraticCurveTo(460, 130, 430, 150);
+            complexPath.lineTo(370, 130);
+            complexPath.closePath();
+            
+            ctx.fillStyle = 'lightyellow';
+            ctx.strokeStyle = 'orange';
+            ctx.lineWidth = 2;
+            
+            // Use Path2D object directly for rendering (works in both environments)
+            ctx.fill(complexPath);
+            ctx.stroke(complexPath);
+            
+            // Test points for complex path
+            const complexTestPoints = [
+                {x: 420, y: 100}, // Inside complex path
+                {x: 440, y: 120}, // Inside complex path
+                {x: 350, y: 100}, // Outside complex path (left)
+                {x: 470, y: 100}, // Outside complex path (right)
+                {x: 420, y: 160}, // Outside complex path (below)
+                {x: 410, y: 80},  // Inside complex path
+            ];
+            
+            complexTestPoints.forEach(point => {
+                const isInPath = ctx.isPointInPath(complexPath, point.x, point.y);
+                ctx.fillStyle = isInPath ? 'red' : 'blue';
+                ctx.fillRect(point.x - 3, point.y - 3, 6, 6);
+            });
+            
+            // Test 4: Path2D with hole (evenodd fill rule)
+            const pathWithHole = createCompatiblePath2D(ctx);
+            pathWithHole.rect(50, 220, 120, 100);  // Outer rectangle
+            pathWithHole.rect(80, 250, 60, 40);    // Inner rectangle (hole)
+            
+            ctx.fillStyle = 'lightcoral';
+            ctx.strokeStyle = 'darkred';
+            ctx.lineWidth = 2;
+            
+            // Fill with evenodd rule to create hole using Path2D object
+            ctx.fill(pathWithHole, 'evenodd');
+            ctx.stroke(pathWithHole);
+            
+            // Test points for path with hole using evenodd rule
+            const holeTestPoints = [
+                {x: 110, y: 270}, // In the hole (should be false with evenodd)
+                {x: 60, y: 240},  // In outer part (should be true)
+                {x: 160, y: 280}, // In outer part (should be true)
+                {x: 30, y: 270},  // Outside entirely (should be false)
+                {x: 190, y: 270}, // Outside entirely (should be false)
+            ];
+            
+            holeTestPoints.forEach(point => {
+                const isInPath = ctx.isPointInPath(pathWithHole, point.x, point.y, 'evenodd');
+                ctx.fillStyle = isInPath ? 'red' : 'blue';
+                ctx.fillRect(point.x - 3, point.y - 3, 6, 6);
+            });
+            
+            // Test 5: Path2D with nonzero fill rule (same path as above)
+            const pathNonzero = createCompatiblePath2D(ctx);
+            pathNonzero.rect(250, 220, 120, 100);  // Outer rectangle
+            pathNonzero.rect(280, 250, 60, 40);    // Inner rectangle
+            
+            ctx.fillStyle = 'lightpink';
+            ctx.strokeStyle = 'purple';
+            ctx.lineWidth = 2;
+            
+            // Fill with nonzero rule using Path2D object
+            ctx.fill(pathNonzero, 'nonzero');
+            ctx.stroke(pathNonzero);
+            
+            // Test points for path using nonzero rule
+            const nonzeroTestPoints = [
+                {x: 310, y: 270}, // In the "hole" area (should be true with nonzero)
+                {x: 260, y: 240}, // In outer part (should be true)
+                {x: 360, y: 280}, // In outer part (should be true)
+                {x: 230, y: 270}, // Outside entirely (should be false)
+                {x: 390, y: 270}, // Outside entirely (should be false)
+            ];
+            
+            nonzeroTestPoints.forEach(point => {
+                const isInPath = ctx.isPointInPath(pathNonzero, point.x, point.y, 'nonzero');
+                ctx.fillStyle = isInPath ? 'red' : 'blue';
+                ctx.fillRect(point.x - 3, point.y - 3, 6, 6);
+            });
+        }
+    });
+
+    // Test: isPointInStroke with Path2D objects
+    // This file will be concatenated into the main visual test suite
+
+    // Test 138
+    registerVisualTest('ispointinstroke-path2d', {
+        name: 'isPointInStroke with Path2D objects - external path stroke testing',
+        width: 500, height: 400,
+        draw: function(canvas) {
+            const ctx = canvas.getContext('2d');
+            
+            // White background
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, 500, 400);
+            
+            // Test 1: Rectangle stroke with Path2D
+            const rectPath = createCompatiblePath2D(ctx);
+            rectPath.rect(50, 50, 100, 80);
+            
+            ctx.strokeStyle = 'blue';
+            ctx.lineWidth = 8;
+            
+            // Use Path2D object directly for rendering (works in both environments)
+            ctx.stroke(rectPath);
+            
+            // Test points for rectangle stroke
+            const rectTestPoints = [
+                {x: 46, y: 90},   // On left stroke edge
+                {x: 154, y: 90},  // On right stroke edge
+                {x: 100, y: 46},  // On top stroke edge
+                {x: 100, y: 134}, // On bottom stroke edge
+                {x: 100, y: 90},  // Inside rectangle (not in stroke)
+                {x: 30, y: 90},   // Outside stroke entirely
+                {x: 170, y: 90},  // Outside stroke entirely
+            ];
+            
+            rectTestPoints.forEach(point => {
+                const isInStroke = ctx.isPointInStroke(rectPath, point.x, point.y);
+                ctx.fillStyle = isInStroke ? 'red' : 'blue';
+                ctx.fillRect(point.x - 3, point.y - 3, 6, 6);
+            });
+            
+            // Test 2: Line path with caps
+            const linePath = createCompatiblePath2D(ctx);
+            linePath.moveTo(250, 70);
+            linePath.lineTo(400, 70);
+            
+            ctx.strokeStyle = 'green';
+            ctx.lineWidth = 12;
+            ctx.lineCap = 'round';
+            
+            // Use Path2D object directly for rendering (works in both environments)
+            ctx.stroke(linePath);
+            
+            // Test points for line stroke with round caps
+            const lineTestPoints = [
+                {x: 244, y: 70},  // Within round cap (left)
+                {x: 406, y: 70},  // Within round cap (right)
+                {x: 325, y: 70},  // On line stroke center
+                {x: 325, y: 64},  // On line stroke edge
+                {x: 325, y: 60},  // Outside line stroke
+                {x: 200, y: 70},  // Outside stroke entirely
+            ];
+            
+            lineTestPoints.forEach(point => {
+                const isInStroke = ctx.isPointInStroke(linePath, point.x, point.y);
+                ctx.fillStyle = isInStroke ? 'red' : 'blue';
+                ctx.fillRect(point.x - 3, point.y - 3, 6, 6);
+            });
+            
+            // Test 3: Complex path with joins
+            const complexPath = createCompatiblePath2D(ctx);
+            complexPath.moveTo(80, 150);
+            complexPath.lineTo(130, 180);
+            complexPath.lineTo(180, 150);
+            complexPath.lineTo(220, 190);
+            
+            ctx.strokeStyle = 'orange';
+            ctx.lineWidth = 10;
+            ctx.lineJoin = 'miter';
+            
+            // Use Path2D object directly for rendering (works in both environments)
+            ctx.stroke(complexPath);
+            
+            // Test points for complex path with miter joins
+            const complexTestPoints = [
+                {x: 105, y: 165}, // On first line segment
+                {x: 130, y: 175}, // At miter join
+                {x: 155, y: 165}, // On second line segment
+                {x: 200, y: 170}, // On third line segment
+                {x: 130, y: 160}, // Inside the angle (not in stroke)
+                {x: 60, y: 160},  // Outside stroke entirely
+            ];
+            
+            complexTestPoints.forEach(point => {
+                const isInStroke = ctx.isPointInStroke(complexPath, point.x, point.y);
+                ctx.fillStyle = isInStroke ? 'red' : 'blue';
+                ctx.fillRect(point.x - 3, point.y - 3, 6, 6);
+            });
+            
+            // Test 4: Circle stroke with Path2D
+            const circlePath = createCompatiblePath2D(ctx);
+            circlePath.arc(350, 180, 35, 0, Math.PI * 2);
+            
+            ctx.strokeStyle = 'purple';
+            ctx.lineWidth = 6;
+            
+            // Use Path2D object directly for rendering (works in both environments)
+            ctx.stroke(circlePath);
+            
+            // Test points for circle stroke
+            const circleTestPoints = [
+                {x: 385, y: 180}, // On right edge of stroke
+                {x: 315, y: 180}, // On left edge of stroke
+                {x: 350, y: 145}, // On top edge of stroke
+                {x: 350, y: 215}, // On bottom edge of stroke
+                {x: 350, y: 180}, // Center of circle (not in stroke)
+                {x: 400, y: 180}, // Outside stroke entirely
+            ];
+            
+            circleTestPoints.forEach(point => {
+                const isInStroke = ctx.isPointInStroke(circlePath, point.x, point.y);
+                ctx.fillStyle = isInStroke ? 'red' : 'blue';
+                ctx.fillRect(point.x - 3, point.y - 3, 6, 6);
+            });
+            
+            // Test 5: Dashed line stroke with Path2D
+            const dashedPath = createCompatiblePath2D(ctx);
+            dashedPath.moveTo(50, 280);
+            dashedPath.lineTo(250, 280);
+            
+            ctx.strokeStyle = 'darkred';
+            ctx.lineWidth = 8;
+            ctx.setLineDash([20, 15]); // 20px dash, 15px gap
+            ctx.lineDashOffset = 0;
+            
+            // Use Path2D object directly for rendering (works in both environments)
+            ctx.stroke(dashedPath);
+            
+            // Test points for dashed line stroke
+            const dashedTestPoints = [
+                {x: 60, y: 280},  // In first dash segment
+                {x: 85, y: 280},  // In first gap
+                {x: 110, y: 280}, // In second dash segment
+                {x: 135, y: 280}, // In second gap
+                {x: 160, y: 280}, // In third dash segment
+                {x: 180, y: 280}, // In third gap
+            ];
+            
+            dashedTestPoints.forEach(point => {
+                const isInStroke = ctx.isPointInStroke(dashedPath, point.x, point.y);
+                ctx.fillStyle = isInStroke ? 'red' : 'blue';
+                ctx.fillRect(point.x - 3, point.y - 3, 6, 6);
+            });
+            
+            // Test 6: Quadratic curve stroke with Path2D
+            const curvePath = createCompatiblePath2D(ctx);
+            curvePath.moveTo(300, 250);
+            curvePath.quadraticCurveTo(400, 300, 450, 250);
+            
+            ctx.strokeStyle = 'darkblue';
+            ctx.lineWidth = 6;
+            ctx.setLineDash([]); // Reset dashing
+            
+            // Use Path2D object directly for rendering (works in both environments)
+            ctx.stroke(curvePath);
+            
+            // Test points for curved stroke
+            const curveTestPoints = [
+                {x: 320, y: 260}, // On curve stroke
+                {x: 375, y: 285}, // On curve stroke
+                {x: 430, y: 260}, // On curve stroke
+                {x: 375, y: 250}, // Inside curve area (not on stroke)
+                {x: 375, y: 320}, // Outside curve entirely
+                {x: 280, y: 250}, // Outside curve entirely
+            ];
+            
+            curveTestPoints.forEach(point => {
+                const isInStroke = ctx.isPointInStroke(curvePath, point.x, point.y);
+                ctx.fillStyle = isInStroke ? 'red' : 'blue';
+                ctx.fillRect(point.x - 3, point.y - 3, 6, 6);
+            });
+            
+            // Test 7: Zero-width stroke with Path2D
+            const zeroWidthPath = createCompatiblePath2D(ctx);
+            zeroWidthPath.moveTo(50, 350);
+            zeroWidthPath.lineTo(200, 350);
+            
+            ctx.strokeStyle = 'black';
+            ctx.lineWidth = 0; // Zero-width stroke
+            
+            // Use Path2D object directly for rendering (works in both environments)
+            ctx.stroke(zeroWidthPath);
+            
+            // Test points for zero-width stroke
+            const zeroWidthTestPoints = [
+                {x: 125, y: 350}, // On the path line
+                {x: 125, y: 351}, // Off the path line
+                {x: 125, y: 349}, // Off the path line
+                {x: 30, y: 350},  // Outside path entirely
+            ];
+            
+            zeroWidthTestPoints.forEach(point => {
+                const isInStroke = ctx.isPointInStroke(zeroWidthPath, point.x, point.y);
+                ctx.fillStyle = isInStroke ? 'red' : 'blue';
+                ctx.fillRect(point.x - 3, point.y - 3, 6, 6);
+            });
         }
     });
 
