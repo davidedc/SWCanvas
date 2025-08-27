@@ -37,6 +37,8 @@ SourceMask.js       → Source coverage tracking using BitBuffer composition
 Gradient.js         → Linear, radial, and conic gradient paint sources
 Pattern.js          → Repeating image pattern paint sources
 SWPath2D.js         → Path definition and command recording
+ShadowBuffer.js     → Sparse shadow alpha storage with extended bounds for blur overflow
+BoxBlur.js          → Multi-pass box blur algorithm approximating Gaussian blur
 ```
 
 **Purpose**: Maximum performance graphics operations with zero overhead.
@@ -73,6 +75,7 @@ HTML5 Canvas has a fundamental dual nature that SWCanvas preserves through archi
 - **Drawing Operations**: `fillRect()`, `stroke()`, `fill()`, `drawImage()`
 - **State Management**: `save()`/`restore()` stack
 - **Style Properties**: `fillStyle`, `strokeStyle`, `lineWidth`
+- **Shadow Properties**: `shadowColor`, `shadowBlur`, `shadowOffsetX`, `shadowOffsetY`
 - **Paint Sources**: `createLinearGradient()`, `createRadialGradient()`, `createConicGradient()`, `createPattern()`
 - **Transform Operations**: `translate()`, `rotate()`, `scale()`
 - **Path Hit Testing**: `isPointInPath()`, `isPointInStroke()` with geometric accuracy
@@ -153,6 +156,8 @@ SWCanvas.Core.* → Direct access to all engine classes
 - `SourceMask()` - Source coverage tracking using BitBuffer composition
 - `LinearGradient()`, `RadialGradient()`, `ConicGradient()` - Gradient paint sources
 - `Pattern()` - Repeating image pattern paint sources
+- `ShadowBuffer()` - Sparse shadow alpha storage with extended bounds
+- `BoxBlur` - Multi-pass box blur algorithms (static methods)
 - `BitmapEncoder` - File format export utilities
 - `BitmapEncodingOptions()` - Immutable encoding configuration (Joshua Bloch patterns)
 - `CompositeOperations` - Porter-Duff blending operations
@@ -180,6 +185,94 @@ ctx.isPointInStroke(x, y)
 ctx.isPointInPath(path, x, y, fillRule?)
 ctx.isPointInStroke(path, x, y)
 ```
+
+## Shadow Rendering System
+
+SWCanvas implements a comprehensive shadow system that provides HTML5 Canvas-compatible shadow properties with high-performance rendering using sparse storage and multi-pass box blur.
+
+### Dual-Buffer Shadow Pipeline
+
+The shadow system uses a sophisticated dual-buffer rendering approach:
+
+1. **Shape Rendering**: Draw the shape to a shadow buffer with alpha values
+2. **Blur Application**: Apply box blur to the shadow buffer 
+3. **Shadow Compositing**: Composite the blurred shadow to the main surface
+4. **Shape Rendering**: Draw the original shape over the shadow
+
+### Core Components
+
+**ShadowBuffer Class** - Sparse shadow storage:
+- **Extended bounds**: Accommodates blur overflow beyond original canvas dimensions
+- **Sparse storage**: Uses "x,y" string keys to store only non-zero alpha values (memory efficient)
+- **Bounds tracking**: Maintains bounding box of actual shadow data for optimization
+- **Dense array conversion**: Converts to/from Float32Array for blur processing
+
+**BoxBlur Class** - Multi-pass blur algorithm:
+- **Gaussian approximation**: Uses 3-pass box blur to approximate Gaussian blur via Central Limit Theorem
+- **Running sums**: Efficient O(1) per-pixel horizontal and vertical passes
+- **Sigma calculation**: Automatically calculates box width from blur radius for correct standard deviation
+- **Separable filtering**: Applies horizontal then vertical blur passes for optimal performance
+
+### Shadow Properties
+
+The system supports all four HTML5 Canvas shadow properties:
+
+```javascript
+// HTML5 Canvas-Compatible API
+ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';  // CSS color strings
+ctx.shadowBlur = 5;                      // Blur radius in pixels
+ctx.shadowOffsetX = 3;                   // Horizontal offset
+ctx.shadowOffsetY = 3;                   // Vertical offset
+
+// Core API (explicit RGBA values)
+ctx.setShadowColor(0, 0, 0, 128);        // Direct RGBA values (0-255)
+ctx.shadowBlur = 5;                      
+ctx.shadowOffsetX = 3;                   
+ctx.shadowOffsetY = 3;                   
+```
+
+### Shadow Pipeline Integration
+
+Shadows are integrated into all major drawing operations:
+- **fillRect()**: Rectangle fills with shadow support
+- **fill()**: Path fills with shadow support  
+- **stroke()**: Path strokes with shadow support
+- **drawImage()**: Image drawing with shadow support
+
+### Paint Source Compatibility
+
+Shadows work seamlessly with all paint sources:
+- **Solid colors**: Standard shadow rendering
+- **Linear gradients**: Gradient-filled shapes cast appropriately colored shadows
+- **Radial gradients**: Radial gradient shapes cast shadows
+- **Conic gradients**: Conic gradient shapes cast shadows
+- **Patterns**: Pattern-filled shapes cast shadows
+
+### Performance Optimizations
+
+**Sparse Storage Efficiency**:
+- Only non-zero alpha values are stored in memory
+- Automatic bounds tracking minimizes processing area
+- Dense array creation only for the minimal required region
+
+**Blur Optimization**:
+- Multi-pass box blur is more efficient than true Gaussian for most blur radii
+- Separable filtering reduces complexity from O(r²) to O(r) per pixel
+- Running sums provide O(1) per-pixel blur operations
+
+**Opacity Calibration**:
+- 8x opacity multiplier ensures shadow intensity matches HTML5 Canvas behavior
+- Proper alpha blending with source-over compositing
+- Premultiplied alpha handling for correct transparency
+
+### State Management
+
+Shadow properties are fully integrated into the context state stack:
+- **save()/restore()**: Shadow properties saved and restored with other context state
+- **Default values**: `shadowColor` defaults to transparent, other properties default to 0
+- **Property validation**: Blur radius and offsets accept negative values per HTML5 Canvas specification
+
+This shadow system provides pixel-perfect compatibility with HTML5 Canvas while maintaining the performance characteristics expected from SWCanvas's deterministic rendering engine.
 
 ## Composite Operations System
 

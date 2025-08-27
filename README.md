@@ -181,6 +181,14 @@ ctx.moveTo(10, 70);
 ctx.lineTo(100, 70);
 ctx.stroke();
 
+// Shadows
+ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';  // Semi-transparent black
+ctx.shadowBlur = 5;                      // 5px blur radius
+ctx.shadowOffsetX = 3;                   // 3px right offset
+ctx.shadowOffsetY = 3;                   // 3px down offset
+ctx.fillStyle = 'red';
+ctx.fillRect(120, 10, 50, 30);          // Rectangle with shadow
+
 // Rounded corners with arcTo
 ctx.beginPath();
 ctx.moveTo(50, 100);
@@ -288,6 +296,28 @@ ctx.drawImage(imagelike, sx, sy, sw, sh, dx, dy, dw, dh); // With source rectang
 ctx.setLineDash([10, 5]);        // Set dash pattern: 10px dash, 5px gap
 ctx.lineDashOffset = 2;          // Starting offset into pattern
 const pattern = ctx.getLineDash(); // Get current pattern: [10, 5]
+
+// Shadow properties
+ctx.shadowColor = 'rgba(0, 0, 0, 0.3)'; // Shadow color with transparency
+ctx.shadowBlur = 8;                     // Blur radius in pixels
+ctx.shadowOffsetX = 4;                  // Horizontal shadow offset
+ctx.shadowOffsetY = 4;                  // Vertical shadow offset
+
+// Drawing with shadows (works with all drawing operations)
+ctx.fillStyle = 'blue';
+ctx.fillRect(50, 50, 100, 60);          // Rectangle with shadow
+ctx.strokeStyle = 'green';
+ctx.lineWidth = 3;
+ctx.strokeRect(50, 120, 100, 60);       // Stroked rectangle with shadow
+
+// Shadows work with paths and complex shapes
+ctx.beginPath();
+ctx.arc(300, 100, 40, 0, Math.PI * 2);
+ctx.fillStyle = 'orange';
+ctx.fill();                             // Circle with shadow
+
+// Turn off shadows
+ctx.shadowColor = 'transparent';        // Or set to 'rgba(0,0,0,0)'
 ```
 
 ### Color Setting
@@ -295,9 +325,18 @@ const pattern = ctx.getLineDash(); // Get current pattern: [10, 5]
 ctx.setFillStyle(r, g, b, a);    // 0-255 values
 ctx.setStrokeStyle(r, g, b, a);  // 0-255 values
 
+// Shadow properties (Core API uses explicit RGBA values)
+ctx.setShadowColor(0, 0, 0, 128);    // Semi-transparent black shadow
+ctx.shadowBlur = 5;                  // 5px blur radius
+ctx.shadowOffsetX = 3;               // 3px horizontal offset
+ctx.shadowOffsetY = 3;               // 3px vertical offset
+
 // Or use Color objects directly
 const color = new SWCanvas.Core.Color(255, 128, 0, 200);
 ctx.setFillStyle(color.r, color.g, color.b, color.a);
+
+const shadowColor = new SWCanvas.Core.Color(0, 0, 0, 100);
+ctx.setShadowColor(shadowColor.r, shadowColor.g, shadowColor.b, shadowColor.a);
 ```
 
 ### Gradients and Patterns
@@ -350,6 +389,14 @@ ctx.strokeRect(250, 50, 100, 100);
 ctx.strokeStyle = radialGrad;
 ctx.lineWidth = 0.5; // 50% opacity stroke
 ctx.strokeRect(250, 150, 100, 100);
+
+// Shadows work with all paint sources
+ctx.shadowColor = 'rgba(0, 0, 0, 0.4)';
+ctx.shadowBlur = 6;
+ctx.shadowOffsetX = 4;
+ctx.shadowOffsetY = 4;
+ctx.fillStyle = conicGrad;
+ctx.fillRect(300, 10, 80, 80);           // Gradient fill with shadow
 ```
 
 #### Core API (Performance)
@@ -390,6 +437,14 @@ const pattern = ctx.createPattern(imagelike, 'repeat-x');
 ctx.setStrokeStyle(pattern);
 ctx.lineWidth = 0.25; // 25% opacity stroke  
 ctx.strokeRect(50, 200, 200, 50);
+
+// Shadows work with all paint sources (Core API)
+ctx.setShadowColor(0, 0, 0, 100);        // RGBA shadow color
+ctx.shadowBlur = 4;
+ctx.shadowOffsetX = 2;
+ctx.shadowOffsetY = 2;
+ctx.setFillStyle(conicGrad);
+ctx.fillRect(300, 200, 80, 80);          // Conic gradient fill with shadow
 ```
 
 #### Pattern Repetition Modes

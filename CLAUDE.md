@@ -42,6 +42,8 @@ src/ClipMask.js               # 1-bit stencil buffer using BitBuffer composition
 src/SourceMask.js             # 1-bit source coverage tracking using BitBuffer composition
 src/Gradient.js               # Linear, radial, and conic gradient paint sources
 src/Pattern.js                # Repeating image pattern paint sources
+src/ShadowBuffer.js           # Sparse shadow alpha storage with extended bounds for blur overflow
+src/BoxBlur.js                # Multi-pass box blur algorithm approximating Gaussian blur
 src/Point.js                  # Immutable 2D point operations
 src/Rectangle.js              # Immutable rectangle operations
 src/PolygonFiller.js          # Scanline polygon filling with paint source support
@@ -127,6 +129,19 @@ src/ColorParser.js            # CSS color string parsing (hex, rgb, named colors
 - **Global alpha support**: Global alpha correctly applied during per-pixel paint evaluation
 - **Sub-pixel stroke integration**: Sub-pixel opacity applied to all paint source types during evaluation
 - **Implementation location**: `PolygonFiller.js` evaluates paint sources via `_evaluatePaintSource()` method
+
+#### Shadow Rendering System
+- **HTML5 Canvas-compatible shadow properties**: `shadowColor`, `shadowBlur`, `shadowOffsetX`, `shadowOffsetY` with full API compatibility
+- **Dual-buffer shadow pipeline**: Shape→ShadowBuffer→BoxBlur→Composite→OriginalShape for high-quality shadow rendering
+- **ShadowBuffer class**: Sparse alpha storage using "x,y" string keys with extended bounds to handle blur overflow beyond canvas edges
+- **BoxBlur class**: Multi-pass box blur algorithm approximating Gaussian blur via Central Limit Theorem (3-pass default)
+- **Memory efficient**: Only non-zero alpha pixels stored, automatic bounds tracking minimizes processing area
+- **Performance optimized**: O(1) per-pixel blur operations using running sums, separable horizontal/vertical filtering
+- **Universal paint source support**: Shadows work with solid colors, gradients (linear/radial/conic), and patterns seamlessly
+- **Opacity calibration**: 8x multiplier ensures shadow intensity matches HTML5 Canvas behavior across all platforms
+- **State management**: Shadow properties fully integrated into save()/restore() context state stack
+- **All drawing operations**: Shadow support in fillRect(), fill(), stroke(), drawImage() with proper alpha blending
+- **Implementation locations**: `Rasterizer.js` shadow pipeline, `ShadowBuffer.js` sparse storage, `BoxBlur.js` blur algorithms
 
 #### Composite Operations System
 - **Porter-Duff compositing**: Implements 10 composite operations beyond basic source-over blending
