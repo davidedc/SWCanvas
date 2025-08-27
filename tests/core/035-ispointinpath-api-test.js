@@ -20,7 +20,7 @@ test('isPointInPath API overload handling', () => {
     assertEquals(ctx.isPointInPath(25, 25, 'nonzero'), false);
     
     // Test 3-argument form: isPointInPath(path, x, y)
-    const path = new SWCanvas.Core.Path2D();
+    const path = new SWCanvas.Core.SWPath2D();
     path.rect(10, 10, 50, 50);
     assertEquals(ctx.isPointInPath(path, 35, 35), true); // Inside path
     assertEquals(ctx.isPointInPath(path, 100, 100), false); // Outside path
@@ -46,7 +46,7 @@ test('isPointInPath parameter validation', () => {
     assertEquals(ctx.isPointInPath(100, NaN), false);
     
     // Test empty path - should return false
-    const emptyPath = new SWCanvas.Core.Path2D();
+    const emptyPath = new SWCanvas.Core.SWPath2D();
     assertEquals(ctx.isPointInPath(emptyPath, 100, 100), false);
     
     // Test invalid argument count - should throw TypeError
@@ -69,7 +69,7 @@ test('isPointInPath fill rule behavior', () => {
     const ctx = new SWCanvas.Core.Context2D(surface);
     
     // Create a path with a hole (outer rect with inner rect)
-    const pathWithHole = new SWCanvas.Core.Path2D();
+    const pathWithHole = new SWCanvas.Core.SWPath2D();
     pathWithHole.rect(0, 0, 100, 100);    // Outer rectangle
     pathWithHole.rect(25, 25, 50, 50);    // Inner rectangle (hole)
     
@@ -102,7 +102,7 @@ test('isPointInPath HTML5 Canvas compatibility API', () => {
     assertEquals(ctx.isPointInPath(25, 25), false);
     
     // Test with external path
-    const path = new Path2D();
+    const path = new SWCanvas.Core.SWPath2D();
     path.rect(10, 10, 30, 30);
     assertEquals(ctx.isPointInPath(path, 25, 25), true);
     assertEquals(ctx.isPointInPath(path, 50, 50), false);

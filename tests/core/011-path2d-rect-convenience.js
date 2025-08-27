@@ -2,7 +2,7 @@
 // This file will be concatenated into the main test suite
 
 test('Path2D rect convenience method', () => {
-    const path = new SWCanvas.Core.Path2D();
+    const path = new SWCanvas.Core.SWPath2D();
     path.rect(10, 20, 100, 50);
     
     assertEquals(path.commands.length, 5); // moveTo + 3 lineTo + closePath

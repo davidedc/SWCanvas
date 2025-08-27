@@ -14,42 +14,42 @@ test('arcTo API parameter validation', () => {
     
     // Test negative radius - should throw DOMException
     assertThrows(() => {
-        const path = new SWCanvas.Core.Path2D();
+        const path = new SWCanvas.Core.SWPath2D();
         path.arcTo(10, 10, 50, 50, -5);
     }, 'IndexSizeError');
     
     // Test non-number parameters - should throw TypeError
     assertThrows(() => {
-        const path = new SWCanvas.Core.Path2D();
+        const path = new SWCanvas.Core.SWPath2D();
         path.arcTo('10', 10, 50, 50, 5);
     }, 'TypeError');
     
     assertThrows(() => {
-        const path = new SWCanvas.Core.Path2D();
+        const path = new SWCanvas.Core.SWPath2D();
         path.arcTo(10, 10, 50, 50, 'radius');
     }, 'TypeError');
     
     // Test infinite values - should throw TypeError
     assertThrows(() => {
-        const path = new SWCanvas.Core.Path2D();
+        const path = new SWCanvas.Core.SWPath2D();
         path.arcTo(Infinity, 10, 50, 50, 5);
     }, 'TypeError');
     
     assertThrows(() => {
-        const path = new SWCanvas.Core.Path2D();
+        const path = new SWCanvas.Core.SWPath2D();
         path.arcTo(10, 10, 50, 50, Infinity);
     }, 'TypeError');
     
     // Test NaN values - should throw TypeError
     assertThrows(() => {
-        const path = new SWCanvas.Core.Path2D();
+        const path = new SWCanvas.Core.SWPath2D();
         path.arcTo(NaN, 10, 50, 50, 5);
     }, 'TypeError');
 });
 
 // Test 034b
 test('arcTo edge cases handling', () => {
-    const path = new SWCanvas.Core.Path2D();
+    const path = new SWCanvas.Core.SWPath2D();
     
     // Test zero radius - should work (creates corner with lines)
     path.moveTo(10, 10);
@@ -64,7 +64,7 @@ test('arcTo edge cases handling', () => {
 
 // Test 034c 
 test('arcTo path command recording', () => {
-    const path = new SWCanvas.Core.Path2D();
+    const path = new SWCanvas.Core.SWPath2D();
     path.moveTo(10, 10);
     path.arcTo(50, 10, 50, 50, 20);
     

@@ -325,6 +325,37 @@ function buildVisualTests() {
         return imagelike;
     }
 
+    // Helper function to create Path2D objects compatible with both environments
+    //
+    // This function bridges the fundamental incompatibility between:
+    // - Native HTML5 Canvas: Requires browser's built-in Path2D class
+    // - SWCanvas: Uses its own Path2D implementation
+    //
+    // The issue: Browser Canvas API strictly type-checks Path2D arguments and rejects
+    // duck-typed objects, even if they have the same interface. This helper detects
+    // the environment and creates the appropriate Path2D type.
+    //
+    // This divergence exists because:
+    // 1. Browsers enforce strict instanceof checks for Path2D in native code
+    // 2. SWCanvas implements its own Path2D for cross-platform consistency
+    // 3. There's no way to make SWCanvas's Path2D pass browser's instanceof check
+    //
+    // Detection method: SWCanvas contexts have a _core property, HTML5 contexts don't
+    function createCompatiblePath2D(ctx) {
+        // Detection: Check if we're using SWCanvas or native HTML5 Canvas
+        if (ctx._core) {
+            // SWCanvas context (has _core property)
+            // Use SWCanvas's SWPath2D implementation
+            return new SWCanvas.Core.SWPath2D();
+        } else if (typeof window !== 'undefined' && window.Path2D) {
+            // Browser environment with native HTML5 Canvas
+            // Use browser's native Path2D class
+            return new window.Path2D();
+        } else {
+            // Fallback - should not happen in normal use
+            throw new Error('No Path2D implementation available');
+        }
+    }
 
     // Helper function to register a visual test with unified API
     function registerVisualTest(testName, testConfig) {

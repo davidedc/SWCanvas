@@ -2,7 +2,7 @@
 // This file will be concatenated into the main test suite
 
 test('Path2D command recording', () => {
-    const path = new SWCanvas.Core.Path2D();
+    const path = new SWCanvas.Core.SWPath2D();
     path.moveTo(10, 20);
     path.lineTo(30, 40);
     path.closePath();
