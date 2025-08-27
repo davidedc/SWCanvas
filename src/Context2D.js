@@ -45,7 +45,7 @@ class Context2D {
         this._lineDashOffset = 0;    // Starting offset into dash pattern
         
         // Internal path and clipping
-        this._currentPath = new Path2D();
+        this._currentPath = new SWPath2D();
         
         // Stencil-based clipping system (only clipping mechanism)
         this._clipMask = null;  // ClipMask instance for 1-bit per pixel clipping
@@ -155,7 +155,7 @@ class Context2D {
 
     // Path methods (delegated to internal path)
     beginPath() {
-    this._currentPath = new Path2D();
+    this._currentPath = new SWPath2D();
     }
 
     closePath() {
@@ -210,7 +210,7 @@ class Context2D {
 
     strokeRect(x, y, width, height) {
     // Create a rectangular path
-    const rectPath = new Path2D();
+    const rectPath = new SWPath2D();
     rectPath.rect(x, y, width, height);
     rectPath.closePath();
     

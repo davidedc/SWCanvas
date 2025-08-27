@@ -221,7 +221,7 @@ class CanvasCompatibleContext2D {
         if (typeof pathOrFillRule === 'string') {
             // fill(fillRule)
             this._core.fill(pathOrFillRule);
-        } else if (pathOrFillRule && pathOrFillRule instanceof Path2D) {
+        } else if (pathOrFillRule && pathOrFillRule instanceof SWPath2D) {
             // fill(path, fillRule)
             this._core.fill(pathOrFillRule, fillRule);
         } else {
@@ -231,7 +231,7 @@ class CanvasCompatibleContext2D {
     }
     
     stroke(path) {
-        if (path && path instanceof Path2D) {
+        if (path && path instanceof SWPath2D) {
             this._core.stroke(path);
         } else {
             this._core.stroke();
@@ -259,7 +259,7 @@ class CanvasCompatibleContext2D {
         if (typeof pathOrFillRule === 'string') {
             // clip(fillRule)
             this._core.clip(pathOrFillRule);
-        } else if (pathOrFillRule && pathOrFillRule instanceof Path2D) {
+        } else if (pathOrFillRule && pathOrFillRule instanceof SWPath2D) {
             // clip(path, fillRule)
             this._core.clip(pathOrFillRule, fillRule);
         } else {

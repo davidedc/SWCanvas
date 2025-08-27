@@ -149,7 +149,7 @@ class Rasterizer {
         // If there's stencil clipping or canvas-wide compositing, convert the rectangle to a path and use path filling
         if (this._currentOp.clipMask || this._requiresCanvasWideCompositing(this._currentOp.composite)) {
             // Create a path for the rectangle
-            const rectPath = new Path2D();
+            const rectPath = new SWPath2D();
             rectPath.rect(x, y, width, height);
             
             // Temporarily override fill style with provided color if specified

@@ -33,7 +33,7 @@ cat src/Rectangle.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
 cat src/Transform2D.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
-cat src/Path2D.js >> dist/swcanvas.js  
+cat src/SWPath2D.js >> dist/swcanvas.js  
 echo "" >> dist/swcanvas.js
 cat src/Surface.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
@@ -126,7 +126,6 @@ cat >> dist/swcanvas.js << 'EOF'
 // Export to global scope with clean dual API architecture
 if (typeof window !== 'undefined') {
     // Browser
-    window.Path2D = Path2D;
     window.SWCanvas = {
         // HTML5 Canvas-compatible API (recommended for portability)
         createCanvas: createCanvas,
@@ -137,7 +136,7 @@ if (typeof window !== 'undefined') {
             Surface: CoreSurfaceFactory,
             Context2D: Context2D,
             Transform2D: Transform2D,
-            Path2D: Path2D,
+            SWPath2D: SWPath2D,
             Color: Color,
             Point: Point,
             Rectangle: Rectangle,
@@ -163,7 +162,6 @@ if (typeof window !== 'undefined') {
     };
 } else if (typeof module !== 'undefined' && module.exports) {
     // Node.js
-    global.Path2D = Path2D;
     module.exports = {
         // HTML5 Canvas-compatible API (recommended for portability)
         createCanvas: createCanvas,
@@ -174,7 +172,7 @@ if (typeof window !== 'undefined') {
             Surface: CoreSurfaceFactory,
             Context2D: Context2D,
             Transform2D: Transform2D,
-            Path2D: Path2D,
+            SWPath2D: SWPath2D,
             Color: Color,
             Point: Point,
             Rectangle: Rectangle,

@@ -1,4 +1,4 @@
-class Path2D {
+class SWPath2D {
     constructor() {
         this.commands = [];
     }
