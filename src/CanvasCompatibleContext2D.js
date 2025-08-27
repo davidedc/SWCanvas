@@ -126,7 +126,15 @@ class CanvasCompatibleContext2D {
     set globalCompositeOperation(value) { this._core.globalCompositeOperation = value; }
     
     get lineWidth() { return this._core.lineWidth; }
-    set lineWidth(value) { this._core.lineWidth = value; }
+    set lineWidth(value) { 
+        // HTML5 Canvas spec: ignore zero, negative, Infinity, and NaN values
+        if (typeof value === 'number' && 
+            value > 0 && 
+            isFinite(value)) {
+            this._core.lineWidth = value;
+        }
+        // Otherwise, keep the current value unchanged (ignore invalid input)
+    }
     
     get lineJoin() { return this._core.lineJoin; }
     set lineJoin(value) { this._core.lineJoin = value; }

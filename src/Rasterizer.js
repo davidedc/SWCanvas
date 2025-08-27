@@ -609,11 +609,11 @@ class Rasterizer {
         let adjustedStrokeProps = strokeProps;
         let subPixelOpacity = 1.0; // Default for strokes > 1px
         
-        if (strokeProps.lineWidth <= 1.0) {
-            // Calculate sub-pixel opacity: zero-width = 1.0, thin strokes = proportional
-            subPixelOpacity = strokeProps.lineWidth === 0 ? 1.0 : strokeProps.lineWidth;
+        if (strokeProps.lineWidth < 1.0) {
+            // Sub-pixel strokes: render at proportional opacity
+            subPixelOpacity = strokeProps.lineWidth;
             
-            // Render all sub-pixel strokes (including zero-width) at 1px width
+            // Render sub-pixel strokes at 1px width
             // Opacity adjustment handled in paint source evaluation
             adjustedStrokeProps = { ...strokeProps, lineWidth: 1.0 };
         }

@@ -34,7 +34,7 @@ class Context2D {
         this._strokeStyle = new Color(0, 0, 0, 255); // Black
         
         // Stroke properties
-        this.lineWidth = 1.0;
+        this._lineWidth = 1.0;
         this.lineJoin = 'miter';  // 'miter', 'round', 'bevel'
         this.lineCap = 'butt';    // 'butt', 'round', 'square'
         this.miterLimit = 10.0;
@@ -57,6 +57,21 @@ class Context2D {
         this._clipMask = null;  // ClipMask instance for 1-bit per pixel clipping
     }
 
+    // HTML5 Canvas-compatible lineWidth property with validation
+    get lineWidth() {
+        return this._lineWidth;
+    }
+    
+    set lineWidth(value) {
+        // HTML5 Canvas spec: ignore zero, negative, Infinity, and NaN values
+        if (typeof value === 'number' && 
+            value > 0 && 
+            isFinite(value)) {
+            this._lineWidth = value;
+        }
+        // Otherwise, keep the current value unchanged (ignore invalid input)
+    }
+
     // State management
     save() {
         // Deep copy clipMask if it exists
@@ -73,7 +88,7 @@ class Context2D {
             fillStyle: this._fillStyle, // Paint sources are immutable, safe to share
             strokeStyle: this._strokeStyle, // Paint sources are immutable, safe to share
             clipMask: clipMaskCopy,   // Deep copy of clip mask
-            lineWidth: this.lineWidth,
+            lineWidth: this._lineWidth,
             lineJoin: this.lineJoin,
             lineCap: this.lineCap,
             miterLimit: this.miterLimit,
@@ -101,7 +116,7 @@ class Context2D {
     // Restore clipMask (may be null)
     this._clipMask = state.clipMask;
     
-    this.lineWidth = state.lineWidth;
+    this._lineWidth = state.lineWidth;
     this.lineJoin = state.lineJoin;
     this.lineCap = state.lineCap;
     this.miterLimit = state.miterLimit;
@@ -285,7 +300,7 @@ class Context2D {
     });
     
     this.rasterizer.stroke(rectPath, {
-        lineWidth: this.lineWidth,
+        lineWidth: this._lineWidth,
         lineJoin: this.lineJoin,
         lineCap: this.lineCap,
         miterLimit: this.miterLimit
@@ -462,7 +477,7 @@ class Context2D {
     });
     
     this.rasterizer.stroke(pathToStroke, {
-        lineWidth: this.lineWidth,
+        lineWidth: this._lineWidth,
         lineJoin: this.lineJoin,
         lineCap: this.lineCap,
         miterLimit: this.miterLimit,
@@ -601,7 +616,7 @@ class Context2D {
         
         // Create stroke properties object from current context state
         const strokeProps = {
-            lineWidth: this.lineWidth,
+            lineWidth: this._lineWidth,
             lineJoin: this.lineJoin,
             lineCap: this.lineCap,
             miterLimit: this.miterLimit,
@@ -609,35 +624,6 @@ class Context2D {
             lineDashOffset: this._lineDashOffset
         };
         
-        // Handle zero-width strokes specially - they should be detectable when point is on path
-        if (strokeProps.lineWidth === 0) {
-            // For zero-width strokes, test if point is on the path itself
-            // Use path hit testing but with a very small tolerance
-            const epsilon = 0.5;
-            
-            // Flatten the path to polygons (line segments)
-            const polygons = PathFlattener.flattenPath(path);
-            const transformedPolygons = polygons.map(poly => 
-                poly.map(point => this._transform.transformPoint(point))
-            );
-            
-            // Test if point is very close to any line segment in the path
-            for (const polygon of transformedPolygons) {
-                if (polygon.length < 2) continue;
-                
-                for (let i = 0; i < polygon.length - 1; i++) {
-                    const p1 = polygon[i];
-                    const p2 = polygon[i + 1];
-                    
-                    // Calculate distance from point to line segment
-                    const distance = this._distanceToLineSegment(x, y, p1.x, p1.y, p2.x, p2.y);
-                    if (distance <= epsilon) {
-                        return true;
-                    }
-                }
-            }
-            return false;
-        }
         
         // Generate stroke polygons using StrokeGenerator
         const strokePolygons = StrokeGenerator.generateStrokePolygons(path, strokeProps);
