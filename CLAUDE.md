@@ -13,7 +13,7 @@ This file provides Claude with essential context about the SWCanvas project for 
 - **Drop-in replacement**: True HTML5 Canvas 2D Context compatibility
 - **Memory efficient**: 1-bit stencil clipping, optimized algorithms
 - **Sub-pixel accurate**: Thin strokes render with proportional opacity (no anti-aliasing)
-- **Well-tested**: 33 core tests + 130 visual tests with pixel-perfect validation
+- **Well-tested**: 36 core tests + 138 visual tests with pixel-perfect validation
 - **Paint Sources**: Full HTML5-compatible gradients (linear, radial, conic) and patterns
 
 ## API Usage
@@ -159,7 +159,7 @@ See README.md for complete build and test instructions.
 **Production workflow:**
 1. `npm run build:prod` (builds + minifies in one command)
 2. Test minified version with `examples/showcase.html`
-3. Verify BMP output matches expectations
+3. Verify PNG output matches expectations
 
 **Build commands available:**
 - `npm run build` - Development build only
@@ -180,7 +180,7 @@ SWCanvas uses a comprehensive test system with modular architecture. See `tests/
 - Build utilities and renumbering tools
 - Cross-platform validation approach
 
-Quick reference: `npm run build` then `npm test` to run all 33 core + 130 visual tests.
+Quick reference: `npm run build` then `npm test` to run all 36 core + 138 visual tests.
 
 #### Smart Test Runner Architecture
 ```javascript
@@ -196,12 +196,12 @@ if (fs.existsSync('./tests/dist/core-functionality-tests.js')) {
 ### Modular File Structure
 ```
 /tests/
-├── core/                               # 33 individual core test files
+├── core/                               # 36 individual core test files
 │   ├── 001-surface-creation-valid.js
 │   ├── 015-alpha-blending-test.js
 │   ├── 032-line-dash-api-test.js
-│   └── ... (30 more files)
-├── visual/                             # 130 individual visual test files
+│   └── ... (32 more files)
+├── visual/                             # 138 individual visual test files
 │   ├── 001-simple-rectangle-test.js
 │   ├── 058-line-dash-basic-patterns-test.js
 │   ├── 060-line-dash-complex-paths-test.js
@@ -228,11 +228,11 @@ if (fs.existsSync('./tests/dist/core-functionality-tests.js')) {
 ├── core-functionality-tests.js         # Original (fallback/reference)
 ├── visual-rendering-tests.js           # Original (fallback/reference)
 ├── run-tests.js                        # Smart test runner with auto-detection
-└── output/                             # Generated BMP files
-    ├── 001-simple-rectangle-test.bmp
-    ├── 058-line-dash-basic-patterns.bmp
-    ├── 060-line-dash-complex-paths.bmp
-    └── ... (130+ BMP files)
+└── output/                             # Generated PNG files
+    ├── 001-simple-rectangle-test.basic.png
+    ├── 058-line-dash-basic-patterns.basic.png
+    ├── 060-line-dash-complex-paths.basic.png
+    └── ... (138+ PNG files)
 ```
 
 ## Common Tasks
@@ -247,10 +247,10 @@ See README.md for complete API usage examples.
 
 ### Debugging Rendering Issues
 1. Add debug visual test with simplified case
-2. Generate BMP: `npm test`  
+2. Generate PNG: `npm test`  
 3. Compare with HTML5 Canvas in browser: `tests/browser/index.html`
 4. Check pixel values manually if needed
-5. Use git to compare before/after BMPs
+5. Use git to compare before/after PNGs
 
 **See `debug/README.md` for comprehensive debugging utilities, templates, and workflow patterns.**
 

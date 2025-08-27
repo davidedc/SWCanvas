@@ -13,7 +13,7 @@ A deterministic 2D raster engine with Canvas-like API. SWCanvas provides pixel-p
 - **Memory Efficient Clipping**: Stencil-based clipping system with proper intersection support
 - **Sub-pixel Stroke Rendering**: Thin strokes render with proportional opacity, works with all paint sources
 - **Full Porter-Duff Compositing**: Complete `globalCompositeOperation` support with all 10 standard operations working correctly
-- **Comprehensive Test Coverage**: 33 core tests + 131 visual tests ensuring pixel-perfect accuracy with modular architecture
+- **Comprehensive Test Coverage**: 36 core tests + 138 visual tests ensuring pixel-perfect accuracy with modular architecture
 - **Immutable Value Objects**: Point, Rectangle, Transform2D, Color prevent mutation bugs
 - **Cross-Platform**: Works in Node.js and browsers
 - **No Dependencies**: Pure JavaScript implementation
@@ -32,8 +32,8 @@ This generates:
 - `dist/swcanvas.js` - Complete library for development
 - `dist/swcanvas.min.js` - Minified library for production (71% smaller)
 - `dist/swcanvas.min.js.map` - Source map for debugging
-- `tests/dist/core-functionality-tests.js` from 32 individual test files in `/tests/core/`
-- `tests/dist/visual-rendering-tests.js` from 78 individual test files in `/tests/visual/`
+- `tests/dist/core-functionality-tests.js` from 36 individual test files in `/tests/core/`
+- `tests/dist/visual-rendering-tests.js` from 138 individual test files in `/tests/visual/`
 
 ### Node.js Usage
 
@@ -131,21 +131,21 @@ npm test
 ```
 
 This runs:
-- 32 modular core functionality tests (automatically uses built tests from `/tests/core/`)
-- 78 visual rendering tests generating BMPs in `tests/output/`
+- 36 modular core functionality tests (automatically uses built tests from `/tests/core/`)
+- 138 visual rendering tests generating PNG files in `tests/output/`
 
 ### Browser Tests
 
 Open `tests/browser/index.html` in a web browser for:
 - Side-by-side HTML5 Canvas vs SWCanvas comparisons  
 - Interactive visual tests
-- All 78 visual rendering test comparisons (automatically uses built modular tests)
-- BMP download functionality
+- All 138 visual rendering tests comparisons (automatically uses built modular tests)
+- PNG/BMP download functionality
 
 ### Test Architecture
 
-- **Core Functionality Tests** (32): Individual test files in `/tests/core/` - API correctness, edge cases, mathematical accuracy
-- **Visual Rendering Tests** (78): Individual test files in `/tests/visual/` - Pixel-perfect rendering verification with BMP generation  
+- **Core Functionality Tests** (36): Individual test files in `/tests/core/` - API correctness, edge cases, mathematical accuracy
+- **Visual Rendering Tests** (138): Individual test files in `/tests/visual/` - Pixel-perfect rendering verification with PNG generation  
 - **Browser Tests**: Interactive visual comparison tools using built test suites with HTML5 Canvas vs SWCanvas side-by-side
 
 The modular architecture allows individual test development while maintaining build-time concatenation for performance.
@@ -434,6 +434,17 @@ const sourceMask = new SWCanvas.Core.SourceMask(800, 600);
 // Image processing utilities
 const validImage = SWCanvas.Core.ImageProcessor.validateAndConvert(imageData);
 
+// Composite operations utilities
+const supportedOps = SWCanvas.Core.CompositeOperations.getSupportedOperations();
+const isSupported = SWCanvas.Core.CompositeOperations.isSupported('xor');
+
+// Path processing utilities
+const polygons = SWCanvas.Core.PathFlattener.flattenPath(path2d);
+const strokePolys = SWCanvas.Core.StrokeGenerator.generateStrokePolygons(path2d, strokeProps);
+
+// Color parsing utilities (for CSS color strings)
+const color = SWCanvas.Core.ColorParser.parse('#FF0000');
+
 // BMP encoding configuration
 const encodingOptions = SWCanvas.Core.BitmapEncodingOptions.withGrayBackground(128);
 ```
@@ -569,7 +580,7 @@ src/              # Source files (ES6 Classes)
 
 tests/            # Test suite
 ├── core-functionality-tests.js # Core functionality tests
-├── visual-rendering-tests.js    # 52+ visual tests
+├── visual-rendering-tests.js    # 138+ visual tests
 └── run-tests.js            # Node.js test runner
 
 tests/browser/    # Browser tests
@@ -584,11 +595,13 @@ dist/             # Built library
 ## Test Architecture
 
 SWCanvas uses a comprehensive dual test system:
-- **32 core functionality tests**: Programmatic API verification with assertions
-- **78 visual rendering tests**: Pixel-perfect BMP generation and comparison
+- **36 core functionality tests**: Programmatic API verification with assertions
+- **138 visual rendering tests**: Pixel-perfect PNG generation and comparison
 - **Modular architecture**: Individual test files auto-concatenated at build time
 
 See [tests/README.md](tests/README.md) for complete test documentation, adding tests, and build utilities.
+
+**Test Count Maintenance**: The `npm run update-test-counts` command automatically updates test count references across all documentation files to match the actual filesystem. This ensures documentation accuracy as tests are added or removed.
 
 ### Build Process
 

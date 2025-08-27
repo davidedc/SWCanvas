@@ -16,6 +16,32 @@ This directory contains utility scripts for managing the SWCanvas test system.
 
 **Usage**: Called automatically by the build system, not typically run directly.
 
+### `update-test-counts.js`
+**Purpose**: Automatically updates test count references throughout all documentation files to match actual filesystem counts.
+
+**What it does**:
+- Counts actual test files in `/tests/core/` and `/tests/visual/` directories
+- Updates all documentation files (README.md, CLAUDE.md, tests/README.md) with correct counts
+- Maintains consistency across all test count references using regex patterns
+- Validates counts for reasonableness before applying updates
+
+**Usage**:
+```bash
+# Update test count references to match current file counts
+node tests/build/update-test-counts.js
+
+# Or use as npm script (if configured)
+npm run update-test-counts
+```
+
+**When to use**:
+- After adding or removing test files to keep documentation accurate
+- As part of automated CI/CD pipeline to prevent documentation drift
+- Before releasing to ensure all documentation reflects current test coverage
+- When restructuring test suites
+
+**Output**: The script provides detailed logging of changes made and suggests appropriate commit messages.
+
 ### `renumber-tests.js`
 **Purpose**: Renumbers test files to make space for inserting new tests at specific positions.
 
@@ -109,6 +135,7 @@ registerVisualTest('test-id', {
 tests/build/
 ├── README.md              # This documentation
 ├── concat-tests.js        # Test concatenation utility
+├── update-test-counts.js  # Automated test count updater
 └── renumber-tests.js      # Test renumbering utility
 ```
 

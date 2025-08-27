@@ -1,21 +1,21 @@
 # SWCanvas Test Suite
 
-This directory contains the comprehensive **modular test infrastructure** for SWCanvas, with 33 core tests + 131 visual tests and cross-platform compatibility.
+This directory contains the comprehensive **modular test infrastructure** for SWCanvas, with 36 core tests + 138 visual tests and cross-platform compatibility.
 
 ## Modular Test Architecture
 
 ```
 tests/
-├── core/                          # 32 individual core test files (001-032)
+├── core/                          # 36 individual core test files (001-036)
 │   ├── 001-surface-creation-valid.js
 │   ├── 015-alpha-blending-test.js  
 │   ├── 031-transform-matrix-order-dependency.js
-│   └── ... (28 more files)
-├── visual/                        # 131 individual visual test files (001-131)
+│   └── ... (32 more files)
+├── visual/                        # 138 individual visual test files (001-138)
 │   ├── 001-simple-rectangle-test.js
 │   ├── 027-fill-rule-complex-test.js
 │   ├── 056-stroke-pixel-analysis-test.js
-│   └── ... (128 more files)
+│   └── ... (134 more files)
 ├── browser/                       # Browser-specific test files
 │   ├── index.html                 # Main browser test page (interactive + comparisons)
 │   ├── simple-test.html           # Simple visual comparison test
@@ -28,7 +28,7 @@ tests/
 ├── core-functionality-tests.js          # Original (fallback/reference)
 ├── visual-rendering-tests.js            # Original (fallback/reference)
 ├── run-tests.js                         # Smart test runner with auto-detection
-├── output/                              # Generated PNG test images (131+ files)
+├── output/                              # Generated PNG test images (138+ files)
 └── README.md                            # This file
 ```
 
@@ -46,8 +46,8 @@ node tests/run-tests.js  # Smart runner uses built tests when available
 
 ### Browser Tests
 1. Open `tests/browser/index.html` in a web browser (automatically runs all tests on page load)
-2. Automatically runs 32 modular core functionality tests from `/tests/core/` 
-3. Automatically runs all 130 visual rendering tests with side-by-side HTML5 Canvas vs SWCanvas comparison
+2. Automatically runs 36 modular core functionality tests from `/tests/core/` 
+3. Automatically runs all 138 visual rendering tests with side-by-side HTML5 Canvas vs SWCanvas comparison
 4. Use interactive visual comparison tools for real-time testing
 5. Simple test: Open `tests/browser/simple-test.html` for basic visual comparison
 
@@ -57,17 +57,17 @@ node tests/run-tests.js  # Smart runner uses built tests when available
 
 SWCanvas uses a **modular complementary dual test system** where individual test files are automatically concatenated at build time, maintaining both development flexibility and production performance:
 
-### Core Functionality Tests - 33 Individual Files
+### Core Functionality Tests - 36 Individual Files
 **Location**: `/tests/core/` (individual files) → `/tests/dist/core-functionality-tests.js` (concatenated)
 
 **Modular Structure**:
-- **33 individual test files** numbered 001-033 with descriptive names
+- **36 individual test files** numbered 001-036 with descriptive names
 - **Build-time concatenation** into single optimized file
 - **Smart test runner** automatically uses built version
 - **Development benefit**: No merge conflicts, focused editing
 
 **Characteristics**:
-- **33 unit tests** using `assertEquals()`, `assertThrows()` assertions
+- **36 unit tests** using `assertEquals()`, `assertThrows()` assertions
 - **Output**: Console logs with ✓ pass/✗ fail status + detailed error messages
 - **Environment**: Runs identically in both Node.js and browser
 - **Focus**: API correctness, error handling, data validation, mathematical accuracy
@@ -77,7 +77,7 @@ SWCanvas uses a **modular complementary dual test system** where individual test
 - ✅ **Mathematical Correctness**: Matrix operations, coordinate transformations
 - ✅ **State Management**: Context save/restore, property persistence  
 - ✅ **Data Structures**: SWPath2D command recording, parameter validation
-- ✅ **Integration Points**: BMP generation, cross-platform consistency
+- ✅ **Integration Points**: PNG generation, cross-platform consistency
 
 **Example Modular Test File** (`/tests/core/001-surface-creation-valid.js`):
 ```javascript
@@ -93,19 +93,19 @@ test('Surface creation with valid dimensions', () => {
 });
 ```
 
-### Visual Rendering Tests - 131 Individual Files
+### Visual Rendering Tests - 138 Individual Files
 **Location**: `/tests/visual/` (individual files) → `/tests/dist/visual-rendering-tests.js` (concatenated)
 
 **Modular Structure**:
-- **131 individual test files** numbered 001-131 with descriptive names
+- **138 individual test files** numbered 001-138 with descriptive names
 - **Build-time concatenation** preserves registerVisualTest pattern
 - **Smart test runner** with automatic fallback to original
 - **Development benefit**: Isolated test development, clear organization
 
 **Characteristics**:
-- **130 visual tests** that generate actual rendered images
-- **Output**: BMP files (Node.js) + side-by-side comparison (browser)
-- **Environment**: BMP generation in Node.js, visual comparison in browser
+- **138 visual tests** that generate actual rendered images
+- **Output**: PNG files (Node.js) + side-by-side comparison (browser)
+- **Environment**: PNG generation in Node.js, visual comparison in browser
 - **Focus**: Rendering accuracy, visual consistency, pixel-perfect output
 
 **Test Categories**:
@@ -202,6 +202,8 @@ Interactive tests requiring DOM and visual comparison:
 
 ## Adding New Tests
 
+**For advanced test organization and renumbering utilities, see [tests/build/README.md](build/README.md).**
+
 ### For Core Functionality Tests
 Create a new individual file in `/tests/core/` with the naming pattern `{3-digit-number}-{descriptive-name}.js`:
 
@@ -264,9 +266,9 @@ Standard HTML5 Canvas API ensures consistent colors:
 - Eliminates need for helper functions or color mapping
 
 ### Comprehensive Modular Test Coverage
-- **33 modular core tests** covering all API functionality with individual files
-- **130 modular visual tests** covering all major Canvas2D features with pixel-perfect accuracy
+- **36 modular core tests** covering all API functionality with individual files
+- **138 modular visual tests** covering all major Canvas2D features with pixel-perfect accuracy
 - **Build-time concatenation** for optimal performance
 - **Smart test runner** with automatic fallback system
 - **Cross-platform validation** (Node.js + browsers)
-- **BMP generation** for visual inspection and regression detection
+- **PNG generation** for visual inspection and regression detection

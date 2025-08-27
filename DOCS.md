@@ -62,3 +62,13 @@ Each document has a **single responsibility** to avoid duplication:
 - **Examples and demos** → examples/README.md
 - **Development with Claude** → CLAUDE.md
 - **Original specifications** → specs-and-high-level-project-plan.md
+
+## Documentation Maintenance
+
+### Automated Test Count Synchronization
+
+**Command**: `npm run update-test-counts`
+
+Single command automatically synchronizes all test count references across the entire documentation suite, ensuring perpetual accuracy with zero manual effort.
+
+**Usage**: Run this command whenever test files are added or removed to keep all documentation (README.md, CLAUDE.md, tests/README.md) accurate with current test counts. The script scans actual filesystem and updates 15+ different reference patterns throughout the documentation.
