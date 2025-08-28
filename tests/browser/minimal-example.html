@@ -34,9 +34,13 @@
         const domCanvas = document.getElementById('canvas');
         const domCtx = domCanvas.getContext('2d');
         
-        // Get image data from SWCanvas and put it on DOM canvas
-        const imageData = ctx.getImageData(0, 0, 200, 150);
-        domCtx.putImageData(imageData, 0, 0);
+        // Get the underlying surface data from SWCanvas and transfer to DOM canvas
+        const surface = canvas._coreSurface || canvas._surface;
+        if (surface && surface.data) {
+            const imageData = domCtx.createImageData(200, 150);
+            imageData.data.set(surface.data);
+            domCtx.putImageData(imageData, 0, 0);
+        }
         
         console.log('✓ Minimal SWCanvas example loaded successfully');
     </script>
