@@ -18,7 +18,7 @@ tests/
 │   └── ... (134 more files)
 ├── browser/                       # Browser-specific test files
 │   ├── index.html                 # Main browser test page (interactive + comparisons)
-│   ├── simple-test.html           # Simple visual comparison test
+│   ├── minimal-example.html       # Minimal usage example
 │   └── browser-test-helpers.js    # Browser-specific interactive testing tools
 ├── dist/                          # Built test files (auto-generated, .gitignored)
 │   ├── core-functionality-tests.js    # Auto-generated from /core/
@@ -49,7 +49,7 @@ node tests/run-tests.js  # Smart runner uses built tests when available
 2. Automatically runs 36 modular core functionality tests from `/tests/core/` 
 3. Automatically runs all 138 visual rendering tests with side-by-side HTML5 Canvas vs SWCanvas comparison
 4. Use interactive visual comparison tools for real-time testing
-5. Simple test: Open `tests/browser/simple-test.html` for basic visual comparison
+5. Minimal example: Open `tests/browser/minimal-example.html` to see a minimal usage example
 
 **Technical Note**: Browser visual comparisons use `renderSWCanvasToHTML5()` helper function in `build/concat-tests.js` which correctly transfers SWCanvas Surface data (non-premultiplied RGBA) to HTML5 Canvas ImageData without unpremultiplication, ensuring accurate semi-transparent color display.
 

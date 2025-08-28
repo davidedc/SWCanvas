@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>SWCanvas Minimal Example</title>
+</head>
+<body>
+    <h1>SWCanvas Minimal Example</h1>
+    <p>A minimal example showing a red square in the center:</p>
+    
+    <canvas id="canvas" width="200" height="150" style="border:1px solid #ccc"></canvas>
+    
+    <!-- Load minified version first, fallback to regular build -->
+    <script src="../../dist/swcanvas.min.js"></script>
+    <script>
+        // Fallback to regular build if minified version not available
+        if (typeof SWCanvas === 'undefined') {
+            document.write('<script src="../../dist/swcanvas.js"><\/script>');
+        }
+    </script>
+    <script>
+        // Create SWCanvas using HTML5-compatible API
+        const canvas = SWCanvas.createCanvas(200, 150);
+        const ctx = canvas.getContext('2d');
+        
+        // White background
+        ctx.fillStyle = 'white';
+        ctx.fillRect(0, 0, 200, 150);
+        
+        // Red square in the center (50x50 square centered in 200x150 canvas)
+        ctx.fillStyle = 'red';
+        ctx.fillRect(75, 50, 50, 50);
+        
+        // Render to DOM canvas
+        const domCanvas = document.getElementById('canvas');
+        const domCtx = domCanvas.getContext('2d');
+        
+        // Get image data from SWCanvas and put it on DOM canvas
+        const imageData = ctx.getImageData(0, 0, 200, 150);
+        domCtx.putImageData(imageData, 0, 0);
+        
+        console.log('✓ Minimal SWCanvas example loaded successfully');
+    </script>
+</body>
+</html>

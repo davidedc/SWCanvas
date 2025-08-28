@@ -1,12 +1,12 @@
 # SWCanvas
 
-A deterministic 2D raster engine with Canvas-like API. SWCanvas provides pixel-perfect, cross-platform 2D rendering that produces identical results on any system, making it ideal for testing, screenshots, and server-side graphics.
+A deterministic 2D Javascript raster engine with Canvas-like API, cross-browser and Node.js.
 
-**🎨 [Interactive Demo](examples/showcase.html)** • **🧪 [Visual Tests](tests/browser/index.html)** • **📊 [Simple Test](tests/browser/simple-test.html)**
+**🎨 [Interactive Demo](examples/showcase.html)** • **🧪 [Visual Tests](tests/browser/index.html)** • **📊 [Minimal Example](tests/browser/minimal-example.html)**
 
 ## Features
 
-- **Deterministic Rendering**: Identical results across all platforms and browsers
+- **Deterministic Rendering**: Identical results across all browsers and Node.js
 - **HTML5 Canvas Compatibility**: Drop-in replacement with familiar API  
 - **Object-Oriented Design**: Clean ES6 classes following effective OO principles
 - **Geometric Path Hit Testing**: Complete `isPointInPath` and `isPointInStroke` implementation with accurate geometric calculation
@@ -646,7 +646,7 @@ tests/            # Test suite
 
 tests/browser/    # Browser tests
 ├── index.html       # Main visual comparison tool (moved from examples/)
-├── simple-test.html # Simple visual test
+├── minimal-example.html # Minimal usage example
 └── browser-test-helpers.js # Interactive test utilities
 
 dist/             # Built library

@@ -234,7 +234,7 @@ if (fs.existsSync('./tests/dist/core-functionality-tests.js')) {
 │   └── ... (95 more files)
 ├── browser/                            # Browser-specific test files
 │   ├── index.html                      # Main browser test page (moved from examples/)
-│   ├── simple-test.html                # Simple visual comparison test
+│   ├── minimal-example.html            # Minimal usage example
 │   └── browser-test-helpers.js         # Interactive test utilities
 ├── dist/                               # Built test files (auto-generated, .gitignored)
 │   ├── core-functionality-tests.js     # Auto-generated from /core/
