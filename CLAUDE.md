@@ -38,11 +38,12 @@ src/Transform2D.js            # Immutable transformation matrix mathematics
 src/SWPath2D.js               # Path definition and command recording
 src/Color.js                  # Immutable color handling with premultiplied alpha
 src/BitBuffer.js              # 1-bit per pixel utility for mask operations (composition component)
+src/BoundsTracker.js          # Reusable bounds tracking utility for optimization (composition component)
 src/ClipMask.js               # 1-bit stencil buffer using BitBuffer composition
-src/SourceMask.js             # 1-bit source coverage tracking using BitBuffer composition
+src/SourceMask.js             # 1-bit source coverage tracking using BitBuffer and BoundsTracker composition
 src/Gradient.js               # Linear, radial, and conic gradient paint sources
 src/Pattern.js                # Repeating image pattern paint sources
-src/ShadowBuffer.js           # Sparse shadow alpha storage with extended bounds for blur overflow
+src/ShadowBuffer.js           # Sparse shadow alpha storage with extended bounds and BoundsTracker composition
 src/BoxBlur.js                # Multi-pass box blur algorithm approximating Gaussian blur
 src/Point.js                  # Immutable 2D point operations
 src/Rectangle.js              # Immutable rectangle operations
@@ -569,13 +570,13 @@ Project fully implemented with object-oriented ES6 class design. See ARCHITECTUR
 - **Use proper classes**: Prefer `new SWCanvas.Core.Point(x, y)` over plain objects
 - **Leverage immutability**: Transform2D, Point, Rectangle, Color, BitmapEncodingOptions are immutable - use their methods
 - **Joshua Bloch patterns**: BitmapEncodingOptions demonstrates static factory methods and immutable configuration objects
-- **Composition over inheritance**: BitBuffer utility composed by ClipMask and SourceMask classes (Item 18)
+- **Composition over inheritance**: BitBuffer and BoundsTracker utilities composed by ClipMask, SourceMask, and ShadowBuffer classes (Item 18)
 - **Static utilities**: Use ImageProcessor for format conversion, CompositeOperations for blending
 - **Factory methods**: Use Transform2D constructor and .translation(), .scaling(), .rotation() for common transformations
 - **Validation**: All classes validate input parameters with descriptive error messages
 - **Composition**: Classes work together rather than through inheritance hierarchies
 - **Encapsulation**: Use public APIs, private methods marked with underscore prefix
-- **Utility classes**: BitBuffer provides reusable bit manipulation for mask operations
+- **Utility classes**: BitBuffer provides reusable bit manipulation, BoundsTracker provides reusable bounds tracking
 
 ### Key Architecture Principles
 - **Single Responsibility**: Each class handles one specific concern

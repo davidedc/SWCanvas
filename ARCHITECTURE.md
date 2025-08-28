@@ -32,12 +32,13 @@ Transform2D.js      → Immutable transformation mathematics
 Point/Rectangle.js  → Pure geometric value objects
 Color.js            → Immutable color handling
 BitBuffer.js        → 1-bit per pixel utility for memory-efficient mask operations
+BoundsTracker.js    → Reusable bounds tracking utility for optimization (composition component)
 ClipMask.js         → Stencil-based clipping using BitBuffer composition
-SourceMask.js       → Source coverage tracking using BitBuffer composition
+SourceMask.js       → Source coverage tracking using BitBuffer and BoundsTracker composition
 Gradient.js         → Linear, radial, and conic gradient paint sources
 Pattern.js          → Repeating image pattern paint sources
 SWPath2D.js         → Path definition and command recording
-ShadowBuffer.js     → Sparse shadow alpha storage with extended bounds for blur overflow
+ShadowBuffer.js     → Sparse shadow alpha storage with extended bounds and BoundsTracker composition
 BoxBlur.js          → Multi-pass box blur algorithm approximating Gaussian blur
 ```
 
@@ -152,11 +153,12 @@ SWCanvas.Core.* → Direct access to all engine classes
 - `Point()`, `Rectangle()` - Geometric value objects
 - `Color()` - Immutable color handling
 - `BitBuffer()` - 1-bit per pixel utility for efficient bit manipulation
+- `BoundsTracker()` - Reusable bounds tracking utility for optimization
 - `ClipMask()` - Stencil-based clipping using BitBuffer composition
-- `SourceMask()` - Source coverage tracking using BitBuffer composition
+- `SourceMask()` - Source coverage tracking using BitBuffer and BoundsTracker composition
 - `LinearGradient()`, `RadialGradient()`, `ConicGradient()` - Gradient paint sources
 - `Pattern()` - Repeating image pattern paint sources
-- `ShadowBuffer()` - Sparse shadow alpha storage with extended bounds
+- `ShadowBuffer()` - Sparse shadow alpha storage with extended bounds and BoundsTracker composition
 - `BoxBlur` - Multi-pass box blur algorithms (static methods)
 - `BitmapEncoder` - File format export utilities
 - `BitmapEncodingOptions()` - Immutable encoding configuration (Joshua Bloch patterns)
@@ -410,18 +412,22 @@ The codebase implements several key patterns from Joshua Bloch's Effective Java:
 - **Builder Pattern Alternative** (`BitmapEncodingOptions`) - Item 2: Use static factory methods for complex configuration
 - **Parameter Validation** (all constructors) - Item 49: Check parameters for validity and fail fast with clear messages
 
-## Composition Pattern for Mask Classes
+## Composition Patterns for Utility Classes
 
-SWCanvas implements a sophisticated composition pattern for mask classes, following Joshua Bloch's **Item 18: "Favor composition over inheritance"** principle to eliminate code duplication while maintaining clear separation of concerns.
+SWCanvas implements sophisticated composition patterns following Joshua Bloch's **Item 18: "Favor composition over inheritance"** principle to eliminate code duplication while maintaining clear separation of concerns.
 
-### The Problem: Similar Implementation, Different Semantics
+### BitBuffer Composition Pattern
+
+The first composition pattern addresses bit manipulation code duplication:
+
+#### The Problem: Similar Implementation, Different Semantics
 
 `ClipMask` and `SourceMask` shared significant bit manipulation code but represented fundamentally different abstractions:
 
 - **ClipMask**: Controls which pixels **can be rendered** (default: all visible, 1s)
 - **SourceMask**: Tracks which pixels **were covered** by drawing operations (default: none covered, 0s)
 
-### The Solution: BitBuffer Composition Component
+#### The Solution: BitBuffer Composition Component
 
 Instead of forced inheritance (which would violate the Liskov Substitution Principle), SWCanvas uses **composition with a utility class**:
 
@@ -458,7 +464,7 @@ class SourceMask {
 }
 ```
 
-### Benefits of This Architecture
+#### Benefits of BitBuffer Composition
 
 1. **Code Reuse Without Inheritance**: Eliminates 200+ lines of duplicated bit manipulation code
 2. **Clear Separation of Concerns**: BitBuffer handles bits, masks handle domain logic
@@ -467,13 +473,95 @@ class SourceMask {
 5. **Better Testability**: Can test bit operations and mask logic separately
 6. **Joshua Bloch Compliance**: Follows effective OO design patterns
 
+### BoundsTracker Composition Pattern
+
+The second composition pattern addresses bounds tracking code duplication:
+
+#### The Problem: Duplicated Bounds Logic
+
+`SourceMask` and `ShadowBuffer` contained nearly identical bounds tracking implementations:
+
+- **SourceMask**: Tracks bounds of covered pixels for rendering optimization
+- **ShadowBuffer**: Tracks bounds of shadow data for blur processing optimization
+
+Both implemented identical:
+- `_bounds` object structure with minX, maxX, minY, maxY, isEmpty
+- `updateBounds()` logic for expanding bounds to include new points
+- `getBounds()` method for retrieving current bounds
+- Bounds reset and cloning operations
+
+#### The Solution: BoundsTracker Composition Component
+
+```javascript
+// BoundsTracker: Reusable bounds tracking utility
+class BoundsTracker {
+    constructor() { /* bounds initialization */ }
+    updateBounds(x, y) { /* expand bounds logic */ }
+    getBounds() { /* return bounds copy */ }
+    reset() { /* reset to empty */ }
+    // ... additional utility methods
+}
+
+// SourceMask: Composed with BitBuffer + BoundsTracker
+class SourceMask {
+    constructor(width, height) {
+        this._bitBuffer = new BitBuffer(width, height, 0);
+        this._boundsTracker = new BoundsTracker();
+    }
+    
+    setPixel(x, y, covered) {
+        // ... update bit buffer
+        if (covered && !wasCovered) {
+            this._boundsTracker.updateBounds(x, y);
+        }
+    }
+    
+    getBounds() { return this._boundsTracker.getBounds(); }
+}
+
+// ShadowBuffer: Composed with BoundsTracker (different data storage)
+class ShadowBuffer {
+    constructor(width, height, maxBlurRadius) {
+        this._alphaData = {}; // Sparse float storage
+        this._boundsTracker = new BoundsTracker();
+    }
+    
+    addAlpha(x, y, alpha) {
+        // ... update alpha data
+        this._boundsTracker.updateBounds(x, y);
+    }
+    
+    getBounds() { return this._boundsTracker.getBounds(); }
+}
+```
+
+#### Benefits of BoundsTracker Composition
+
+1. **Eliminates Code Duplication**: Removes ~40 lines of identical bounds tracking code
+2. **Single Source of Truth**: Bounds logic centralized and consistently implemented
+3. **Preserves Architectural Boundaries**: ShadowBuffer remains independent from BitBuffer (different data types)
+4. **Consistent Patterns**: Follows same composition approach as BitBuffer utility
+5. **Enhanced Maintainability**: Bounds tracking bugs fixed once, benefits all consumers
+6. **Future Extensibility**: Other classes can easily adopt bounds tracking functionality
+
 ### Implementation Details
 
-- **BitBuffer**: Configurable default values (0 or 1) support different mask semantics
-- **Memory Efficiency**: Maintains 1-bit per pixel storage (87.5% memory reduction)
-- **Performance**: No overhead compared to original implementation
-- **API Compatibility**: All existing mask APIs preserved unchanged
+- **BoundsTracker**: Comprehensive utility with parameter validation, helper methods, and proper encapsulation
+- **Memory Efficiency**: Minimal overhead, optimized for frequent updates
+- **Performance**: No degradation compared to original implementations  
+- **API Compatibility**: All existing bounds APIs preserved unchanged
+- **Testability**: Bounds logic thoroughly testable in isolation
 
-This composition pattern demonstrates how to eliminate code duplication through clean object-oriented design while avoiding the pitfalls of inappropriate inheritance hierarchies.
+### Why Not Force Further Composition?
+
+**ShadowBuffer does NOT use BitBuffer** because they represent fundamentally incompatible abstractions:
+
+- **Data Types**: BitBuffer handles binary (1-bit), ShadowBuffer handles float (0-1 alpha)
+- **Storage Strategies**: BitBuffer uses dense bit-packed arrays, ShadowBuffer uses sparse hashmaps
+- **Coordinate Systems**: BitBuffer uses original coordinates, ShadowBuffer uses extended coordinates
+
+Forcing composition would violate Item 51: "Make interfaces easy to use correctly and hard to use incorrectly."
+
+These composition patterns demonstrate how to systematically eliminate code duplication through clean object-oriented design while respecting fundamental differences between abstractions.
 
 This architecture represents a **paradigm bridge** that successfully unifies web standards compliance, performance optimization, and clean API design in a single coherent system.

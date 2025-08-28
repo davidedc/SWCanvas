@@ -482,7 +482,12 @@ const bitBuffer = new SWCanvas.Core.BitBuffer(100, 100, 0); // Default to 0s
 bitBuffer.setPixel(50, 50, true);
 console.log(bitBuffer.getPixel(50, 50)); // true
 
-// Mask classes (use BitBuffer composition internally)
+// Bounds tracking utility (used by SourceMask and ShadowBuffer)
+const boundsTracker = new SWCanvas.Core.BoundsTracker();
+boundsTracker.updateBounds(50, 75);
+console.log(boundsTracker.getBounds()); // { minX: 50, maxX: 50, minY: 75, maxY: 75, isEmpty: false }
+
+// Mask classes (use BitBuffer and BoundsTracker composition internally)
 const clipMask = new SWCanvas.Core.ClipMask(800, 600);
 const sourceMask = new SWCanvas.Core.SourceMask(800, 600);
 
@@ -576,8 +581,9 @@ const blackBmp = SWCanvas.Core.BitmapEncoder.encode(surface,
 - **Pattern**: Paint source objects for repeating image patterns with repetition modes
 - **Geometry**: Point and Rectangle value objects
 - **BitBuffer**: 1-bit per pixel utility for efficient bit manipulation (composition component)
+- **BoundsTracker**: Reusable bounds tracking utility for optimization (composition component)
 - **ClipMask**: 1-bit clipping buffer using BitBuffer composition
-- **SourceMask**: 1-bit source coverage tracking using BitBuffer composition
+- **SourceMask**: 1-bit source coverage tracking using BitBuffer and BoundsTracker composition
 - **DrawingState**: Context state stack management
 - **PolygonFiller**: Scanline-based polygon filling with paint source support
 - **StrokeGenerator**: Geometric stroke generation (static methods)  
@@ -676,17 +682,21 @@ The build script (`build.sh`) concatenates source files in dependency order, fol
 9. PathFlattener - Path-to-polygon conversion (static methods)
 10. PolygonFiller - Scanline filling with paint sources (static methods)
 11. StrokeGenerator - Stroke generation (static methods) 
-12. ClipMask - 1-bit stencil buffer management (class)
-13. ImageProcessor - ImageLike validation and conversion (static methods)
-14. ColorParser - CSS color string parsing (static methods)
+12. BitBuffer - 1-bit per pixel utility (composition component)
+13. BoundsTracker - Reusable bounds tracking utility (composition component)
+14. ClipMask - 1-bit stencil buffer management (class)
+15. SourceMask - 1-bit source coverage tracking (class)
+16. ShadowBuffer - Sparse shadow alpha storage (class)
+17. ImageProcessor - ImageLike validation and conversion (static methods)
+18. ColorParser - CSS color string parsing (static methods)
 
 **Phase 2.5: Paint Sources**
-15. Gradient - Linear, radial, and conic gradient paint sources
-16. Pattern - Repeating image pattern paint sources
+19. Gradient - Linear, radial, and conic gradient paint sources
+20. Pattern - Repeating image pattern paint sources
 
 **Phase 3: Rendering Classes**
-17. Rasterizer - Rendering pipeline (class)
-18. Context2D - Main drawing API (class)
+21. Rasterizer - Rendering pipeline (class)
+22. Context2D - Main drawing API (class)
 
 ## License
 
