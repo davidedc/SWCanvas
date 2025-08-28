@@ -24,14 +24,8 @@ class SourceMask {
         // Default to 0 (no coverage by default)
         this._bitBuffer = new BitBuffer(width, height, 0);
         
-        // Bounds tracking for optimization
-        this._bounds = {
-            minX: Infinity,
-            minY: Infinity, 
-            maxX: -Infinity,
-            maxY: -Infinity,
-            isEmpty: true
-        };
+        // Bounds tracking for optimization using composition
+        this._boundsTracker = new BoundsTracker();
         
         // Make dimensions immutable
         Object.defineProperty(this, 'width', { value: width, writable: false });
@@ -67,18 +61,7 @@ class SourceMask {
         
         // Update bounds if pixel became covered
         if (covered && !wasCovered) {
-            if (this._bounds.isEmpty) {
-                this._bounds.minX = x;
-                this._bounds.minY = y;
-                this._bounds.maxX = x;
-                this._bounds.maxY = y;
-                this._bounds.isEmpty = false;
-            } else {
-                this._bounds.minX = Math.min(this._bounds.minX, x);
-                this._bounds.minY = Math.min(this._bounds.minY, y);
-                this._bounds.maxX = Math.max(this._bounds.maxX, x);
-                this._bounds.maxY = Math.max(this._bounds.maxY, y);
-            }
+            this._boundsTracker.updateBounds(x, y);
         }
         // Note: We don't shrink bounds when pixels are uncovered for performance
         // Clear() resets bounds completely
@@ -89,13 +72,7 @@ class SourceMask {
      */
     clear() {
         this._bitBuffer.clear();
-        this._bounds = {
-            minX: Infinity,
-            minY: Infinity,
-            maxX: -Infinity, 
-            maxY: -Infinity,
-            isEmpty: true
-        };
+        this._boundsTracker.reset();
     }
     
     /**
@@ -103,7 +80,7 @@ class SourceMask {
      * @returns {boolean} True if no pixels are covered
      */
     isEmpty() {
-        return this._bounds.isEmpty;
+        return this._boundsTracker.isEmpty();
     }
     
     /**
@@ -111,13 +88,7 @@ class SourceMask {
      * @returns {Object} {minX, minY, maxX, maxY, isEmpty} bounds
      */
     getBounds() {
-        return {
-            minX: this._bounds.minX,
-            minY: this._bounds.minY,
-            maxX: this._bounds.maxX,
-            maxY: this._bounds.maxY,
-            isEmpty: this._bounds.isEmpty
-        };
+        return this._boundsTracker.getBounds();
     }
     
     /**
@@ -127,7 +98,7 @@ class SourceMask {
      * @returns {Object} {minX, minY, maxX, maxY, isEmpty} optimized iteration bounds
      */
     getIterationBounds(clipMask = null, isCanvasWideCompositing = false) {
-        if (this._bounds.isEmpty) {
+        if (this._boundsTracker.isEmpty()) {
             return { minX: 0, minY: 0, maxX: -1, maxY: -1, isEmpty: true };
         }
         
@@ -156,11 +127,12 @@ class SourceMask {
         }
         
         // For local compositing operations, use source bounds only
+        const sourceBounds = this._boundsTracker.getBounds();
         let bounds = {
-            minX: Math.max(0, this._bounds.minX),
-            minY: Math.max(0, this._bounds.minY),
-            maxX: Math.min(this.width - 1, this._bounds.maxX),
-            maxY: Math.min(this.height - 1, this._bounds.maxY),
+            minX: Math.max(0, sourceBounds.minX),
+            minY: Math.max(0, sourceBounds.minY),
+            maxX: Math.min(this.width - 1, sourceBounds.maxX),
+            maxY: Math.min(this.height - 1, sourceBounds.maxY),
             isEmpty: false
         };
         
@@ -196,8 +168,9 @@ class SourceMask {
      */
     toString() {
         const memoryKB = (this.getMemoryUsage() / 1024).toFixed(2);
-        const boundsStr = this._bounds.isEmpty ? 'empty' : 
-            `(${this._bounds.minX},${this._bounds.minY})-(${this._bounds.maxX},${this._bounds.maxY})`;
+        const bounds = this._boundsTracker.getBounds();
+        const boundsStr = bounds.isEmpty ? 'empty' : 
+            `(${bounds.minX},${bounds.minY})-(${bounds.maxX},${bounds.maxY})`;
         return `SourceMask(${this.width}×${this.height}, ${memoryKB}KB, bounds: ${boundsStr})`;
     }
 }

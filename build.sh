@@ -57,6 +57,8 @@ cat src/StrokeGenerator.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
 cat src/BitBuffer.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
+cat src/BoundsTracker.js >> dist/swcanvas.js
+echo "" >> dist/swcanvas.js
 cat src/ClipMask.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
 cat src/SourceMask.js >> dist/swcanvas.js
@@ -149,6 +151,7 @@ if (typeof window !== 'undefined') {
             PngEncoder: PngEncoder,
             PngEncodingOptions: PngEncodingOptions,
             BitBuffer: BitBuffer,
+            BoundsTracker: BoundsTracker,
             ClipMask: ClipMask,
             SourceMask: SourceMask,
             ShadowBuffer: ShadowBuffer,
@@ -187,6 +190,7 @@ if (typeof window !== 'undefined') {
             PngEncoder: PngEncoder,
             PngEncodingOptions: PngEncodingOptions,
             BitBuffer: BitBuffer,
+            BoundsTracker: BoundsTracker,
             ClipMask: ClipMask,
             SourceMask: SourceMask,
             ShadowBuffer: ShadowBuffer,

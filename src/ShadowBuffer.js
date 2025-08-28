@@ -44,14 +44,8 @@ class ShadowBuffer {
         // Key format: "x,y" -> alpha value (0-1)
         this._alphaData = {};
         
-        // Bounding box of actual data (for optimization)
-        this._bounds = {
-            minX: Infinity,
-            maxX: -Infinity,
-            minY: Infinity,
-            maxY: -Infinity,
-            isEmpty: true
-        };
+        // Bounds tracking for optimization using composition
+        this._boundsTracker = new BoundsTracker();
         
         // Make properties immutable
         Object.defineProperty(this, 'originalWidth', { value: width, writable: false });
@@ -87,16 +81,7 @@ class ShadowBuffer {
         this._alphaData[key] = Math.min(1.0, currentAlpha + alpha);
         
         // Update bounds
-        if (this._bounds.isEmpty) {
-            this._bounds.minX = this._bounds.maxX = extX;
-            this._bounds.minY = this._bounds.maxY = extY;
-            this._bounds.isEmpty = false;
-        } else {
-            this._bounds.minX = Math.min(this._bounds.minX, extX);
-            this._bounds.maxX = Math.max(this._bounds.maxX, extX);
-            this._bounds.minY = Math.min(this._bounds.minY, extY);
-            this._bounds.maxY = Math.max(this._bounds.maxY, extY);
-        }
+        this._boundsTracker.updateBounds(extX, extY);
     }
     
     /**
@@ -134,16 +119,7 @@ class ShadowBuffer {
             this._alphaData[key] = Math.min(1.0, alpha);
             
             // Update bounds if needed
-            if (this._bounds.isEmpty) {
-                this._bounds.minX = this._bounds.maxX = x;
-                this._bounds.minY = this._bounds.maxY = y;
-                this._bounds.isEmpty = false;
-            } else {
-                this._bounds.minX = Math.min(this._bounds.minX, x);
-                this._bounds.maxX = Math.max(this._bounds.maxX, x);
-                this._bounds.minY = Math.min(this._bounds.minY, y);
-                this._bounds.maxY = Math.max(this._bounds.maxY, y);
-            }
+            this._boundsTracker.updateBounds(x, y);
         }
     }
     
@@ -152,13 +128,7 @@ class ShadowBuffer {
      */
     clear() {
         this._alphaData = {};
-        this._bounds = {
-            minX: Infinity,
-            maxX: -Infinity,
-            minY: Infinity,
-            maxY: -Infinity,
-            isEmpty: true
-        };
+        this._boundsTracker.reset();
     }
     
     /**
@@ -166,13 +136,7 @@ class ShadowBuffer {
      * @returns {Object} Bounds object with minX, maxX, minY, maxY, isEmpty
      */
     getBounds() {
-        return {
-            minX: this._bounds.minX,
-            maxX: this._bounds.maxX,
-            minY: this._bounds.minY,
-            maxY: this._bounds.maxY,
-            isEmpty: this._bounds.isEmpty
-        };
+        return this._boundsTracker.getBounds();
     }
     
     /**
@@ -218,13 +182,7 @@ class ShadowBuffer {
         }
         
         // Copy bounds
-        clone._bounds = {
-            minX: this._bounds.minX,
-            maxX: this._bounds.maxX,
-            minY: this._bounds.minY,
-            maxY: this._bounds.maxY,
-            isEmpty: this._bounds.isEmpty
-        };
+        clone._boundsTracker = this._boundsTracker.clone();
         
         return clone;
     }
@@ -235,7 +193,7 @@ class ShadowBuffer {
      */
     toDenseArray() {
         // Only create dense array for the actual bounds (plus blur padding)
-        if (this._bounds.isEmpty) {
+        if (this._boundsTracker.isEmpty()) {
             return {
                 data: new Float32Array(0),
                 width: 0,
@@ -246,11 +204,12 @@ class ShadowBuffer {
         }
         
         // Expand bounds by blur radius for blur processing
+        const bounds = this._boundsTracker.getBounds();
         const padding = this._maxBlurRadius;
-        const minX = Math.max(0, this._bounds.minX - padding);
-        const maxX = Math.min(this._extendedWidth - 1, this._bounds.maxX + padding);
-        const minY = Math.max(0, this._bounds.minY - padding);
-        const maxY = Math.min(this._extendedHeight - 1, this._bounds.maxY + padding);
+        const minX = Math.max(0, bounds.minX - padding);
+        const maxX = Math.min(this._extendedWidth - 1, bounds.maxX + padding);
+        const minY = Math.max(0, bounds.minY - padding);
+        const maxY = Math.min(this._extendedHeight - 1, bounds.maxY + padding);
         
         const width = maxX - minX + 1;
         const height = maxY - minY + 1;
