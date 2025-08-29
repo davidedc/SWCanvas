@@ -2,7 +2,7 @@
 
 A deterministic 2D Javascript raster engine with Canvas-like API, cross-browser and Node.js.
 
-**🎨 [Interactive Demo](examples/showcase.html)** • **🧪 [Visual Tests](tests/browser/index.html)** • **📊 [Minimal Example](tests/browser/minimal-example.html)**
+**🎨 [Demo](examples/showcase.html)** • **🧪 [Tests](tests/browser/index.html)** • **📊 [Minimal Example](tests/browser/minimal-example.html)**
 
 ## Features
 
