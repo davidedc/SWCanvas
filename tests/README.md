@@ -106,7 +106,7 @@ test('Surface creation with valid dimensions', () => {
 - **138 visual tests** that generate actual rendered images
 - **Output**: PNG files (Node.js) + side-by-side comparison (browser)
 - **Environment**: PNG generation in Node.js, visual comparison in browser
-- **Focus**: Rendering accuracy, visual consistency, pixel-perfect output
+- **Focus**: Rendering accuracy, visual consistency
 
 **Test Categories**:
 - ✅ **Phase 1**: Basic transformations (translate, scale, rotate) - 8 tests
@@ -141,7 +141,7 @@ registerVisualTest('alpha-test', {
         ctx.globalAlpha = 0.5;
         ctx.fillStyle = 'green';  
         ctx.fillRect(40, 40, 80, 60);
-        // → Generates BMP for pixel-perfect verification
+        // → Generates image file for verification
     }
 });
 ```
@@ -177,7 +177,7 @@ test('Alpha blending test - semi-transparent rectangles', () => {
 2. **Fallback Safety**: Core tests work even when visual tests are unavailable  
 3. **Cross-Platform Consistency**: Node.js validates math, browser validates visual output
 4. **No Code Duplication**: Visual tests define drawing once, used by both test types
-5. **Comprehensive Coverage**: Mathematical correctness + pixel-perfect rendering validation
+5. **Comprehensive Coverage**: Mathematical correctness + rendering validation
 
 **Benefits of Complementary Testing**:
 - **Catch More Bugs**: Logic errors caught by assertions, rendering errors caught by visual comparison
@@ -267,7 +267,7 @@ Standard HTML5 Canvas API ensures consistent colors:
 
 ### Comprehensive Modular Test Coverage
 - **36 modular core tests** covering all API functionality with individual files
-- **138 modular visual tests** covering all major Canvas2D features with pixel-perfect accuracy
+- **138 modular visual tests** covering all major Canvas2D features
 - **Build-time concatenation** for optimal performance
 - **Smart test runner** with automatic fallback system
 - **Cross-platform validation** (Node.js + browsers)

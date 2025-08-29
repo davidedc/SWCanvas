@@ -6,17 +6,38 @@ A deterministic 2D Javascript raster engine with Canvas-like API, cross-browser 
 
 ## Features
 
-- **Deterministic Rendering**: Identical results across all browsers and Node.js
+- **Cross-platform Deterministic Rendering**: Identical results across all browsers and Node.js
 - **HTML5 Canvas Compatibility**: Drop-in replacement with familiar API  
 - **Object-Oriented Design**: Clean ES6 classes following effective OO principles
 - **Geometric Path Hit Testing**: Complete `isPointInPath` and `isPointInStroke` implementation with accurate geometric calculation
 - **Memory Efficient Clipping**: Stencil-based clipping system with proper intersection support
 - **Sub-pixel Stroke Rendering**: Thin strokes render with proportional opacity, works with all paint sources
 - **Full Porter-Duff Compositing**: Complete `globalCompositeOperation` support with all 10 standard operations working correctly
-- **Comprehensive Test Coverage**: 36 core tests + 138 visual tests ensuring pixel-perfect accuracy with modular architecture
+- **Comprehensive Test Coverage**: 36 core tests + 138 visual tests
 - **Immutable Value Objects**: Point, Rectangle, Transform2D, Color prevent mutation bugs
 - **Cross-Platform**: Works in Node.js and browsers
 - **No Dependencies**: Pure JavaScript implementation
+
+## Not Supported
+
+SWCanvas focuses on deterministic 2D graphics primitives and does not implement several HTML5 Canvas features:
+
+- **Text Rendering / Advanced Typography**: No `fillText()`, `strokeText()`, `measureText()` or font handling, no text baseline, direction, or complex text layout
+- **Image Loading**: No built-in image loading from URLs or files (use ImageLike objects with raw pixel data)
+- **Video/Media**: No video frame rendering or media stream support
+- **Filter Effects**: No CSS-style filters or convolution matrices
+- **Canvas-to-Canvas Blitting**: Limited `drawImage()` support (works with ImageLike objects, not arbitrary Canvas elements)
+- **Pixel Manipulation Beyond ImageData**: No advanced pixel-level operations beyond `getImageData()/putImageData()`
+
+### Performance Limitations
+
+**⚠️ Important Performance Note**: SWCanvas prioritized cross-platform rendering consistency, educational and debugging purposes, and is **not optimized for**:
+- Real-time animations or games
+- High-frequency updates (>30 FPS)
+- Complex scenes with many elements
+- Performance-critical applications
+
+For animations beyond very basic drawings, expect significant performance limitations. The rendering engine uses CPU-based pixel manipulation in Javascript without GPU acceleration, making it unsuitable for intensive animated content.
 
 ## Quick Start
 
@@ -145,7 +166,7 @@ Open `tests/browser/index.html` in a web browser for:
 ### Test Architecture
 
 - **Core Functionality Tests** (36): Individual test files in `/tests/core/` - API correctness, edge cases, mathematical accuracy
-- **Visual Rendering Tests** (138): Individual test files in `/tests/visual/` - Pixel-perfect rendering verification with PNG generation  
+- **Visual Rendering Tests** (138): Individual test files in `/tests/visual/` - Rendering verification with PNG generation  
 - **Browser Tests**: Interactive visual comparison tools using built test suites with HTML5 Canvas vs SWCanvas side-by-side
 
 The modular architecture allows individual test development while maintaining build-time concatenation for performance.
@@ -657,7 +678,7 @@ dist/             # Built library
 
 SWCanvas uses a comprehensive dual test system:
 - **36 core functionality tests**: Programmatic API verification with assertions
-- **138 visual rendering tests**: Pixel-perfect PNG generation and comparison
+- **138 visual rendering tests**: PNG (lossless) generation and comparison
 - **Modular architecture**: Individual test files auto-concatenated at build time
 
 See [tests/README.md](tests/README.md) for complete test documentation, adding tests, and build utilities.
@@ -710,4 +731,4 @@ MIT License - see LICENSE file for details.
 4. **Add Tests**: Create individual test files in `/tests/core/` or `/tests/visual/` (see renumbering utility for advanced organization)
 5. **Verify**: Ensure identical results in both Node.js and browser
 
-The comprehensive test suite ensures any changes maintain pixel-perfect compatibility with HTML5 Canvas.
+The comprehensive test suite ensures any changes maintain compatibility/similarity with HTML5 Canvas.

@@ -4,7 +4,7 @@ This file provides Claude with essential context about the SWCanvas project for 
 
 ## Project Overview
 
-**SWCanvas** is a deterministic 2D raster engine with dual API architecture that produces pixel-perfect, identical results across all platforms. It provides both HTML5 Canvas-compatible API and a high-performance Core API.
+**SWCanvas** is a deterministic 2D raster engine with dual API architecture that produces identical results across all platforms. It provides both HTML5 Canvas-compatible API and a high-performance Core API.
 
 ### Key Characteristics
 - **Deterministic**: Same input → same output on any platform
@@ -13,7 +13,7 @@ This file provides Claude with essential context about the SWCanvas project for 
 - **Drop-in replacement**: True HTML5 Canvas 2D Context compatibility
 - **Memory efficient**: 1-bit stencil clipping, optimized algorithms
 - **Sub-pixel accurate**: Thin strokes render with proportional opacity (no anti-aliasing)
-- **Well-tested**: 36 core tests + 138 visual tests with pixel-perfect validation
+- **Well-tested**: 36 core tests + 138 visual tests with pixel-level validation
 - **Paint Sources**: Full HTML5-compatible gradients (linear, radial, conic) and patterns
 
 ## API Usage
@@ -100,7 +100,7 @@ src/ColorParser.js            # CSS color string parsing (hex, rgb, named colors
 - **Universal paint source support**: Works with Colors, Gradients, and Patterns seamlessly
 - **Implementation location**: `Rasterizer.js:270-277` calculates opacity, `PolygonFiller.js` applies during paint evaluation
 - **Formula**: `subPixelOpacity = lineWidth` (for strokes < 1px)
-- **Visual consistency**: Maintains deterministic pixel-perfect output across platforms
+- **Visual consistency**: Maintains deterministic output across platforms
 - **Browser compatibility**: Matches modern HTML5Canvas behavior for edge cases
 
 #### Thick Polyline Join Testing
@@ -133,7 +133,7 @@ src/ColorParser.js            # CSS color string parsing (hex, rgb, named colors
 
 #### Shadow Rendering System
 - **HTML5 Canvas-compatible shadow properties**: `shadowColor`, `shadowBlur`, `shadowOffsetX`, `shadowOffsetY` with full API compatibility
-- **Dual-buffer shadow pipeline**: Shape→ShadowBuffer→BoxBlur→Composite→OriginalShape for high-quality shadow rendering
+- **Dual-buffer shadow pipeline**: Shape→ShadowBuffer→BoxBlur→Composite→OriginalShape for shadow rendering
 - **ShadowBuffer class**: Sparse alpha storage using "x,y" string keys with extended bounds to handle blur overflow beyond canvas edges
 - **BoxBlur class**: Multi-pass box blur algorithm approximating Gaussian blur via Central Limit Theorem (3-pass default)
 - **Memory efficient**: Only non-zero alpha pixels stored, automatic bounds tracking minimizes processing area

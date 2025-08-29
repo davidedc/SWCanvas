@@ -309,7 +309,7 @@ Debug utilities complement the main test suite:
 
 - **Main tests**: Comprehensive automated validation
 - **Debug utilities**: Focused investigation of specific issues
-- **Visual tests**: Cross-platform pixel-perfect validation
+- **Visual tests**: Cross-platform validation
 - **Debug scripts**: Developer workflow for rapid iteration
 
 Use debug utilities during development, then create proper tests in `/tests/visual/` or `/tests/core/` for permanent validation.

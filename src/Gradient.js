@@ -1,7 +1,7 @@
 /**
  * Gradient classes for SWCanvas
  * 
- * Implements HTML5 Canvas gradient support with deterministic, pixel-perfect rendering.
+ * Implements HTML5 Canvas gradient support with deterministic rendering.
  * Follows SWCanvas's immutable object-oriented design principles.
  * 
  * Gradients are paint sources that can replace solid colors in fillStyle/strokeStyle.

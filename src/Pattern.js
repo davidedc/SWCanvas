@@ -1,7 +1,7 @@
 /**
  * Pattern class for SWCanvas
  * 
- * Implements HTML5 Canvas pattern support with deterministic, pixel-perfect rendering.
+ * Implements HTML5 Canvas pattern support with deterministic rendering.
  * Follows SWCanvas's immutable object-oriented design principles.
  * 
  * Patterns are paint sources that tile ImageLike objects and can replace solid colors.

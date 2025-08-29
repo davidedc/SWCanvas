@@ -274,8 +274,6 @@ Shadow properties are fully integrated into the context state stack:
 - **Default values**: `shadowColor` defaults to transparent, other properties default to 0
 - **Property validation**: Blur radius and offsets accept negative values per HTML5 Canvas specification
 
-This shadow system provides pixel-perfect compatibility with HTML5 Canvas while maintaining the performance characteristics expected from SWCanvas's deterministic rendering engine.
-
 ## Composite Operations System
 
 SWCanvas implements a comprehensive Porter-Duff composite operations system that provides HTML5 Canvas-compatible blending modes with mathematically correct rendering.
