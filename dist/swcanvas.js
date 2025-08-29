@@ -6279,7 +6279,7 @@ class ColorParser {
 /**
  * Gradient classes for SWCanvas
  * 
- * Implements HTML5 Canvas gradient support with deterministic, pixel-perfect rendering.
+ * Implements HTML5 Canvas gradient support with deterministic rendering.
  * Follows SWCanvas's immutable object-oriented design principles.
  * 
  * Gradients are paint sources that can replace solid colors in fillStyle/strokeStyle.
@@ -6586,7 +6586,7 @@ class ConicGradient extends Gradient {
 /**
  * Pattern class for SWCanvas
  * 
- * Implements HTML5 Canvas pattern support with deterministic, pixel-perfect rendering.
+ * Implements HTML5 Canvas pattern support with deterministic rendering.
  * Follows SWCanvas's immutable object-oriented design principles.
  * 
  * Patterns are paint sources that tile ImageLike objects and can replace solid colors.
