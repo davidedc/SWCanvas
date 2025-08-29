@@ -12,7 +12,6 @@ Each document has a **single responsibility** to avoid duplication:
 - **tests/build/README.md**: Build utility scripts documentation (concat-tests.js, renumber-tests.js)
 - **debug/README.md**: Debug utilities, investigation scripts, and debugging workflows
 - **CLAUDE.md**: Claude-specific development context and workflow tips ONLY
-- **specs-and-high-level-project-plan.md**: Original requirements specification
 
 ### What NOT to Include (Anti-Duplication Rules)
 
@@ -61,7 +60,6 @@ Each document has a **single responsibility** to avoid duplication:
 - **Debug utilities** → debug/README.md
 - **Examples and demos** → examples/README.md
 - **Development with Claude** → CLAUDE.md
-- **Original specifications** → specs-and-high-level-project-plan.md
 
 ## Documentation Maintenance
 
