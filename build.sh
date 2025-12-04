@@ -25,7 +25,7 @@ EOF
 
 # Concatenate source files in dependency order
 # Phase 1: Core Foundation classes (no dependencies)
-cat src/Color.js >> dist/swcanvas.js
+cat ../SWCanvas-primitives/Color.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
 cat src/Point.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
@@ -69,7 +69,7 @@ cat src/BoxBlur.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
 cat src/ImageProcessor.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
-cat src/ColorParser.js >> dist/swcanvas.js
+cat ../SWCanvas-primitives/ColorParser.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
 
 # Phase 2.5: Paint sources (depend on foundation + ColorParser)

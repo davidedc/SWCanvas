@@ -14,15 +14,15 @@ class Rasterizer {
         if (!surface || typeof surface !== 'object') {
             throw new Error('Rasterizer requires a valid Surface object');
         }
-        
+
         if (!surface.width || !surface.height || !surface.data) {
             throw new Error('Surface must have width, height, and data properties');
         }
-        
+
         this._surface = surface;
         this._currentOp = null;
     }
-    
+
     /**
      * Get the target surface
      * @returns {Surface} Target surface
@@ -30,7 +30,7 @@ class Rasterizer {
     get surface() {
         return this._surface;
     }
-    
+
     /**
      * Get current operation state
      * @returns {Object|null} Current operation state
@@ -45,7 +45,7 @@ class Rasterizer {
      */
     beginOp(params = {}) {
         this._validateParams(params);
-        
+
         this._currentOp = {
             composite: params.composite || 'source-over',
             globalAlpha: params.globalAlpha !== undefined ? params.globalAlpha : 1.0,
@@ -55,7 +55,7 @@ class Rasterizer {
             strokeStyle: params.strokeStyle || null,
             sourceMask: null,  // Will be initialized if needed for canvas-wide compositing
             // Shadow properties
-            shadowColor: params.shadowColor || new Color(0, 0, 0, 0),
+            shadowColor: params.shadowColor || Color.transparent,
             shadowBlur: params.shadowBlur || 0,
             shadowOffsetX: params.shadowOffsetX || 0,
             shadowOffsetY: params.shadowOffsetY || 0
@@ -66,14 +66,14 @@ class Rasterizer {
             this._currentOp.sourceMask = new SourceMask(this._surface.width, this._surface.height);
         }
     }
-    
+
     /**
      * End the current rendering operation
      */
     endOp() {
         this._currentOp = null;
     }
-    
+
     /**
      * Validate operation parameters
      * @param {Object} params - Parameters to validate
@@ -85,11 +85,11 @@ class Rasterizer {
                 throw new Error('globalAlpha must be a number between 0 and 1');
             }
         }
-        
+
         if (params.composite && !CompositeOperations.isSupported(params.composite)) {
             throw new Error(`Invalid composite operation. Supported: ${CompositeOperations.getSupportedOperations().join(', ')}`);
         }
-        
+
         if (params.transform && !(params.transform instanceof Transform2D)) {
             throw new Error('transform must be a Transform2D instance');
         }
@@ -135,10 +135,10 @@ class Rasterizer {
      */
     _needsShadow() {
         if (!this._currentOp) return false;
-        
+
         const op = this._currentOp;
-        return op.shadowColor.a > 0 && 
-               (op.shadowBlur > 0 || op.shadowOffsetX !== 0 || op.shadowOffsetY !== 0);
+        return op.shadowColor.a > 0 &&
+            (op.shadowBlur > 0 || op.shadowOffsetX !== 0 || op.shadowOffsetY !== 0);
     }
 
     /**
@@ -189,26 +189,26 @@ class Rasterizer {
     _renderToShadowBuffer(shadowBuffer, renderFunc) {
         // This is a simplified approach - we render normally and extract alpha
         // A more sophisticated implementation would render directly to the shadow buffer
-        
+
         // For now, create a temporary surface to capture the shape
         const tempSurface = new Surface(this._surface.width, this._surface.height);
         const tempRasterizer = new Rasterizer(tempSurface);
-        
+
         // Set up operation for temp rendering (without shadow)
         const opCopy = Object.assign({}, this._currentOp);
-        opCopy.shadowColor = new Color(0, 0, 0, 0); // No shadow for temp render
+        opCopy.shadowColor = Color.transparent; // No shadow for temp render
         opCopy.shadowBlur = 0;
         opCopy.shadowOffsetX = 0;
         opCopy.shadowOffsetY = 0;
-        
+
         tempRasterizer._currentOp = opCopy;
-        
+
         // Render to temp surface
         const originalSurface = this._surface;
         const originalCurrentOp = this._currentOp;
         this._surface = tempSurface;
         this._currentOp = opCopy;
-        
+
         try {
             renderFunc();
         } finally {
@@ -216,13 +216,13 @@ class Rasterizer {
             this._surface = originalSurface;
             this._currentOp = originalCurrentOp;
         }
-        
+
         // Extract alpha from temp surface to shadow buffer
         for (let y = 0; y < tempSurface.height; y++) {
             for (let x = 0; x < tempSurface.width; x++) {
                 const offset = y * tempSurface.stride + x * 4;
                 const alpha = tempSurface.data[offset + 3] / 255.0; // Normalize to 0-1
-                
+
                 if (alpha > 0) {
                     shadowBuffer.addAlpha(x, y, alpha);
                 }
@@ -240,18 +240,18 @@ class Rasterizer {
     _applyShadowBlur(shadowBuffer, blurRadius) {
         // Convert shadow buffer to dense array for blur processing
         const denseData = shadowBuffer.toDenseArray();
-        
+
         if (denseData.width === 0 || denseData.height === 0) {
             return shadowBuffer; // Nothing to blur
         }
-        
+
         // Apply box blur
         const blurredData = BoxBlur.blur(denseData.data, denseData.width, denseData.height, blurRadius);
-        
+
         // Create new shadow buffer with blurred data
         const blurredBuffer = new ShadowBuffer(shadowBuffer.originalWidth, shadowBuffer.originalHeight, Math.ceil(blurRadius));
         blurredBuffer.fromDenseArray(blurredData, denseData.width, denseData.height, denseData.offsetX, denseData.offsetY);
-        
+
         return blurredBuffer;
     }
 
@@ -266,27 +266,27 @@ class Rasterizer {
     _compositeShadowToSurface(shadowBuffer, shadowColor, offsetX, offsetY) {
         const surface = this._surface;
         const globalAlpha = this._currentOp.globalAlpha;
-        
+
         // Apply global alpha to shadow color using the standard method
         const effectiveShadowColor = shadowColor.withGlobalAlpha(globalAlpha);
-        
+
         // Iterate over shadow pixels and composite to surface
         for (const pixel of shadowBuffer.getPixels()) {
             // Convert from extended buffer coordinates to surface coordinates
             // ShadowBuffer stores pixels in extended coordinates, we need to convert back to surface coordinates
             const surfaceX = Math.round(pixel.x - shadowBuffer.extendedOffsetX + offsetX);
             const surfaceY = Math.round(pixel.y - shadowBuffer.extendedOffsetY + offsetY);
-            
+
             // Bounds check
             if (surfaceX < 0 || surfaceX >= surface.width || surfaceY < 0 || surfaceY >= surface.height) {
                 continue;
             }
-            
+
             // Check clipping
             if (this._isPixelClipped(surfaceX, surfaceY)) {
                 continue;
             }
-            
+
             // Calculate final shadow alpha by combining pixel alpha with shadow color alpha
             // pixel.alpha is 0-1 (from blurred shadow buffer)
             // effectiveShadowColor.a is 0-255 range
@@ -299,23 +299,23 @@ class Rasterizer {
             const finalShadowAlpha = Math.min(255, Math.round(
                 pixel.alpha * effectiveShadowColor.a * BLUR_DILUTION_COMPENSATION
             ));
-            
+
             if (finalShadowAlpha <= 0) continue;
-            
+
             // Get surface pixel
             const offset = surfaceY * surface.stride + surfaceX * 4;
             const dstR = surface.data[offset];
             const dstG = surface.data[offset + 1];
             const dstB = surface.data[offset + 2];
             const dstA = surface.data[offset + 3];
-            
+
             // Composite shadow (using source-over blending)
             const result = CompositeOperations.blendPixel(
                 'source-over',
                 effectiveShadowColor.r, effectiveShadowColor.g, effectiveShadowColor.b, finalShadowAlpha,
                 dstR, dstG, dstB, dstA
             );
-            
+
             // Write result
             surface.data[offset] = result.r;
             surface.data[offset + 1] = result.g;
@@ -334,17 +334,17 @@ class Rasterizer {
      */
     fillRect(x, y, width, height, color) {
         this._requireActiveOp();
-        
+
         // Validate parameters
-        if (typeof x !== 'number' || typeof y !== 'number' || 
+        if (typeof x !== 'number' || typeof y !== 'number' ||
             typeof width !== 'number' || typeof height !== 'number') {
             throw new Error('Rectangle coordinates must be numbers');
         }
-        
+
         if (width < 0 || height < 0) {
             throw new Error('Rectangle dimensions must be non-negative');
         }
-        
+
         if (width === 0 || height === 0) return; // Nothing to draw
 
         // Wrap the actual rectangle filling logic with shadow pipeline
@@ -368,51 +368,51 @@ class Rasterizer {
             // Create a path for the rectangle
             const rectPath = new SWPath2D();
             rectPath.rect(x, y, width, height);
-            
+
             // Temporarily override fill style with provided color if specified
             const originalFillStyle = this._currentOp.fillStyle;
             if (color && Array.isArray(color)) {
                 // Only override for array colors (like from clearRect)
                 this._currentOp.fillStyle = new Color(color[0], color[1], color[2], color[3]);
             }
-            
+
             // Use the existing path filling logic which handles stencil clipping and canvas-wide compositing properly
             this._fillInternal(rectPath, 'nonzero');
-            
+
             // Restore original fill style
             if (color && Array.isArray(color)) {
                 this._currentOp.fillStyle = originalFillStyle;
             }
             return;
         }
-        
+
         // No clipping - use optimized direct rectangle filling
         // Transform rectangle corners
         const transform = this._currentOp.transform;
-        const topLeft = transform.transformPoint({x: x, y: y});
-        const topRight = transform.transformPoint({x: x + width, y: y});
-        const bottomLeft = transform.transformPoint({x: x, y: y + height});
-        const bottomRight = transform.transformPoint({x: x + width, y: y + height});
-        
+        const topLeft = transform.transformPoint({ x: x, y: y });
+        const topRight = transform.transformPoint({ x: x + width, y: y });
+        const bottomLeft = transform.transformPoint({ x: x, y: y + height });
+        const bottomRight = transform.transformPoint({ x: x + width, y: y + height });
+
         // Find bounding box in device space
         const minX = Math.max(0, Math.floor(Math.min(topLeft.x, topRight.x, bottomLeft.x, bottomRight.x)));
         const maxX = Math.min(this._surface.width - 1, Math.floor(Math.max(topLeft.x, topRight.x, bottomLeft.x, bottomRight.x) - 1));
         const minY = Math.max(0, Math.floor(Math.min(topLeft.y, topRight.y, bottomLeft.y, bottomRight.y)));
         const maxY = Math.min(this._surface.height - 1, Math.floor(Math.max(topLeft.y, topRight.y, bottomLeft.y, bottomRight.y) - 1));
-        
+
         // Optimized path for axis-aligned rectangles with solid colors only
-        if (this._currentOp.transform.b === 0 && this._currentOp.transform.c === 0 && 
+        if (this._currentOp.transform.b === 0 && this._currentOp.transform.c === 0 &&
             (color instanceof Color || Array.isArray(color))) {
             this._fillAxisAlignedRect(minX, minY, maxX - minX + 1, maxY - minY + 1, color);
         } else {
             // Handle rotated rectangles by converting to polygon
             const rectPolygon = [
-                {x: x, y: y},
-                {x: x + width, y: y}, 
-                {x: x + width, y: y + height},
-                {x: x, y: y + height}
+                { x: x, y: y },
+                { x: x + width, y: y },
+                { x: x + width, y: y + height },
+                { x: x, y: y + height }
             ];
-            
+
             // Use existing polygon filling system which handles transforms and stencil clipping
             const rectColor = Array.isArray(color) ? new Color(color[0], color[1], color[2], color[3]) : color;
             PolygonFiller.fillPolygons(this._surface, [rectPolygon], rectColor, 'nonzero', this._currentOp.transform, this._currentOp.clipMask, this._currentOp.globalAlpha, 1.0, this._currentOp.composite);
@@ -431,7 +431,7 @@ class Rasterizer {
     _fillAxisAlignedRect(x, y, width, height, color) {
         const surface = this._surface;
         const globalAlpha = this._currentOp.globalAlpha;
-        
+
         // Convert color to Color object if needed and apply global alpha
         const colorObj = Array.isArray(color) ? new Color(color[0], color[1], color[2], color[3]) : color;
         const finalColor = colorObj.withGlobalAlpha(globalAlpha);
@@ -439,33 +439,33 @@ class Rasterizer {
         const srcG = finalColor.g;
         const srcB = finalColor.b;
         const srcA = finalColor.a;
-        
+
         for (let py = y; py < y + height; py++) {
             if (py < 0 || py >= surface.height) continue;
-            
+
             for (let px = x; px < x + width; px++) {
                 if (px < 0 || px >= surface.width) continue;
-                
+
                 // Check stencil buffer clipping
                 if (this._currentOp.clipMask && this._isPixelClipped(px, py)) {
                     continue; // Skip pixels clipped by stencil buffer
                 }
-                
+
                 const offset = py * surface.stride + px * 4;
-                
+
                 // Get destination pixel for blending
                 const dstR = surface.data[offset];
                 const dstG = surface.data[offset + 1];
                 const dstB = surface.data[offset + 2];
                 const dstA = surface.data[offset + 3];
-                
+
                 // Use CompositeOperations for consistent blending
                 const result = CompositeOperations.blendPixel(
                     this._currentOp.composite,
                     srcR, srcG, srcB, srcA,  // source
                     dstR, dstG, dstB, dstA   // destination
                 );
-                
+
                 surface.data[offset] = result.r;
                 surface.data[offset + 1] = result.g;
                 surface.data[offset + 2] = result.b;
@@ -509,13 +509,13 @@ class Rasterizer {
                 // Determine source coverage and color
                 const Sa = sourceMask.getPixel(x, y) ? 1 : 0;
                 let srcColor;
-                
+
                 if (Sa > 0) {
                     // Evaluate paint source at covered pixel
                     srcColor = PolygonFiller._evaluatePaintSource(paintSource, x, y, transform, globalAlpha, subPixelOpacity);
                 } else {
                     // Transparent source for uncovered pixels
-                    srcColor = new Color(0, 0, 0, 0);
+                    srcColor = Color.transparent;
                 }
 
                 // Get destination pixel
@@ -565,14 +565,14 @@ class Rasterizer {
         // Get fill style (Color, Gradient, or Pattern)
         const fillStyle = this._currentOp.fillStyle || new Color(0, 0, 0, 255);
         const fillRule = rule || 'nonzero';
-        
+
         // Flatten path to polygons
         const polygons = PathFlattener.flattenPath(path);
-        
+
         if (this._requiresCanvasWideCompositing(this._currentOp.composite)) {
             // Canvas-wide compositing path: build source mask then perform canvas-wide compositing
             PolygonFiller.fillPolygons(this._surface, polygons, fillStyle, fillRule, this._currentOp.transform, this._currentOp.clipMask, this._currentOp.globalAlpha, 1.0, this._currentOp.composite, this._currentOp.sourceMask);
-            
+
             // Perform canvas-wide compositing pass
             this._performCanvasWideCompositing(fillStyle, this._currentOp.globalAlpha, 1.0);
         } else {
@@ -604,27 +604,27 @@ class Rasterizer {
     _strokeInternal(path, strokeProps) {
         // Get stroke style (Color, Gradient, or Pattern)
         const strokeStyle = this._currentOp.strokeStyle || new Color(0, 0, 0, 255);
-        
+
         // Sub-pixel stroke rendering: calculate opacity adjustment
         let adjustedStrokeProps = strokeProps;
         let subPixelOpacity = 1.0; // Default for strokes > 1px
-        
+
         if (strokeProps.lineWidth < 1.0) {
             // Sub-pixel strokes: render at proportional opacity
             subPixelOpacity = strokeProps.lineWidth;
-            
+
             // Render sub-pixel strokes at 1px width
             // Opacity adjustment handled in paint source evaluation
             adjustedStrokeProps = { ...strokeProps, lineWidth: 1.0 };
         }
-        
+
         // Generate stroke polygons using geometric approach
         const strokePolygons = StrokeGenerator.generateStrokePolygons(path, adjustedStrokeProps);
-        
+
         if (this._requiresCanvasWideCompositing(this._currentOp.composite)) {
             // Canvas-wide compositing path: build source mask then perform canvas-wide compositing
             PolygonFiller.fillPolygons(this._surface, strokePolygons, strokeStyle, 'nonzero', this._currentOp.transform, this._currentOp.clipMask, this._currentOp.globalAlpha, subPixelOpacity, this._currentOp.composite, this._currentOp.sourceMask);
-            
+
             // Perform canvas-wide compositing pass
             this._performCanvasWideCompositing(strokeStyle, this._currentOp.globalAlpha, subPixelOpacity);
         } else {
@@ -670,15 +670,15 @@ class Rasterizer {
     _drawImageInternal(img, sx, sy, sw, sh, dx, dy, dw, dh) {
         // Validate and convert ImageLike (handles RGB→RGBA conversion)
         const imageData = ImageProcessor.validateAndConvert(img);
-        
+
         // Handle different parameter combinations
         let sourceX, sourceY, sourceWidth, sourceHeight;
         let destX, destY, destWidth, destHeight;
-        
+
         if (arguments.length === 3) {
             // drawImage(image, dx, dy)
             sourceX = 0;
-            sourceY = 0; 
+            sourceY = 0;
             sourceWidth = imageData.width;
             sourceHeight = imageData.height;
             destX = sx; // Actually dx
@@ -708,30 +708,30 @@ class Rasterizer {
         } else {
             throw new Error('Invalid number of arguments for drawImage');
         }
-        
+
         // Validate source rectangle bounds
         if (sourceX < 0 || sourceY < 0 || sourceX + sourceWidth > imageData.width || sourceY + sourceHeight > imageData.height) {
             throw new Error('Source rectangle is outside image bounds');
         }
-        
+
         // Apply transform to destination rectangle corners  
         const transform = this._currentOp.transform;
-        const topLeft = transform.transformPoint({x: destX, y: destY});
-        const topRight = transform.transformPoint({x: destX + destWidth, y: destY});
-        const bottomLeft = transform.transformPoint({x: destX, y: destY + destHeight});
-        const bottomRight = transform.transformPoint({x: destX + destWidth, y: destY + destHeight});
-        
+        const topLeft = transform.transformPoint({ x: destX, y: destY });
+        const topRight = transform.transformPoint({ x: destX + destWidth, y: destY });
+        const bottomLeft = transform.transformPoint({ x: destX, y: destY + destHeight });
+        const bottomRight = transform.transformPoint({ x: destX + destWidth, y: destY + destHeight });
+
         // Find bounding box in device space
         const minX = Math.max(0, Math.floor(Math.min(topLeft.x, topRight.x, bottomLeft.x, bottomRight.x)));
         const maxX = Math.min(this._surface.width - 1, Math.ceil(Math.max(topLeft.x, topRight.x, bottomLeft.x, bottomRight.x)));
         const minY = Math.max(0, Math.floor(Math.min(topLeft.y, topRight.y, bottomLeft.y, bottomRight.y)));
         const maxY = Math.min(this._surface.height - 1, Math.ceil(Math.max(topLeft.y, topRight.y, bottomLeft.y, bottomRight.y)));
-        
+
         // Get inverse transform for mapping device pixels back to source  
         const inverseTransform = transform.invert();
-        
+
         const globalAlpha = this._currentOp.globalAlpha;
-        
+
         // Render each pixel in the bounding box
         for (let deviceY = minY; deviceY <= maxY; deviceY++) {
             for (let deviceX = minX; deviceX <= maxX; deviceX++) {
@@ -739,59 +739,59 @@ class Rasterizer {
                 if (this._currentOp.clipMask && this._isPixelClipped(deviceX, deviceY)) {
                     continue;
                 }
-            
-            // Transform device pixel back to destination space
-            const destPoint = inverseTransform.transformPoint({x: deviceX, y: deviceY});
-            
-            // Check if we're inside the destination rectangle
-            if (destPoint.x < destX || destPoint.x >= destX + destWidth || 
-                destPoint.y < destY || destPoint.y >= destY + destHeight) {
-                continue;
-            }
-            
-            // Map destination coordinates to source coordinates
-            const sourceXf = sourceX + (destPoint.x - destX) / destWidth * sourceWidth;
-            const sourceYf = sourceY + (destPoint.y - destY) / destHeight * sourceHeight;
-            
-            // Nearest-neighbor sampling
-            const sourcePX = Math.floor(sourceXf);
-            const sourcePY = Math.floor(sourceYf);
-            
-            // Bounds check for source coordinates
-            if (sourcePX < 0 || sourcePY < 0 || sourcePX >= imageData.width || sourcePY >= imageData.height) {
-                continue;
-            }
-            
-            // Sample source pixel
-            const sourceOffset = (sourcePY * imageData.width + sourcePX) * 4;
-            const srcR = imageData.data[sourceOffset];
-            const srcG = imageData.data[sourceOffset + 1]; 
-            const srcB = imageData.data[sourceOffset + 2];
-            const srcA = imageData.data[sourceOffset + 3];
-            
-            // Apply global alpha
-            const effectiveAlpha = (srcA / 255) * globalAlpha;
-            const finalSrcA = Math.round(effectiveAlpha * 255);
-            
-            // Skip transparent pixels
-            if (finalSrcA === 0) continue;
-            
+
+                // Transform device pixel back to destination space
+                const destPoint = inverseTransform.transformPoint({ x: deviceX, y: deviceY });
+
+                // Check if we're inside the destination rectangle
+                if (destPoint.x < destX || destPoint.x >= destX + destWidth ||
+                    destPoint.y < destY || destPoint.y >= destY + destHeight) {
+                    continue;
+                }
+
+                // Map destination coordinates to source coordinates
+                const sourceXf = sourceX + (destPoint.x - destX) / destWidth * sourceWidth;
+                const sourceYf = sourceY + (destPoint.y - destY) / destHeight * sourceHeight;
+
+                // Nearest-neighbor sampling
+                const sourcePX = Math.floor(sourceXf);
+                const sourcePY = Math.floor(sourceYf);
+
+                // Bounds check for source coordinates
+                if (sourcePX < 0 || sourcePY < 0 || sourcePX >= imageData.width || sourcePY >= imageData.height) {
+                    continue;
+                }
+
+                // Sample source pixel
+                const sourceOffset = (sourcePY * imageData.width + sourcePX) * 4;
+                const srcR = imageData.data[sourceOffset];
+                const srcG = imageData.data[sourceOffset + 1];
+                const srcB = imageData.data[sourceOffset + 2];
+                const srcA = imageData.data[sourceOffset + 3];
+
+                // Apply global alpha
+                const effectiveAlpha = (srcA / 255) * globalAlpha;
+                const finalSrcA = Math.round(effectiveAlpha * 255);
+
+                // Skip transparent pixels
+                if (finalSrcA === 0) continue;
+
                 // Get destination pixel for blending
                 const destOffset = deviceY * this._surface.stride + deviceX * 4;
-                
+
                 // Get destination pixel for blending
                 const dstR = this._surface.data[destOffset];
                 const dstG = this._surface.data[destOffset + 1];
                 const dstB = this._surface.data[destOffset + 2];
                 const dstA = this._surface.data[destOffset + 3];
-                
+
                 // Use CompositeOperations for consistent blending
                 const result = CompositeOperations.blendPixel(
                     this._currentOp.composite,
                     srcR, srcG, srcB, finalSrcA,  // source
                     dstR, dstG, dstB, dstA        // destination
                 );
-                
+
                 this._surface.data[destOffset] = result.r;
                 this._surface.data[destOffset + 1] = result.g;
                 this._surface.data[destOffset + 2] = result.b;

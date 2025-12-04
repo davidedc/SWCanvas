@@ -29,15 +29,15 @@ class PolygonFiller {
         if (!PolygonFiller._isValidPaintSource(paintSource)) {
             throw new Error('Paint source must be a Color, Gradient, or Pattern instance');
         }
-        
+
         // Transform all polygon vertices
-        const transformedPolygons = polygons.map(poly => 
+        const transformedPolygons = polygons.map(poly =>
             poly.map(point => transform.transformPoint(point))
         );
-        
+
         // Find bounding box for optimization
         const bounds = PolygonFiller._calculateBounds(transformedPolygons, surface);
-        
+
         // Process each scanline
         for (let y = bounds.minY; y <= bounds.maxY; y++) {
             PolygonFiller._fillScanline(
@@ -45,7 +45,7 @@ class PolygonFiller {
             );
         }
     }
-    
+
     /**
      * Calculate bounding box for transformed polygons
      * @param {Array} polygons - Transformed polygons
@@ -55,21 +55,21 @@ class PolygonFiller {
      */
     static _calculateBounds(polygons, surface) {
         let minY = Infinity, maxY = -Infinity;
-        
+
         for (const poly of polygons) {
             for (const point of poly) {
                 minY = Math.min(minY, point.y);
                 maxY = Math.max(maxY, point.y);
             }
         }
-        
+
         // Clamp to surface bounds
         return {
             minY: Math.max(0, Math.floor(minY)),
             maxY: Math.min(surface.height - 1, Math.ceil(maxY))
         };
     }
-    
+
     /**
      * Fill a single scanline using polygon intersection and winding rules
      * @param {Surface} surface - Target surface
@@ -87,19 +87,19 @@ class PolygonFiller {
      */
     static _fillScanline(surface, y, polygons, paintSource, fillRule, clipMask, transform, globalAlpha, subPixelOpacity = 1.0, composite = 'source-over', sourceMask = null) {
         const intersections = [];
-        
+
         // Find all intersections with this scanline
         for (const poly of polygons) {
             PolygonFiller._findPolygonIntersections(poly, y + 0.5, intersections);
         }
-        
+
         // Sort intersections by x coordinate
         intersections.sort((a, b) => a.x - b.x);
-        
+
         // Fill spans based on winding rule
         PolygonFiller._fillSpans(surface, y, intersections, paintSource, fillRule, clipMask, transform, globalAlpha, subPixelOpacity, composite, sourceMask);
     }
-    
+
     /**
      * Find intersections between a polygon and a horizontal scanline
      * @param {Array} polygon - Array of {x, y} points
@@ -111,27 +111,27 @@ class PolygonFiller {
         for (let i = 0; i < polygon.length; i++) {
             const p1 = polygon[i];
             const p2 = polygon[(i + 1) % polygon.length];
-            
+
             // Skip horizontal edges (avoid division by zero)
             if (Math.abs(p1.y - p2.y) < 1e-10) continue;
-            
+
             // Check if scanline crosses this edge
             const minY = Math.min(p1.y, p2.y);
             const maxY = Math.max(p1.y, p2.y);
-            
+
             if (y >= minY && y < maxY) { // Note: < maxY to avoid double-counting vertices
                 // Calculate intersection point using linear interpolation
                 const t = (y - p1.y) / (p2.y - p1.y);
                 const x = p1.x + t * (p2.x - p1.x);
-                
+
                 // Determine winding direction
                 const winding = p2.y > p1.y ? 1 : -1;
-                
+
                 intersections.push({ x: x, winding: winding });
             }
         }
     }
-    
+
     /**
      * Fill spans on a scanline based on winding rule
      * @param {Surface} surface - Target surface
@@ -149,36 +149,36 @@ class PolygonFiller {
      */
     static _fillSpans(surface, y, intersections, paintSource, fillRule, clipMask, transform, globalAlpha, subPixelOpacity = 1.0, composite = 'source-over', sourceMask = null) {
         if (intersections.length === 0) return;
-        
+
         let windingNumber = 0;
         let inside = false;
-        
+
         for (let i = 0; i < intersections.length; i++) {
             const intersection = intersections[i];
             const nextIntersection = intersections[i + 1];
-            
+
             // Update winding number
             windingNumber += intersection.winding;
-            
+
             // Determine if we're inside based on fill rule
             if (fillRule === 'evenodd') {
                 inside = (windingNumber % 2) !== 0;
             } else { // nonzero
                 inside = windingNumber !== 0;
             }
-            
+
             // Fill span if we're inside
             if (inside && nextIntersection) {
                 const startX = Math.max(0, Math.ceil(intersection.x));
                 const endX = Math.min(surface.width - 1, Math.floor(nextIntersection.x));
-                
+
                 PolygonFiller._fillPixelSpan(
                     surface, y, startX, endX, paintSource, clipMask, transform, globalAlpha, subPixelOpacity, composite, sourceMask
                 );
             }
         }
     }
-    
+
     /**
      * Fill a horizontal span of pixels with paint source and alpha blending
      * @param {Surface} surface - Target surface
@@ -200,23 +200,23 @@ class PolygonFiller {
             if (clipMask && clipMask.isPixelClipped(x, y)) {
                 continue; // Skip pixels clipped by stencil buffer
             }
-            
+
             // Record source coverage if sourceMask is provided
             if (sourceMask) {
                 sourceMask.setPixel(x, y, true);
                 // For canvas-wide compositing operations, only build source mask - don't draw to surface
                 continue;
             }
-            
+
             // Evaluate paint source at pixel position
             const pixelColor = PolygonFiller._evaluatePaintSource(paintSource, x, y, transform, globalAlpha, subPixelOpacity);
-            
+
             const offset = y * surface.stride + x * 4;
             PolygonFiller._blendPixel(surface, offset, pixelColor, composite);
         }
     }
-    
-    
+
+
     /**
      * Blend a color into a surface pixel using specified composite operation
      * @param {Surface} surface - Target surface
@@ -231,21 +231,21 @@ class PolygonFiller {
         const dstG = surface.data[offset + 1];
         const dstB = surface.data[offset + 2];
         const dstA = surface.data[offset + 3];
-        
+
         // Use CompositeOperations for blending
         const result = CompositeOperations.blendPixel(
             composite,
             color.r, color.g, color.b, color.a,  // source
             dstR, dstG, dstB, dstA               // destination
         );
-        
+
         // Store result
         surface.data[offset] = result.r;
         surface.data[offset + 1] = result.g;
         surface.data[offset + 2] = result.b;
         surface.data[offset + 3] = result.a;
     }
-    
+
     /**
      * Utility method to convert old-style RGBA array to Color instance
      * Maintains backward compatibility during transition
@@ -255,7 +255,7 @@ class PolygonFiller {
     static colorFromRGBA(rgba) {
         return new Color(rgba[0], rgba[1], rgba[2], rgba[3], false);
     }
-    
+
     /**
      * Debug method to visualize polygon bounds
      * @param {Array} polygons - Polygons to analyze
@@ -265,11 +265,11 @@ class PolygonFiller {
         if (polygons.length === 0) {
             return new Rectangle(0, 0, 0, 0);
         }
-        
+
         const points = polygons.flat();
         return Rectangle.boundingBox(points.map(p => new Point(p.x, p.y)));
     }
-    
+
     /**
      * Performance utility to count total vertices in polygon set
      * @param {Array} polygons - Polygons to count
@@ -278,7 +278,7 @@ class PolygonFiller {
     static countVertices(polygons) {
         return polygons.reduce((total, poly) => total + poly.length, 0);
     }
-    
+
     /**
      * Validate paint source type
      * @param {*} paintSource - Object to validate
@@ -287,13 +287,13 @@ class PolygonFiller {
      */
     static _isValidPaintSource(paintSource) {
         return paintSource instanceof Color ||
-               paintSource instanceof Gradient ||
-               paintSource instanceof LinearGradient ||
-               paintSource instanceof RadialGradient ||
-               paintSource instanceof ConicGradient ||
-               paintSource instanceof Pattern;
+            paintSource instanceof Gradient ||
+            paintSource instanceof LinearGradient ||
+            paintSource instanceof RadialGradient ||
+            paintSource instanceof ConicGradient ||
+            paintSource instanceof Pattern;
     }
-    
+
     /**
      * Evaluate paint source at a pixel position
      * @param {Color|Gradient|Pattern} paintSource - Paint source to evaluate
@@ -310,29 +310,29 @@ class PolygonFiller {
         if (paintSource instanceof Color) {
             color = paintSource;
         } else if (paintSource instanceof Gradient ||
-                   paintSource instanceof LinearGradient ||
-                   paintSource instanceof RadialGradient ||
-                   paintSource instanceof ConicGradient) {
+            paintSource instanceof LinearGradient ||
+            paintSource instanceof RadialGradient ||
+            paintSource instanceof ConicGradient) {
             color = paintSource.getColorForPixel(x, y, transform);
         } else if (paintSource instanceof Pattern) {
             color = paintSource.getColorForPixel(x, y, transform);
         } else {
             // Fallback to transparent black
-            color = new Color(0, 0, 0, 0);
+            color = Color.transparent;
         }
-        
+
         // Apply global alpha and sub-pixel opacity
         let resultColor = color.withGlobalAlpha(globalAlpha);
-        
+
         // Apply sub-pixel opacity for thin strokes
         if (subPixelOpacity < 1.0) {
             const adjustedAlpha = Math.round(resultColor.a * subPixelOpacity);
             resultColor = new Color(resultColor.r, resultColor.g, resultColor.b, adjustedAlpha, resultColor.premultiplied);
         }
-        
+
         return resultColor;
     }
-    
+
     /**
      * Test if a point is inside a set of polygons using the specified fill rule
      * @param {number} x - X coordinate of the point
@@ -344,48 +344,48 @@ class PolygonFiller {
      */
     static isPointInPolygons(x, y, polygons, fillRule = 'nonzero') {
         if (polygons.length === 0) return false;
-        
+
         const epsilon = 1e-10;
-        
+
         // First check if point is exactly on any edge (HTML5 Canvas inclusive behavior)
         for (const polygon of polygons) {
             if (polygon.length < 3) continue;
-            
+
             for (let i = 0; i < polygon.length; i++) {
                 const p1 = polygon[i];
                 const p2 = polygon[(i + 1) % polygon.length];
-                
+
                 // Check if point lies on this edge
                 if (PolygonFiller._isPointOnEdge(x, y, p1, p2, epsilon)) {
                     return true; // HTML5 Canvas treats points on edges as inside
                 }
             }
         }
-        
+
         let windingNumber = 0;
-        
+
         // Cast horizontal ray from point to the right
         // Count intersections with polygon edges
         for (const polygon of polygons) {
             if (polygon.length < 3) continue; // Skip degenerate polygons
-            
+
             for (let i = 0; i < polygon.length; i++) {
                 const p1 = polygon[i];
                 const p2 = polygon[(i + 1) % polygon.length];
-                
+
                 // Skip horizontal edges (no intersection with horizontal ray)
                 if (Math.abs(p1.y - p2.y) < epsilon) continue;
-                
+
                 // Check if ray crosses this edge
                 const minY = Math.min(p1.y, p2.y);
                 const maxY = Math.max(p1.y, p2.y);
-                
+
                 // Ray is at y level, check if it intersects the edge
                 if (y >= minY && y < maxY) { // Note: < maxY to avoid double-counting vertices
                     // Calculate intersection point using linear interpolation
                     const t = (y - p1.y) / (p2.y - p1.y);
                     const intersectionX = p1.x + t * (p2.x - p1.x);
-                    
+
                     // Only count intersections to the right of our point
                     // Use >= to handle edge case where intersection is exactly at x
                     if (intersectionX >= x) {
@@ -396,7 +396,7 @@ class PolygonFiller {
                 }
             }
         }
-        
+
         // Apply fill rule to determine if point is inside
         if (fillRule === 'evenodd') {
             return (windingNumber % 2) !== 0;
@@ -420,27 +420,27 @@ class PolygonFiller {
         const dx = p2.x - p1.x;
         const dy = p2.y - p1.y;
         const edgeLength = Math.sqrt(dx * dx + dy * dy);
-        
+
         if (edgeLength < epsilon) {
             // Degenerate edge - check if point is at the same location
             return Math.abs(px - p1.x) < epsilon && Math.abs(py - p1.y) < epsilon;
         }
-        
+
         // Vector from p1 to test point
         const dpx = px - p1.x;
         const dpy = py - p1.y;
-        
+
         // Check if point is collinear with the edge using cross product
         const crossProduct = Math.abs(dpx * dy - dpy * dx);
         const lineDistanceThreshold = epsilon * edgeLength; // Scale epsilon by edge length
         if (crossProduct > lineDistanceThreshold) {
             return false; // Not on the line containing the edge
         }
-        
+
         // Check if point is within the bounds of the edge segment
         const dotProduct = dpx * dx + dpy * dy;
         const lengthSquared = dx * dx + dy * dy;
-        
+
         // Parameter t where point = p1 + t * (p2 - p1)
         // Point is on segment if 0 <= t <= 1
         const t = dotProduct / lengthSquared;

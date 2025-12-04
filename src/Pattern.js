@@ -16,21 +16,21 @@ class Pattern {
     constructor(image, repetition = 'repeat') {
         // Validate and convert image to standard format
         this._imageData = ImageProcessor.validateAndConvert(image);
-        
+
         // Validate repetition mode
         const validRepetitions = ['repeat', 'repeat-x', 'repeat-y', 'no-repeat'];
         if (!validRepetitions.includes(repetition)) {
             throw new Error(`Invalid repetition mode: ${repetition}. Must be one of: ${validRepetitions.join(', ')}`);
         }
-        
+
         this._repetition = repetition;
-        
+
         // Pattern-specific transform (initially identity)
         this._patternTransform = new Transform2D();
-        
+
         Object.freeze(this);
     }
-    
+
     /**
      * Set pattern transformation matrix
      * @param {Transform2D|DOMMatrix} matrix - Pattern transformation
@@ -52,7 +52,7 @@ class Pattern {
             throw new Error('Pattern transform must be a Transform2D or DOMMatrix-like object');
         }
     }
-    
+
     /**
      * Calculate color for a pixel position
      * @param {number} x - Pixel x coordinate in canvas space
@@ -67,15 +67,15 @@ class Pattern {
             const combinedTransform = canvasTransform.multiply(this._patternTransform);
             const inverseTransform = combinedTransform.invert();
             const patternPoint = inverseTransform.transformPoint(new Point(x, y));
-            
+
             // Sample pattern image at calculated coordinates
             return this._samplePattern(patternPoint.x, patternPoint.y);
         } catch (error) {
             // If transform is not invertible, return transparent
-            return new Color(0, 0, 0, 0);
+            return Color.transparent;
         }
     }
-    
+
     /**
      * Sample pattern image at given coordinates with repetition logic
      * @param {number} x - X coordinate in pattern space
@@ -86,62 +86,62 @@ class Pattern {
     _samplePattern(x, y) {
         const width = this._imageData.width;
         const height = this._imageData.height;
-        
+
         // Apply repetition logic
         let sampleX, sampleY;
-        
+
         switch (this._repetition) {
             case 'repeat':
                 sampleX = this._repeatCoordinate(x, width);
                 sampleY = this._repeatCoordinate(y, height);
                 break;
-                
+
             case 'repeat-x':
                 sampleX = this._repeatCoordinate(x, width);
                 sampleY = y;
                 // Check if Y is out of bounds
                 if (y < 0 || y >= height) {
-                    return new Color(0, 0, 0, 0); // Transparent
+                    return Color.transparent; // Transparent
                 }
                 break;
-                
+
             case 'repeat-y':
                 sampleX = x;
                 sampleY = this._repeatCoordinate(y, height);
                 // Check if X is out of bounds  
                 if (x < 0 || x >= width) {
-                    return new Color(0, 0, 0, 0); // Transparent
+                    return Color.transparent; // Transparent
                 }
                 break;
-                
+
             case 'no-repeat':
                 sampleX = x;
                 sampleY = y;
                 // Check if coordinates are out of bounds
                 if (x < 0 || x >= width || y < 0 || y >= height) {
-                    return new Color(0, 0, 0, 0); // Transparent
+                    return Color.transparent; // Transparent
                 }
                 break;
         }
-        
+
         // Use nearest neighbor sampling (matching SWCanvas approach)
         const pixelX = Math.floor(sampleX);
         const pixelY = Math.floor(sampleY);
-        
+
         // Clamp to image bounds (safety check)
         const clampedX = Math.max(0, Math.min(width - 1, pixelX));
         const clampedY = Math.max(0, Math.min(height - 1, pixelY));
-        
+
         // Sample pixel from image data
         const offset = (clampedY * width + clampedX) * 4;
         const r = this._imageData.data[offset];
         const g = this._imageData.data[offset + 1];
         const b = this._imageData.data[offset + 2];
         const a = this._imageData.data[offset + 3];
-        
+
         return new Color(r, g, b, a);
     }
-    
+
     /**
      * Apply repeat logic to a coordinate
      * @param {number} coord - Input coordinate
@@ -151,14 +151,14 @@ class Pattern {
      */
     _repeatCoordinate(coord, size) {
         if (size === 0) return 0;
-        
+
         let result = coord % size;
         if (result < 0) {
             result += size; // Handle negative coordinates
         }
         return result;
     }
-    
+
     /**
      * Get pattern dimensions
      * @returns {Object} {width, height} of pattern
@@ -169,7 +169,7 @@ class Pattern {
             height: this._imageData.height
         };
     }
-    
+
     /**
      * Get repetition mode
      * @returns {string} Current repetition mode
@@ -177,7 +177,7 @@ class Pattern {
     getRepetition() {
         return this._repetition;
     }
-    
+
     /**
      * Get current pattern transform
      * @returns {Transform2D} Current pattern transform
@@ -185,7 +185,7 @@ class Pattern {
     getTransform() {
         return this._patternTransform;
     }
-    
+
     /**
      * Create a pattern from a Surface object
      * @param {Surface} surface - Source surface
@@ -196,7 +196,7 @@ class Pattern {
         const imageData = ImageProcessor.surfaceToImageLike(surface);
         return new Pattern(imageData, repetition);
     }
-    
+
     /**
      * Create a solid color pattern (useful for testing)
      * @param {number} width - Pattern width
