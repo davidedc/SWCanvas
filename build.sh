@@ -31,7 +31,7 @@ cat src/Point.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
 cat src/Rectangle.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
-cat src/Transform2D.js >> dist/swcanvas.js
+cat ../SWCanvas-primitives/Transform2D.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
 cat src/SWPath2D.js >> dist/swcanvas.js  
 echo "" >> dist/swcanvas.js

@@ -26,11 +26,15 @@ SWCanvas resolves these competing paradigms through a three-layer architecture:
 
 ### Layer 1: Core Engine (Performance)
 ```
-Surface.js          → Raw pixel buffer management
-Context2D.js        → High-performance rendering engine  
+# Shared primitives (from ../SWCanvas-primitives/ sibling repo)
 Transform2D.js      → Immutable transformation mathematics
-Point/Rectangle.js  → Pure geometric value objects
 Color.js            → Immutable color handling
+ColorParser.js      → CSS color string parsing
+
+# Core source files (src/)
+Surface.js          → Raw pixel buffer management
+Context2D.js        → High-performance rendering engine
+Point/Rectangle.js  → Pure geometric value objects
 BitBuffer.js        → 1-bit per pixel utility for memory-efficient mask operations
 BoundsTracker.js    → Reusable bounds tracking utility for optimization (composition component)
 ClipMask.js         → Stencil-based clipping using BitBuffer composition

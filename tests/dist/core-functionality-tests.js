@@ -131,8 +131,10 @@
             const result = m1.multiply(m2);
             assertEquals(result.a, 2);
             assertEquals(result.d, 2);
-            assertEquals(result.e, 15); // 10 + 5*2
-            assertEquals(result.f, 25); // 20 + 5*2
+            // Correct matrix multiplication: e = a*e' + c*f' + e = 2*5 + 0*5 + 10 = 20
+            assertEquals(result.e, 20);
+            // Correct matrix multiplication: f = b*e' + d*f' + f = 0*5 + 2*5 + 20 = 30
+            assertEquals(result.f, 30);
         });
 
         // Test: Matrix translate

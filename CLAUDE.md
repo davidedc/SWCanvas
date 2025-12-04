@@ -30,13 +30,16 @@ Refer to README.md for detailed usage examples and ARCHITECTURE.md for design ra
 
 ### Core Components
 ```
+# Shared Primitives (from ../SWCanvas-primitives/ sibling repo)
+../SWCanvas-primitives/Transform2D.js  # Immutable transformation matrix mathematics
+../SWCanvas-primitives/Color.js        # Immutable color handling with premultiplied alpha
+../SWCanvas-primitives/ColorParser.js  # CSS color string parsing (hex, rgb, named colors)
+
 # Core Rendering Engine (SWCanvas.Core.*)
 src/Context2D.js              # Core 2D rendering context (explicit RGBA API)
 src/Rasterizer.js             # Low-level pixel operations and rendering pipeline
 src/Surface.js                # Memory buffer management - RGBA pixel data
-src/Transform2D.js            # Immutable transformation matrix mathematics
 src/SWPath2D.js               # Path definition and command recording
-src/Color.js                  # Immutable color handling with premultiplied alpha
 src/BitBuffer.js              # 1-bit per pixel utility for mask operations (composition component)
 src/BoundsTracker.js          # Reusable bounds tracking utility for optimization (composition component)
 src/ClipMask.js               # 1-bit stencil buffer using BitBuffer composition
@@ -59,7 +62,6 @@ src/ImageProcessor.js         # ImageLike validation and format conversion
 # HTML5 Canvas Compatibility Layer
 src/SWCanvasElement.js        # Canvas-like object (width/height properties, getContext)
 src/CanvasCompatibleContext2D.js  # HTML5 Canvas 2D Context API wrapper
-src/ColorParser.js            # CSS color string parsing (hex, rgb, named colors)
 ```
 
 ### Key Systems

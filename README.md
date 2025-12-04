@@ -640,12 +640,15 @@ const blackBmp = SWCanvas.Core.BitmapEncoder.encode(surface,
 ### Project Structure (Object-Oriented Architecture)
 
 ```
+../SWCanvas-primitives/   # Shared primitives (sibling repo)
+├── Transform2D.js   # Transform mathematics (immutable class)
+├── Color.js         # Immutable color handling (class)
+└── ColorParser.js   # CSS color string parsing (static methods)
+
 src/              # Source files (ES6 Classes)
 ├── Context2D.js     # Main drawing API (class)
-├── Surface.js       # Memory management (ES6 class) 
-├── Transform2D.js   # Transform mathematics (immutable class)
+├── Surface.js       # Memory management (ES6 class)
 ├── Rasterizer.js    # Low-level rendering (ES6 class)
-├── Color.js         # Immutable color handling (class)
 ├── Point.js         # Immutable 2D point operations (class)
 ├── Rectangle.js     # Immutable rectangle operations (class)
 ├── Gradient.js      # Gradient paint sources (linear, radial, conic)
@@ -657,7 +660,6 @@ src/              # Source files (ES6 Classes)
 ├── PathFlattener.js # Path to polygon conversion (static methods)
 ├── BitmapEncoder.js # BMP file encoding (static methods)
 ├── BitmapEncodingOptions.js # BMP encoding configuration (immutable options)
-├── ColorParser.js   # CSS color string parsing (static methods)
 └── SWPath2D.js      # Path definition (class)
 
 tests/            # Test suite

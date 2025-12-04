@@ -132,9 +132,10 @@ class Context2D {
     }
 
     // Transform methods
+    // HTML5 Canvas spec: transformations POST-multiply (current * new)
     transform(a, b, c, d, e, f) {
         const m = new Transform2D([a, b, c, d, e, f]);
-        this._transform = m.multiply(this._transform);
+        this._transform = this._transform.multiply(m);
     }
 
     setTransform(a, b, c, d, e, f) {
@@ -145,17 +146,17 @@ class Context2D {
         this._transform = new Transform2D();
     }
 
-    // Convenience transform methods
+    // Convenience transform methods - all post-multiply per HTML5 Canvas spec
     translate(x, y) {
-        this._transform = new Transform2D().translate(x, y).multiply(this._transform);
+        this._transform = this._transform.translate(x, y);
     }
 
     scale(sx, sy) {
-        this._transform = new Transform2D().scale(sx, sy).multiply(this._transform);
+        this._transform = this._transform.scale(sx, sy);
     }
 
     rotate(angleInRadians) {
-        this._transform = new Transform2D().rotate(angleInRadians).multiply(this._transform);
+        this._transform = this._transform.rotate(angleInRadians);
     }
 
     // Style setters - support solid colors and paint sources
