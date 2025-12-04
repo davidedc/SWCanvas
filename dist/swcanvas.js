@@ -24,7 +24,7 @@ class Color {
         if (r < 0 || r > 255 || g < 0 || g > 255 || b < 0 || b > 255 || a < 0 || a > 255) {
             throw new Error('Color components must be in range 0-255');
         }
-        
+
         if (isPremultiplied) {
             this._r = Math.round(r);
             this._g = Math.round(g);
@@ -39,46 +39,36 @@ class Color {
             this._a = Math.round(a);
         }
     }
-    
-    
-    /**
-     * Create transparent black color
-     * @returns {Color} Transparent color
-     */
-    static transparent() {
-        return new Color(0, 0, 0, 0);
-    }
-    
-    
+
     // Getters for premultiplied components (internal storage format)
     get premultipliedR() { return this._r; }
     get premultipliedG() { return this._g; }
     get premultipliedB() { return this._b; }
     get premultipliedA() { return this._a; }
-    
+
     // Getters for non-premultiplied components (API-friendly)
     get r() {
         if (this._a === 0) return 0;
         if (this._a === 255) return this._r;
         return Math.round((this._r * 255) / this._a);
     }
-    
+
     get g() {
         if (this._a === 0) return 0;
         if (this._a === 255) return this._g;
         return Math.round((this._g * 255) / this._a);
     }
-    
+
     get b() {
         if (this._a === 0) return 0;
         if (this._a === 255) return this._b;
         return Math.round((this._b * 255) / this._a);
     }
-    
+
     get a() {
         return this._a;
     }
-    
+
     /**
      * Get non-premultiplied RGBA array
      * @returns {number[]} [r, g, b, a] array
@@ -86,7 +76,7 @@ class Color {
     toRGBA() {
         return [this.r, this.g, this.b, this.a];
     }
-    
+
     /**
      * Get premultiplied RGBA array (internal storage format)
      * @returns {number[]} [r, g, b, a] array with RGB premultiplied
@@ -94,7 +84,7 @@ class Color {
     toPremultipliedRGBA() {
         return [this._r, this._g, this._b, this._a];
     }
-    
+
     /**
      * Get alpha as normalized value (0-1)
      * @returns {number} Alpha in 0-1 range
@@ -102,7 +92,7 @@ class Color {
     get normalizedAlpha() {
         return this._a / 255;
     }
-    
+
     /**
      * Check if color is fully transparent
      * @returns {boolean} True if alpha is 0
@@ -110,7 +100,7 @@ class Color {
     get isTransparent() {
         return this._a === 0;
     }
-    
+
     /**
      * Check if color is fully opaque
      * @returns {boolean} True if alpha is 255
@@ -118,7 +108,7 @@ class Color {
     get isOpaque() {
         return this._a === 255;
     }
-    
+
     /**
      * Apply global alpha to this color (immutable operation)
      * @param {number} globalAlpha - Alpha multiplier (0-1)
@@ -128,17 +118,17 @@ class Color {
         if (globalAlpha < 0 || globalAlpha > 1) {
             throw new Error('Global alpha must be in range 0-1');
         }
-        
+
         // Work with non-premultiplied values to apply global alpha correctly
         const nonPremultR = this.r;
         const nonPremultG = this.g;
         const nonPremultB = this.b;
         const nonPremultA = this.a;
-        
+
         const newAlpha = Math.round(nonPremultA * globalAlpha);
         return new Color(nonPremultR, nonPremultG, nonPremultB, newAlpha, false);
     }
-    
+
     /**
      * Blend this color over another color using source-over composition
      * @param {Color} background - Background color to blend over
@@ -149,24 +139,24 @@ class Color {
             // Source is opaque - return source
             return this;
         }
-        
+
         if (this._a === 0) {
             // Source is transparent - return background
             return background;
         }
-        
+
         // Standard premultiplied alpha blending
         const srcAlpha = this.normalizedAlpha;
         const invSrcAlpha = 1 - srcAlpha;
-        
+
         const newR = Math.round(this._r + background._r * invSrcAlpha);
         const newG = Math.round(this._g + background._g * invSrcAlpha);
         const newB = Math.round(this._b + background._b * invSrcAlpha);
         const newA = Math.round(this._a + background._a * invSrcAlpha);
-        
+
         return new Color(newR, newG, newB, newA, true);
     }
-    
+
     /**
      * Convert color for BMP output (non-premultiplied RGB)
      * @returns {Object} {r, g, b} object for BMP encoding
@@ -178,7 +168,16 @@ class Color {
             b: this.b
         };
     }
-    
+
+    /**
+     * Convert to CSS rgba() string
+     * @returns {string} CSS rgba() format string
+     */
+    toCSS() {
+        const alpha = (this.a / 255).toFixed(3).replace(/\.?0+$/, '');
+        return `rgba(${this.r}, ${this.g}, ${this.b}, ${alpha})`;
+    }
+
     /**
      * String representation for debugging
      * @returns {string} Color description
@@ -186,7 +185,7 @@ class Color {
     toString() {
         return `Color(${this.r}, ${this.g}, ${this.b}, ${this.a})`;
     }
-    
+
     /**
      * Check equality with another Color
      * @param {Color} other - Color to compare with
@@ -194,12 +193,32 @@ class Color {
      */
     equals(other) {
         return other instanceof Color &&
-               this._r === other._r &&
-               this._g === other._g &&
-               this._b === other._b &&
-               this._a === other._a;
+            this._r === other._r &&
+            this._g === other._g &&
+            this._b === other._b &&
+            this._a === other._a;
     }
 }
+
+// Static constant: transparent black
+Color.transparent = new Color(0, 0, 0, 0);
+
+// Static constant: opaque black
+Color.black = new Color(0, 0, 0, 255);
+
+/**
+ * Create Color from CSS string using provided parser
+ * @param {string} cssString - CSS color string
+ * @param {ColorParser} parser - ColorParser instance
+ * @returns {Color} New Color instance
+ */
+Color.fromCSS = function (cssString, parser) {
+    if (!cssString || typeof cssString !== 'string') {
+        throw new Error("Invalid color format: must be a string");
+    }
+    const parsed = parser.parse(cssString);
+    return new Color(parsed.r, parsed.g, parsed.b, parsed.a, false);
+};
 /**
  * Point class for SWCanvas
  * 
@@ -985,31 +1004,31 @@ class Surface {
         if (typeof width !== 'number' || !Number.isInteger(width) || width <= 0) {
             throw new Error('Surface width must be a positive integer');
         }
-        
+
         if (typeof height !== 'number' || !Number.isInteger(height) || height <= 0) {
             throw new Error('Surface height must be a positive integer');
         }
-        
+
         // Check area first (SurfaceTooLarge takes precedence for test compatibility)
         if (width * height > 268435456) { // 16384 * 16384
             throw new Error('SurfaceTooLarge');
         }
-        
+
         // Prevent memory issues with reasonable individual dimension limits
         const maxDimension = 16384;
         if (width > maxDimension || height > maxDimension) {
             throw new Error(`Surface dimensions must be ≤ ${maxDimension}x${maxDimension}`);
         }
-        
+
         // Make dimensions immutable
         Object.defineProperty(this, 'width', { value: width, writable: false });
         Object.defineProperty(this, 'height', { value: height, writable: false });
         Object.defineProperty(this, 'stride', { value: width * 4, writable: false });
-        
+
         // Allocate pixel data (RGBA, non-premultiplied)
         this.data = new Uint8ClampedArray(this.stride * height);
     }
-    
+
     /**
      * Create a copy of this surface
      * @returns {Surface} New surface with copied data
@@ -1019,7 +1038,7 @@ class Surface {
         clone.data.set(this.data);
         return clone;
     }
-    
+
     /**
      * Get pixel color at coordinates
      * @param {number} x - X coordinate
@@ -1030,17 +1049,17 @@ class Surface {
         if (x < 0 || x >= this.width || y < 0 || y >= this.height) {
             return null;
         }
-        
+
         const offset = y * this.stride + x * 4;
         return new Color(
             this.data[offset],
-            this.data[offset + 1], 
+            this.data[offset + 1],
             this.data[offset + 2],
             this.data[offset + 3],
             false // Non-premultiplied
         );
     }
-    
+
     /**
      * Set pixel color at coordinates
      * @param {number} x - X coordinate
@@ -1051,29 +1070,29 @@ class Surface {
         if (x < 0 || x >= this.width || y < 0 || y >= this.height) {
             return; // Silently ignore out-of-bounds writes
         }
-        
+
         if (!(color instanceof Color)) {
             throw new Error('Color must be a Color instance');
         }
-        
+
         const offset = y * this.stride + x * 4;
         this.data[offset] = color.r;
         this.data[offset + 1] = color.g;
         this.data[offset + 2] = color.b;
         this.data[offset + 3] = color.a;
     }
-    
+
     /**
      * Clear surface to specified color
      * @param {Color} color - Color to clear to (defaults to transparent)
      */
-    clear(color = Color.transparent()) {
+    clear(color = Color.transparent) {
         if (!(color instanceof Color)) {
             throw new Error('Color must be a Color instance');
         }
-        
+
         const rgba = color.toRGBA();
-        
+
         for (let i = 0; i < this.data.length; i += 4) {
             this.data[i] = rgba[0];
             this.data[i + 1] = rgba[1];
@@ -1081,7 +1100,7 @@ class Surface {
             this.data[i + 3] = rgba[3];
         }
     }
-    
+
     /**
      * Get memory usage in bytes
      * @returns {number} Memory usage
@@ -1089,7 +1108,7 @@ class Surface {
     getMemoryUsage() {
         return this.data.byteLength;
     }
-    
+
     /**
      * String representation for debugging
      * @returns {string} Surface description
@@ -3046,15 +3065,15 @@ class PolygonFiller {
         if (!PolygonFiller._isValidPaintSource(paintSource)) {
             throw new Error('Paint source must be a Color, Gradient, or Pattern instance');
         }
-        
+
         // Transform all polygon vertices
-        const transformedPolygons = polygons.map(poly => 
+        const transformedPolygons = polygons.map(poly =>
             poly.map(point => transform.transformPoint(point))
         );
-        
+
         // Find bounding box for optimization
         const bounds = PolygonFiller._calculateBounds(transformedPolygons, surface);
-        
+
         // Process each scanline
         for (let y = bounds.minY; y <= bounds.maxY; y++) {
             PolygonFiller._fillScanline(
@@ -3062,7 +3081,7 @@ class PolygonFiller {
             );
         }
     }
-    
+
     /**
      * Calculate bounding box for transformed polygons
      * @param {Array} polygons - Transformed polygons
@@ -3072,21 +3091,21 @@ class PolygonFiller {
      */
     static _calculateBounds(polygons, surface) {
         let minY = Infinity, maxY = -Infinity;
-        
+
         for (const poly of polygons) {
             for (const point of poly) {
                 minY = Math.min(minY, point.y);
                 maxY = Math.max(maxY, point.y);
             }
         }
-        
+
         // Clamp to surface bounds
         return {
             minY: Math.max(0, Math.floor(minY)),
             maxY: Math.min(surface.height - 1, Math.ceil(maxY))
         };
     }
-    
+
     /**
      * Fill a single scanline using polygon intersection and winding rules
      * @param {Surface} surface - Target surface
@@ -3104,19 +3123,19 @@ class PolygonFiller {
      */
     static _fillScanline(surface, y, polygons, paintSource, fillRule, clipMask, transform, globalAlpha, subPixelOpacity = 1.0, composite = 'source-over', sourceMask = null) {
         const intersections = [];
-        
+
         // Find all intersections with this scanline
         for (const poly of polygons) {
             PolygonFiller._findPolygonIntersections(poly, y + 0.5, intersections);
         }
-        
+
         // Sort intersections by x coordinate
         intersections.sort((a, b) => a.x - b.x);
-        
+
         // Fill spans based on winding rule
         PolygonFiller._fillSpans(surface, y, intersections, paintSource, fillRule, clipMask, transform, globalAlpha, subPixelOpacity, composite, sourceMask);
     }
-    
+
     /**
      * Find intersections between a polygon and a horizontal scanline
      * @param {Array} polygon - Array of {x, y} points
@@ -3128,27 +3147,27 @@ class PolygonFiller {
         for (let i = 0; i < polygon.length; i++) {
             const p1 = polygon[i];
             const p2 = polygon[(i + 1) % polygon.length];
-            
+
             // Skip horizontal edges (avoid division by zero)
             if (Math.abs(p1.y - p2.y) < 1e-10) continue;
-            
+
             // Check if scanline crosses this edge
             const minY = Math.min(p1.y, p2.y);
             const maxY = Math.max(p1.y, p2.y);
-            
+
             if (y >= minY && y < maxY) { // Note: < maxY to avoid double-counting vertices
                 // Calculate intersection point using linear interpolation
                 const t = (y - p1.y) / (p2.y - p1.y);
                 const x = p1.x + t * (p2.x - p1.x);
-                
+
                 // Determine winding direction
                 const winding = p2.y > p1.y ? 1 : -1;
-                
+
                 intersections.push({ x: x, winding: winding });
             }
         }
     }
-    
+
     /**
      * Fill spans on a scanline based on winding rule
      * @param {Surface} surface - Target surface
@@ -3166,36 +3185,36 @@ class PolygonFiller {
      */
     static _fillSpans(surface, y, intersections, paintSource, fillRule, clipMask, transform, globalAlpha, subPixelOpacity = 1.0, composite = 'source-over', sourceMask = null) {
         if (intersections.length === 0) return;
-        
+
         let windingNumber = 0;
         let inside = false;
-        
+
         for (let i = 0; i < intersections.length; i++) {
             const intersection = intersections[i];
             const nextIntersection = intersections[i + 1];
-            
+
             // Update winding number
             windingNumber += intersection.winding;
-            
+
             // Determine if we're inside based on fill rule
             if (fillRule === 'evenodd') {
                 inside = (windingNumber % 2) !== 0;
             } else { // nonzero
                 inside = windingNumber !== 0;
             }
-            
+
             // Fill span if we're inside
             if (inside && nextIntersection) {
                 const startX = Math.max(0, Math.ceil(intersection.x));
                 const endX = Math.min(surface.width - 1, Math.floor(nextIntersection.x));
-                
+
                 PolygonFiller._fillPixelSpan(
                     surface, y, startX, endX, paintSource, clipMask, transform, globalAlpha, subPixelOpacity, composite, sourceMask
                 );
             }
         }
     }
-    
+
     /**
      * Fill a horizontal span of pixels with paint source and alpha blending
      * @param {Surface} surface - Target surface
@@ -3217,23 +3236,23 @@ class PolygonFiller {
             if (clipMask && clipMask.isPixelClipped(x, y)) {
                 continue; // Skip pixels clipped by stencil buffer
             }
-            
+
             // Record source coverage if sourceMask is provided
             if (sourceMask) {
                 sourceMask.setPixel(x, y, true);
                 // For canvas-wide compositing operations, only build source mask - don't draw to surface
                 continue;
             }
-            
+
             // Evaluate paint source at pixel position
             const pixelColor = PolygonFiller._evaluatePaintSource(paintSource, x, y, transform, globalAlpha, subPixelOpacity);
-            
+
             const offset = y * surface.stride + x * 4;
             PolygonFiller._blendPixel(surface, offset, pixelColor, composite);
         }
     }
-    
-    
+
+
     /**
      * Blend a color into a surface pixel using specified composite operation
      * @param {Surface} surface - Target surface
@@ -3248,21 +3267,21 @@ class PolygonFiller {
         const dstG = surface.data[offset + 1];
         const dstB = surface.data[offset + 2];
         const dstA = surface.data[offset + 3];
-        
+
         // Use CompositeOperations for blending
         const result = CompositeOperations.blendPixel(
             composite,
             color.r, color.g, color.b, color.a,  // source
             dstR, dstG, dstB, dstA               // destination
         );
-        
+
         // Store result
         surface.data[offset] = result.r;
         surface.data[offset + 1] = result.g;
         surface.data[offset + 2] = result.b;
         surface.data[offset + 3] = result.a;
     }
-    
+
     /**
      * Utility method to convert old-style RGBA array to Color instance
      * Maintains backward compatibility during transition
@@ -3272,7 +3291,7 @@ class PolygonFiller {
     static colorFromRGBA(rgba) {
         return new Color(rgba[0], rgba[1], rgba[2], rgba[3], false);
     }
-    
+
     /**
      * Debug method to visualize polygon bounds
      * @param {Array} polygons - Polygons to analyze
@@ -3282,11 +3301,11 @@ class PolygonFiller {
         if (polygons.length === 0) {
             return new Rectangle(0, 0, 0, 0);
         }
-        
+
         const points = polygons.flat();
         return Rectangle.boundingBox(points.map(p => new Point(p.x, p.y)));
     }
-    
+
     /**
      * Performance utility to count total vertices in polygon set
      * @param {Array} polygons - Polygons to count
@@ -3295,7 +3314,7 @@ class PolygonFiller {
     static countVertices(polygons) {
         return polygons.reduce((total, poly) => total + poly.length, 0);
     }
-    
+
     /**
      * Validate paint source type
      * @param {*} paintSource - Object to validate
@@ -3304,13 +3323,13 @@ class PolygonFiller {
      */
     static _isValidPaintSource(paintSource) {
         return paintSource instanceof Color ||
-               paintSource instanceof Gradient ||
-               paintSource instanceof LinearGradient ||
-               paintSource instanceof RadialGradient ||
-               paintSource instanceof ConicGradient ||
-               paintSource instanceof Pattern;
+            paintSource instanceof Gradient ||
+            paintSource instanceof LinearGradient ||
+            paintSource instanceof RadialGradient ||
+            paintSource instanceof ConicGradient ||
+            paintSource instanceof Pattern;
     }
-    
+
     /**
      * Evaluate paint source at a pixel position
      * @param {Color|Gradient|Pattern} paintSource - Paint source to evaluate
@@ -3327,29 +3346,29 @@ class PolygonFiller {
         if (paintSource instanceof Color) {
             color = paintSource;
         } else if (paintSource instanceof Gradient ||
-                   paintSource instanceof LinearGradient ||
-                   paintSource instanceof RadialGradient ||
-                   paintSource instanceof ConicGradient) {
+            paintSource instanceof LinearGradient ||
+            paintSource instanceof RadialGradient ||
+            paintSource instanceof ConicGradient) {
             color = paintSource.getColorForPixel(x, y, transform);
         } else if (paintSource instanceof Pattern) {
             color = paintSource.getColorForPixel(x, y, transform);
         } else {
             // Fallback to transparent black
-            color = new Color(0, 0, 0, 0);
+            color = Color.transparent;
         }
-        
+
         // Apply global alpha and sub-pixel opacity
         let resultColor = color.withGlobalAlpha(globalAlpha);
-        
+
         // Apply sub-pixel opacity for thin strokes
         if (subPixelOpacity < 1.0) {
             const adjustedAlpha = Math.round(resultColor.a * subPixelOpacity);
             resultColor = new Color(resultColor.r, resultColor.g, resultColor.b, adjustedAlpha, resultColor.premultiplied);
         }
-        
+
         return resultColor;
     }
-    
+
     /**
      * Test if a point is inside a set of polygons using the specified fill rule
      * @param {number} x - X coordinate of the point
@@ -3361,48 +3380,48 @@ class PolygonFiller {
      */
     static isPointInPolygons(x, y, polygons, fillRule = 'nonzero') {
         if (polygons.length === 0) return false;
-        
+
         const epsilon = 1e-10;
-        
+
         // First check if point is exactly on any edge (HTML5 Canvas inclusive behavior)
         for (const polygon of polygons) {
             if (polygon.length < 3) continue;
-            
+
             for (let i = 0; i < polygon.length; i++) {
                 const p1 = polygon[i];
                 const p2 = polygon[(i + 1) % polygon.length];
-                
+
                 // Check if point lies on this edge
                 if (PolygonFiller._isPointOnEdge(x, y, p1, p2, epsilon)) {
                     return true; // HTML5 Canvas treats points on edges as inside
                 }
             }
         }
-        
+
         let windingNumber = 0;
-        
+
         // Cast horizontal ray from point to the right
         // Count intersections with polygon edges
         for (const polygon of polygons) {
             if (polygon.length < 3) continue; // Skip degenerate polygons
-            
+
             for (let i = 0; i < polygon.length; i++) {
                 const p1 = polygon[i];
                 const p2 = polygon[(i + 1) % polygon.length];
-                
+
                 // Skip horizontal edges (no intersection with horizontal ray)
                 if (Math.abs(p1.y - p2.y) < epsilon) continue;
-                
+
                 // Check if ray crosses this edge
                 const minY = Math.min(p1.y, p2.y);
                 const maxY = Math.max(p1.y, p2.y);
-                
+
                 // Ray is at y level, check if it intersects the edge
                 if (y >= minY && y < maxY) { // Note: < maxY to avoid double-counting vertices
                     // Calculate intersection point using linear interpolation
                     const t = (y - p1.y) / (p2.y - p1.y);
                     const intersectionX = p1.x + t * (p2.x - p1.x);
-                    
+
                     // Only count intersections to the right of our point
                     // Use >= to handle edge case where intersection is exactly at x
                     if (intersectionX >= x) {
@@ -3413,7 +3432,7 @@ class PolygonFiller {
                 }
             }
         }
-        
+
         // Apply fill rule to determine if point is inside
         if (fillRule === 'evenodd') {
             return (windingNumber % 2) !== 0;
@@ -3437,27 +3456,27 @@ class PolygonFiller {
         const dx = p2.x - p1.x;
         const dy = p2.y - p1.y;
         const edgeLength = Math.sqrt(dx * dx + dy * dy);
-        
+
         if (edgeLength < epsilon) {
             // Degenerate edge - check if point is at the same location
             return Math.abs(px - p1.x) < epsilon && Math.abs(py - p1.y) < epsilon;
         }
-        
+
         // Vector from p1 to test point
         const dpx = px - p1.x;
         const dpy = py - p1.y;
-        
+
         // Check if point is collinear with the edge using cross product
         const crossProduct = Math.abs(dpx * dy - dpy * dx);
         const lineDistanceThreshold = epsilon * edgeLength; // Scale epsilon by edge length
         if (crossProduct > lineDistanceThreshold) {
             return false; // Not on the line containing the edge
         }
-        
+
         // Check if point is within the bounds of the edge segment
         const dotProduct = dpx * dx + dpy * dy;
         const lengthSquared = dx * dx + dy * dy;
-        
+
         // Parameter t where point = p1 + t * (p2 - p1)
         // Point is on segment if 0 <= t <= 1
         const t = dotProduct / lengthSquared;
@@ -6299,7 +6318,7 @@ class Gradient {
         this._colorStops = [];
         this._sorted = false;
     }
-    
+
     /**
      * Add a color stop to the gradient
      * @param {number} offset - Position along gradient (0-1)
@@ -6310,25 +6329,25 @@ class Gradient {
         if (typeof offset !== 'number' || !isFinite(offset)) {
             throw new Error('Color stop offset must be a finite number');
         }
-        
+
         if (offset < 0 || offset > 1) {
             throw new Error('Color stop offset must be between 0 and 1');
         }
-        
+
         // Parse color using ColorParser
         const colorParser = new ColorParser();
         const rgba = colorParser.parse(color);
         const colorObj = new Color(rgba.r, rgba.g, rgba.b, rgba.a);
-        
+
         // Add color stop
         this._colorStops.push({
             offset: offset,
             color: colorObj
         });
-        
+
         this._sorted = false; // Mark as needing re-sort
     }
-    
+
     /**
      * Get sorted color stops array
      * @returns {Array} Sorted color stops
@@ -6341,7 +6360,7 @@ class Gradient {
         }
         return this._colorStops;
     }
-    
+
     /**
      * Get color at parameter t using color stops
      * @param {number} t - Parameter value (0-1, but can be outside range)
@@ -6350,55 +6369,55 @@ class Gradient {
      */
     _getColorAt(t) {
         const stops = this._getSortedColorStops();
-        
+
         if (stops.length === 0) {
-            return new Color(0, 0, 0, 0); // Transparent black
+            return Color.transparent; // Transparent black
         }
-        
+
         if (stops.length === 1) {
             return stops[0].color;
         }
-        
+
         // Clamp t to [0, 1] range for gradient bounds
         if (t <= stops[0].offset) {
             return stops[0].color;
         }
-        
+
         if (t >= stops[stops.length - 1].offset) {
             return stops[stops.length - 1].color;
         }
-        
+
         // Find adjacent color stops
         for (let i = 0; i < stops.length - 1; i++) {
             const stop1 = stops[i];
             const stop2 = stops[i + 1];
-            
+
             if (t >= stop1.offset && t <= stop2.offset) {
                 // Linear interpolation between color stops
                 const range = stop2.offset - stop1.offset;
                 if (range === 0) {
                     return stop1.color;
                 }
-                
+
                 const localT = (t - stop1.offset) / range;
-                
+
                 // Interpolate RGBA components
                 const r1 = stop1.color.r, g1 = stop1.color.g, b1 = stop1.color.b, a1 = stop1.color.a;
                 const r2 = stop2.color.r, g2 = stop2.color.g, b2 = stop2.color.b, a2 = stop2.color.a;
-                
+
                 const r = Math.round(r1 + (r2 - r1) * localT);
                 const g = Math.round(g1 + (g2 - g1) * localT);
                 const b = Math.round(b1 + (b2 - b1) * localT);
                 const a = Math.round(a1 + (a2 - a1) * localT);
-                
+
                 return new Color(r, g, b, a);
             }
         }
-        
+
         // Fallback (shouldn't reach here)
         return stops[0].color;
     }
-    
+
     /**
      * Calculate color for a pixel position (must be implemented by subclasses)
      * @param {number} x - Pixel x coordinate in canvas space
@@ -6425,18 +6444,18 @@ class LinearGradient extends Gradient {
      */
     constructor(x0, y0, x1, y1) {
         super();
-        
+
         this._x0 = x0;
         this._y0 = y0;
         this._x1 = x1;
         this._y1 = y1;
-        
+
         // Pre-compute gradient vector
         this._dx = x1 - x0;
         this._dy = y1 - y0;
         this._lengthSquared = this._dx * this._dx + this._dy * this._dy;
     }
-    
+
     /**
      * Calculate color for a pixel position
      * @param {number} x - Pixel x coordinate in canvas space
@@ -6449,22 +6468,22 @@ class LinearGradient extends Gradient {
         // Gradients work in transformed coordinate space
         const p0 = transform.transformPoint(new Point(this._x0, this._y0));
         const p1 = transform.transformPoint(new Point(this._x1, this._y1));
-        
+
         const dx = p1.x - p0.x;
         const dy = p1.y - p0.y;
         const lengthSquared = dx * dx + dy * dy;
-        
+
         if (lengthSquared === 0) {
             // Degenerate gradient (same start/end points)
             return this._getColorAt(0);
         }
-        
+
         // Calculate parameter t along gradient line
         // Project pixel onto gradient line
         const px = x - p0.x;
         const py = y - p0.y;
         const t = (px * dx + py * dy) / lengthSquared;
-        
+
         return this._getColorAt(t);
     }
 }
@@ -6484,17 +6503,17 @@ class RadialGradient extends Gradient {
      */
     constructor(x0, y0, r0, x1, y1, r1) {
         super();
-        
+
         // Validate radii
         if (r0 < 0 || r1 < 0) {
             throw new Error('Radial gradient radii must be non-negative');
         }
-        
+
         // Check for identical circles (would paint nothing)
         if (x0 === x1 && y0 === y1 && r0 === r1) {
             throw new Error('Radial gradient circles must not be identical');
         }
-        
+
         this._x0 = x0;
         this._y0 = y0;
         this._r0 = r0;
@@ -6502,7 +6521,7 @@ class RadialGradient extends Gradient {
         this._y1 = y1;
         this._r1 = r1;
     }
-    
+
     /**
      * Calculate color for a pixel position
      * @param {number} x - Pixel x coordinate in canvas space
@@ -6514,15 +6533,15 @@ class RadialGradient extends Gradient {
         // Transform gradient coordinates by current transform
         const p0 = transform.transformPoint(new Point(this._x0, this._y0));
         const p1 = transform.transformPoint(new Point(this._x1, this._y1));
-        
+
         // For simplicity, we'll use distance-based calculation
         // More accurate would be solving the cone intersection equation
         const d0 = Math.sqrt((x - p0.x) ** 2 + (y - p0.y) ** 2);
         const d1 = Math.sqrt((x - p1.x) ** 2 + (y - p1.y) ** 2);
-        
+
         // Simple linear interpolation based on distance ratio
         const maxDistance = Math.sqrt((p1.x - p0.x) ** 2 + (p1.y - p0.y) ** 2) + this._r1;
-        
+
         let t;
         if (d0 <= this._r0) {
             t = 0; // Inside inner circle
@@ -6532,7 +6551,7 @@ class RadialGradient extends Gradient {
             // Simple distance-based calculation
             t = (d0 - this._r0) / (maxDistance - this._r0);
         }
-        
+
         return this._getColorAt(Math.max(0, Math.min(1, t)));
     }
 }
@@ -6549,12 +6568,12 @@ class ConicGradient extends Gradient {
      */
     constructor(angle, x, y) {
         super();
-        
+
         this._angle = angle;
         this._x = x;
         this._y = y;
     }
-    
+
     /**
      * Calculate color for a pixel position
      * @param {number} x - Pixel x coordinate in canvas space
@@ -6565,10 +6584,10 @@ class ConicGradient extends Gradient {
     getColorForPixel(x, y, transform) {
         // Transform gradient center by current transform
         const center = transform.transformPoint(new Point(this._x, this._y));
-        
+
         // Calculate angle from center to pixel
         let pixelAngle = Math.atan2(y - center.y, x - center.x) - this._angle;
-        
+
         // Normalize angle to [0, 2π)
         while (pixelAngle < 0) {
             pixelAngle += 2 * Math.PI;
@@ -6576,10 +6595,10 @@ class ConicGradient extends Gradient {
         while (pixelAngle >= 2 * Math.PI) {
             pixelAngle -= 2 * Math.PI;
         }
-        
+
         // Convert angle to parameter t [0, 1]
         const t = pixelAngle / (2 * Math.PI);
-        
+
         return this._getColorAt(t);
     }
 }
@@ -6601,21 +6620,21 @@ class Pattern {
     constructor(image, repetition = 'repeat') {
         // Validate and convert image to standard format
         this._imageData = ImageProcessor.validateAndConvert(image);
-        
+
         // Validate repetition mode
         const validRepetitions = ['repeat', 'repeat-x', 'repeat-y', 'no-repeat'];
         if (!validRepetitions.includes(repetition)) {
             throw new Error(`Invalid repetition mode: ${repetition}. Must be one of: ${validRepetitions.join(', ')}`);
         }
-        
+
         this._repetition = repetition;
-        
+
         // Pattern-specific transform (initially identity)
         this._patternTransform = new Transform2D();
-        
+
         Object.freeze(this);
     }
-    
+
     /**
      * Set pattern transformation matrix
      * @param {Transform2D|DOMMatrix} matrix - Pattern transformation
@@ -6637,7 +6656,7 @@ class Pattern {
             throw new Error('Pattern transform must be a Transform2D or DOMMatrix-like object');
         }
     }
-    
+
     /**
      * Calculate color for a pixel position
      * @param {number} x - Pixel x coordinate in canvas space
@@ -6652,15 +6671,15 @@ class Pattern {
             const combinedTransform = canvasTransform.multiply(this._patternTransform);
             const inverseTransform = combinedTransform.invert();
             const patternPoint = inverseTransform.transformPoint(new Point(x, y));
-            
+
             // Sample pattern image at calculated coordinates
             return this._samplePattern(patternPoint.x, patternPoint.y);
         } catch (error) {
             // If transform is not invertible, return transparent
-            return new Color(0, 0, 0, 0);
+            return Color.transparent;
         }
     }
-    
+
     /**
      * Sample pattern image at given coordinates with repetition logic
      * @param {number} x - X coordinate in pattern space
@@ -6671,62 +6690,62 @@ class Pattern {
     _samplePattern(x, y) {
         const width = this._imageData.width;
         const height = this._imageData.height;
-        
+
         // Apply repetition logic
         let sampleX, sampleY;
-        
+
         switch (this._repetition) {
             case 'repeat':
                 sampleX = this._repeatCoordinate(x, width);
                 sampleY = this._repeatCoordinate(y, height);
                 break;
-                
+
             case 'repeat-x':
                 sampleX = this._repeatCoordinate(x, width);
                 sampleY = y;
                 // Check if Y is out of bounds
                 if (y < 0 || y >= height) {
-                    return new Color(0, 0, 0, 0); // Transparent
+                    return Color.transparent; // Transparent
                 }
                 break;
-                
+
             case 'repeat-y':
                 sampleX = x;
                 sampleY = this._repeatCoordinate(y, height);
                 // Check if X is out of bounds  
                 if (x < 0 || x >= width) {
-                    return new Color(0, 0, 0, 0); // Transparent
+                    return Color.transparent; // Transparent
                 }
                 break;
-                
+
             case 'no-repeat':
                 sampleX = x;
                 sampleY = y;
                 // Check if coordinates are out of bounds
                 if (x < 0 || x >= width || y < 0 || y >= height) {
-                    return new Color(0, 0, 0, 0); // Transparent
+                    return Color.transparent; // Transparent
                 }
                 break;
         }
-        
+
         // Use nearest neighbor sampling (matching SWCanvas approach)
         const pixelX = Math.floor(sampleX);
         const pixelY = Math.floor(sampleY);
-        
+
         // Clamp to image bounds (safety check)
         const clampedX = Math.max(0, Math.min(width - 1, pixelX));
         const clampedY = Math.max(0, Math.min(height - 1, pixelY));
-        
+
         // Sample pixel from image data
         const offset = (clampedY * width + clampedX) * 4;
         const r = this._imageData.data[offset];
         const g = this._imageData.data[offset + 1];
         const b = this._imageData.data[offset + 2];
         const a = this._imageData.data[offset + 3];
-        
+
         return new Color(r, g, b, a);
     }
-    
+
     /**
      * Apply repeat logic to a coordinate
      * @param {number} coord - Input coordinate
@@ -6736,14 +6755,14 @@ class Pattern {
      */
     _repeatCoordinate(coord, size) {
         if (size === 0) return 0;
-        
+
         let result = coord % size;
         if (result < 0) {
             result += size; // Handle negative coordinates
         }
         return result;
     }
-    
+
     /**
      * Get pattern dimensions
      * @returns {Object} {width, height} of pattern
@@ -6754,7 +6773,7 @@ class Pattern {
             height: this._imageData.height
         };
     }
-    
+
     /**
      * Get repetition mode
      * @returns {string} Current repetition mode
@@ -6762,7 +6781,7 @@ class Pattern {
     getRepetition() {
         return this._repetition;
     }
-    
+
     /**
      * Get current pattern transform
      * @returns {Transform2D} Current pattern transform
@@ -6770,7 +6789,7 @@ class Pattern {
     getTransform() {
         return this._patternTransform;
     }
-    
+
     /**
      * Create a pattern from a Surface object
      * @param {Surface} surface - Source surface
@@ -6781,7 +6800,7 @@ class Pattern {
         const imageData = ImageProcessor.surfaceToImageLike(surface);
         return new Pattern(imageData, repetition);
     }
-    
+
     /**
      * Create a solid color pattern (useful for testing)
      * @param {number} width - Pattern width
@@ -6811,15 +6830,15 @@ class Rasterizer {
         if (!surface || typeof surface !== 'object') {
             throw new Error('Rasterizer requires a valid Surface object');
         }
-        
+
         if (!surface.width || !surface.height || !surface.data) {
             throw new Error('Surface must have width, height, and data properties');
         }
-        
+
         this._surface = surface;
         this._currentOp = null;
     }
-    
+
     /**
      * Get the target surface
      * @returns {Surface} Target surface
@@ -6827,7 +6846,7 @@ class Rasterizer {
     get surface() {
         return this._surface;
     }
-    
+
     /**
      * Get current operation state
      * @returns {Object|null} Current operation state
@@ -6842,7 +6861,7 @@ class Rasterizer {
      */
     beginOp(params = {}) {
         this._validateParams(params);
-        
+
         this._currentOp = {
             composite: params.composite || 'source-over',
             globalAlpha: params.globalAlpha !== undefined ? params.globalAlpha : 1.0,
@@ -6852,7 +6871,7 @@ class Rasterizer {
             strokeStyle: params.strokeStyle || null,
             sourceMask: null,  // Will be initialized if needed for canvas-wide compositing
             // Shadow properties
-            shadowColor: params.shadowColor || new Color(0, 0, 0, 0),
+            shadowColor: params.shadowColor || Color.transparent,
             shadowBlur: params.shadowBlur || 0,
             shadowOffsetX: params.shadowOffsetX || 0,
             shadowOffsetY: params.shadowOffsetY || 0
@@ -6863,14 +6882,14 @@ class Rasterizer {
             this._currentOp.sourceMask = new SourceMask(this._surface.width, this._surface.height);
         }
     }
-    
+
     /**
      * End the current rendering operation
      */
     endOp() {
         this._currentOp = null;
     }
-    
+
     /**
      * Validate operation parameters
      * @param {Object} params - Parameters to validate
@@ -6882,11 +6901,11 @@ class Rasterizer {
                 throw new Error('globalAlpha must be a number between 0 and 1');
             }
         }
-        
+
         if (params.composite && !CompositeOperations.isSupported(params.composite)) {
             throw new Error(`Invalid composite operation. Supported: ${CompositeOperations.getSupportedOperations().join(', ')}`);
         }
-        
+
         if (params.transform && !(params.transform instanceof Transform2D)) {
             throw new Error('transform must be a Transform2D instance');
         }
@@ -6932,10 +6951,10 @@ class Rasterizer {
      */
     _needsShadow() {
         if (!this._currentOp) return false;
-        
+
         const op = this._currentOp;
-        return op.shadowColor.a > 0 && 
-               (op.shadowBlur > 0 || op.shadowOffsetX !== 0 || op.shadowOffsetY !== 0);
+        return op.shadowColor.a > 0 &&
+            (op.shadowBlur > 0 || op.shadowOffsetX !== 0 || op.shadowOffsetY !== 0);
     }
 
     /**
@@ -6986,26 +7005,26 @@ class Rasterizer {
     _renderToShadowBuffer(shadowBuffer, renderFunc) {
         // This is a simplified approach - we render normally and extract alpha
         // A more sophisticated implementation would render directly to the shadow buffer
-        
+
         // For now, create a temporary surface to capture the shape
         const tempSurface = new Surface(this._surface.width, this._surface.height);
         const tempRasterizer = new Rasterizer(tempSurface);
-        
+
         // Set up operation for temp rendering (without shadow)
         const opCopy = Object.assign({}, this._currentOp);
-        opCopy.shadowColor = new Color(0, 0, 0, 0); // No shadow for temp render
+        opCopy.shadowColor = Color.transparent; // No shadow for temp render
         opCopy.shadowBlur = 0;
         opCopy.shadowOffsetX = 0;
         opCopy.shadowOffsetY = 0;
-        
+
         tempRasterizer._currentOp = opCopy;
-        
+
         // Render to temp surface
         const originalSurface = this._surface;
         const originalCurrentOp = this._currentOp;
         this._surface = tempSurface;
         this._currentOp = opCopy;
-        
+
         try {
             renderFunc();
         } finally {
@@ -7013,13 +7032,13 @@ class Rasterizer {
             this._surface = originalSurface;
             this._currentOp = originalCurrentOp;
         }
-        
+
         // Extract alpha from temp surface to shadow buffer
         for (let y = 0; y < tempSurface.height; y++) {
             for (let x = 0; x < tempSurface.width; x++) {
                 const offset = y * tempSurface.stride + x * 4;
                 const alpha = tempSurface.data[offset + 3] / 255.0; // Normalize to 0-1
-                
+
                 if (alpha > 0) {
                     shadowBuffer.addAlpha(x, y, alpha);
                 }
@@ -7037,18 +7056,18 @@ class Rasterizer {
     _applyShadowBlur(shadowBuffer, blurRadius) {
         // Convert shadow buffer to dense array for blur processing
         const denseData = shadowBuffer.toDenseArray();
-        
+
         if (denseData.width === 0 || denseData.height === 0) {
             return shadowBuffer; // Nothing to blur
         }
-        
+
         // Apply box blur
         const blurredData = BoxBlur.blur(denseData.data, denseData.width, denseData.height, blurRadius);
-        
+
         // Create new shadow buffer with blurred data
         const blurredBuffer = new ShadowBuffer(shadowBuffer.originalWidth, shadowBuffer.originalHeight, Math.ceil(blurRadius));
         blurredBuffer.fromDenseArray(blurredData, denseData.width, denseData.height, denseData.offsetX, denseData.offsetY);
-        
+
         return blurredBuffer;
     }
 
@@ -7063,27 +7082,27 @@ class Rasterizer {
     _compositeShadowToSurface(shadowBuffer, shadowColor, offsetX, offsetY) {
         const surface = this._surface;
         const globalAlpha = this._currentOp.globalAlpha;
-        
+
         // Apply global alpha to shadow color using the standard method
         const effectiveShadowColor = shadowColor.withGlobalAlpha(globalAlpha);
-        
+
         // Iterate over shadow pixels and composite to surface
         for (const pixel of shadowBuffer.getPixels()) {
             // Convert from extended buffer coordinates to surface coordinates
             // ShadowBuffer stores pixels in extended coordinates, we need to convert back to surface coordinates
             const surfaceX = Math.round(pixel.x - shadowBuffer.extendedOffsetX + offsetX);
             const surfaceY = Math.round(pixel.y - shadowBuffer.extendedOffsetY + offsetY);
-            
+
             // Bounds check
             if (surfaceX < 0 || surfaceX >= surface.width || surfaceY < 0 || surfaceY >= surface.height) {
                 continue;
             }
-            
+
             // Check clipping
             if (this._isPixelClipped(surfaceX, surfaceY)) {
                 continue;
             }
-            
+
             // Calculate final shadow alpha by combining pixel alpha with shadow color alpha
             // pixel.alpha is 0-1 (from blurred shadow buffer)
             // effectiveShadowColor.a is 0-255 range
@@ -7096,23 +7115,23 @@ class Rasterizer {
             const finalShadowAlpha = Math.min(255, Math.round(
                 pixel.alpha * effectiveShadowColor.a * BLUR_DILUTION_COMPENSATION
             ));
-            
+
             if (finalShadowAlpha <= 0) continue;
-            
+
             // Get surface pixel
             const offset = surfaceY * surface.stride + surfaceX * 4;
             const dstR = surface.data[offset];
             const dstG = surface.data[offset + 1];
             const dstB = surface.data[offset + 2];
             const dstA = surface.data[offset + 3];
-            
+
             // Composite shadow (using source-over blending)
             const result = CompositeOperations.blendPixel(
                 'source-over',
                 effectiveShadowColor.r, effectiveShadowColor.g, effectiveShadowColor.b, finalShadowAlpha,
                 dstR, dstG, dstB, dstA
             );
-            
+
             // Write result
             surface.data[offset] = result.r;
             surface.data[offset + 1] = result.g;
@@ -7131,17 +7150,17 @@ class Rasterizer {
      */
     fillRect(x, y, width, height, color) {
         this._requireActiveOp();
-        
+
         // Validate parameters
-        if (typeof x !== 'number' || typeof y !== 'number' || 
+        if (typeof x !== 'number' || typeof y !== 'number' ||
             typeof width !== 'number' || typeof height !== 'number') {
             throw new Error('Rectangle coordinates must be numbers');
         }
-        
+
         if (width < 0 || height < 0) {
             throw new Error('Rectangle dimensions must be non-negative');
         }
-        
+
         if (width === 0 || height === 0) return; // Nothing to draw
 
         // Wrap the actual rectangle filling logic with shadow pipeline
@@ -7165,51 +7184,51 @@ class Rasterizer {
             // Create a path for the rectangle
             const rectPath = new SWPath2D();
             rectPath.rect(x, y, width, height);
-            
+
             // Temporarily override fill style with provided color if specified
             const originalFillStyle = this._currentOp.fillStyle;
             if (color && Array.isArray(color)) {
                 // Only override for array colors (like from clearRect)
                 this._currentOp.fillStyle = new Color(color[0], color[1], color[2], color[3]);
             }
-            
+
             // Use the existing path filling logic which handles stencil clipping and canvas-wide compositing properly
             this._fillInternal(rectPath, 'nonzero');
-            
+
             // Restore original fill style
             if (color && Array.isArray(color)) {
                 this._currentOp.fillStyle = originalFillStyle;
             }
             return;
         }
-        
+
         // No clipping - use optimized direct rectangle filling
         // Transform rectangle corners
         const transform = this._currentOp.transform;
-        const topLeft = transform.transformPoint({x: x, y: y});
-        const topRight = transform.transformPoint({x: x + width, y: y});
-        const bottomLeft = transform.transformPoint({x: x, y: y + height});
-        const bottomRight = transform.transformPoint({x: x + width, y: y + height});
-        
+        const topLeft = transform.transformPoint({ x: x, y: y });
+        const topRight = transform.transformPoint({ x: x + width, y: y });
+        const bottomLeft = transform.transformPoint({ x: x, y: y + height });
+        const bottomRight = transform.transformPoint({ x: x + width, y: y + height });
+
         // Find bounding box in device space
         const minX = Math.max(0, Math.floor(Math.min(topLeft.x, topRight.x, bottomLeft.x, bottomRight.x)));
         const maxX = Math.min(this._surface.width - 1, Math.floor(Math.max(topLeft.x, topRight.x, bottomLeft.x, bottomRight.x) - 1));
         const minY = Math.max(0, Math.floor(Math.min(topLeft.y, topRight.y, bottomLeft.y, bottomRight.y)));
         const maxY = Math.min(this._surface.height - 1, Math.floor(Math.max(topLeft.y, topRight.y, bottomLeft.y, bottomRight.y) - 1));
-        
+
         // Optimized path for axis-aligned rectangles with solid colors only
-        if (this._currentOp.transform.b === 0 && this._currentOp.transform.c === 0 && 
+        if (this._currentOp.transform.b === 0 && this._currentOp.transform.c === 0 &&
             (color instanceof Color || Array.isArray(color))) {
             this._fillAxisAlignedRect(minX, minY, maxX - minX + 1, maxY - minY + 1, color);
         } else {
             // Handle rotated rectangles by converting to polygon
             const rectPolygon = [
-                {x: x, y: y},
-                {x: x + width, y: y}, 
-                {x: x + width, y: y + height},
-                {x: x, y: y + height}
+                { x: x, y: y },
+                { x: x + width, y: y },
+                { x: x + width, y: y + height },
+                { x: x, y: y + height }
             ];
-            
+
             // Use existing polygon filling system which handles transforms and stencil clipping
             const rectColor = Array.isArray(color) ? new Color(color[0], color[1], color[2], color[3]) : color;
             PolygonFiller.fillPolygons(this._surface, [rectPolygon], rectColor, 'nonzero', this._currentOp.transform, this._currentOp.clipMask, this._currentOp.globalAlpha, 1.0, this._currentOp.composite);
@@ -7228,7 +7247,7 @@ class Rasterizer {
     _fillAxisAlignedRect(x, y, width, height, color) {
         const surface = this._surface;
         const globalAlpha = this._currentOp.globalAlpha;
-        
+
         // Convert color to Color object if needed and apply global alpha
         const colorObj = Array.isArray(color) ? new Color(color[0], color[1], color[2], color[3]) : color;
         const finalColor = colorObj.withGlobalAlpha(globalAlpha);
@@ -7236,33 +7255,33 @@ class Rasterizer {
         const srcG = finalColor.g;
         const srcB = finalColor.b;
         const srcA = finalColor.a;
-        
+
         for (let py = y; py < y + height; py++) {
             if (py < 0 || py >= surface.height) continue;
-            
+
             for (let px = x; px < x + width; px++) {
                 if (px < 0 || px >= surface.width) continue;
-                
+
                 // Check stencil buffer clipping
                 if (this._currentOp.clipMask && this._isPixelClipped(px, py)) {
                     continue; // Skip pixels clipped by stencil buffer
                 }
-                
+
                 const offset = py * surface.stride + px * 4;
-                
+
                 // Get destination pixel for blending
                 const dstR = surface.data[offset];
                 const dstG = surface.data[offset + 1];
                 const dstB = surface.data[offset + 2];
                 const dstA = surface.data[offset + 3];
-                
+
                 // Use CompositeOperations for consistent blending
                 const result = CompositeOperations.blendPixel(
                     this._currentOp.composite,
                     srcR, srcG, srcB, srcA,  // source
                     dstR, dstG, dstB, dstA   // destination
                 );
-                
+
                 surface.data[offset] = result.r;
                 surface.data[offset + 1] = result.g;
                 surface.data[offset + 2] = result.b;
@@ -7306,13 +7325,13 @@ class Rasterizer {
                 // Determine source coverage and color
                 const Sa = sourceMask.getPixel(x, y) ? 1 : 0;
                 let srcColor;
-                
+
                 if (Sa > 0) {
                     // Evaluate paint source at covered pixel
                     srcColor = PolygonFiller._evaluatePaintSource(paintSource, x, y, transform, globalAlpha, subPixelOpacity);
                 } else {
                     // Transparent source for uncovered pixels
-                    srcColor = new Color(0, 0, 0, 0);
+                    srcColor = Color.transparent;
                 }
 
                 // Get destination pixel
@@ -7362,14 +7381,14 @@ class Rasterizer {
         // Get fill style (Color, Gradient, or Pattern)
         const fillStyle = this._currentOp.fillStyle || new Color(0, 0, 0, 255);
         const fillRule = rule || 'nonzero';
-        
+
         // Flatten path to polygons
         const polygons = PathFlattener.flattenPath(path);
-        
+
         if (this._requiresCanvasWideCompositing(this._currentOp.composite)) {
             // Canvas-wide compositing path: build source mask then perform canvas-wide compositing
             PolygonFiller.fillPolygons(this._surface, polygons, fillStyle, fillRule, this._currentOp.transform, this._currentOp.clipMask, this._currentOp.globalAlpha, 1.0, this._currentOp.composite, this._currentOp.sourceMask);
-            
+
             // Perform canvas-wide compositing pass
             this._performCanvasWideCompositing(fillStyle, this._currentOp.globalAlpha, 1.0);
         } else {
@@ -7401,27 +7420,27 @@ class Rasterizer {
     _strokeInternal(path, strokeProps) {
         // Get stroke style (Color, Gradient, or Pattern)
         const strokeStyle = this._currentOp.strokeStyle || new Color(0, 0, 0, 255);
-        
+
         // Sub-pixel stroke rendering: calculate opacity adjustment
         let adjustedStrokeProps = strokeProps;
         let subPixelOpacity = 1.0; // Default for strokes > 1px
-        
+
         if (strokeProps.lineWidth < 1.0) {
             // Sub-pixel strokes: render at proportional opacity
             subPixelOpacity = strokeProps.lineWidth;
-            
+
             // Render sub-pixel strokes at 1px width
             // Opacity adjustment handled in paint source evaluation
             adjustedStrokeProps = { ...strokeProps, lineWidth: 1.0 };
         }
-        
+
         // Generate stroke polygons using geometric approach
         const strokePolygons = StrokeGenerator.generateStrokePolygons(path, adjustedStrokeProps);
-        
+
         if (this._requiresCanvasWideCompositing(this._currentOp.composite)) {
             // Canvas-wide compositing path: build source mask then perform canvas-wide compositing
             PolygonFiller.fillPolygons(this._surface, strokePolygons, strokeStyle, 'nonzero', this._currentOp.transform, this._currentOp.clipMask, this._currentOp.globalAlpha, subPixelOpacity, this._currentOp.composite, this._currentOp.sourceMask);
-            
+
             // Perform canvas-wide compositing pass
             this._performCanvasWideCompositing(strokeStyle, this._currentOp.globalAlpha, subPixelOpacity);
         } else {
@@ -7467,15 +7486,15 @@ class Rasterizer {
     _drawImageInternal(img, sx, sy, sw, sh, dx, dy, dw, dh) {
         // Validate and convert ImageLike (handles RGB→RGBA conversion)
         const imageData = ImageProcessor.validateAndConvert(img);
-        
+
         // Handle different parameter combinations
         let sourceX, sourceY, sourceWidth, sourceHeight;
         let destX, destY, destWidth, destHeight;
-        
+
         if (arguments.length === 3) {
             // drawImage(image, dx, dy)
             sourceX = 0;
-            sourceY = 0; 
+            sourceY = 0;
             sourceWidth = imageData.width;
             sourceHeight = imageData.height;
             destX = sx; // Actually dx
@@ -7505,30 +7524,30 @@ class Rasterizer {
         } else {
             throw new Error('Invalid number of arguments for drawImage');
         }
-        
+
         // Validate source rectangle bounds
         if (sourceX < 0 || sourceY < 0 || sourceX + sourceWidth > imageData.width || sourceY + sourceHeight > imageData.height) {
             throw new Error('Source rectangle is outside image bounds');
         }
-        
+
         // Apply transform to destination rectangle corners  
         const transform = this._currentOp.transform;
-        const topLeft = transform.transformPoint({x: destX, y: destY});
-        const topRight = transform.transformPoint({x: destX + destWidth, y: destY});
-        const bottomLeft = transform.transformPoint({x: destX, y: destY + destHeight});
-        const bottomRight = transform.transformPoint({x: destX + destWidth, y: destY + destHeight});
-        
+        const topLeft = transform.transformPoint({ x: destX, y: destY });
+        const topRight = transform.transformPoint({ x: destX + destWidth, y: destY });
+        const bottomLeft = transform.transformPoint({ x: destX, y: destY + destHeight });
+        const bottomRight = transform.transformPoint({ x: destX + destWidth, y: destY + destHeight });
+
         // Find bounding box in device space
         const minX = Math.max(0, Math.floor(Math.min(topLeft.x, topRight.x, bottomLeft.x, bottomRight.x)));
         const maxX = Math.min(this._surface.width - 1, Math.ceil(Math.max(topLeft.x, topRight.x, bottomLeft.x, bottomRight.x)));
         const minY = Math.max(0, Math.floor(Math.min(topLeft.y, topRight.y, bottomLeft.y, bottomRight.y)));
         const maxY = Math.min(this._surface.height - 1, Math.ceil(Math.max(topLeft.y, topRight.y, bottomLeft.y, bottomRight.y)));
-        
+
         // Get inverse transform for mapping device pixels back to source  
         const inverseTransform = transform.invert();
-        
+
         const globalAlpha = this._currentOp.globalAlpha;
-        
+
         // Render each pixel in the bounding box
         for (let deviceY = minY; deviceY <= maxY; deviceY++) {
             for (let deviceX = minX; deviceX <= maxX; deviceX++) {
@@ -7536,59 +7555,59 @@ class Rasterizer {
                 if (this._currentOp.clipMask && this._isPixelClipped(deviceX, deviceY)) {
                     continue;
                 }
-            
-            // Transform device pixel back to destination space
-            const destPoint = inverseTransform.transformPoint({x: deviceX, y: deviceY});
-            
-            // Check if we're inside the destination rectangle
-            if (destPoint.x < destX || destPoint.x >= destX + destWidth || 
-                destPoint.y < destY || destPoint.y >= destY + destHeight) {
-                continue;
-            }
-            
-            // Map destination coordinates to source coordinates
-            const sourceXf = sourceX + (destPoint.x - destX) / destWidth * sourceWidth;
-            const sourceYf = sourceY + (destPoint.y - destY) / destHeight * sourceHeight;
-            
-            // Nearest-neighbor sampling
-            const sourcePX = Math.floor(sourceXf);
-            const sourcePY = Math.floor(sourceYf);
-            
-            // Bounds check for source coordinates
-            if (sourcePX < 0 || sourcePY < 0 || sourcePX >= imageData.width || sourcePY >= imageData.height) {
-                continue;
-            }
-            
-            // Sample source pixel
-            const sourceOffset = (sourcePY * imageData.width + sourcePX) * 4;
-            const srcR = imageData.data[sourceOffset];
-            const srcG = imageData.data[sourceOffset + 1]; 
-            const srcB = imageData.data[sourceOffset + 2];
-            const srcA = imageData.data[sourceOffset + 3];
-            
-            // Apply global alpha
-            const effectiveAlpha = (srcA / 255) * globalAlpha;
-            const finalSrcA = Math.round(effectiveAlpha * 255);
-            
-            // Skip transparent pixels
-            if (finalSrcA === 0) continue;
-            
+
+                // Transform device pixel back to destination space
+                const destPoint = inverseTransform.transformPoint({ x: deviceX, y: deviceY });
+
+                // Check if we're inside the destination rectangle
+                if (destPoint.x < destX || destPoint.x >= destX + destWidth ||
+                    destPoint.y < destY || destPoint.y >= destY + destHeight) {
+                    continue;
+                }
+
+                // Map destination coordinates to source coordinates
+                const sourceXf = sourceX + (destPoint.x - destX) / destWidth * sourceWidth;
+                const sourceYf = sourceY + (destPoint.y - destY) / destHeight * sourceHeight;
+
+                // Nearest-neighbor sampling
+                const sourcePX = Math.floor(sourceXf);
+                const sourcePY = Math.floor(sourceYf);
+
+                // Bounds check for source coordinates
+                if (sourcePX < 0 || sourcePY < 0 || sourcePX >= imageData.width || sourcePY >= imageData.height) {
+                    continue;
+                }
+
+                // Sample source pixel
+                const sourceOffset = (sourcePY * imageData.width + sourcePX) * 4;
+                const srcR = imageData.data[sourceOffset];
+                const srcG = imageData.data[sourceOffset + 1];
+                const srcB = imageData.data[sourceOffset + 2];
+                const srcA = imageData.data[sourceOffset + 3];
+
+                // Apply global alpha
+                const effectiveAlpha = (srcA / 255) * globalAlpha;
+                const finalSrcA = Math.round(effectiveAlpha * 255);
+
+                // Skip transparent pixels
+                if (finalSrcA === 0) continue;
+
                 // Get destination pixel for blending
                 const destOffset = deviceY * this._surface.stride + deviceX * 4;
-                
+
                 // Get destination pixel for blending
                 const dstR = this._surface.data[destOffset];
                 const dstG = this._surface.data[destOffset + 1];
                 const dstB = this._surface.data[destOffset + 2];
                 const dstA = this._surface.data[destOffset + 3];
-                
+
                 // Use CompositeOperations for consistent blending
                 const result = CompositeOperations.blendPixel(
                     this._currentOp.composite,
                     srcR, srcG, srcB, finalSrcA,  // source
                     dstR, dstG, dstB, dstA        // destination
                 );
-                
+
                 this._surface.data[destOffset] = result.r;
                 this._surface.data[destOffset + 1] = result.g;
                 this._surface.data[destOffset + 2] = result.b;
@@ -7622,37 +7641,37 @@ class Context2D {
     constructor(surface) {
         this.surface = surface;
         this.rasterizer = new Rasterizer(surface);
-        
+
         // State stack
         this.stateStack = [];
-        
+
         // Current state
         this.globalAlpha = 1.0;
         this.globalCompositeOperation = 'source-over';
         this._transform = new Transform2D();
         this._fillStyle = new Color(0, 0, 0, 255); // Black
         this._strokeStyle = new Color(0, 0, 0, 255); // Black
-        
+
         // Stroke properties
         this._lineWidth = 1.0;
         this.lineJoin = 'miter';  // 'miter', 'round', 'bevel'
         this.lineCap = 'butt';    // 'butt', 'round', 'square'
         this.miterLimit = 10.0;
-        
+
         // Line dash properties
         this._lineDash = [];         // Internal working dash pattern (may be duplicated)
         this._originalLineDash = []; // Original pattern as set by user
         this._lineDashOffset = 0;    // Starting offset into dash pattern
-        
+
         // Shadow properties - HTML5 Canvas compatible defaults
-        this.shadowColor = new Color(0, 0, 0, 0); // Transparent black (no shadow)
+        this.shadowColor = Color.transparent; // Transparent black (no shadow)
         this.shadowBlur = 0;       // No blur
         this.shadowOffsetX = 0;    // No horizontal offset
         this.shadowOffsetY = 0;    // No vertical offset
-        
+
         // Internal path and clipping
         this._currentPath = new SWPath2D();
-        
+
         // Stencil-based clipping system (only clipping mechanism)
         this._clipMask = null;  // ClipMask instance for 1-bit per pixel clipping
     }
@@ -7661,11 +7680,11 @@ class Context2D {
     get lineWidth() {
         return this._lineWidth;
     }
-    
+
     set lineWidth(value) {
         // HTML5 Canvas spec: ignore zero, negative, Infinity, and NaN values
-        if (typeof value === 'number' && 
-            value > 0 && 
+        if (typeof value === 'number' &&
+            value > 0 &&
             isFinite(value)) {
             this._lineWidth = value;
         }
@@ -7679,12 +7698,12 @@ class Context2D {
         if (this._clipMask) {
             clipMaskCopy = this._clipMask.clone();
         }
-        
+
         this.stateStack.push({
             globalAlpha: this.globalAlpha,
             globalCompositeOperation: this.globalCompositeOperation,
-            transform: new Transform2D([this._transform.a, this._transform.b, this._transform.c, 
-                                  this._transform.d, this._transform.e, this._transform.f]),
+            transform: new Transform2D([this._transform.a, this._transform.b, this._transform.c,
+            this._transform.d, this._transform.e, this._transform.f]),
             fillStyle: this._fillStyle, // Paint sources are immutable, safe to share
             strokeStyle: this._strokeStyle, // Paint sources are immutable, safe to share
             clipMask: clipMaskCopy,   // Deep copy of clip mask
@@ -7704,64 +7723,64 @@ class Context2D {
     }
 
     restore() {
-    if (this.stateStack.length === 0) return;
-    
-    const state = this.stateStack.pop();
-    this.globalAlpha = state.globalAlpha;
-    this.globalCompositeOperation = state.globalCompositeOperation;
-    this._transform = state.transform;
-    this._fillStyle = state.fillStyle;
-    this._strokeStyle = state.strokeStyle;
-    
-    // Restore clipMask (may be null)
-    this._clipMask = state.clipMask;
-    
-    this._lineWidth = state.lineWidth;
-    this.lineJoin = state.lineJoin;
-    this.lineCap = state.lineCap;
-    this.miterLimit = state.miterLimit;
-    this._lineDash = state.lineDash || [];
-    this._originalLineDash = state.originalLineDash || [];
-    this._lineDashOffset = state.lineDashOffset || 0;
-    
-    // Restore shadow properties
-    this.shadowColor = state.shadowColor || new Color(0, 0, 0, 0);
-    this.shadowBlur = state.shadowBlur || 0;
-    this.shadowOffsetX = state.shadowOffsetX || 0;
-    this.shadowOffsetY = state.shadowOffsetY || 0;
+        if (this.stateStack.length === 0) return;
+
+        const state = this.stateStack.pop();
+        this.globalAlpha = state.globalAlpha;
+        this.globalCompositeOperation = state.globalCompositeOperation;
+        this._transform = state.transform;
+        this._fillStyle = state.fillStyle;
+        this._strokeStyle = state.strokeStyle;
+
+        // Restore clipMask (may be null)
+        this._clipMask = state.clipMask;
+
+        this._lineWidth = state.lineWidth;
+        this.lineJoin = state.lineJoin;
+        this.lineCap = state.lineCap;
+        this.miterLimit = state.miterLimit;
+        this._lineDash = state.lineDash || [];
+        this._originalLineDash = state.originalLineDash || [];
+        this._lineDashOffset = state.lineDashOffset || 0;
+
+        // Restore shadow properties
+        this.shadowColor = state.shadowColor || Color.transparent;
+        this.shadowBlur = state.shadowBlur || 0;
+        this.shadowOffsetX = state.shadowOffsetX || 0;
+        this.shadowOffsetY = state.shadowOffsetY || 0;
     }
 
     // Transform methods
     transform(a, b, c, d, e, f) {
-    const m = new Transform2D([a, b, c, d, e, f]);
-    this._transform = m.multiply(this._transform);
+        const m = new Transform2D([a, b, c, d, e, f]);
+        this._transform = m.multiply(this._transform);
     }
 
     setTransform(a, b, c, d, e, f) {
-    this._transform = new Transform2D([a, b, c, d, e, f]);
+        this._transform = new Transform2D([a, b, c, d, e, f]);
     }
 
     resetTransform() {
-    this._transform = new Transform2D();
+        this._transform = new Transform2D();
     }
 
     // Convenience transform methods
     translate(x, y) {
-    this._transform = new Transform2D().translate(x, y).multiply(this._transform);
+        this._transform = new Transform2D().translate(x, y).multiply(this._transform);
     }
 
     scale(sx, sy) {
-    this._transform = new Transform2D().scale(sx, sy).multiply(this._transform);
+        this._transform = new Transform2D().scale(sx, sy).multiply(this._transform);
     }
 
     rotate(angleInRadians) {
-    this._transform = new Transform2D().rotate(angleInRadians).multiply(this._transform);
+        this._transform = new Transform2D().rotate(angleInRadians).multiply(this._transform);
     }
 
     // Style setters - support solid colors and paint sources
     setFillStyle(r, g, b, a) {
-        if (arguments.length === 1 && (r instanceof Color || r instanceof Gradient || 
-            r instanceof LinearGradient || r instanceof RadialGradient || 
+        if (arguments.length === 1 && (r instanceof Color || r instanceof Gradient ||
+            r instanceof LinearGradient || r instanceof RadialGradient ||
             r instanceof ConicGradient || r instanceof Pattern)) {
             // Paint source (gradient or pattern)
             this._fillStyle = r;
@@ -7773,8 +7792,8 @@ class Context2D {
     }
 
     setStrokeStyle(r, g, b, a) {
-        if (arguments.length === 1 && (r instanceof Color || r instanceof Gradient || 
-            r instanceof LinearGradient || r instanceof RadialGradient || 
+        if (arguments.length === 1 && (r instanceof Color || r instanceof Gradient ||
+            r instanceof LinearGradient || r instanceof RadialGradient ||
             r instanceof ConicGradient || r instanceof Pattern)) {
             // Paint source (gradient or pattern)
             this._strokeStyle = r;
@@ -7821,100 +7840,100 @@ class Context2D {
 
     // Path methods (delegated to internal path)
     beginPath() {
-    this._currentPath = new SWPath2D();
+        this._currentPath = new SWPath2D();
     }
 
     closePath() {
-    this._currentPath.closePath();
+        this._currentPath.closePath();
     }
 
     moveTo(x, y) {
-    this._currentPath.moveTo(x, y);
+        this._currentPath.moveTo(x, y);
     }
 
     lineTo(x, y) {
-    this._currentPath.lineTo(x, y);
+        this._currentPath.lineTo(x, y);
     }
 
     rect(x, y, w, h) {
-    this._currentPath.rect(x, y, w, h);
+        this._currentPath.rect(x, y, w, h);
     }
 
     arc(x, y, radius, startAngle, endAngle, counterclockwise) {
-    this._currentPath.arc(x, y, radius, startAngle, endAngle, counterclockwise);
+        this._currentPath.arc(x, y, radius, startAngle, endAngle, counterclockwise);
     }
 
     ellipse(x, y, radiusX, radiusY, rotation, startAngle, endAngle, counterclockwise) {
-    this._currentPath.ellipse(x, y, radiusX, radiusY, rotation, startAngle, endAngle, counterclockwise);
+        this._currentPath.ellipse(x, y, radiusX, radiusY, rotation, startAngle, endAngle, counterclockwise);
     }
-    
+
     arcTo(x1, y1, x2, y2, radius) {
         this._currentPath.arcTo(x1, y1, x2, y2, radius);
     }
 
     quadraticCurveTo(cpx, cpy, x, y) {
-    this._currentPath.quadraticCurveTo(cpx, cpy, x, y);
+        this._currentPath.quadraticCurveTo(cpx, cpy, x, y);
     }
 
     bezierCurveTo(cp1x, cp1y, cp2x, cp2y, x, y) {
-    this._currentPath.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, x, y);
+        this._currentPath.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, x, y);
     }
 
     // Drawing methods - simplified for M1 (only rectangles)
     fillRect(x, y, width, height) {
-    this.rasterizer.beginOp({
-        composite: this.globalCompositeOperation,
-        globalAlpha: this.globalAlpha,
-        transform: this._transform,
-        clipMask: this._clipMask,
-        fillStyle: this._fillStyle,
-        // Shadow properties
-        shadowColor: this.shadowColor,
-        shadowBlur: this.shadowBlur,
-        shadowOffsetX: this.shadowOffsetX,
-        shadowOffsetY: this.shadowOffsetY
-    });
-    
-    this.rasterizer.fillRect(x, y, width, height, this._fillStyle);
-    this.rasterizer.endOp();
+        this.rasterizer.beginOp({
+            composite: this.globalCompositeOperation,
+            globalAlpha: this.globalAlpha,
+            transform: this._transform,
+            clipMask: this._clipMask,
+            fillStyle: this._fillStyle,
+            // Shadow properties
+            shadowColor: this.shadowColor,
+            shadowBlur: this.shadowBlur,
+            shadowOffsetX: this.shadowOffsetX,
+            shadowOffsetY: this.shadowOffsetY
+        });
+
+        this.rasterizer.fillRect(x, y, width, height, this._fillStyle);
+        this.rasterizer.endOp();
     }
 
     strokeRect(x, y, width, height) {
-    // Create a rectangular path
-    const rectPath = new SWPath2D();
-    rectPath.rect(x, y, width, height);
-    rectPath.closePath();
-    
-    // Stroke the path using existing stroke infrastructure
-    this.rasterizer.beginOp({
-        composite: this.globalCompositeOperation,
-        globalAlpha: this.globalAlpha,
-        transform: this._transform,
-        clipMask: this._clipMask,
-        strokeStyle: this._strokeStyle,
-        // Shadow properties
-        shadowColor: this.shadowColor,
-        shadowBlur: this.shadowBlur,
-        shadowOffsetX: this.shadowOffsetX,
-        shadowOffsetY: this.shadowOffsetY
-    });
-    
-    this.rasterizer.stroke(rectPath, {
-        lineWidth: this._lineWidth,
-        lineJoin: this.lineJoin,
-        lineCap: this.lineCap,
-        miterLimit: this.miterLimit
-    });
-    
-    this.rasterizer.endOp();
+        // Create a rectangular path
+        const rectPath = new SWPath2D();
+        rectPath.rect(x, y, width, height);
+        rectPath.closePath();
+
+        // Stroke the path using existing stroke infrastructure
+        this.rasterizer.beginOp({
+            composite: this.globalCompositeOperation,
+            globalAlpha: this.globalAlpha,
+            transform: this._transform,
+            clipMask: this._clipMask,
+            strokeStyle: this._strokeStyle,
+            // Shadow properties
+            shadowColor: this.shadowColor,
+            shadowBlur: this.shadowBlur,
+            shadowOffsetX: this.shadowOffsetX,
+            shadowOffsetY: this.shadowOffsetY
+        });
+
+        this.rasterizer.stroke(rectPath, {
+            lineWidth: this._lineWidth,
+            lineJoin: this.lineJoin,
+            lineCap: this.lineCap,
+            miterLimit: this.miterLimit
+        });
+
+        this.rasterizer.endOp();
     }
 
     clearRect(x, y, width, height) {
-    // clearRect should only affect the specified rectangle, not use canvas-wide compositing
-    // We'll handle this as a special case by directly clearing the surface pixels
-    this._clearRectDirect(x, y, width, height);
+        // clearRect should only affect the specified rectangle, not use canvas-wide compositing
+        // We'll handle this as a special case by directly clearing the surface pixels
+        this._clearRectDirect(x, y, width, height);
     }
-    
+
     /**
      * Clear rectangle directly without canvas-wide compositing
      * @param {number} x - Rectangle x coordinate
@@ -7925,34 +7944,34 @@ class Context2D {
      */
     _clearRectDirect(x, y, width, height) {
         // Validate parameters
-        if (typeof x !== 'number' || typeof y !== 'number' || 
+        if (typeof x !== 'number' || typeof y !== 'number' ||
             typeof width !== 'number' || typeof height !== 'number') {
             throw new Error('Rectangle coordinates must be numbers');
         }
-        
+
         if (width < 0 || height < 0) {
             return; // Nothing to clear for negative dimensions
         }
-        
+
         if (width === 0 || height === 0) {
             return; // Nothing to clear for zero dimensions
         }
-        
+
         const surface = this.surface;
         const transform = this._transform;
-        
+
         // Transform rectangle corners to determine affected region
-        const topLeft = transform.transformPoint({x: x, y: y});
-        const topRight = transform.transformPoint({x: x + width, y: y});
-        const bottomLeft = transform.transformPoint({x: x, y: y + height});
-        const bottomRight = transform.transformPoint({x: x + width, y: y + height});
-        
+        const topLeft = transform.transformPoint({ x: x, y: y });
+        const topRight = transform.transformPoint({ x: x + width, y: y });
+        const bottomLeft = transform.transformPoint({ x: x, y: y + height });
+        const bottomRight = transform.transformPoint({ x: x + width, y: y + height });
+
         // Get bounding box of transformed rectangle
         const minX = Math.floor(Math.min(topLeft.x, topRight.x, bottomLeft.x, bottomRight.x));
         const maxX = Math.ceil(Math.max(topLeft.x, topRight.x, bottomLeft.x, bottomRight.x));
         const minY = Math.floor(Math.min(topLeft.y, topRight.y, bottomLeft.y, bottomRight.y));
         const maxY = Math.ceil(Math.max(topLeft.y, topRight.y, bottomLeft.y, bottomRight.y));
-        
+
         // Handle simple axis-aligned case (no rotation/skew)
         if (transform.b === 0 && transform.c === 0) {
             // Calculate the actual rectangle bounds in surface coordinates
@@ -7960,20 +7979,20 @@ class Context2D {
             const rectTop = transform.f + y * transform.d;  // y coordinate with scaling and translation  
             const rectRight = rectLeft + width * transform.a;
             const rectBottom = rectTop + height * transform.d;
-            
+
             // Get integer pixel bounds
             const startX = Math.max(0, Math.floor(rectLeft));
             const endX = Math.min(surface.width - 1, Math.floor(rectRight) - 1); // Exclusive end
             const startY = Math.max(0, Math.floor(rectTop));
             const endY = Math.min(surface.height - 1, Math.floor(rectBottom) - 1); // Exclusive end
-            
+
             for (let py = startY; py <= endY; py++) {
                 for (let px = startX; px <= endX; px++) {
                     // Check if this pixel should be clipped by current clip mask
                     if (this._clipMask && this._clipMask.isPixelClipped(px, py)) {
                         continue;
                     }
-                    
+
                     const offset = py * surface.stride + px * 4;
                     surface.data[offset] = 0;     // R
                     surface.data[offset + 1] = 0; // G  
@@ -7985,17 +8004,17 @@ class Context2D {
             // For rotated/skewed rectangles, we need to test each pixel 
             // This is more complex but handles all transformation cases correctly
             const invTransform = transform.invert();
-            
+
             for (let py = Math.max(0, minY); py <= Math.min(surface.height - 1, maxY); py++) {
                 for (let px = Math.max(0, minX); px <= Math.min(surface.width - 1, maxX); px++) {
                     // Check if this pixel should be clipped by current clip mask
                     if (this._clipMask && this._clipMask.isPixelClipped(px, py)) {
                         continue;
                     }
-                    
+
                     // Transform pixel back to path coordinate space
-                    const pathPoint = invTransform.transformPoint({x: px + 0.5, y: py + 0.5});
-                    
+                    const pathPoint = invTransform.transformPoint({ x: px + 0.5, y: py + 0.5 });
+
                     // Check if point is inside the clearRect rectangle
                     if (pathPoint.x >= x && pathPoint.x < x + width &&
                         pathPoint.y >= y && pathPoint.y < y + height) {
@@ -8012,82 +8031,82 @@ class Context2D {
 
     // M2: Path drawing methods
     fill(path, rule) {
-    let pathToFill, fillRule;
-    
-    // Handle different argument combinations:
-    // fill() -> path = undefined, rule = undefined
-    // fill('evenodd') -> path = 'evenodd', rule = undefined  
-    // fill(path2d) -> path = path2d object, rule = undefined
-    // fill(path2d, 'evenodd') -> path = path2d object, rule = 'evenodd'
-    
-    if (arguments.length === 0) {
-        // fill() - use current path, nonzero rule
-        pathToFill = this._currentPath;
-        fillRule = 'nonzero';
-    } else if (arguments.length === 1) {
-        if (typeof path === 'string') {
-            // fill('evenodd') - use current path, specified rule
+        let pathToFill, fillRule;
+
+        // Handle different argument combinations:
+        // fill() -> path = undefined, rule = undefined
+        // fill('evenodd') -> path = 'evenodd', rule = undefined  
+        // fill(path2d) -> path = path2d object, rule = undefined
+        // fill(path2d, 'evenodd') -> path = path2d object, rule = 'evenodd'
+
+        if (arguments.length === 0) {
+            // fill() - use current path, nonzero rule
             pathToFill = this._currentPath;
-            fillRule = path;
-        } else {
-            // fill(path2d) - use specified path, nonzero rule
-            pathToFill = path;
             fillRule = 'nonzero';
+        } else if (arguments.length === 1) {
+            if (typeof path === 'string') {
+                // fill('evenodd') - use current path, specified rule
+                pathToFill = this._currentPath;
+                fillRule = path;
+            } else {
+                // fill(path2d) - use specified path, nonzero rule
+                pathToFill = path;
+                fillRule = 'nonzero';
+            }
+        } else {
+            // fill(path2d, 'evenodd') - use specified path and rule
+            pathToFill = path;
+            fillRule = rule;
         }
-    } else {
-        // fill(path2d, 'evenodd') - use specified path and rule
-        pathToFill = path;
-        fillRule = rule;
-    }
-    
-    fillRule = fillRule || 'nonzero';
-    
-    this.rasterizer.beginOp({
-        composite: this.globalCompositeOperation,
-        globalAlpha: this.globalAlpha,
-        transform: this._transform,
-        clipMask: this._clipMask,
-        fillStyle: this._fillStyle,
-        // Shadow properties
-        shadowColor: this.shadowColor,
-        shadowBlur: this.shadowBlur,
-        shadowOffsetX: this.shadowOffsetX,
-        shadowOffsetY: this.shadowOffsetY
-    });
-    
-    this.rasterizer.fill(pathToFill, fillRule);
-    this.rasterizer.endOp();
+
+        fillRule = fillRule || 'nonzero';
+
+        this.rasterizer.beginOp({
+            composite: this.globalCompositeOperation,
+            globalAlpha: this.globalAlpha,
+            transform: this._transform,
+            clipMask: this._clipMask,
+            fillStyle: this._fillStyle,
+            // Shadow properties
+            shadowColor: this.shadowColor,
+            shadowBlur: this.shadowBlur,
+            shadowOffsetX: this.shadowOffsetX,
+            shadowOffsetY: this.shadowOffsetY
+        });
+
+        this.rasterizer.fill(pathToFill, fillRule);
+        this.rasterizer.endOp();
     }
 
     stroke(path) {
-    // Use specified path or current internal path
-    const pathToStroke = path || this._currentPath;
-    
-    this.rasterizer.beginOp({
-        composite: this.globalCompositeOperation,
-        globalAlpha: this.globalAlpha,
-        transform: this._transform,
-        clipMask: this._clipMask,
-        strokeStyle: this._strokeStyle,
-        // Shadow properties
-        shadowColor: this.shadowColor,
-        shadowBlur: this.shadowBlur,
-        shadowOffsetX: this.shadowOffsetX,
-        shadowOffsetY: this.shadowOffsetY
-    });
-    
-    this.rasterizer.stroke(pathToStroke, {
-        lineWidth: this._lineWidth,
-        lineJoin: this.lineJoin,
-        lineCap: this.lineCap,
-        miterLimit: this.miterLimit,
-        lineDash: this._lineDash.slice(),    // Copy to avoid mutation
-        lineDashOffset: this._lineDashOffset
-    });
-    
-    this.rasterizer.endOp();
+        // Use specified path or current internal path
+        const pathToStroke = path || this._currentPath;
+
+        this.rasterizer.beginOp({
+            composite: this.globalCompositeOperation,
+            globalAlpha: this.globalAlpha,
+            transform: this._transform,
+            clipMask: this._clipMask,
+            strokeStyle: this._strokeStyle,
+            // Shadow properties
+            shadowColor: this.shadowColor,
+            shadowBlur: this.shadowBlur,
+            shadowOffsetX: this.shadowOffsetX,
+            shadowOffsetY: this.shadowOffsetY
+        });
+
+        this.rasterizer.stroke(pathToStroke, {
+            lineWidth: this._lineWidth,
+            lineJoin: this.lineJoin,
+            lineCap: this.lineCap,
+            miterLimit: this.miterLimit,
+            lineDash: this._lineDash.slice(),    // Copy to avoid mutation
+            lineDashOffset: this._lineDashOffset
+        });
+
+        this.rasterizer.endOp();
     }
-    
+
     /**
      * Test if a point is inside the current path or specified path
      * Supports all HTML5 Canvas API overloads:
@@ -8100,7 +8119,7 @@ class Context2D {
      */
     isPointInPath() {
         let path, x, y, fillRule;
-        
+
         if (arguments.length < 2) {
             const error = new TypeError('Invalid number of arguments for isPointInPath');
             error.message = 'TypeError: ' + error.message;
@@ -8138,33 +8157,33 @@ class Context2D {
             error.message = 'TypeError: ' + error.message;
             throw error;
         }
-        
+
         // Validate parameters
         if (typeof x !== 'number' || typeof y !== 'number') {
             return false;
         }
-        
+
         if (!path || !path.commands || path.commands.length === 0) {
             return false;
         }
-        
+
         fillRule = fillRule || 'nonzero';
-        
+
         // Note: isPointInPath uses untransformed coordinates per HTML5 Canvas spec
         // The point coordinates are in canvas coordinate space, not transform-adjusted space
-        
+
         // Flatten the path to polygons
         const polygons = PathFlattener.flattenPath(path);
-        
+
         if (polygons.length === 0) {
             return false;
         }
-        
+
         // Transform polygons to match current canvas transform
-        const transformedPolygons = polygons.map(poly => 
+        const transformedPolygons = polygons.map(poly =>
             poly.map(point => this._transform.transformPoint(point))
         );
-        
+
         // Test point against transformed polygons
         return PolygonFiller.isPointInPolygons(x, y, transformedPolygons, fillRule);
     }
@@ -8179,7 +8198,7 @@ class Context2D {
      */
     isPointInStroke() {
         let path, x, y;
-        
+
         if (arguments.length < 2) {
             const error = new TypeError('Invalid number of arguments for isPointInStroke');
             error.message = 'TypeError: ' + error.message;
@@ -8201,19 +8220,19 @@ class Context2D {
             error.message = 'TypeError: ' + error.message;
             throw error;
         }
-        
+
         // Validate parameters
         if (typeof x !== 'number' || typeof y !== 'number') {
             return false;
         }
-        
+
         if (!path || !path.commands || path.commands.length === 0) {
             return false;
         }
-        
+
         // Note: isPointInStroke uses untransformed coordinates per HTML5 Canvas spec
         // The point coordinates are in canvas coordinate space, not transform-adjusted space
-        
+
         // Create stroke properties object from current context state
         const strokeProps = {
             lineWidth: this._lineWidth,
@@ -8223,20 +8242,20 @@ class Context2D {
             lineDash: this._lineDash,
             lineDashOffset: this._lineDashOffset
         };
-        
-        
+
+
         // Generate stroke polygons using StrokeGenerator
         const strokePolygons = StrokeGenerator.generateStrokePolygons(path, strokeProps);
-        
+
         if (strokePolygons.length === 0) {
             return false;
         }
-        
+
         // Transform stroke polygons to match current canvas transform
-        const transformedPolygons = strokePolygons.map(poly => 
+        const transformedPolygons = strokePolygons.map(poly =>
             poly.map(point => this._transform.transformPoint(point))
         );
-        
+
         // Test point against transformed stroke polygons using nonzero winding rule
         // (stroke hit testing doesn't use fill rules like path filling does)
         return PolygonFiller.isPointInPolygons(x, y, transformedPolygons, 'nonzero');
@@ -8256,59 +8275,59 @@ class Context2D {
     _distanceToLineSegment(px, py, x1, y1, x2, y2) {
         const dx = x2 - x1;
         const dy = y2 - y1;
-        
+
         // If line segment is actually a point
         if (dx === 0 && dy === 0) {
             return Math.sqrt((px - x1) * (px - x1) + (py - y1) * (py - y1));
         }
-        
+
         // Calculate parameter t for closest point on line
         const t = Math.max(0, Math.min(1, ((px - x1) * dx + (py - y1) * dy) / (dx * dx + dy * dy)));
-        
+
         // Find closest point on line segment
         const closestX = x1 + t * dx;
         const closestY = y1 + t * dy;
-        
+
         // Return distance from point to closest point on segment
         return Math.sqrt((px - closestX) * (px - closestX) + (py - closestY) * (py - closestY));
     }
 
-/**
- * Enhanced clipping support with stencil buffer intersection
- * 
- * Implements HTML5 Canvas-compatible clipping with proper intersection semantics.
- * Each clip() operation creates a new clip region that intersects with any existing
- * clipping regions.
- * 
- * @param {Path2D} path - Optional path to clip with (uses current path if not provided)
- * @param {string} rule - Fill rule: 'nonzero' (default) or 'evenodd'
- */
+    /**
+     * Enhanced clipping support with stencil buffer intersection
+     * 
+     * Implements HTML5 Canvas-compatible clipping with proper intersection semantics.
+     * Each clip() operation creates a new clip region that intersects with any existing
+     * clipping regions.
+     * 
+     * @param {Path2D} path - Optional path to clip with (uses current path if not provided)
+     * @param {string} rule - Fill rule: 'nonzero' (default) or 'evenodd'
+     */
     clip(path, rule) {
         // If no path provided, use current internal path
         const pathToClip = path || this._currentPath;
         const clipRule = rule || 'nonzero';
-        
+
         // Create temporary clip mask to render this clip path
         const tempClipMask = new ClipMask(this.surface.width, this.surface.height);
         tempClipMask.clipAll(); // Start with all pixels clipped
-        
+
         // Create clip pixel writer that writes to the temporary buffer
         const clipPixelWriter = tempClipMask.createPixelWriter();
-        
+
         // Render the clip path to the temporary buffer using fill logic
         // We need to temporarily set up a "fake" rendering operation
         const originalFillStyle = this._fillStyle;
         this._fillStyle = [255, 255, 255, 255]; // White (doesn't matter for clipping)
-        
+
         // Flatten path and fill to temporary clip buffer
         const polygons = PathFlattener.flattenPath(pathToClip);
-        
+
         // Use a modified version of fillPolygons that writes to our clip buffer
         this._fillPolygonsToClipBuffer(polygons, clipRule, tempClipMask);
-        
+
         // Restore original fill style
         this._fillStyle = originalFillStyle;
-        
+
         // Intersect with existing clip mask (if any)
         if (this._clipMask) {
             // AND operation: existing mask & new mask
@@ -8317,7 +8336,7 @@ class Context2D {
             // First clip - use the temporary buffer as the new clip mask
             this._clipMask = tempClipMask;
         }
-        
+
         // NOTE: Browser Compatibility - Clip Path Auto-Stroking
         // ========================================================
         // Some browsers (particularly older versions and certain rendering modes) 
@@ -8343,85 +8362,85 @@ class Context2D {
 
     // Helper method to fill polygons directly to a clip buffer
     _fillPolygonsToClipBuffer(polygons, fillRule, clipBuffer) {
-    if (polygons.length === 0) return;
-    
-    const surface = this.surface;  // Need width/height for bounds
-    
-    // Transform all polygon vertices
-    const transformedPolygons = polygons.map(poly => 
-        poly.map(point => this._transform.transformPoint(point))
-    );
-    
-    // Find bounding box
-    let minY = Infinity, maxY = -Infinity;
-    for (const poly of transformedPolygons) {
-        for (const point of poly) {
-            minY = Math.min(minY, point.y);
-            maxY = Math.max(maxY, point.y);
-        }
-    }
-    
-    // Clamp to surface bounds
-    minY = Math.max(0, Math.floor(minY));
-    maxY = Math.min(surface.height - 1, Math.ceil(maxY));
-    
-    // Process each scanline (similar to fillPolygons but writes to clip buffer)
-    for (let y = minY; y <= maxY; y++) {
-        const intersections = [];
-        
-        // Find all intersections with this scanline
+        if (polygons.length === 0) return;
+
+        const surface = this.surface;  // Need width/height for bounds
+
+        // Transform all polygon vertices
+        const transformedPolygons = polygons.map(poly =>
+            poly.map(point => this._transform.transformPoint(point))
+        );
+
+        // Find bounding box
+        let minY = Infinity, maxY = -Infinity;
         for (const poly of transformedPolygons) {
-            this._findPolygonIntersections(poly, y + 0.5, intersections);
+            for (const point of poly) {
+                minY = Math.min(minY, point.y);
+                maxY = Math.max(maxY, point.y);
+            }
         }
-        
-        // Sort intersections by x coordinate
-        intersections.sort((a, b) => a.x - b.x);
-        
-        // Fill spans based on winding rule
-        this._fillClipSpans(y, intersections, fillRule, clipBuffer);
-    }
+
+        // Clamp to surface bounds
+        minY = Math.max(0, Math.floor(minY));
+        maxY = Math.min(surface.height - 1, Math.ceil(maxY));
+
+        // Process each scanline (similar to fillPolygons but writes to clip buffer)
+        for (let y = minY; y <= maxY; y++) {
+            const intersections = [];
+
+            // Find all intersections with this scanline
+            for (const poly of transformedPolygons) {
+                this._findPolygonIntersections(poly, y + 0.5, intersections);
+            }
+
+            // Sort intersections by x coordinate
+            intersections.sort((a, b) => a.x - b.x);
+
+            // Fill spans based on winding rule
+            this._fillClipSpans(y, intersections, fillRule, clipBuffer);
+        }
     }
 
     // Helper method to find polygon intersections (copied from polygon-filler.js)
     _findPolygonIntersections(polygon, y, intersections) {
-    for (let i = 0; i < polygon.length; i++) {
-        const p1 = polygon[i];
-        const p2 = polygon[(i + 1) % polygon.length];
-        
-        // Skip horizontal edges
-        if (Math.abs(p1.y - p2.y) < 1e-10) continue;
-        
-        // Check if scanline crosses this edge
-        const minY = Math.min(p1.y, p2.y);
-        const maxY = Math.max(p1.y, p2.y);
-        
-        if (y >= minY && y < maxY) { // Note: < maxY to avoid double-counting vertices
-            // Calculate intersection point
-            const t = (y - p1.y) / (p2.y - p1.y);
-            const x = p1.x + t * (p2.x - p1.x);
-            
-            // Determine winding direction
-            const winding = p2.y > p1.y ? 1 : -1;
-            
-            intersections.push({x: x, winding: winding});
+        for (let i = 0; i < polygon.length; i++) {
+            const p1 = polygon[i];
+            const p2 = polygon[(i + 1) % polygon.length];
+
+            // Skip horizontal edges
+            if (Math.abs(p1.y - p2.y) < 1e-10) continue;
+
+            // Check if scanline crosses this edge
+            const minY = Math.min(p1.y, p2.y);
+            const maxY = Math.max(p1.y, p2.y);
+
+            if (y >= minY && y < maxY) { // Note: < maxY to avoid double-counting vertices
+                // Calculate intersection point
+                const t = (y - p1.y) / (p2.y - p1.y);
+                const x = p1.x + t * (p2.x - p1.x);
+
+                // Determine winding direction
+                const winding = p2.y > p1.y ? 1 : -1;
+
+                intersections.push({ x: x, winding: winding });
+            }
         }
-    }
     }
 
     // Helper method to fill clip spans (writes to clip buffer instead of surface)
     _fillClipSpans(y, intersections, fillRule, clipBuffer) {
         if (intersections.length === 0) return;
-        
+
         let windingNumber = 0;
         let inside = false;
-        
+
         for (let i = 0; i < intersections.length; i++) {
             const intersection = intersections[i];
             const nextIntersection = intersections[i + 1];
-            
+
             // Update winding number
             windingNumber += intersection.winding;
-            
+
             // Determine if we're inside based on fill rule
             const wasInside = inside;
             if (fillRule === 'evenodd') {
@@ -8429,12 +8448,12 @@ class Context2D {
             } else { // nonzero
                 inside = windingNumber !== 0;
             }
-            
+
             // Fill span if we're inside
             if (inside && nextIntersection) {
                 const startX = Math.max(0, Math.ceil(intersection.x));
                 const endX = Math.min(this.surface.width - 1, Math.floor(nextIntersection.x));
-                
+
                 for (let x = startX; x <= endX; x++) {
                     clipBuffer.setPixel(x, y, true); // Set pixel to visible (inside clip region)
                 }
@@ -8444,57 +8463,57 @@ class Context2D {
 
     // Image rendering
     drawImage(image, sx, sy, sw, sh, dx, dy, dw, dh) {
-    // Debug logging for browser troubleshooting
-    if (typeof console !== 'undefined' && console.log) {
-        console.log('Core drawImage called with:', {
-            imageType: image ? image.constructor.name : 'null',
-            hasWidth: image ? typeof image.width : 'N/A',
-            hasHeight: image ? typeof image.height : 'N/A',
-            hasData: image ? !!image.data : 'N/A',
-            dataType: image && image.data ? image.data.constructor.name : 'N/A',
-            dataInstanceCheck: image && image.data ? (image.data instanceof Uint8ClampedArray) : 'N/A'
+        // Debug logging for browser troubleshooting
+        if (typeof console !== 'undefined' && console.log) {
+            console.log('Core drawImage called with:', {
+                imageType: image ? image.constructor.name : 'null',
+                hasWidth: image ? typeof image.width : 'N/A',
+                hasHeight: image ? typeof image.height : 'N/A',
+                hasData: image ? !!image.data : 'N/A',
+                dataType: image && image.data ? image.data.constructor.name : 'N/A',
+                dataInstanceCheck: image && image.data ? (image.data instanceof Uint8ClampedArray) : 'N/A'
+            });
+        }
+
+        // Validate ImageLike object at API level
+        if (!image || typeof image !== 'object') {
+            throw new Error('First argument must be an ImageLike object');
+        }
+
+        if (typeof image.width !== 'number' || typeof image.height !== 'number') {
+            throw new Error('ImageLike must have numeric width and height properties');
+        }
+
+        if (!(image.data instanceof Uint8ClampedArray)) {
+            throw new Error('ImageLike data must be a Uint8ClampedArray');
+        }
+
+        // Set up rasterizer operation
+        this.rasterizer.beginOp({
+            composite: this.globalCompositeOperation,
+            globalAlpha: this.globalAlpha,
+            transform: new Transform2D([
+                this._transform.a, this._transform.b,
+                this._transform.c, this._transform.d,
+                this._transform.e, this._transform.f
+            ]),
+            clipMask: this._clipMask,
+            // Shadow properties
+            shadowColor: this.shadowColor,
+            shadowBlur: this.shadowBlur,
+            shadowOffsetX: this.shadowOffsetX,
+            shadowOffsetY: this.shadowOffsetY
         });
-    }
-    
-    // Validate ImageLike object at API level
-    if (!image || typeof image !== 'object') {
-        throw new Error('First argument must be an ImageLike object');
-    }
-    
-    if (typeof image.width !== 'number' || typeof image.height !== 'number') {
-        throw new Error('ImageLike must have numeric width and height properties');
-    }
-    
-    if (!(image.data instanceof Uint8ClampedArray)) {
-        throw new Error('ImageLike data must be a Uint8ClampedArray');
-    }
-    
-    // Set up rasterizer operation
-    this.rasterizer.beginOp({
-        composite: this.globalCompositeOperation,
-        globalAlpha: this.globalAlpha,
-        transform: new Transform2D([
-            this._transform.a, this._transform.b,
-            this._transform.c, this._transform.d, 
-            this._transform.e, this._transform.f
-        ]),
-        clipMask: this._clipMask,
-        // Shadow properties
-        shadowColor: this.shadowColor,
-        shadowBlur: this.shadowBlur,
-        shadowOffsetX: this.shadowOffsetX,
-        shadowOffsetY: this.shadowOffsetY
-    });
-    
-    // Delegate to rasterizer
-    this.rasterizer.drawImage.apply(this.rasterizer, arguments);
-    
-    // End rasterizer operation
-    this.rasterizer.endOp();
+
+        // Delegate to rasterizer
+        this.rasterizer.drawImage.apply(this.rasterizer, arguments);
+
+        // End rasterizer operation
+        this.rasterizer.endOp();
     }
 
     // Line dash methods
-    
+
     /**
      * Set line dash pattern
      * @param {Array<number>} segments - Array of dash and gap lengths
@@ -8503,7 +8522,7 @@ class Context2D {
         if (!Array.isArray(segments)) {
             throw new Error('setLineDash expects an array');
         }
-        
+
         // Validate all segments are numbers and non-negative
         for (let i = 0; i < segments.length; i++) {
             if (typeof segments[i] !== 'number' || isNaN(segments[i])) {
@@ -8513,10 +8532,10 @@ class Context2D {
                 throw new Error('Dash segments must be non-negative');
             }
         }
-        
+
         // Store original pattern for getLineDash()
         this._originalLineDash = segments.slice();
-        
+
         // Create working pattern - duplicate if odd length
         // This matches HTML5 Canvas behavior: [5, 10, 15] becomes [5, 10, 15, 5, 10, 15]
         this._lineDash = segments.slice();
@@ -8524,7 +8543,7 @@ class Context2D {
             this._lineDash = this._lineDash.concat(this._lineDash);
         }
     }
-    
+
     /**
      * Get current line dash pattern
      * @returns {Array<number>} Copy of current dash pattern
@@ -8533,7 +8552,7 @@ class Context2D {
         // Return copy of original pattern as set by user
         return this._originalLineDash.slice();
     }
-    
+
     /**
      * Set line dash offset
      * @param {number} offset - Starting offset into dash pattern
@@ -8544,7 +8563,7 @@ class Context2D {
         }
         this._lineDashOffset = offset;
     }
-    
+
     /**
      * Get line dash offset
      * @returns {number} Current dash offset
@@ -8552,9 +8571,9 @@ class Context2D {
     get lineDashOffset() {
         return this._lineDashOffset;
     }
-    
+
     // Gradient and Pattern Creation Methods
-    
+
     /**
      * Create a linear gradient
      * @param {number} x0 - Start point x coordinate
@@ -8566,7 +8585,7 @@ class Context2D {
     createLinearGradient(x0, y0, x1, y1) {
         return new LinearGradient(x0, y0, x1, y1);
     }
-    
+
     /**
      * Create a radial gradient
      * @param {number} x0 - Inner circle center x
@@ -8580,7 +8599,7 @@ class Context2D {
     createRadialGradient(x0, y0, r0, x1, y1, r1) {
         return new RadialGradient(x0, y0, r0, x1, y1, r1);
     }
-    
+
     /**
      * Create a conic gradient
      * @param {number} angle - Starting angle in radians
@@ -8591,7 +8610,7 @@ class Context2D {
     createConicGradient(angle, x, y) {
         return new ConicGradient(angle, x, y);
     }
-    
+
     /**
      * Create a pattern from an image
      * @param {Object} image - ImageLike object (canvas, surface, imagedata)
