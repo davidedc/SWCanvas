@@ -1177,8 +1177,12 @@ class Context2D {
                     err += 2 * (y - x + 1);
                 }
             }
+        } else if (isSemiTransparentColor) {
+            // Fast path 2: Bresenham scanlines with per-pixel alpha blending
+            this._fillCircleAlphaBlend(cx, cy, radius, paintSource, clipBuffer);
         } else {
-            // Standard path: use path system for gradients/patterns/alpha
+            // Standard path: use path system for gradients/patterns/non-source-over compositing
+            Context2D._markSlowPath(); // Mark slow path for testing
             this.beginPath();
             this.arc(cx, cy, radius, 0, Math.PI * 2);
             // Temporarily set identity transform since we already transformed
@@ -1186,6 +1190,54 @@ class Context2D {
             this._transform = new Transform2D();
             this.fill();
             this._transform = savedTransform;
+        }
+    }
+
+    /**
+     * Optimized circle fill with alpha blending using Bresenham scanlines
+     * @private
+     */
+    _fillCircleAlphaBlend(cx, cy, radius, color, clipBuffer) {
+        const surface = this.surface;
+        const width = surface.width;
+        const height = surface.height;
+        const data = surface.data;
+
+        // Calculate effective alpha (color alpha * global alpha)
+        const effectiveAlpha = (color.a / 255) * this.globalAlpha;
+        if (effectiveAlpha <= 0) return;
+
+        const invAlpha = 1 - effectiveAlpha;
+        const r = color.r;
+        const g = color.g;
+        const b = color.b;
+
+        // Bresenham circle algorithm (same as opaque path)
+        const radiusInt = Math.round(radius);
+        let x = radiusInt;
+        let y = 0;
+        let err = 1 - radiusInt;
+
+        while (x >= y) {
+            // Fill horizontal spans with alpha blending
+            this._fillSpanAlpha(data, width, height, cx - x, cy + y, x * 2 + 1,
+                               r, g, b, effectiveAlpha, invAlpha, clipBuffer);
+            this._fillSpanAlpha(data, width, height, cx - x, cy - y, x * 2 + 1,
+                               r, g, b, effectiveAlpha, invAlpha, clipBuffer);
+            if (x !== y) {
+                this._fillSpanAlpha(data, width, height, cx - y, cy + x, y * 2 + 1,
+                                   r, g, b, effectiveAlpha, invAlpha, clipBuffer);
+                this._fillSpanAlpha(data, width, height, cx - y, cy - x, y * 2 + 1,
+                                   r, g, b, effectiveAlpha, invAlpha, clipBuffer);
+            }
+
+            y++;
+            if (err < 0) {
+                err += 2 * y + 1;
+            } else {
+                x--;
+                err += 2 * (y - x + 1);
+            }
         }
     }
 
