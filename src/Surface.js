@@ -1,9 +1,13 @@
 /**
  * Surface class for SWCanvas
- * 
+ *
  * Represents a 2D pixel surface with RGBA data storage.
  * Following Joshua Bloch's principle of proper class design with validation,
  * clear error messages, and immutable properties where sensible.
+ *
+ * Provides dual-view buffer access:
+ * - data: Uint8ClampedArray for standard RGBA access (4 bytes per pixel)
+ * - data32: Uint32Array view for optimized 32-bit packed writes (same underlying buffer)
  */
 class Surface {
     /**
@@ -39,6 +43,59 @@ class Surface {
 
         // Allocate pixel data (RGBA, non-premultiplied)
         this.data = new Uint8ClampedArray(this.stride * height);
+
+        // Uint32Array view for optimized opaque pixel writes
+        // Shares same underlying ArrayBuffer - no additional memory cost
+        this.data32 = new Uint32Array(this.data.buffer);
+    }
+
+    /**
+     * Pack RGBA color into 32-bit integer (little-endian: ABGR layout in memory)
+     * @param {number} r - Red component (0-255)
+     * @param {number} g - Green component (0-255)
+     * @param {number} b - Blue component (0-255)
+     * @param {number} a - Alpha component (0-255), defaults to 255 (opaque)
+     * @returns {number} Packed 32-bit color value
+     */
+    static packColor(r, g, b, a = 255) {
+        return (a << 24) | (b << 16) | (g << 8) | r;
+    }
+
+    /**
+     * Set pixel using pre-packed 32-bit color (fastest path)
+     * No bounds checking - caller must ensure validity for performance
+     * @param {number} pixelIndex - Linear pixel index (y * width + x)
+     * @param {number} packedColor - Pre-packed 32-bit ABGR color from packColor()
+     */
+    setPixelPacked(pixelIndex, packedColor) {
+        this.data32[pixelIndex] = packedColor;
+    }
+
+    /**
+     * Set opaque pixel with individual RGB components (no alpha blending)
+     * No bounds checking - caller must ensure validity for performance
+     * @param {number} pixelIndex - Linear pixel index (y * width + x)
+     * @param {number} r - Red component (0-255)
+     * @param {number} g - Green component (0-255)
+     * @param {number} b - Blue component (0-255)
+     */
+    setPixelOpaque(pixelIndex, r, g, b) {
+        this.data32[pixelIndex] = 0xFF000000 | (b << 16) | (g << 8) | r;
+    }
+
+    /**
+     * Fill horizontal span with packed color (optimized for scanline rendering)
+     * No bounds checking - caller must ensure validity for performance
+     * @param {number} startIndex - Starting linear pixel index
+     * @param {number} length - Number of pixels to fill
+     * @param {number} packedColor - Pre-packed 32-bit ABGR color from packColor()
+     */
+    fillSpanPacked(startIndex, length, packedColor) {
+        const end = startIndex + length;
+        const data32 = this.data32;
+        for (let i = startIndex; i < end; i++) {
+            data32[i] = packedColor;
+        }
     }
 
     /**
@@ -96,6 +153,7 @@ class Surface {
 
     /**
      * Clear surface to specified color
+     * Uses optimized 32-bit writes for better performance
      * @param {Color} color - Color to clear to (defaults to transparent)
      */
     clear(color = Color.transparent) {
@@ -104,12 +162,13 @@ class Surface {
         }
 
         const rgba = color.toRGBA();
+        const packedColor = Surface.packColor(rgba[0], rgba[1], rgba[2], rgba[3]);
+        const data32 = this.data32;
+        const pixelCount = this.width * this.height;
 
-        for (let i = 0; i < this.data.length; i += 4) {
-            this.data[i] = rgba[0];
-            this.data[i + 1] = rgba[1];
-            this.data[i + 2] = rgba[2];
-            this.data[i + 3] = rgba[3];
+        // Use 32-bit writes - 4x fewer write operations than byte-by-byte
+        for (let i = 0; i < pixelCount; i++) {
+            data32[i] = packedColor;
         }
     }
 

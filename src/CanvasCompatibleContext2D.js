@@ -533,12 +533,55 @@ class CanvasCompatibleContext2D {
     }
     
     // ===== CORE ACCESS FOR ADVANCED USERS =====
-    
+
     /**
      * Get the underlying Core Context2D for advanced operations
      * @returns {Context2D} The Core Context2D instance
      */
     get _coreContext() {
         return this._core;
+    }
+
+    // ===== DIRECT SHAPE APIs (CrispSwCanvas compatibility) =====
+
+    /**
+     * Fill a circle directly without using the path system
+     * @param {number} centerX - Center X coordinate
+     * @param {number} centerY - Center Y coordinate
+     * @param {number} radius - Circle radius
+     */
+    fillCircle(centerX, centerY, radius) {
+        this._core.fillCircle(centerX, centerY, radius);
+    }
+
+    /**
+     * Stroke a circle directly without using the path system
+     * @param {number} centerX - Center X coordinate
+     * @param {number} centerY - Center Y coordinate
+     * @param {number} radius - Circle radius
+     */
+    strokeCircle(centerX, centerY, radius) {
+        this._core.strokeCircle(centerX, centerY, radius);
+    }
+
+    /**
+     * Fill and stroke a circle in one operation
+     * @param {number} centerX - Center X coordinate
+     * @param {number} centerY - Center Y coordinate
+     * @param {number} radius - Circle radius
+     */
+    fillAndStrokeCircle(centerX, centerY, radius) {
+        this._core.fillAndStrokeCircle(centerX, centerY, radius);
+    }
+
+    /**
+     * Stroke a line directly without using the path system
+     * @param {number} x1 - Start X coordinate
+     * @param {number} y1 - Start Y coordinate
+     * @param {number} x2 - End X coordinate
+     * @param {number} y2 - End Y coordinate
+     */
+    strokeLine(x1, y1, x2, y2) {
+        this._core.strokeLine(x1, y1, x2, y2);
     }
 }

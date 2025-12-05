@@ -37,6 +37,8 @@ cat src/SWPath2D.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
 cat src/Surface.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
+cat src/FastPixelOps.js >> dist/swcanvas.js
+echo "" >> dist/swcanvas.js
 
 # Phase 2: Core Service classes (depend on foundation)
 cat src/CompositeOperations.js >> dist/swcanvas.js
@@ -166,7 +168,8 @@ if (typeof window !== 'undefined') {
             LinearGradient: LinearGradient,
             RadialGradient: RadialGradient,
             ConicGradient: ConicGradient,
-            Pattern: Pattern
+            Pattern: Pattern,
+            FastPixelOps: FastPixelOps
         }
     };
 } else if (typeof module !== 'undefined' && module.exports) {
@@ -205,7 +208,8 @@ if (typeof window !== 'undefined') {
             LinearGradient: LinearGradient,
             RadialGradient: RadialGradient,
             ConicGradient: ConicGradient,
-            Pattern: Pattern
+            Pattern: Pattern,
+            FastPixelOps: FastPixelOps
         }
     };
 }

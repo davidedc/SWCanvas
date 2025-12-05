@@ -1,24 +1,29 @@
 /**
  * PolygonFiller class for SWCanvas
- * 
+ *
  * Implements scanline polygon filling with nonzero and evenodd winding rules.
  * Handles stencil-based clipping integration and premultiplied alpha blending.
- * 
+ *
+ * Provides dual rendering paths:
+ * - Fast path: 32-bit packed writes for opaque solid colors (CrispSwCanvas-style)
+ * - Standard path: Full paint source support with gradients, patterns, compositing
+ *
  * Converted from functional to class-based approach following OO best practices:
- * - Static methods for stateless operations 
+ * - Static methods for stateless operations
  * - Clear separation of scanline logic from pixel blending
  * - Immutable color handling with Color class integration
  */
 class PolygonFiller {
     /**
      * Fill polygons using scanline algorithm with stencil-based clipping
-     * 
+     * Routes to fast path when possible for optimal performance
+     *
      * @param {Surface} surface - Target surface to render to
-     * @param {Array} polygons - Array of polygons (each polygon is array of {x,y} points)  
+     * @param {Array} polygons - Array of polygons (each polygon is array of {x,y} points)
      * @param {Color|Gradient|Pattern} paintSource - Paint source to fill with
      * @param {string} fillRule - 'nonzero' or 'evenodd' winding rule
      * @param {Transform2D} transform - Transformation matrix to apply to polygons
-     * @param {Uint8Array|null} clipMask - Optional 1-bit stencil buffer for clipping
+     * @param {ClipMask|null} clipMask - Optional 1-bit stencil buffer for clipping
      * @param {number} globalAlpha - Global alpha value (0-1) for rendering operation
      * @param {number} subPixelOpacity - Sub-pixel opacity for thin strokes (0-1)
      * @param {string} composite - Composite operation (default: 'source-over')
@@ -30,6 +35,114 @@ class PolygonFiller {
             throw new Error('Paint source must be a Color, Gradient, or Pattern instance');
         }
 
+        // Check if we can use the fast path (opaque solid color with source-over)
+        const canUseFastPath =
+            paintSource instanceof Color &&
+            paintSource.a === 255 &&
+            globalAlpha >= 1.0 &&
+            subPixelOpacity >= 1.0 &&
+            composite === 'source-over' &&
+            sourceMask === null;
+
+        if (canUseFastPath) {
+            PolygonFiller._fillPolygonsFast(surface, polygons, paintSource, fillRule, transform, clipMask);
+        } else {
+            PolygonFiller._fillPolygonsStandard(surface, polygons, paintSource, fillRule, transform, clipMask, globalAlpha, subPixelOpacity, composite, sourceMask);
+        }
+    }
+
+    /**
+     * Fast path for opaque solid color fills with source-over compositing
+     * Uses 32-bit packed writes and inline clip buffer access for maximum performance
+     * @private
+     */
+    static _fillPolygonsFast(surface, polygons, color, fillRule, transform, clipMask) {
+        // Pre-compute packed color outside hot loop
+        const packedColor = Surface.packColor(color.r, color.g, color.b, 255);
+        const data32 = surface.data32;
+        const width = surface.width;
+        const clipBuffer = clipMask ? clipMask.buffer : null;
+
+        // Transform all polygon vertices
+        const transformedPolygons = polygons.map(poly =>
+            poly.map(point => transform.transformPoint(point))
+        );
+
+        // Find bounding box
+        const bounds = PolygonFiller._calculateBounds(transformedPolygons, surface);
+
+        // Process each scanline
+        for (let y = bounds.minY; y <= bounds.maxY; y++) {
+            // Find all intersections with this scanline
+            const intersections = [];
+            for (const poly of transformedPolygons) {
+                PolygonFiller._findPolygonIntersections(poly, y + 0.5, intersections);
+            }
+
+            // Sort intersections by x coordinate
+            intersections.sort((a, b) => a.x - b.x);
+
+            // Fill spans using fast path
+            let windingNumber = 0;
+            let inside = false;
+
+            for (let i = 0; i < intersections.length; i++) {
+                const intersection = intersections[i];
+                const nextIntersection = intersections[i + 1];
+
+                windingNumber += intersection.winding;
+
+                if (fillRule === 'evenodd') {
+                    inside = (windingNumber % 2) !== 0;
+                } else {
+                    inside = windingNumber !== 0;
+                }
+
+                if (inside && nextIntersection) {
+                    const startX = Math.max(0, Math.ceil(intersection.x));
+                    const endX = Math.min(width - 1, Math.floor(nextIntersection.x));
+
+                    if (startX <= endX) {
+                        // Fast span fill with 32-bit writes
+                        let pixelIndex = y * width + startX;
+                        const endIndex = y * width + endX + 1;
+
+                        if (clipBuffer) {
+                            // With clipping - use byte-level skip optimization
+                            while (pixelIndex < endIndex) {
+                                const byteIndex = pixelIndex >> 3;
+
+                                // Skip fully clipped bytes (8 pixels at a time)
+                                if (clipBuffer[byteIndex] === 0) {
+                                    const nextByteBoundary = (byteIndex + 1) << 3;
+                                    pixelIndex = Math.min(nextByteBoundary, endIndex);
+                                    continue;
+                                }
+
+                                // Check individual pixel within partially visible byte
+                                const bitIndex = pixelIndex & 7;
+                                if (clipBuffer[byteIndex] & (1 << bitIndex)) {
+                                    data32[pixelIndex] = packedColor;
+                                }
+                                pixelIndex++;
+                            }
+                        } else {
+                            // No clipping - fastest path with direct 32-bit writes
+                            for (; pixelIndex < endIndex; pixelIndex++) {
+                                data32[pixelIndex] = packedColor;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Standard path for all other cases (gradients, patterns, transparency, compositing)
+     * @private
+     */
+    static _fillPolygonsStandard(surface, polygons, paintSource, fillRule, transform, clipMask, globalAlpha, subPixelOpacity, composite, sourceMask) {
         // Transform all polygon vertices
         const transformedPolygons = polygons.map(poly =>
             poly.map(point => transform.transformPoint(point))

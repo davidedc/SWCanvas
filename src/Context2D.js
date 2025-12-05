@@ -1002,4 +1002,302 @@ class Context2D {
     createPattern(image, repetition) {
         return new Pattern(image, repetition);
     }
+
+    // ========================================================================
+    // DIRECT SHAPE APIs (CrispSwCanvas compatibility)
+    // These methods bypass the path system for maximum performance
+    // ========================================================================
+
+    /**
+     * Fill a circle directly without using the path system
+     * @param {number} centerX - Center X coordinate
+     * @param {number} centerY - Center Y coordinate
+     * @param {number} radius - Circle radius
+     */
+    fillCircle(centerX, centerY, radius) {
+        if (radius <= 0) return;
+
+        // Transform center point
+        const center = this._transform.transformPoint({ x: centerX, y: centerY });
+
+        // Calculate effective radius considering non-uniform scaling
+        const scale = Math.sqrt(
+            Math.abs(this._transform.a * this._transform.d - this._transform.b * this._transform.c)
+        );
+        const scaledRadius = radius * scale;
+
+        // Get paint source
+        const paintSource = this._fillStyle;
+
+        // Use optimized circle renderer
+        this._fillCircleDirect(center.x, center.y, scaledRadius, paintSource);
+    }
+
+    /**
+     * Stroke a circle directly without using the path system
+     * @param {number} centerX - Center X coordinate
+     * @param {number} centerY - Center Y coordinate
+     * @param {number} radius - Circle radius
+     */
+    strokeCircle(centerX, centerY, radius) {
+        if (radius <= 0) return;
+
+        // Transform center point
+        const center = this._transform.transformPoint({ x: centerX, y: centerY });
+
+        // Calculate effective radius and line width
+        const scale = Math.sqrt(
+            Math.abs(this._transform.a * this._transform.d - this._transform.b * this._transform.c)
+        );
+        const scaledRadius = radius * scale;
+        const scaledLineWidth = this._lineWidth * scale;
+
+        // Get paint source
+        const paintSource = this._strokeStyle;
+
+        // Use optimized circle stroke renderer
+        this._strokeCircleDirect(center.x, center.y, scaledRadius, scaledLineWidth, paintSource);
+    }
+
+    /**
+     * Fill and stroke a circle in one operation
+     * @param {number} centerX - Center X coordinate
+     * @param {number} centerY - Center Y coordinate
+     * @param {number} radius - Circle radius
+     */
+    fillAndStrokeCircle(centerX, centerY, radius) {
+        this.fillCircle(centerX, centerY, radius);
+        this.strokeCircle(centerX, centerY, radius);
+    }
+
+    /**
+     * Stroke a line directly without using the path system
+     * @param {number} x1 - Start X coordinate
+     * @param {number} y1 - Start Y coordinate
+     * @param {number} x2 - End X coordinate
+     * @param {number} y2 - End Y coordinate
+     */
+    strokeLine(x1, y1, x2, y2) {
+        // Transform endpoints
+        const start = this._transform.transformPoint({ x: x1, y: y1 });
+        const end = this._transform.transformPoint({ x: x2, y: y2 });
+
+        // Calculate effective line width
+        const scale = Math.sqrt(
+            Math.abs(this._transform.a * this._transform.d - this._transform.b * this._transform.c)
+        );
+        const scaledLineWidth = this._lineWidth * scale;
+
+        // Get paint source
+        const paintSource = this._strokeStyle;
+
+        // Use optimized line renderer
+        this._strokeLineDirect(start.x, start.y, end.x, end.y, scaledLineWidth, paintSource);
+    }
+
+    // ========================================================================
+    // Private optimized shape renderers
+    // ========================================================================
+
+    /**
+     * Optimized circle fill using midpoint algorithm with horizontal spans
+     * @private
+     */
+    _fillCircleDirect(cx, cy, radius, paintSource) {
+        const surface = this.surface;
+        const width = surface.width;
+        const height = surface.height;
+        const clipBuffer = this._clipMask ? this._clipMask.buffer : null;
+
+        // Get color for solid color fast path
+        const isOpaqueColor = paintSource instanceof Color &&
+            paintSource.a === 255 &&
+            this.globalAlpha >= 1.0 &&
+            this.globalCompositeOperation === 'source-over';
+
+        if (isOpaqueColor) {
+            // Fast path: 32-bit packed writes
+            const packedColor = Surface.packColor(paintSource.r, paintSource.g, paintSource.b, 255);
+            const data32 = surface.data32;
+
+            const radiusInt = Math.round(radius);
+            let x = radiusInt;
+            let y = 0;
+            let err = 1 - radiusInt;
+
+            while (x >= y) {
+                // Fill horizontal spans for 4 octants
+                this._fillSpanFast(data32, width, height, cx - x, cy + y, x * 2 + 1, packedColor, clipBuffer);
+                this._fillSpanFast(data32, width, height, cx - x, cy - y, x * 2 + 1, packedColor, clipBuffer);
+                if (x !== y) {
+                    this._fillSpanFast(data32, width, height, cx - y, cy + x, y * 2 + 1, packedColor, clipBuffer);
+                    this._fillSpanFast(data32, width, height, cx - y, cy - x, y * 2 + 1, packedColor, clipBuffer);
+                }
+
+                y++;
+                if (err < 0) {
+                    err += 2 * y + 1;
+                } else {
+                    x--;
+                    err += 2 * (y - x + 1);
+                }
+            }
+        } else {
+            // Standard path: use path system for gradients/patterns/alpha
+            this.beginPath();
+            this.arc(cx, cy, radius, 0, Math.PI * 2);
+            // Temporarily set identity transform since we already transformed
+            const savedTransform = this._transform;
+            this._transform = new Transform2D();
+            this.fill();
+            this._transform = savedTransform;
+        }
+    }
+
+    /**
+     * Optimized circle stroke using Bresenham with thickness
+     * @private
+     */
+    _strokeCircleDirect(cx, cy, radius, lineWidth, paintSource) {
+        // For strokes, use the path system to ensure correct line properties
+        this.beginPath();
+        this.arc(cx, cy, radius, 0, Math.PI * 2);
+        // Temporarily set identity transform since we already transformed
+        const savedTransform = this._transform;
+        this._transform = new Transform2D();
+        const savedLineWidth = this._lineWidth;
+        this._lineWidth = lineWidth;
+        this.stroke();
+        this._lineWidth = savedLineWidth;
+        this._transform = savedTransform;
+    }
+
+    /**
+     * Optimized line stroke
+     * @private
+     */
+    _strokeLineDirect(x1, y1, x2, y2, lineWidth, paintSource) {
+        const surface = this.surface;
+        const width = surface.width;
+        const height = surface.height;
+        const clipBuffer = this._clipMask ? this._clipMask.buffer : null;
+
+        // Get color for solid color fast path
+        const isOpaqueColor = paintSource instanceof Color &&
+            paintSource.a === 255 &&
+            this.globalAlpha >= 1.0 &&
+            this.globalCompositeOperation === 'source-over';
+
+        if (isOpaqueColor && lineWidth <= 1.5) {
+            // Fast path for thin lines: Bresenham algorithm
+            const packedColor = Surface.packColor(paintSource.r, paintSource.g, paintSource.b, 255);
+            const data32 = surface.data32;
+
+            const x1i = Math.round(x1);
+            const y1i = Math.round(y1);
+            const x2i = Math.round(x2);
+            const y2i = Math.round(y2);
+
+            let dx = Math.abs(x2i - x1i);
+            let dy = Math.abs(y2i - y1i);
+            const sx = x1i < x2i ? 1 : -1;
+            const sy = y1i < y2i ? 1 : -1;
+            let err = dx - dy;
+
+            let x = x1i;
+            let y = y1i;
+
+            while (true) {
+                // Set pixel if in bounds
+                if (x >= 0 && x < width && y >= 0 && y < height) {
+                    const pixelIndex = y * width + x;
+
+                    if (clipBuffer) {
+                        const byteIndex = pixelIndex >> 3;
+                        const bitIndex = pixelIndex & 7;
+                        if (clipBuffer[byteIndex] & (1 << bitIndex)) {
+                            data32[pixelIndex] = packedColor;
+                        }
+                    } else {
+                        data32[pixelIndex] = packedColor;
+                    }
+                }
+
+                if (x === x2i && y === y2i) break;
+
+                const e2 = 2 * err;
+                if (e2 > -dy) {
+                    err -= dy;
+                    x += sx;
+                }
+                if (e2 < dx) {
+                    err += dx;
+                    y += sy;
+                }
+            }
+        } else {
+            // Standard path for thick lines or non-opaque colors
+            this.beginPath();
+            this.moveTo(x1, y1);
+            this.lineTo(x2, y2);
+            // Temporarily set identity transform
+            const savedTransform = this._transform;
+            this._transform = new Transform2D();
+            const savedLineWidth = this._lineWidth;
+            this._lineWidth = lineWidth;
+            this.stroke();
+            this._lineWidth = savedLineWidth;
+            this._transform = savedTransform;
+        }
+    }
+
+    /**
+     * Fast horizontal span fill with 32-bit writes
+     * @private
+     */
+    _fillSpanFast(data32, surfaceWidth, surfaceHeight, startX, y, length, packedColor, clipBuffer) {
+        // Y bounds check
+        const yi = Math.round(y);
+        if (yi < 0 || yi >= surfaceHeight) return;
+
+        // X clipping to surface bounds
+        let x = Math.round(startX);
+        let len = length;
+        if (x < 0) {
+            len += x;
+            x = 0;
+        }
+        if (x + len > surfaceWidth) {
+            len = surfaceWidth - x;
+        }
+        if (len <= 0) return;
+
+        let pixelIndex = yi * surfaceWidth + x;
+        const endIndex = pixelIndex + len;
+
+        if (clipBuffer) {
+            // With clipping
+            while (pixelIndex < endIndex) {
+                const byteIndex = pixelIndex >> 3;
+
+                // Skip fully clipped bytes
+                if (clipBuffer[byteIndex] === 0) {
+                    const nextByteBoundary = (byteIndex + 1) << 3;
+                    pixelIndex = Math.min(nextByteBoundary, endIndex);
+                    continue;
+                }
+
+                const bitIndex = pixelIndex & 7;
+                if (clipBuffer[byteIndex] & (1 << bitIndex)) {
+                    data32[pixelIndex] = packedColor;
+                }
+                pixelIndex++;
+            }
+        } else {
+            // No clipping - fastest path
+            for (; pixelIndex < endIndex; pixelIndex++) {
+                data32[pixelIndex] = packedColor;
+            }
+        }
+    }
 }
