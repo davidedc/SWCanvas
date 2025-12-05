@@ -55,11 +55,11 @@ cat src/PolygonFiller.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
 cat src/StrokeGenerator.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
-cat src/BitBuffer.js >> dist/swcanvas.js
+cat ../SWCanvas-primitives/BitBuffer.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
 cat src/BoundsTracker.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
-cat src/ClipMask.js >> dist/swcanvas.js
+cat ../SWCanvas-primitives/ClipMask.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
 cat src/SourceMask.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
