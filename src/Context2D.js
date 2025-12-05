@@ -1194,7 +1194,38 @@ class Context2D {
     }
 
     /**
+     * Generate horizontal extents for each scanline of a circle using Bresenham
+     * @private
+     * @returns {number[]} Array where extents[y] = x extent at that y offset from center
+     */
+    _generateCircleExtents(radius) {
+        const extents = new Array(radius + 1);
+        let x = radius;
+        let y = 0;
+        let err = 1 - radius;
+
+        while (x >= y) {
+            // Record the x extent at this y position
+            extents[y] = x;
+            if (x !== y) {
+                extents[x] = y;  // Mirror for the other octant
+            }
+
+            y++;
+            if (err < 0) {
+                err += 2 * y + 1;
+            } else {
+                x--;
+                err += 2 * (y - x) + 1;
+            }
+        }
+
+        return extents;
+    }
+
+    /**
      * Optimized circle fill with alpha blending using Bresenham scanlines
+     * Uses top/bottom symmetry with rel_y > 0 guard to prevent overdraw
      * @private
      */
     _fillCircleAlphaBlend(cx, cy, radius, color, clipBuffer) {
@@ -1212,31 +1243,35 @@ class Context2D {
         const g = color.g;
         const b = color.b;
 
-        // Bresenham circle algorithm (same as opaque path)
-        const radiusInt = Math.round(radius);
-        let x = radiusInt;
-        let y = 0;
-        let err = 1 - radiusInt;
+        const intRadius = Math.round(radius);
+        const adjCenterX = Math.floor(cx);
+        const adjCenterY = Math.floor(cy);
 
-        while (x >= y) {
-            // Fill horizontal spans with alpha blending
-            this._fillSpanAlpha(data, width, height, cx - x, cy + y, x * 2 + 1,
-                               r, g, b, effectiveAlpha, invAlpha, clipBuffer);
-            this._fillSpanAlpha(data, width, height, cx - x, cy - y, x * 2 + 1,
-                               r, g, b, effectiveAlpha, invAlpha, clipBuffer);
-            if (x !== y) {
-                this._fillSpanAlpha(data, width, height, cx - y, cy + x, y * 2 + 1,
-                                   r, g, b, effectiveAlpha, invAlpha, clipBuffer);
-                this._fillSpanAlpha(data, width, height, cx - y, cy - x, y * 2 + 1,
+        // Generate horizontal extents using Bresenham
+        const extents = this._generateCircleExtents(intRadius);
+
+        // Fill scanlines using top/bottom symmetry
+        for (let rel_y = 0; rel_y <= intRadius; rel_y++) {
+            const xExtent = extents[rel_y];
+            if (xExtent === undefined) continue;
+
+            const leftX = adjCenterX - xExtent;
+            const spanWidth = xExtent * 2 + 1;
+
+            // Always draw bottom scanline
+            const bottomY = adjCenterY + rel_y;
+            if (bottomY >= 0 && bottomY < height) {
+                this._fillSpanAlpha(data, width, height, leftX, bottomY, spanWidth,
                                    r, g, b, effectiveAlpha, invAlpha, clipBuffer);
             }
 
-            y++;
-            if (err < 0) {
-                err += 2 * y + 1;
-            } else {
-                x--;
-                err += 2 * (y - x + 1);
+            // Draw top scanline only when rel_y > 0 (prevents overdraw at center)
+            if (rel_y > 0) {
+                const topY = adjCenterY - rel_y;
+                if (topY >= 0 && topY < height) {
+                    this._fillSpanAlpha(data, width, height, leftX, topY, spanWidth,
+                                       r, g, b, effectiveAlpha, invAlpha, clipBuffer);
+                }
             }
         }
     }

@@ -412,6 +412,57 @@ button.secondary:hover {
     margin-top: 10px;
 }
 
+/* Display/Comparison Canvas */
+.display-wrapper {
+    position: relative;
+}
+
+.display-label-container {
+    height: 24px;
+    margin-bottom: 3px;
+}
+
+.display-label {
+    background: #fff3e0;
+    color: #e65100;
+}
+
+.magnifier-label-container {
+    display: flex;
+    justify-content: space-around;
+    width: 100%;
+}
+
+.magnifier-label-container .mag-label {
+    flex-basis: 50%;
+    text-align: center;
+    font-size: 11px;
+    background: #e8f5e8;
+    color: #388e3c;
+    padding: 4px 8px;
+}
+
+.flip-btn {
+    margin-top: 8px;
+    padding: 6px 12px;
+    font-size: 12px;
+    background: #fff3e0;
+    color: #e65100;
+    border: 1px solid #ffcc80;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.flip-btn:hover {
+    background: #ffe0b2;
+}
+
+/* Crosshair cursor for inspection */
+canvas[data-renderer="swcanvas"],
+canvas[data-renderer="html5"] {
+    cursor: crosshair;
+}
+
 /* Responsive */
 @media (max-width: 800px) {
     .canvas-container {

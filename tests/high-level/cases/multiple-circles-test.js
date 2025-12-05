@@ -45,7 +45,7 @@ registerHighLevelTest(
     'circles',
     {
         extremes: { tolerance: 0.05 },
-        totalUniqueColors: 2, // Could be more due to overlaps
+        // No totalUniqueColors check - random colors and overlaps make exact count unpredictable
         // Fast path expected for all circles
     },
     {

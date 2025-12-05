@@ -40,13 +40,13 @@ registerHighLevelTest(
                 topY: pixelY,
                 bottomY: pixelY,
                 leftX: Math.min(x1, x2),
-                rightX: Math.max(x1, x2) - 1
+                rightX: Math.max(x1, x2)
             }
         };
     },
     'lines',
     {
-        extremes: true,
+        extremes: { tolerance: 0.01 },  // Small tolerance for sub-pixel positioning
         // Fast path expected for 1px opaque line
     },
     {

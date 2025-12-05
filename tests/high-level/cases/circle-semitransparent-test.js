@@ -33,6 +33,7 @@ registerHighLevelTest(
     'circles',
     {
         extremes: { tolerance: 0.05 },
+        totalUniqueColors: 2,  // Exactly 2 colors: white background + one blended red (no overdraw)
         // Semi-transparent colors now use fast path with Bresenham + alpha blending
     },
     {

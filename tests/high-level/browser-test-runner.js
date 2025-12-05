@@ -63,6 +63,11 @@ class HighLevelTestRunner {
     static results = { passed: 0, failed: 0 };
     static testElements = new Map();
     static runningIterations = new Map(); // Track running multi-iteration tests
+    static flipStates = new Map(); // Track flip state per test: 'sw' or 'canvas'
+
+    // Magnifier grid dimensions
+    static GRID_COLUMNS = 11;
+    static GRID_ROWS = 21;
 
     /**
      * Initialize the test runner
@@ -278,6 +283,69 @@ class HighLevelTestRunner {
         html5Wrapper.appendChild(html5Canvas);
         canvasContainer.appendChild(html5Wrapper);
 
+        // Comparison/Display canvas wrapper
+        const displayWrapper = document.createElement('div');
+        displayWrapper.className = 'canvas-wrapper display-wrapper';
+
+        // Label container (for dynamic label switching)
+        const displayLabelContainer = document.createElement('div');
+        displayLabelContainer.className = 'display-label-container';
+
+        // Alternating view label (shown by default)
+        const displayAltLabel = document.createElement('div');
+        displayAltLabel.className = 'canvas-label display-label';
+        displayAltLabel.textContent = 'Alternating View (SW)';
+        displayLabelContainer.appendChild(displayAltLabel);
+
+        // Magnifier labels container (hidden by default)
+        const displayMagContainer = document.createElement('div');
+        displayMagContainer.className = 'magnifier-label-container';
+        displayMagContainer.style.display = 'none';
+
+        const magSwLabel = document.createElement('div');
+        magSwLabel.className = 'canvas-label mag-label';
+        magSwLabel.textContent = 'SW Magnified';
+
+        const magCanvasLabel = document.createElement('div');
+        magCanvasLabel.className = 'canvas-label mag-label';
+        magCanvasLabel.textContent = 'Canvas Magnified';
+
+        displayMagContainer.appendChild(magSwLabel);
+        displayMagContainer.appendChild(magCanvasLabel);
+        displayLabelContainer.appendChild(displayMagContainer);
+
+        displayWrapper.appendChild(displayLabelContainer);
+
+        // Third canvas (same size as others)
+        const displayCanvas = document.createElement('canvas');
+        displayCanvas.width = 400;
+        displayCanvas.height = 300;
+        displayCanvas.dataset.renderer = 'display';
+        displayWrapper.appendChild(displayCanvas);
+
+        // Flip button
+        const flipBtn = document.createElement('button');
+        flipBtn.className = 'flip-btn';
+        flipBtn.textContent = 'Flip View';
+        flipBtn.onclick = () => this.flipView(test.name);
+        displayWrapper.appendChild(flipBtn);
+
+        canvasContainer.appendChild(displayWrapper);
+
+        // Add mouse event listeners for pixel inspection
+        swCanvas.style.cursor = 'crosshair';
+        html5Canvas.style.cursor = 'crosshair';
+
+        swCanvas.addEventListener('mousemove', (e) => this.handleMouseMove(e, test.name, swCanvas));
+        html5Canvas.addEventListener('mousemove', (e) => this.handleMouseMove(e, test.name, html5Canvas));
+        swCanvas.addEventListener('mouseout', () => this.handleMouseOut(test.name));
+        html5Canvas.addEventListener('mouseout', () => this.handleMouseOut(test.name));
+
+        // Initialize flip state
+        if (!this.flipStates.has(test.name)) {
+            this.flipStates.set(test.name, 'sw');
+        }
+
         section.appendChild(canvasContainer);
 
         // Results section (initially hidden)
@@ -309,6 +377,9 @@ class HighLevelTestRunner {
 
         // Run on HTML5 Canvas
         const html5Result = this.runOnHTML5Canvas(test, html5Canvas, iterationNumber);
+
+        // Update the flip display canvas
+        this.updateFlipDisplay(test.name);
 
         // Run validation checks
         const checkResults = this.runValidationChecks(test, swCanvas, swResult);
@@ -539,11 +610,11 @@ class HighLevelTestRunner {
         // Unique colors check
         if (checks.totalUniqueColors !== undefined) {
             const uniqueColors = countUniqueColors(surface);
-            const passed = uniqueColors >= checks.totalUniqueColors;
+            const passed = uniqueColors === checks.totalUniqueColors;
             results.push({
                 name: 'Unique Colors',
                 passed,
-                details: `${uniqueColors} (expected >= ${checks.totalUniqueColors})`
+                details: `${uniqueColors} (expected exactly ${checks.totalUniqueColors})`
             });
         }
 
@@ -697,6 +768,253 @@ class HighLevelTestRunner {
             </div>
             ${run < total ? `<div class="summary-item"><span>(${total - run} not yet run)</span></div>` : ''}
         `;
+    }
+
+    /**
+     * Flip the alternating view for a test
+     */
+    static flipView(testName) {
+        const section = this.testElements.get(testName);
+        if (!section) return;
+
+        const currentState = this.flipStates.get(testName) || 'sw';
+        const newState = currentState === 'sw' ? 'canvas' : 'sw';
+        this.flipStates.set(testName, newState);
+
+        this.updateFlipDisplay(testName);
+    }
+
+    /**
+     * Update the flip display canvas
+     */
+    static updateFlipDisplay(testName) {
+        const section = this.testElements.get(testName);
+        if (!section) return;
+
+        const state = this.flipStates.get(testName) || 'sw';
+        const displayCanvas = section.querySelector('canvas[data-renderer="display"]');
+        const swCanvas = section.querySelector('canvas[data-renderer="swcanvas"]');
+        const html5Canvas = section.querySelector('canvas[data-renderer="html5"]');
+        const displayAltLabel = section.querySelector('.display-label');
+        const displayMagContainer = section.querySelector('.magnifier-label-container');
+
+        if (!displayCanvas || !swCanvas || !html5Canvas) return;
+
+        const displayCtx = displayCanvas.getContext('2d');
+        displayCtx.clearRect(0, 0, displayCanvas.width, displayCanvas.height);
+
+        if (state === 'sw') {
+            displayCtx.drawImage(swCanvas, 0, 0);
+            if (displayAltLabel) displayAltLabel.textContent = 'Alternating View (SW)';
+        } else {
+            displayCtx.drawImage(html5Canvas, 0, 0);
+            if (displayAltLabel) displayAltLabel.textContent = 'Alternating View (Canvas)';
+        }
+
+        // Ensure alternating label is visible, magnifier is hidden
+        if (displayAltLabel) displayAltLabel.style.display = 'block';
+        if (displayMagContainer) displayMagContainer.style.display = 'none';
+    }
+
+    /**
+     * Handle mouse move over source canvases for pixel inspection
+     */
+    static handleMouseMove(event, testName, sourceCanvas) {
+        const section = this.testElements.get(testName);
+        if (!section) return;
+
+        // Get mouse position in canvas coordinates
+        const rect = sourceCanvas.getBoundingClientRect();
+        const x = Math.floor(event.clientX - rect.left);
+        const y = Math.floor(event.clientY - rect.top);
+
+        // Get canvas references
+        const swCanvas = section.querySelector('canvas[data-renderer="swcanvas"]');
+        const html5Canvas = section.querySelector('canvas[data-renderer="html5"]');
+        const displayCanvas = section.querySelector('canvas[data-renderer="display"]');
+        const displayAltLabel = section.querySelector('.display-label');
+        const displayMagContainer = section.querySelector('.magnifier-label-container');
+
+        if (!swCanvas || !html5Canvas || !displayCanvas) return;
+
+        // Switch to magnifier view (labels)
+        if (displayAltLabel) displayAltLabel.style.display = 'none';
+        if (displayMagContainer) displayMagContainer.style.display = 'flex';
+
+        // Clear display canvas
+        const displayCtx = displayCanvas.getContext('2d');
+        displayCtx.clearRect(0, 0, displayCanvas.width, displayCanvas.height);
+
+        // Get image data from both canvases
+        const swCtx = swCanvas.getContext('2d');
+        const html5Ctx = html5Canvas.getContext('2d');
+
+        const halfCols = Math.floor(this.GRID_COLUMNS / 2);
+        const halfRows = Math.floor(this.GRID_ROWS / 2);
+
+        const swImageData = swCtx.getImageData(
+            Math.max(0, x - halfCols),
+            Math.max(0, y - halfRows),
+            this.GRID_COLUMNS,
+            this.GRID_ROWS
+        );
+
+        const canvasImageData = html5Ctx.getImageData(
+            Math.max(0, x - halfCols),
+            Math.max(0, y - halfRows),
+            this.GRID_COLUMNS,
+            this.GRID_ROWS
+        );
+
+        // Calculate pixel size for magnified view
+        const pixelSize = Math.min(
+            (displayCanvas.width / 2) / this.GRID_COLUMNS,
+            displayCanvas.height / this.GRID_ROWS
+        );
+
+        // Draw magnified grids
+        this.drawMagnifiedGrid(displayCtx, swImageData, 0, pixelSize, x, y, swCanvas.width, swCanvas.height);
+        this.drawMagnifiedGrid(displayCtx, canvasImageData, displayCanvas.width / 2, pixelSize, x, y, html5Canvas.width, html5Canvas.height);
+
+        // Draw separator line
+        this.drawSeparator(displayCtx, displayCanvas.width, displayCanvas.height);
+
+        // Draw coordinates at top center
+        displayCtx.font = '14px monospace';
+        displayCtx.textAlign = 'center';
+        displayCtx.fillStyle = 'black';
+        displayCtx.fillText(`(${x}, ${y})`, displayCanvas.width / 2, 15);
+    }
+
+    /**
+     * Draw a magnified pixel grid
+     */
+    static drawMagnifiedGrid(ctx, imageData, offsetX, pixelSize, mouseX, mouseY, canvasWidth, canvasHeight) {
+        const halfCols = Math.floor(this.GRID_COLUMNS / 2);
+        const halfRows = Math.floor(this.GRID_ROWS / 2);
+
+        // Calculate source coordinates
+        const sourceX = mouseX - halfCols;
+        const sourceY = mouseY - halfRows;
+
+        // Calculate read offsets for edge cases
+        const readOffsetX = Math.max(0, -sourceX);
+        const readOffsetY = Math.max(0, -sourceY);
+
+        const gridTop = 20; // Offset for coordinates text at top
+
+        // Draw each pixel
+        for (let py = 0; py < this.GRID_ROWS; py++) {
+            for (let px = 0; px < this.GRID_COLUMNS; px++) {
+                const actualX = sourceX + px;
+                const actualY = sourceY + py;
+
+                const isOutOfBounds = actualX < 0 || actualY < 0 ||
+                                      actualX >= canvasWidth || actualY >= canvasHeight;
+
+                if (isOutOfBounds) {
+                    ctx.fillStyle = 'rgb(128, 128, 128)'; // Grey for out-of-bounds
+                } else {
+                    const dataX = px - readOffsetX;
+                    const dataY = py - readOffsetY;
+                    const i = (dataY * this.GRID_COLUMNS + dataX) * 4;
+                    const r = imageData.data[i];
+                    const g = imageData.data[i + 1];
+                    const b = imageData.data[i + 2];
+                    const a = imageData.data[i + 3];
+                    ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${a / 255})`;
+                }
+
+                // Fill magnified pixel
+                ctx.fillRect(
+                    offsetX + px * pixelSize,
+                    py * pixelSize + gridTop,
+                    pixelSize,
+                    pixelSize
+                );
+
+                // Draw grid lines
+                ctx.strokeStyle = 'rgba(128, 128, 128, 0.5)';
+                ctx.lineWidth = 1;
+                ctx.strokeRect(
+                    offsetX + px * pixelSize,
+                    py * pixelSize + gridTop,
+                    pixelSize,
+                    pixelSize
+                );
+            }
+        }
+
+        // Draw red crosshair at center
+        ctx.strokeStyle = 'red';
+        ctx.lineWidth = 2;
+
+        const centerPxX = offsetX + halfCols * pixelSize + pixelSize / 2;
+        const gridBottom = gridTop + this.GRID_ROWS * pixelSize;
+
+        // Vertical line
+        ctx.beginPath();
+        ctx.moveTo(centerPxX, gridTop);
+        ctx.lineTo(centerPxX, gridBottom);
+        ctx.stroke();
+
+        // Horizontal line
+        const centerPxY = gridTop + halfRows * pixelSize + pixelSize / 2;
+        ctx.beginPath();
+        ctx.moveTo(offsetX, centerPxY);
+        ctx.lineTo(offsetX + this.GRID_COLUMNS * pixelSize, centerPxY);
+        ctx.stroke();
+
+        // Display center pixel RGBA below grid
+        const centerIdx = (halfRows * this.GRID_COLUMNS + halfCols) * 4;
+        const r = imageData.data[centerIdx];
+        const g = imageData.data[centerIdx + 1];
+        const b = imageData.data[centerIdx + 2];
+        const a = imageData.data[centerIdx + 3];
+
+        ctx.font = '11px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillStyle = 'black';
+        const textX = offsetX + (this.GRID_COLUMNS * pixelSize) / 2;
+        const textY = gridBottom + 15;
+        ctx.fillText(`rgba(${r},${g},${b},${a})`, textX, textY);
+    }
+
+    /**
+     * Draw separator line between the two grids
+     */
+    static drawSeparator(ctx, width, height) {
+        const centerX = width / 2;
+
+        // Main separator line
+        ctx.strokeStyle = 'rgba(128, 128, 128, 0.8)';
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.moveTo(centerX, 0);
+        ctx.lineTo(centerX, height);
+        ctx.stroke();
+
+        // White highlights on sides
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+        ctx.lineWidth = 1;
+
+        ctx.beginPath();
+        ctx.moveTo(centerX - 2, 0);
+        ctx.lineTo(centerX - 2, height);
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(centerX + 2, 0);
+        ctx.lineTo(centerX + 2, height);
+        ctx.stroke();
+    }
+
+    /**
+     * Handle mouse out from source canvases
+     */
+    static handleMouseOut(testName) {
+        // Restore alternating view
+        this.updateFlipDisplay(testName);
     }
 
     /**
