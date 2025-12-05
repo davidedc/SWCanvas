@@ -65,8 +65,25 @@ header p {
 #controls {
     display: flex;
     justify-content: center;
+    align-items: center;
     gap: 15px;
     margin-top: 15px;
+    flex-wrap: wrap;
+}
+
+.global-iter-label {
+    font-size: 14px;
+    color: #666;
+    margin-left: 20px;
+}
+
+.global-progress {
+    padding: 8px 16px;
+    font-size: 13px;
+    font-weight: 500;
+    background: #e3f2fd;
+    color: #1976d2;
+    border-radius: 4px;
 }
 
 button {
@@ -316,6 +333,85 @@ button.secondary:hover {
     padding: 2px 0;
 }
 
+/* Iteration Controls */
+.iteration-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 20px;
+    background: #fafafa;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.iter-label {
+    font-size: 13px;
+    color: #666;
+    margin-right: 5px;
+}
+
+.iter-btn {
+    padding: 5px 12px;
+    font-size: 12px;
+    background: #e0e0e0;
+    color: #333;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.iter-btn:hover {
+    background: #d0d0d0;
+}
+
+.iter-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.iter-btn.stop-btn {
+    background: #ffcdd2;
+    color: #c62828;
+}
+
+.iter-btn.stop-btn:hover {
+    background: #ef9a9a;
+}
+
+.iter-progress {
+    margin-left: 10px;
+    padding: 5px 12px;
+    font-size: 13px;
+    font-weight: 500;
+    background: #e3f2fd;
+    color: #1976d2;
+    border-radius: 4px;
+}
+
+.iter-progress.iter-pass {
+    background: #e8f5e8;
+    color: #388e3c;
+}
+
+.iter-progress.iter-fail {
+    background: #ffebee;
+    color: #d32f2f;
+}
+
+.iter-row {
+    background: #f5f5f5;
+    font-size: 13px;
+}
+
+.iter-errors {
+    padding: 10px;
+    background: #fff3e0;
+    color: #e65100;
+    font-size: 12px;
+    border-radius: 4px;
+    margin-top: 10px;
+}
+
 /* Responsive */
 @media (max-width: 800px) {
     .canvas-container {
@@ -326,5 +422,10 @@ button.secondary:hover {
     #summary {
         flex-direction: column;
         align-items: center;
+    }
+
+    .iteration-controls {
+        flex-wrap: wrap;
+        justify-content: center;
     }
 }

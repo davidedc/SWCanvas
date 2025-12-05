@@ -62,6 +62,7 @@
 class HighLevelTestRunner {
     static results = { passed: 0, failed: 0 };
     static testElements = new Map();
+    static runningIterations = new Map(); // Track running multi-iteration tests
 
     /**
      * Initialize the test runner
@@ -98,7 +99,7 @@ class HighLevelTestRunner {
     }
 
     /**
-     * Add run all button
+     * Add run all button and iteration controls
      */
     static addControls() {
         const header = document.querySelector('header');
@@ -112,6 +113,45 @@ class HighLevelTestRunner {
         runAllBtn.textContent = 'Run All Tests';
         runAllBtn.onclick = () => this.runAllTests();
         controls.appendChild(runAllBtn);
+
+        // Add iteration controls for running all tests
+        const iterLabel = document.createElement('span');
+        iterLabel.className = 'global-iter-label';
+        iterLabel.textContent = 'All Tests:';
+        controls.appendChild(iterLabel);
+
+        const run1Btn = document.createElement('button');
+        run1Btn.className = 'secondary iter-btn';
+        run1Btn.textContent = '1 iter';
+        run1Btn.onclick = () => this.runAllIterations(1);
+        controls.appendChild(run1Btn);
+
+        const run10Btn = document.createElement('button');
+        run10Btn.className = 'secondary iter-btn';
+        run10Btn.textContent = '10 iter';
+        run10Btn.onclick = () => this.runAllIterations(10);
+        controls.appendChild(run10Btn);
+
+        const run100Btn = document.createElement('button');
+        run100Btn.className = 'secondary iter-btn';
+        run100Btn.textContent = '100 iter';
+        run100Btn.onclick = () => this.runAllIterations(100);
+        controls.appendChild(run100Btn);
+
+        const stopAllBtn = document.createElement('button');
+        stopAllBtn.id = 'stop-all-btn';
+        stopAllBtn.className = 'secondary iter-btn stop-btn';
+        stopAllBtn.textContent = 'Stop All';
+        stopAllBtn.onclick = () => this.stopAllIterations();
+        stopAllBtn.style.display = 'none';
+        controls.appendChild(stopAllBtn);
+
+        // Global progress display
+        const progressDiv = document.createElement('div');
+        progressDiv.id = 'global-progress';
+        progressDiv.className = 'global-progress';
+        progressDiv.style.display = 'none';
+        controls.appendChild(progressDiv);
 
         header.appendChild(controls);
     }
@@ -164,6 +204,48 @@ class HighLevelTestRunner {
 
         section.appendChild(header);
 
+        // Iteration controls
+        const iterControls = document.createElement('div');
+        iterControls.className = 'iteration-controls';
+
+        const iterLabel = document.createElement('span');
+        iterLabel.className = 'iter-label';
+        iterLabel.textContent = 'Iterations:';
+        iterControls.appendChild(iterLabel);
+
+        const run1Btn = document.createElement('button');
+        run1Btn.className = 'iter-btn';
+        run1Btn.textContent = '1';
+        run1Btn.onclick = () => this.runIterations(test, 1);
+        iterControls.appendChild(run1Btn);
+
+        const run10Btn = document.createElement('button');
+        run10Btn.className = 'iter-btn';
+        run10Btn.textContent = '10';
+        run10Btn.onclick = () => this.runIterations(test, 10);
+        iterControls.appendChild(run10Btn);
+
+        const run100Btn = document.createElement('button');
+        run100Btn.className = 'iter-btn';
+        run100Btn.textContent = '100';
+        run100Btn.onclick = () => this.runIterations(test, 100);
+        iterControls.appendChild(run100Btn);
+
+        const stopBtn = document.createElement('button');
+        stopBtn.className = 'iter-btn stop-btn';
+        stopBtn.textContent = 'Stop';
+        stopBtn.onclick = () => this.stopIterations(test);
+        stopBtn.style.display = 'none';
+        iterControls.appendChild(stopBtn);
+
+        // Progress display
+        const progressDiv = document.createElement('div');
+        progressDiv.className = 'iter-progress';
+        progressDiv.style.display = 'none';
+        iterControls.appendChild(progressDiv);
+
+        section.appendChild(iterControls);
+
         // Canvas container
         const canvasContainer = document.createElement('div');
         canvasContainer.className = 'canvas-container';
@@ -210,7 +292,7 @@ class HighLevelTestRunner {
     /**
      * Run a single test
      */
-    static runTest(test) {
+    static runTest(test, iterationNumber = 1) {
         const section = this.testElements.get(test.name);
         if (!section) return;
 
@@ -219,26 +301,134 @@ class HighLevelTestRunner {
         const resultsDiv = section.querySelector('.test-results');
 
         // Run on SWCanvas
-        const swResult = this.runOnSWCanvas(test, swCanvas);
+        const swResult = this.runOnSWCanvas(test, swCanvas, iterationNumber);
 
         // Get fast path status AFTER running SWCanvas
         const slowPathUsed = SWCanvas.Core.Context2D.wasSlowPathUsed();
         const allowSlowPath = test.checks.allowSlowPath === true;
 
         // Run on HTML5 Canvas
-        const html5Result = this.runOnHTML5Canvas(test, html5Canvas);
+        const html5Result = this.runOnHTML5Canvas(test, html5Canvas, iterationNumber);
 
         // Run validation checks
         const checkResults = this.runValidationChecks(test, swCanvas, swResult);
 
         // Display results
-        this.displayResults(section, test, slowPathUsed, allowSlowPath, checkResults, swResult);
+        return this.displayResults(section, test, slowPathUsed, allowSlowPath, checkResults, swResult, iterationNumber);
+    }
+
+    /**
+     * Run multiple iterations of a test
+     */
+    static runIterations(test, count) {
+        const section = this.testElements.get(test.name);
+        if (!section) return;
+
+        // Stop any existing run
+        this.stopIterations(test);
+
+        // Get UI elements
+        const iterControls = section.querySelector('.iteration-controls');
+        const stopBtn = iterControls.querySelector('.stop-btn');
+        const progressDiv = iterControls.querySelector('.iter-progress');
+        const iterBtns = iterControls.querySelectorAll('.iter-btn:not(.stop-btn)');
+
+        // Show progress, hide other buttons
+        stopBtn.style.display = 'inline-block';
+        progressDiv.style.display = 'inline-block';
+        iterBtns.forEach(btn => btn.disabled = true);
+
+        let current = 0;
+        let passed = 0;
+        let failed = 0;
+        const errors = [];
+
+        // Reset section run state for fresh summary tracking
+        section.dataset.hasRun = 'false';
+
+        const runState = {
+            running: true,
+            current: 0,
+            total: count
+        };
+        this.runningIterations.set(test.name, runState);
+
+        const runFrame = () => {
+            if (!runState.running || current >= count) {
+                // Done - show final results
+                this.finishIterations(test, section, passed, failed, errors, count);
+                return;
+            }
+
+            // Update progress
+            progressDiv.textContent = `${current + 1}/${count}`;
+
+            // Run iteration with different seed
+            const iterPassed = this.runTest(test, current + 1);
+            if (iterPassed) {
+                passed++;
+            } else {
+                failed++;
+                errors.push(`Iteration ${current + 1} failed`);
+            }
+
+            current++;
+            runState.current = current;
+
+            // Schedule next frame
+            requestAnimationFrame(runFrame);
+        };
+
+        // Start running
+        requestAnimationFrame(runFrame);
+    }
+
+    /**
+     * Stop running iterations
+     */
+    static stopIterations(test) {
+        const runState = this.runningIterations.get(test.name);
+        if (runState) {
+            runState.running = false;
+            this.runningIterations.delete(test.name);
+        }
+    }
+
+    /**
+     * Finish iteration run and show summary
+     */
+    static finishIterations(test, section, passed, failed, errors, total) {
+        // Clean up run state
+        this.runningIterations.delete(test.name);
+
+        // Reset UI
+        const iterControls = section.querySelector('.iteration-controls');
+        const stopBtn = iterControls.querySelector('.stop-btn');
+        const progressDiv = iterControls.querySelector('.iter-progress');
+        const iterBtns = iterControls.querySelectorAll('.iter-btn:not(.stop-btn)');
+
+        stopBtn.style.display = 'none';
+        iterBtns.forEach(btn => btn.disabled = false);
+
+        // Show iteration summary in progress div
+        const allPassed = failed === 0;
+        progressDiv.className = 'iter-progress ' + (allPassed ? 'iter-pass' : 'iter-fail');
+        progressDiv.textContent = `${passed}/${total} passed`;
+
+        // Add error details if any failures
+        if (errors.length > 0 && errors.length <= 5) {
+            const resultsDiv = section.querySelector('.test-results');
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'iter-errors';
+            errorDiv.innerHTML = `<strong>Failed iterations:</strong> ${errors.join(', ')}`;
+            resultsDiv.appendChild(errorDiv);
+        }
     }
 
     /**
      * Run test on SWCanvas
      */
-    static runOnSWCanvas(test, canvas) {
+    static runOnSWCanvas(test, canvas, iterationNumber = 1) {
         // Create SWCanvas from the canvas element
         const swCanvas = SWCanvas.createCanvas(canvas.width, canvas.height);
         const ctx = swCanvas.getContext('2d');
@@ -247,15 +437,15 @@ class HighLevelTestRunner {
         // Reset slow path flag before drawing
         SWCanvas.Core.Context2D.resetSlowPathFlag();
 
-        // Seed random for reproducibility
-        SeededRandom.seedWithInteger(12345);
+        // Seed random for reproducibility - different seed per iteration
+        SeededRandom.seedWithInteger(12345 + iterationNumber - 1);
 
         // White background
         ctx.fillStyle = '#ffffff';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
         // Run the test draw function
-        const result = test.drawFunction(ctx, 1, null);
+        const result = test.drawFunction(ctx, iterationNumber, null);
 
         // Copy SWCanvas result to visible canvas
         const visibleCtx = canvas.getContext('2d');
@@ -271,12 +461,12 @@ class HighLevelTestRunner {
     /**
      * Run test on native HTML5 Canvas
      */
-    static runOnHTML5Canvas(test, canvas) {
+    static runOnHTML5Canvas(test, canvas, iterationNumber = 1) {
         const ctx = canvas.getContext('2d');
         // Note: ctx.canvas is already set and readonly on native Canvas
 
-        // Seed random with same seed for reproducibility
-        SeededRandom.seedWithInteger(12345);
+        // Seed random with same seed for reproducibility - different seed per iteration
+        SeededRandom.seedWithInteger(12345 + iterationNumber - 1);
 
         // Clear and white background
         ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -284,7 +474,7 @@ class HighLevelTestRunner {
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
         // Run the test draw function
-        const result = test.drawFunction(ctx, 1, null);
+        const result = test.drawFunction(ctx, iterationNumber, null);
 
         return result || {};
     }
@@ -373,10 +563,18 @@ class HighLevelTestRunner {
     /**
      * Display test results
      */
-    static displayResults(section, test, slowPathUsed, allowSlowPath, checkResults, drawResult) {
+    static displayResults(section, test, slowPathUsed, allowSlowPath, checkResults, drawResult, iterationNumber = 1) {
         const resultsDiv = section.querySelector('.test-results');
         resultsDiv.innerHTML = '';
         resultsDiv.style.display = 'block';
+
+        // Show iteration number if not 1
+        if (iterationNumber > 1) {
+            const iterRow = document.createElement('div');
+            iterRow.className = 'result-row iter-row';
+            iterRow.innerHTML = `<span class="result-label">Iteration:</span><span class="result-value">#${iterationNumber}</span>`;
+            resultsDiv.appendChild(iterRow);
+        }
 
         // Fast path status
         const fastPathRow = document.createElement('div');
@@ -515,6 +713,123 @@ class HighLevelTestRunner {
         HIGH_LEVEL_TESTS.forEach(test => {
             this.runTest(test);
         });
+    }
+
+    /**
+     * Run all tests for multiple iterations
+     */
+    static runAllIterations(iterCount) {
+        // Stop any existing run
+        this.stopAllIterations();
+
+        // Get UI elements
+        const controls = document.getElementById('controls');
+        const stopBtn = document.getElementById('stop-all-btn');
+        const progressDiv = document.getElementById('global-progress');
+        const iterBtns = controls.querySelectorAll('.iter-btn:not(.stop-btn)');
+
+        // Show progress, disable other buttons
+        stopBtn.style.display = 'inline-block';
+        progressDiv.style.display = 'inline-block';
+        iterBtns.forEach(btn => btn.disabled = true);
+
+        const totalTests = HIGH_LEVEL_TESTS.length;
+        let currentTest = 0;
+        let currentIter = 0;
+        let totalPassed = 0;
+        let totalFailed = 0;
+
+        // Reset all sections
+        this.results = { passed: 0, failed: 0 };
+        this.testElements.forEach(section => {
+            section.dataset.hasRun = 'false';
+        });
+
+        this.globalRunState = {
+            running: true,
+            iterCount,
+            totalTests,
+            currentTest,
+            currentIter
+        };
+
+        const runFrame = () => {
+            if (!this.globalRunState.running) {
+                this.finishAllIterations(totalPassed, totalFailed, iterCount);
+                return;
+            }
+
+            // Update progress
+            const totalOps = totalTests * iterCount;
+            const currentOp = currentTest * iterCount + currentIter + 1;
+            progressDiv.textContent = `Test ${currentTest + 1}/${totalTests}, Iter ${currentIter + 1}/${iterCount} (${currentOp}/${totalOps})`;
+
+            // Run current test iteration
+            const test = HIGH_LEVEL_TESTS[currentTest];
+            const passed = this.runTest(test, currentIter + 1);
+            if (passed) {
+                totalPassed++;
+            } else {
+                totalFailed++;
+            }
+
+            // Move to next
+            currentIter++;
+            if (currentIter >= iterCount) {
+                currentIter = 0;
+                currentTest++;
+            }
+
+            // Check if done
+            if (currentTest >= totalTests) {
+                this.finishAllIterations(totalPassed, totalFailed, iterCount);
+                return;
+            }
+
+            this.globalRunState.currentTest = currentTest;
+            this.globalRunState.currentIter = currentIter;
+
+            // Schedule next frame
+            requestAnimationFrame(runFrame);
+        };
+
+        // Start running
+        requestAnimationFrame(runFrame);
+    }
+
+    /**
+     * Stop all iterations
+     */
+    static stopAllIterations() {
+        if (this.globalRunState) {
+            this.globalRunState.running = false;
+        }
+        // Also stop individual test iterations
+        HIGH_LEVEL_TESTS.forEach(test => {
+            this.stopIterations(test);
+        });
+    }
+
+    /**
+     * Finish all iterations and show summary
+     */
+    static finishAllIterations(totalPassed, totalFailed, iterCount) {
+        this.globalRunState = null;
+
+        // Reset UI
+        const controls = document.getElementById('controls');
+        const stopBtn = document.getElementById('stop-all-btn');
+        const progressDiv = document.getElementById('global-progress');
+        const iterBtns = controls.querySelectorAll('.iter-btn:not(.stop-btn)');
+
+        stopBtn.style.display = 'none';
+        iterBtns.forEach(btn => btn.disabled = false);
+
+        // Show final summary
+        const total = totalPassed + totalFailed;
+        const allPassed = totalFailed === 0;
+        progressDiv.className = 'global-progress ' + (allPassed ? 'iter-pass' : 'iter-fail');
+        progressDiv.textContent = `${totalPassed}/${total} passed (${HIGH_LEVEL_TESTS.length} tests × ${iterCount} iterations)`;
     }
 }
 
