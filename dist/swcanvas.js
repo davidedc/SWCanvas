@@ -1023,10 +1023,14 @@ class SWPath2D {
 }
 /**
  * Surface class for SWCanvas
- * 
+ *
  * Represents a 2D pixel surface with RGBA data storage.
  * Following Joshua Bloch's principle of proper class design with validation,
  * clear error messages, and immutable properties where sensible.
+ *
+ * Provides dual-view buffer access:
+ * - data: Uint8ClampedArray for standard RGBA access (4 bytes per pixel)
+ * - data32: Uint32Array view for optimized 32-bit packed writes (same underlying buffer)
  */
 class Surface {
     /**
@@ -1062,6 +1066,59 @@ class Surface {
 
         // Allocate pixel data (RGBA, non-premultiplied)
         this.data = new Uint8ClampedArray(this.stride * height);
+
+        // Uint32Array view for optimized opaque pixel writes
+        // Shares same underlying ArrayBuffer - no additional memory cost
+        this.data32 = new Uint32Array(this.data.buffer);
+    }
+
+    /**
+     * Pack RGBA color into 32-bit integer (little-endian: ABGR layout in memory)
+     * @param {number} r - Red component (0-255)
+     * @param {number} g - Green component (0-255)
+     * @param {number} b - Blue component (0-255)
+     * @param {number} a - Alpha component (0-255), defaults to 255 (opaque)
+     * @returns {number} Packed 32-bit color value
+     */
+    static packColor(r, g, b, a = 255) {
+        return (a << 24) | (b << 16) | (g << 8) | r;
+    }
+
+    /**
+     * Set pixel using pre-packed 32-bit color (fastest path)
+     * No bounds checking - caller must ensure validity for performance
+     * @param {number} pixelIndex - Linear pixel index (y * width + x)
+     * @param {number} packedColor - Pre-packed 32-bit ABGR color from packColor()
+     */
+    setPixelPacked(pixelIndex, packedColor) {
+        this.data32[pixelIndex] = packedColor;
+    }
+
+    /**
+     * Set opaque pixel with individual RGB components (no alpha blending)
+     * No bounds checking - caller must ensure validity for performance
+     * @param {number} pixelIndex - Linear pixel index (y * width + x)
+     * @param {number} r - Red component (0-255)
+     * @param {number} g - Green component (0-255)
+     * @param {number} b - Blue component (0-255)
+     */
+    setPixelOpaque(pixelIndex, r, g, b) {
+        this.data32[pixelIndex] = 0xFF000000 | (b << 16) | (g << 8) | r;
+    }
+
+    /**
+     * Fill horizontal span with packed color (optimized for scanline rendering)
+     * No bounds checking - caller must ensure validity for performance
+     * @param {number} startIndex - Starting linear pixel index
+     * @param {number} length - Number of pixels to fill
+     * @param {number} packedColor - Pre-packed 32-bit ABGR color from packColor()
+     */
+    fillSpanPacked(startIndex, length, packedColor) {
+        const end = startIndex + length;
+        const data32 = this.data32;
+        for (let i = startIndex; i < end; i++) {
+            data32[i] = packedColor;
+        }
     }
 
     /**
@@ -1119,6 +1176,7 @@ class Surface {
 
     /**
      * Clear surface to specified color
+     * Uses optimized 32-bit writes for better performance
      * @param {Color} color - Color to clear to (defaults to transparent)
      */
     clear(color = Color.transparent) {
@@ -1127,12 +1185,13 @@ class Surface {
         }
 
         const rgba = color.toRGBA();
+        const packedColor = Surface.packColor(rgba[0], rgba[1], rgba[2], rgba[3]);
+        const data32 = this.data32;
+        const pixelCount = this.width * this.height;
 
-        for (let i = 0; i < this.data.length; i += 4) {
-            this.data[i] = rgba[0];
-            this.data[i + 1] = rgba[1];
-            this.data[i + 2] = rgba[2];
-            this.data[i + 3] = rgba[3];
+        // Use 32-bit writes - 4x fewer write operations than byte-by-byte
+        for (let i = 0; i < pixelCount; i++) {
+            data32[i] = packedColor;
         }
     }
 
@@ -1155,6 +1214,316 @@ class Surface {
 }
 
 
+
+/**
+ * FastPixelOps - High-performance pixel operations for SWCanvas
+ *
+ * Provides CrispSwCanvas-style optimizations:
+ * - 32-bit packed writes for opaque pixels (4x fewer memory operations)
+ * - Inline clip buffer access with bitwise operations
+ * - Pre-computed values outside hot loops
+ * - Byte-level clip skipping (skip 8 pixels at once when fully clipped)
+ *
+ * This class centralizes the performance-critical pixel operations that are
+ * used by shape renderers and the polygon filler for maximum speed.
+ */
+class FastPixelOps {
+    /**
+     * Create FastPixelOps for a surface
+     * @param {Surface} surface - Target surface for pixel operations
+     */
+    constructor(surface) {
+        this.surface = surface;
+        this.width = surface.width;
+        this.height = surface.height;
+        this.data = surface.data;
+        this.data32 = surface.data32;
+    }
+
+    /**
+     * Check if pixel is clipped (inline-optimized static method)
+     * @param {Uint8Array|null} clipBuffer - Raw clip mask buffer (or null if no clipping)
+     * @param {number} pixelIndex - Linear pixel index (y * width + x)
+     * @returns {boolean} True if pixel is clipped (should skip rendering)
+     */
+    static isClipped(clipBuffer, pixelIndex) {
+        if (!clipBuffer) return false;
+        const byteIndex = pixelIndex >> 3;
+        const bitIndex = pixelIndex & 7;
+        return (clipBuffer[byteIndex] & (1 << bitIndex)) === 0;
+    }
+
+    /**
+     * Check if entire byte is clipped (skip 8 pixels optimization)
+     * @param {Uint8Array} clipBuffer - Raw clip mask buffer
+     * @param {number} byteIndex - Byte index in clip buffer
+     * @returns {boolean} True if all 8 pixels in byte are clipped
+     */
+    static isByteFullyClipped(clipBuffer, byteIndex) {
+        return clipBuffer[byteIndex] === 0;
+    }
+
+    /**
+     * Set single pixel with clipping and optional alpha blending
+     * @param {number} x - X coordinate
+     * @param {number} y - Y coordinate
+     * @param {number} r - Red component (0-255)
+     * @param {number} g - Green component (0-255)
+     * @param {number} b - Blue component (0-255)
+     * @param {number} a - Alpha component (0-255)
+     * @param {number} globalAlpha - Global alpha multiplier (0-1)
+     * @param {Uint8Array|null} clipBuffer - Raw clip mask buffer (or null)
+     */
+    setPixel(x, y, r, g, b, a, globalAlpha, clipBuffer) {
+        // Bounds check
+        if (x < 0 || x >= this.width || y < 0 || y >= this.height) return;
+
+        const pixelIndex = y * this.width + x;
+
+        // Clip check with inline bitwise operations
+        if (clipBuffer) {
+            const byteIndex = pixelIndex >> 3;
+            const bitIndex = pixelIndex & 7;
+            if ((clipBuffer[byteIndex] & (1 << bitIndex)) === 0) return;
+        }
+
+        // Fast path for fully opaque pixels
+        if (a === 255 && globalAlpha >= 1.0) {
+            this.data32[pixelIndex] = 0xFF000000 | (b << 16) | (g << 8) | r;
+            return;
+        }
+
+        // Alpha blending path (source-over compositing)
+        const idx = pixelIndex * 4;
+        const srcAlpha = (a / 255) * globalAlpha;
+        const invSrcAlpha = 1 - srcAlpha;
+        const dstAlpha = this.data[idx + 3] / 255;
+        const outAlpha = srcAlpha + dstAlpha * invSrcAlpha;
+
+        if (outAlpha <= 0) return;
+
+        const blendFactor = 1 / outAlpha;
+        this.data[idx]     = (r * srcAlpha + this.data[idx]     * dstAlpha * invSrcAlpha) * blendFactor;
+        this.data[idx + 1] = (g * srcAlpha + this.data[idx + 1] * dstAlpha * invSrcAlpha) * blendFactor;
+        this.data[idx + 2] = (b * srcAlpha + this.data[idx + 2] * dstAlpha * invSrcAlpha) * blendFactor;
+        this.data[idx + 3] = outAlpha * 255;
+    }
+
+    /**
+     * Set pixel using pre-packed color (fastest single-pixel write)
+     * No bounds checking - caller must ensure validity
+     * @param {number} pixelIndex - Linear pixel index
+     * @param {number} packedColor - Pre-packed 32-bit ABGR color
+     * @param {Uint8Array|null} clipBuffer - Raw clip mask buffer (or null)
+     */
+    setPixelPacked(pixelIndex, packedColor, clipBuffer) {
+        if (clipBuffer) {
+            const byteIndex = pixelIndex >> 3;
+            const bitIndex = pixelIndex & 7;
+            if ((clipBuffer[byteIndex] & (1 << bitIndex)) === 0) return;
+        }
+        this.data32[pixelIndex] = packedColor;
+    }
+
+    /**
+     * Clear pixel to fully transparent
+     * @param {number} x - X coordinate
+     * @param {number} y - Y coordinate
+     */
+    clearPixel(x, y) {
+        if (x < 0 || x >= this.width || y < 0 || y >= this.height) return;
+        this.data32[y * this.width + x] = 0;
+    }
+
+    /**
+     * Fill horizontal run with solid color (optimized for scanline rendering)
+     * @param {number} x - Starting X coordinate
+     * @param {number} y - Y coordinate
+     * @param {number} length - Run length in pixels
+     * @param {number} r - Red component (0-255)
+     * @param {number} g - Green component (0-255)
+     * @param {number} b - Blue component (0-255)
+     * @param {number} a - Alpha component (0-255)
+     * @param {number} globalAlpha - Global alpha multiplier (0-1)
+     * @param {Uint8Array|null} clipBuffer - Raw clip mask buffer (or null)
+     */
+    fillRun(x, y, length, r, g, b, a, globalAlpha, clipBuffer) {
+        // Y bounds check
+        if (y < 0 || y >= this.height) return;
+
+        // X clipping to surface bounds
+        if (x < 0) {
+            length += x;
+            x = 0;
+        }
+        if (x + length > this.width) {
+            length = this.width - x;
+        }
+        if (length <= 0) return;
+
+        const isOpaque = a === 255 && globalAlpha >= 1.0;
+        let pixelIndex = y * this.width + x;
+        const endIndex = pixelIndex + length;
+        const data32 = this.data32;
+
+        if (isOpaque) {
+            const packedColor = 0xFF000000 | (b << 16) | (g << 8) | r;
+
+            if (clipBuffer) {
+                // Opaque with clipping - use byte-level skip optimization
+                while (pixelIndex < endIndex) {
+                    const byteIndex = pixelIndex >> 3;
+
+                    // Skip fully clipped bytes (8 pixels at a time)
+                    if (clipBuffer[byteIndex] === 0) {
+                        const nextByteBoundary = (byteIndex + 1) << 3;
+                        pixelIndex = Math.min(nextByteBoundary, endIndex);
+                        continue;
+                    }
+
+                    // Check individual pixel within partially visible byte
+                    const bitIndex = pixelIndex & 7;
+                    if (clipBuffer[byteIndex] & (1 << bitIndex)) {
+                        data32[pixelIndex] = packedColor;
+                    }
+                    pixelIndex++;
+                }
+            } else {
+                // Opaque without clipping - fastest path
+                for (; pixelIndex < endIndex; pixelIndex++) {
+                    data32[pixelIndex] = packedColor;
+                }
+            }
+        } else {
+            // Alpha blending path
+            const srcAlpha = (a / 255) * globalAlpha;
+            if (srcAlpha <= 0) return;
+
+            const invSrcAlpha = 1 - srcAlpha;
+            const data = this.data;
+
+            if (clipBuffer) {
+                while (pixelIndex < endIndex) {
+                    const byteIndex = pixelIndex >> 3;
+
+                    // Skip fully clipped bytes
+                    if (clipBuffer[byteIndex] === 0) {
+                        const nextByteBoundary = (byteIndex + 1) << 3;
+                        pixelIndex = Math.min(nextByteBoundary, endIndex);
+                        continue;
+                    }
+
+                    const bitIndex = pixelIndex & 7;
+                    if (clipBuffer[byteIndex] & (1 << bitIndex)) {
+                        const idx = pixelIndex * 4;
+                        const dstAlpha = data[idx + 3] / 255;
+                        const outAlpha = srcAlpha + dstAlpha * invSrcAlpha;
+
+                        if (outAlpha > 0) {
+                            const blendFactor = 1 / outAlpha;
+                            data[idx]     = (r * srcAlpha + data[idx]     * dstAlpha * invSrcAlpha) * blendFactor;
+                            data[idx + 1] = (g * srcAlpha + data[idx + 1] * dstAlpha * invSrcAlpha) * blendFactor;
+                            data[idx + 2] = (b * srcAlpha + data[idx + 2] * dstAlpha * invSrcAlpha) * blendFactor;
+                            data[idx + 3] = outAlpha * 255;
+                        }
+                    }
+                    pixelIndex++;
+                }
+            } else {
+                // Blending without clipping
+                for (; pixelIndex < endIndex; pixelIndex++) {
+                    const idx = pixelIndex * 4;
+                    const dstAlpha = data[idx + 3] / 255;
+                    const outAlpha = srcAlpha + dstAlpha * invSrcAlpha;
+
+                    if (outAlpha > 0) {
+                        const blendFactor = 1 / outAlpha;
+                        data[idx]     = (r * srcAlpha + data[idx]     * dstAlpha * invSrcAlpha) * blendFactor;
+                        data[idx + 1] = (g * srcAlpha + data[idx + 1] * dstAlpha * invSrcAlpha) * blendFactor;
+                        data[idx + 2] = (b * srcAlpha + data[idx + 2] * dstAlpha * invSrcAlpha) * blendFactor;
+                        data[idx + 3] = outAlpha * 255;
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Fill horizontal run with pre-packed opaque color (fastest run fill)
+     * No bounds checking - caller must ensure validity
+     * @param {number} startIndex - Starting linear pixel index
+     * @param {number} length - Number of pixels to fill
+     * @param {number} packedColor - Pre-packed 32-bit ABGR color
+     * @param {Uint8Array|null} clipBuffer - Raw clip mask buffer (or null)
+     */
+    fillRunPacked(startIndex, length, packedColor, clipBuffer) {
+        const endIndex = startIndex + length;
+        const data32 = this.data32;
+
+        if (clipBuffer) {
+            let pixelIndex = startIndex;
+            while (pixelIndex < endIndex) {
+                const byteIndex = pixelIndex >> 3;
+
+                // Skip fully clipped bytes
+                if (clipBuffer[byteIndex] === 0) {
+                    const nextByteBoundary = (byteIndex + 1) << 3;
+                    pixelIndex = Math.min(nextByteBoundary, endIndex);
+                    continue;
+                }
+
+                const bitIndex = pixelIndex & 7;
+                if (clipBuffer[byteIndex] & (1 << bitIndex)) {
+                    data32[pixelIndex] = packedColor;
+                }
+                pixelIndex++;
+            }
+        } else {
+            // No clipping - direct fill
+            for (let i = startIndex; i < endIndex; i++) {
+                data32[i] = packedColor;
+            }
+        }
+    }
+
+    /**
+     * Fill multiple horizontal runs with the same color (batch operation)
+     * Runs format: flat array of [x, y, length, x, y, length, ...]
+     * @param {Array<number>} runs - Flat array of run triplets [x, y, length, ...]
+     * @param {number} r - Red component (0-255)
+     * @param {number} g - Green component (0-255)
+     * @param {number} b - Blue component (0-255)
+     * @param {number} a - Alpha component (0-255)
+     * @param {number} globalAlpha - Global alpha multiplier (0-1)
+     * @param {Uint8Array|null} clipBuffer - Raw clip mask buffer (or null)
+     */
+    fillRuns(runs, r, g, b, a, globalAlpha, clipBuffer) {
+        for (let i = 0; i < runs.length; i += 3) {
+            this.fillRun(runs[i], runs[i + 1], runs[i + 2], r, g, b, a, globalAlpha, clipBuffer);
+        }
+    }
+
+    /**
+     * Set pixel in clipping mask (for building clip regions)
+     * @param {Uint8Array} clipBuffer - Target clip mask buffer
+     * @param {number} x - X coordinate
+     * @param {number} y - Y coordinate
+     */
+    clipPixel(clipBuffer, x, y) {
+        // Convert to integer with bitwise OR
+        x = x | 0;
+        y = y | 0;
+
+        if (x < 0 || x >= this.width || y < 0 || y >= this.height) return;
+
+        const pixelPos = y * this.width + x;
+        const byteIndex = pixelPos >> 3;
+        const bitIndex = pixelPos & 7;
+
+        // OR the bit to mark pixel as visible in clip mask
+        clipBuffer[byteIndex] |= (1 << bitIndex);
+    }
+}
 
 /**
  * CompositeOperations utility class for SWCanvas
@@ -3071,25 +3440,30 @@ class PathFlattener {
 PathFlattener.TOLERANCE = 0.25; // Fixed tolerance for deterministic behavior
 /**
  * PolygonFiller class for SWCanvas
- * 
+ *
  * Implements scanline polygon filling with nonzero and evenodd winding rules.
  * Handles stencil-based clipping integration and premultiplied alpha blending.
- * 
+ *
+ * Provides dual rendering paths:
+ * - Fast path: 32-bit packed writes for opaque solid colors (CrispSwCanvas-style)
+ * - Standard path: Full paint source support with gradients, patterns, compositing
+ *
  * Converted from functional to class-based approach following OO best practices:
- * - Static methods for stateless operations 
+ * - Static methods for stateless operations
  * - Clear separation of scanline logic from pixel blending
  * - Immutable color handling with Color class integration
  */
 class PolygonFiller {
     /**
      * Fill polygons using scanline algorithm with stencil-based clipping
-     * 
+     * Routes to fast path when possible for optimal performance
+     *
      * @param {Surface} surface - Target surface to render to
-     * @param {Array} polygons - Array of polygons (each polygon is array of {x,y} points)  
+     * @param {Array} polygons - Array of polygons (each polygon is array of {x,y} points)
      * @param {Color|Gradient|Pattern} paintSource - Paint source to fill with
      * @param {string} fillRule - 'nonzero' or 'evenodd' winding rule
      * @param {Transform2D} transform - Transformation matrix to apply to polygons
-     * @param {Uint8Array|null} clipMask - Optional 1-bit stencil buffer for clipping
+     * @param {ClipMask|null} clipMask - Optional 1-bit stencil buffer for clipping
      * @param {number} globalAlpha - Global alpha value (0-1) for rendering operation
      * @param {number} subPixelOpacity - Sub-pixel opacity for thin strokes (0-1)
      * @param {string} composite - Composite operation (default: 'source-over')
@@ -3099,6 +3473,119 @@ class PolygonFiller {
         if (polygons.length === 0) return;
         if (!PolygonFiller._isValidPaintSource(paintSource)) {
             throw new Error('Paint source must be a Color, Gradient, or Pattern instance');
+        }
+
+        // Check if we can use the fast path (opaque solid color with source-over)
+        const canUseFastPath =
+            paintSource instanceof Color &&
+            paintSource.a === 255 &&
+            globalAlpha >= 1.0 &&
+            subPixelOpacity >= 1.0 &&
+            composite === 'source-over' &&
+            sourceMask === null;
+
+        if (canUseFastPath) {
+            PolygonFiller._fillPolygonsFast(surface, polygons, paintSource, fillRule, transform, clipMask);
+        } else {
+            PolygonFiller._fillPolygonsStandard(surface, polygons, paintSource, fillRule, transform, clipMask, globalAlpha, subPixelOpacity, composite, sourceMask);
+        }
+    }
+
+    /**
+     * Fast path for opaque solid color fills with source-over compositing
+     * Uses 32-bit packed writes and inline clip buffer access for maximum performance
+     * @private
+     */
+    static _fillPolygonsFast(surface, polygons, color, fillRule, transform, clipMask) {
+        // Pre-compute packed color outside hot loop
+        const packedColor = Surface.packColor(color.r, color.g, color.b, 255);
+        const data32 = surface.data32;
+        const width = surface.width;
+        const clipBuffer = clipMask ? clipMask.buffer : null;
+
+        // Transform all polygon vertices
+        const transformedPolygons = polygons.map(poly =>
+            poly.map(point => transform.transformPoint(point))
+        );
+
+        // Find bounding box
+        const bounds = PolygonFiller._calculateBounds(transformedPolygons, surface);
+
+        // Process each scanline
+        for (let y = bounds.minY; y <= bounds.maxY; y++) {
+            // Find all intersections with this scanline
+            const intersections = [];
+            for (const poly of transformedPolygons) {
+                PolygonFiller._findPolygonIntersections(poly, y + 0.5, intersections);
+            }
+
+            // Sort intersections by x coordinate
+            intersections.sort((a, b) => a.x - b.x);
+
+            // Fill spans using fast path
+            let windingNumber = 0;
+            let inside = false;
+
+            for (let i = 0; i < intersections.length; i++) {
+                const intersection = intersections[i];
+                const nextIntersection = intersections[i + 1];
+
+                windingNumber += intersection.winding;
+
+                if (fillRule === 'evenodd') {
+                    inside = (windingNumber % 2) !== 0;
+                } else {
+                    inside = windingNumber !== 0;
+                }
+
+                if (inside && nextIntersection) {
+                    const startX = Math.max(0, Math.ceil(intersection.x));
+                    const endX = Math.min(width - 1, Math.floor(nextIntersection.x));
+
+                    if (startX <= endX) {
+                        // Fast span fill with 32-bit writes
+                        let pixelIndex = y * width + startX;
+                        const endIndex = y * width + endX + 1;
+
+                        if (clipBuffer) {
+                            // With clipping - use byte-level skip optimization
+                            while (pixelIndex < endIndex) {
+                                const byteIndex = pixelIndex >> 3;
+
+                                // Skip fully clipped bytes (8 pixels at a time)
+                                if (clipBuffer[byteIndex] === 0) {
+                                    const nextByteBoundary = (byteIndex + 1) << 3;
+                                    pixelIndex = Math.min(nextByteBoundary, endIndex);
+                                    continue;
+                                }
+
+                                // Check individual pixel within partially visible byte
+                                const bitIndex = pixelIndex & 7;
+                                if (clipBuffer[byteIndex] & (1 << bitIndex)) {
+                                    data32[pixelIndex] = packedColor;
+                                }
+                                pixelIndex++;
+                            }
+                        } else {
+                            // No clipping - fastest path with direct 32-bit writes
+                            for (; pixelIndex < endIndex; pixelIndex++) {
+                                data32[pixelIndex] = packedColor;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Standard path for all other cases (gradients, patterns, transparency, compositing)
+     * @private
+     */
+    static _fillPolygonsStandard(surface, polygons, paintSource, fillRule, transform, clipMask, globalAlpha, subPixelOpacity, composite, sourceMask) {
+        // Mark slow path for testing (helps verify fast path is used when expected)
+        if (typeof Context2D !== 'undefined' && Context2D._markSlowPath) {
+            Context2D._markSlowPath();
         }
 
         // Transform all polygon vertices
@@ -7682,6 +8169,34 @@ class Rasterizer {
 
 
 class Context2D {
+    // Static flag to track slow path usage (for testing)
+    // Reset before each test, check after to verify fast paths were used
+    static _slowPathUsed = false;
+
+    /**
+     * Reset the slow path tracking flag
+     * Call before running tests that should use fast paths
+     */
+    static resetSlowPathFlag() {
+        Context2D._slowPathUsed = false;
+    }
+
+    /**
+     * Check if slow path was used since last reset
+     * @returns {boolean} True if slow path was used
+     */
+    static wasSlowPathUsed() {
+        return Context2D._slowPathUsed;
+    }
+
+    /**
+     * Mark that slow path was used (called internally)
+     * @private
+     */
+    static _markSlowPath() {
+        Context2D._slowPathUsed = true;
+    }
+
     constructor(surface) {
         this.surface = surface;
         this.rasterizer = new Rasterizer(surface);
@@ -8665,6 +9180,428 @@ class Context2D {
     createPattern(image, repetition) {
         return new Pattern(image, repetition);
     }
+
+    // ========================================================================
+    // DIRECT SHAPE APIs (CrispSwCanvas compatibility)
+    // These methods bypass the path system for maximum performance
+    // ========================================================================
+
+    /**
+     * Fill a circle directly without using the path system
+     * @param {number} centerX - Center X coordinate
+     * @param {number} centerY - Center Y coordinate
+     * @param {number} radius - Circle radius
+     */
+    fillCircle(centerX, centerY, radius) {
+        if (radius <= 0) return;
+
+        // Transform center point
+        const center = this._transform.transformPoint({ x: centerX, y: centerY });
+
+        // Calculate effective radius considering non-uniform scaling
+        const scale = Math.sqrt(
+            Math.abs(this._transform.a * this._transform.d - this._transform.b * this._transform.c)
+        );
+        const scaledRadius = radius * scale;
+
+        // Get paint source
+        const paintSource = this._fillStyle;
+
+        // Use optimized circle renderer
+        this._fillCircleDirect(center.x, center.y, scaledRadius, paintSource);
+    }
+
+    /**
+     * Stroke a circle directly without using the path system
+     * @param {number} centerX - Center X coordinate
+     * @param {number} centerY - Center Y coordinate
+     * @param {number} radius - Circle radius
+     */
+    strokeCircle(centerX, centerY, radius) {
+        if (radius <= 0) return;
+
+        // Transform center point
+        const center = this._transform.transformPoint({ x: centerX, y: centerY });
+
+        // Calculate effective radius and line width
+        const scale = Math.sqrt(
+            Math.abs(this._transform.a * this._transform.d - this._transform.b * this._transform.c)
+        );
+        const scaledRadius = radius * scale;
+        const scaledLineWidth = this._lineWidth * scale;
+
+        // Get paint source
+        const paintSource = this._strokeStyle;
+
+        // Use optimized circle stroke renderer
+        this._strokeCircleDirect(center.x, center.y, scaledRadius, scaledLineWidth, paintSource);
+    }
+
+    /**
+     * Fill and stroke a circle in one operation
+     * @param {number} centerX - Center X coordinate
+     * @param {number} centerY - Center Y coordinate
+     * @param {number} radius - Circle radius
+     */
+    fillAndStrokeCircle(centerX, centerY, radius) {
+        this.fillCircle(centerX, centerY, radius);
+        this.strokeCircle(centerX, centerY, radius);
+    }
+
+    /**
+     * Stroke a line directly without using the path system
+     * @param {number} x1 - Start X coordinate
+     * @param {number} y1 - Start Y coordinate
+     * @param {number} x2 - End X coordinate
+     * @param {number} y2 - End Y coordinate
+     */
+    strokeLine(x1, y1, x2, y2) {
+        // Transform endpoints
+        const start = this._transform.transformPoint({ x: x1, y: y1 });
+        const end = this._transform.transformPoint({ x: x2, y: y2 });
+
+        // Calculate effective line width
+        const scale = Math.sqrt(
+            Math.abs(this._transform.a * this._transform.d - this._transform.b * this._transform.c)
+        );
+        const scaledLineWidth = this._lineWidth * scale;
+
+        // Get paint source
+        const paintSource = this._strokeStyle;
+
+        // Use optimized line renderer
+        this._strokeLineDirect(start.x, start.y, end.x, end.y, scaledLineWidth, paintSource);
+    }
+
+    // ========================================================================
+    // Private optimized shape renderers
+    // ========================================================================
+
+    /**
+     * Optimized circle fill using midpoint algorithm with horizontal spans
+     * @private
+     */
+    _fillCircleDirect(cx, cy, radius, paintSource) {
+        const surface = this.surface;
+        const width = surface.width;
+        const height = surface.height;
+        const clipBuffer = this._clipMask ? this._clipMask.buffer : null;
+
+        // Check for solid color fast paths
+        const isColor = paintSource instanceof Color;
+        const isSourceOver = this.globalCompositeOperation === 'source-over';
+
+        const isOpaqueColor = isColor &&
+            paintSource.a === 255 &&
+            this.globalAlpha >= 1.0 &&
+            isSourceOver;
+
+        const isSemiTransparentColor = isColor &&
+            paintSource.a < 255 &&
+            isSourceOver;
+
+        if (isOpaqueColor) {
+            // Fast path 1: 32-bit packed writes for opaque colors
+            const packedColor = Surface.packColor(paintSource.r, paintSource.g, paintSource.b, 255);
+            const data32 = surface.data32;
+
+            const radiusInt = Math.round(radius);
+            let x = radiusInt;
+            let y = 0;
+            let err = 1 - radiusInt;
+
+            while (x >= y) {
+                // Fill horizontal spans for 4 octants
+                this._fillSpanFast(data32, width, height, cx - x, cy + y, x * 2 + 1, packedColor, clipBuffer);
+                this._fillSpanFast(data32, width, height, cx - x, cy - y, x * 2 + 1, packedColor, clipBuffer);
+                if (x !== y) {
+                    this._fillSpanFast(data32, width, height, cx - y, cy + x, y * 2 + 1, packedColor, clipBuffer);
+                    this._fillSpanFast(data32, width, height, cx - y, cy - x, y * 2 + 1, packedColor, clipBuffer);
+                }
+
+                y++;
+                if (err < 0) {
+                    err += 2 * y + 1;
+                } else {
+                    x--;
+                    err += 2 * (y - x + 1);
+                }
+            }
+        } else if (isSemiTransparentColor) {
+            // Fast path 2: Bresenham scanlines with per-pixel alpha blending
+            this._fillCircleAlphaBlend(cx, cy, radius, paintSource, clipBuffer);
+        } else {
+            // Standard path: use path system for gradients/patterns/non-source-over compositing
+            Context2D._markSlowPath(); // Mark slow path for testing
+            this.beginPath();
+            this.arc(cx, cy, radius, 0, Math.PI * 2);
+            // Temporarily set identity transform since we already transformed
+            const savedTransform = this._transform;
+            this._transform = new Transform2D();
+            this.fill();
+            this._transform = savedTransform;
+        }
+    }
+
+    /**
+     * Optimized circle fill with alpha blending using Bresenham scanlines
+     * @private
+     */
+    _fillCircleAlphaBlend(cx, cy, radius, color, clipBuffer) {
+        const surface = this.surface;
+        const width = surface.width;
+        const height = surface.height;
+        const data = surface.data;
+
+        // Calculate effective alpha (color alpha * global alpha)
+        const effectiveAlpha = (color.a / 255) * this.globalAlpha;
+        if (effectiveAlpha <= 0) return;
+
+        const invAlpha = 1 - effectiveAlpha;
+        const r = color.r;
+        const g = color.g;
+        const b = color.b;
+
+        // Bresenham circle algorithm (same as opaque path)
+        const radiusInt = Math.round(radius);
+        let x = radiusInt;
+        let y = 0;
+        let err = 1 - radiusInt;
+
+        while (x >= y) {
+            // Fill horizontal spans with alpha blending
+            this._fillSpanAlpha(data, width, height, cx - x, cy + y, x * 2 + 1,
+                               r, g, b, effectiveAlpha, invAlpha, clipBuffer);
+            this._fillSpanAlpha(data, width, height, cx - x, cy - y, x * 2 + 1,
+                               r, g, b, effectiveAlpha, invAlpha, clipBuffer);
+            if (x !== y) {
+                this._fillSpanAlpha(data, width, height, cx - y, cy + x, y * 2 + 1,
+                                   r, g, b, effectiveAlpha, invAlpha, clipBuffer);
+                this._fillSpanAlpha(data, width, height, cx - y, cy - x, y * 2 + 1,
+                                   r, g, b, effectiveAlpha, invAlpha, clipBuffer);
+            }
+
+            y++;
+            if (err < 0) {
+                err += 2 * y + 1;
+            } else {
+                x--;
+                err += 2 * (y - x + 1);
+            }
+        }
+    }
+
+    /**
+     * Optimized circle stroke using Bresenham with thickness
+     * @private
+     */
+    _strokeCircleDirect(cx, cy, radius, lineWidth, paintSource) {
+        // For strokes, use the path system to ensure correct line properties
+        Context2D._markSlowPath(); // Mark slow path for testing (strokes always use path system)
+        this.beginPath();
+        this.arc(cx, cy, radius, 0, Math.PI * 2);
+        // Temporarily set identity transform since we already transformed
+        const savedTransform = this._transform;
+        this._transform = new Transform2D();
+        const savedLineWidth = this._lineWidth;
+        this._lineWidth = lineWidth;
+        this.stroke();
+        this._lineWidth = savedLineWidth;
+        this._transform = savedTransform;
+    }
+
+    /**
+     * Optimized line stroke
+     * @private
+     */
+    _strokeLineDirect(x1, y1, x2, y2, lineWidth, paintSource) {
+        const surface = this.surface;
+        const width = surface.width;
+        const height = surface.height;
+        const clipBuffer = this._clipMask ? this._clipMask.buffer : null;
+
+        // Get color for solid color fast path
+        const isOpaqueColor = paintSource instanceof Color &&
+            paintSource.a === 255 &&
+            this.globalAlpha >= 1.0 &&
+            this.globalCompositeOperation === 'source-over';
+
+        if (isOpaqueColor && lineWidth <= 1.5) {
+            // Fast path for thin lines: Bresenham algorithm
+            const packedColor = Surface.packColor(paintSource.r, paintSource.g, paintSource.b, 255);
+            const data32 = surface.data32;
+
+            const x1i = Math.round(x1);
+            const y1i = Math.round(y1);
+            const x2i = Math.round(x2);
+            const y2i = Math.round(y2);
+
+            let dx = Math.abs(x2i - x1i);
+            let dy = Math.abs(y2i - y1i);
+            const sx = x1i < x2i ? 1 : -1;
+            const sy = y1i < y2i ? 1 : -1;
+            let err = dx - dy;
+
+            let x = x1i;
+            let y = y1i;
+
+            while (true) {
+                // Set pixel if in bounds
+                if (x >= 0 && x < width && y >= 0 && y < height) {
+                    const pixelIndex = y * width + x;
+
+                    if (clipBuffer) {
+                        const byteIndex = pixelIndex >> 3;
+                        const bitIndex = pixelIndex & 7;
+                        if (clipBuffer[byteIndex] & (1 << bitIndex)) {
+                            data32[pixelIndex] = packedColor;
+                        }
+                    } else {
+                        data32[pixelIndex] = packedColor;
+                    }
+                }
+
+                if (x === x2i && y === y2i) break;
+
+                const e2 = 2 * err;
+                if (e2 > -dy) {
+                    err -= dy;
+                    x += sx;
+                }
+                if (e2 < dx) {
+                    err += dx;
+                    y += sy;
+                }
+            }
+        } else {
+            // Standard path for thick lines or non-opaque colors
+            Context2D._markSlowPath(); // Mark slow path for testing
+            this.beginPath();
+            this.moveTo(x1, y1);
+            this.lineTo(x2, y2);
+            // Temporarily set identity transform
+            const savedTransform = this._transform;
+            this._transform = new Transform2D();
+            const savedLineWidth = this._lineWidth;
+            this._lineWidth = lineWidth;
+            this.stroke();
+            this._lineWidth = savedLineWidth;
+            this._transform = savedTransform;
+        }
+    }
+
+    /**
+     * Fast horizontal span fill with 32-bit writes
+     * @private
+     */
+    _fillSpanFast(data32, surfaceWidth, surfaceHeight, startX, y, length, packedColor, clipBuffer) {
+        // Y bounds check
+        const yi = Math.round(y);
+        if (yi < 0 || yi >= surfaceHeight) return;
+
+        // X clipping to surface bounds
+        let x = Math.round(startX);
+        let len = length;
+        if (x < 0) {
+            len += x;
+            x = 0;
+        }
+        if (x + len > surfaceWidth) {
+            len = surfaceWidth - x;
+        }
+        if (len <= 0) return;
+
+        let pixelIndex = yi * surfaceWidth + x;
+        const endIndex = pixelIndex + len;
+
+        if (clipBuffer) {
+            // With clipping
+            while (pixelIndex < endIndex) {
+                const byteIndex = pixelIndex >> 3;
+
+                // Skip fully clipped bytes
+                if (clipBuffer[byteIndex] === 0) {
+                    const nextByteBoundary = (byteIndex + 1) << 3;
+                    pixelIndex = Math.min(nextByteBoundary, endIndex);
+                    continue;
+                }
+
+                const bitIndex = pixelIndex & 7;
+                if (clipBuffer[byteIndex] & (1 << bitIndex)) {
+                    data32[pixelIndex] = packedColor;
+                }
+                pixelIndex++;
+            }
+        } else {
+            // No clipping - fastest path
+            for (; pixelIndex < endIndex; pixelIndex++) {
+                data32[pixelIndex] = packedColor;
+            }
+        }
+    }
+
+    /**
+     * Horizontal span fill with alpha blending (source-over)
+     * @private
+     */
+    _fillSpanAlpha(data, surfaceWidth, surfaceHeight, startX, y, length, r, g, b, alpha, invAlpha, clipBuffer) {
+        // Y bounds check
+        const yi = Math.round(y);
+        if (yi < 0 || yi >= surfaceHeight) return;
+
+        // X clipping to surface bounds
+        let x = Math.round(startX);
+        let len = length;
+        if (x < 0) {
+            len += x;
+            x = 0;
+        }
+        if (x + len > surfaceWidth) {
+            len = surfaceWidth - x;
+        }
+        if (len <= 0) return;
+
+        const endX = x + len;
+        const rowOffset = yi * surfaceWidth * 4;
+
+        if (clipBuffer) {
+            // With clipping
+            for (let px = x; px < endX; px++) {
+                const bitIndex = yi * surfaceWidth + px;
+                const byteIndex = bitIndex >> 3;
+                const bitOffset = bitIndex & 7;
+                if ((clipBuffer[byteIndex] & (1 << bitOffset)) === 0) continue;
+
+                const offset = rowOffset + px * 4;
+                this._blendPixelAlpha(data, offset, r, g, b, alpha, invAlpha);
+            }
+        } else {
+            // No clipping
+            for (let px = x; px < endX; px++) {
+                const offset = rowOffset + px * 4;
+                this._blendPixelAlpha(data, offset, r, g, b, alpha, invAlpha);
+            }
+        }
+    }
+
+    /**
+     * Blend a single pixel with source-over alpha compositing
+     * @private
+     */
+    _blendPixelAlpha(data, offset, r, g, b, alpha, invAlpha) {
+        // Source-over alpha blending formula
+        const dstA = data[offset + 3] / 255;
+        const dstAScaled = dstA * invAlpha;
+        const outA = alpha + dstAScaled;
+
+        if (outA > 0) {
+            const blendFactor = 1 / outA;
+            data[offset]     = (r * alpha + data[offset] * dstAScaled) * blendFactor;
+            data[offset + 1] = (g * alpha + data[offset + 1] * dstAScaled) * blendFactor;
+            data[offset + 2] = (b * alpha + data[offset + 2] * dstAScaled) * blendFactor;
+            data[offset + 3] = outA * 255;
+        }
+    }
 }
 /**
  * CanvasCompatibleContext2D
@@ -8674,16 +9611,34 @@ class Context2D {
  * CSS color support while delegating actual rendering to the Core implementation.
  */
 class CanvasCompatibleContext2D {
+    // ===== STATIC SLOW-PATH TRACKING (for testing) =====
+
+    /**
+     * Reset the slow path tracking flag
+     * Call before running tests that should use fast paths
+     */
+    static resetSlowPathFlag() {
+        Context2D.resetSlowPathFlag();
+    }
+
+    /**
+     * Check if slow path was used since last reset
+     * @returns {boolean} True if slow path was used
+     */
+    static wasSlowPathUsed() {
+        return Context2D.wasSlowPathUsed();
+    }
+
     constructor(surface) {
         this._core = new Context2D(surface);
         this._colorParser = new ColorParser();
-        
+
         // Property state (mirroring HTML5 Canvas behavior)
         this._fillStyle = '#000000';
         this._strokeStyle = '#000000';
         this._shadowColor = 'rgba(0, 0, 0, 0)'; // Transparent black (no shadow)
     }
-    
+
     /**
      * Update the underlying surface (called when canvas is resized)
      * @param {Surface} newSurface - New surface instance
@@ -9201,13 +10156,56 @@ class CanvasCompatibleContext2D {
     }
     
     // ===== CORE ACCESS FOR ADVANCED USERS =====
-    
+
     /**
      * Get the underlying Core Context2D for advanced operations
      * @returns {Context2D} The Core Context2D instance
      */
     get _coreContext() {
         return this._core;
+    }
+
+    // ===== DIRECT SHAPE APIs (CrispSwCanvas compatibility) =====
+
+    /**
+     * Fill a circle directly without using the path system
+     * @param {number} centerX - Center X coordinate
+     * @param {number} centerY - Center Y coordinate
+     * @param {number} radius - Circle radius
+     */
+    fillCircle(centerX, centerY, radius) {
+        this._core.fillCircle(centerX, centerY, radius);
+    }
+
+    /**
+     * Stroke a circle directly without using the path system
+     * @param {number} centerX - Center X coordinate
+     * @param {number} centerY - Center Y coordinate
+     * @param {number} radius - Circle radius
+     */
+    strokeCircle(centerX, centerY, radius) {
+        this._core.strokeCircle(centerX, centerY, radius);
+    }
+
+    /**
+     * Fill and stroke a circle in one operation
+     * @param {number} centerX - Center X coordinate
+     * @param {number} centerY - Center Y coordinate
+     * @param {number} radius - Circle radius
+     */
+    fillAndStrokeCircle(centerX, centerY, radius) {
+        this._core.fillAndStrokeCircle(centerX, centerY, radius);
+    }
+
+    /**
+     * Stroke a line directly without using the path system
+     * @param {number} x1 - Start X coordinate
+     * @param {number} y1 - Start Y coordinate
+     * @param {number} x2 - End X coordinate
+     * @param {number} y2 - End Y coordinate
+     */
+    strokeLine(x1, y1, x2, y2) {
+        this._core.strokeLine(x1, y1, x2, y2);
     }
 }
 /**
@@ -9403,7 +10401,8 @@ if (typeof window !== 'undefined') {
             LinearGradient: LinearGradient,
             RadialGradient: RadialGradient,
             ConicGradient: ConicGradient,
-            Pattern: Pattern
+            Pattern: Pattern,
+            FastPixelOps: FastPixelOps
         }
     };
 } else if (typeof module !== 'undefined' && module.exports) {
@@ -9442,7 +10441,8 @@ if (typeof window !== 'undefined') {
             LinearGradient: LinearGradient,
             RadialGradient: RadialGradient,
             ConicGradient: ConicGradient,
-            Pattern: Pattern
+            Pattern: Pattern,
+            FastPixelOps: FastPixelOps
         }
     };
 }
