@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SWCanvas High-Level Tests - Fast Path Verification</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <h1>SWCanvas High-Level Tests</h1>
+        <p>Comparing SWCanvas (fast path) vs native HTML5 Canvas side-by-side</p>
+        <div id="summary"></div>
+    </header>
+
+    <nav id="navigation"></nav>
+
+    <main id="test-container"></main>
+
+    <!-- Load SWCanvas library -->
+    <script src="../../dist/swcanvas.js"></script>
+
+    <!-- Load test utilities (SeededRandom, validation functions, etc.) -->
+    <script src="high-level-test-utils.js"></script>
+
+    <!-- Load browser test runner framework -->
+    <script src="browser-test-runner.js"></script>
+
+    <!-- Load individual test cases -->
+    <script src="cases/circle-fill-opaque-test.js"></script>
+    <script src="cases/circle-semitransparent-test.js"></script>
+    <script src="cases/line-stroke-1px-test.js"></script>
+    <script src="cases/line-diagonal-test.js"></script>
+    <script src="cases/multiple-circles-test.js"></script>
+    <script src="cases/mixed-shapes-test.js"></script>
+    <script src="cases/rect-fill-opaque-test.js"></script>
+
+    <!-- Initialize test runner when DOM is ready -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Verify SWCanvas is loaded
+            if (typeof SWCanvas === 'undefined') {
+                document.body.innerHTML = '<div style="color: red; padding: 20px;">Error: SWCanvas library not loaded. Please run "npm run build" first.</div>';
+                return;
+            }
+
+            // Verify tests are registered
+            if (typeof HIGH_LEVEL_TESTS === 'undefined' || HIGH_LEVEL_TESTS.length === 0) {
+                document.body.innerHTML = '<div style="color: red; padding: 20px;">Error: No tests registered. Check that test case files are loaded correctly.</div>';
+                return;
+            }
+
+            // Initialize the test runner
+            HighLevelTestRunner.initialize();
+
+            console.log('SWCanvas High-Level Tests initialized');
+            console.log('Registered tests:', HIGH_LEVEL_TESTS.map(t => t.name).join(', '));
+        });
+    </script>
+</body>
+</html>
