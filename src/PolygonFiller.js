@@ -143,6 +143,11 @@ class PolygonFiller {
      * @private
      */
     static _fillPolygonsStandard(surface, polygons, paintSource, fillRule, transform, clipMask, globalAlpha, subPixelOpacity, composite, sourceMask) {
+        // Mark slow path for testing (helps verify fast path is used when expected)
+        if (typeof Context2D !== 'undefined' && Context2D._markSlowPath) {
+            Context2D._markSlowPath();
+        }
+
         // Transform all polygon vertices
         const transformedPolygons = polygons.map(poly =>
             poly.map(point => transform.transformPoint(point))

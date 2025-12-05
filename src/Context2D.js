@@ -19,6 +19,34 @@
 
 
 class Context2D {
+    // Static flag to track slow path usage (for testing)
+    // Reset before each test, check after to verify fast paths were used
+    static _slowPathUsed = false;
+
+    /**
+     * Reset the slow path tracking flag
+     * Call before running tests that should use fast paths
+     */
+    static resetSlowPathFlag() {
+        Context2D._slowPathUsed = false;
+    }
+
+    /**
+     * Check if slow path was used since last reset
+     * @returns {boolean} True if slow path was used
+     */
+    static wasSlowPathUsed() {
+        return Context2D._slowPathUsed;
+    }
+
+    /**
+     * Mark that slow path was used (called internally)
+     * @private
+     */
+    static _markSlowPath() {
+        Context2D._slowPathUsed = true;
+    }
+
     constructor(surface) {
         this.surface = surface;
         this.rasterizer = new Rasterizer(surface);
@@ -1109,14 +1137,21 @@ class Context2D {
         const height = surface.height;
         const clipBuffer = this._clipMask ? this._clipMask.buffer : null;
 
-        // Get color for solid color fast path
-        const isOpaqueColor = paintSource instanceof Color &&
+        // Check for solid color fast paths
+        const isColor = paintSource instanceof Color;
+        const isSourceOver = this.globalCompositeOperation === 'source-over';
+
+        const isOpaqueColor = isColor &&
             paintSource.a === 255 &&
             this.globalAlpha >= 1.0 &&
-            this.globalCompositeOperation === 'source-over';
+            isSourceOver;
+
+        const isSemiTransparentColor = isColor &&
+            paintSource.a < 255 &&
+            isSourceOver;
 
         if (isOpaqueColor) {
-            // Fast path: 32-bit packed writes
+            // Fast path 1: 32-bit packed writes for opaque colors
             const packedColor = Surface.packColor(paintSource.r, paintSource.g, paintSource.b, 255);
             const data32 = surface.data32;
 
@@ -1160,6 +1195,7 @@ class Context2D {
      */
     _strokeCircleDirect(cx, cy, radius, lineWidth, paintSource) {
         // For strokes, use the path system to ensure correct line properties
+        Context2D._markSlowPath(); // Mark slow path for testing (strokes always use path system)
         this.beginPath();
         this.arc(cx, cy, radius, 0, Math.PI * 2);
         // Temporarily set identity transform since we already transformed
@@ -1237,6 +1273,7 @@ class Context2D {
             }
         } else {
             // Standard path for thick lines or non-opaque colors
+            Context2D._markSlowPath(); // Mark slow path for testing
             this.beginPath();
             this.moveTo(x1, y1);
             this.lineTo(x2, y2);
@@ -1298,6 +1335,69 @@ class Context2D {
             for (; pixelIndex < endIndex; pixelIndex++) {
                 data32[pixelIndex] = packedColor;
             }
+        }
+    }
+
+    /**
+     * Horizontal span fill with alpha blending (source-over)
+     * @private
+     */
+    _fillSpanAlpha(data, surfaceWidth, surfaceHeight, startX, y, length, r, g, b, alpha, invAlpha, clipBuffer) {
+        // Y bounds check
+        const yi = Math.round(y);
+        if (yi < 0 || yi >= surfaceHeight) return;
+
+        // X clipping to surface bounds
+        let x = Math.round(startX);
+        let len = length;
+        if (x < 0) {
+            len += x;
+            x = 0;
+        }
+        if (x + len > surfaceWidth) {
+            len = surfaceWidth - x;
+        }
+        if (len <= 0) return;
+
+        const endX = x + len;
+        const rowOffset = yi * surfaceWidth * 4;
+
+        if (clipBuffer) {
+            // With clipping
+            for (let px = x; px < endX; px++) {
+                const bitIndex = yi * surfaceWidth + px;
+                const byteIndex = bitIndex >> 3;
+                const bitOffset = bitIndex & 7;
+                if ((clipBuffer[byteIndex] & (1 << bitOffset)) === 0) continue;
+
+                const offset = rowOffset + px * 4;
+                this._blendPixelAlpha(data, offset, r, g, b, alpha, invAlpha);
+            }
+        } else {
+            // No clipping
+            for (let px = x; px < endX; px++) {
+                const offset = rowOffset + px * 4;
+                this._blendPixelAlpha(data, offset, r, g, b, alpha, invAlpha);
+            }
+        }
+    }
+
+    /**
+     * Blend a single pixel with source-over alpha compositing
+     * @private
+     */
+    _blendPixelAlpha(data, offset, r, g, b, alpha, invAlpha) {
+        // Source-over alpha blending formula
+        const dstA = data[offset + 3] / 255;
+        const dstAScaled = dstA * invAlpha;
+        const outA = alpha + dstAScaled;
+
+        if (outA > 0) {
+            const blendFactor = 1 / outA;
+            data[offset]     = (r * alpha + data[offset] * dstAScaled) * blendFactor;
+            data[offset + 1] = (g * alpha + data[offset + 1] * dstAScaled) * blendFactor;
+            data[offset + 2] = (b * alpha + data[offset + 2] * dstAScaled) * blendFactor;
+            data[offset + 3] = outA * 255;
         }
     }
 }

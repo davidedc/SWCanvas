@@ -6,16 +6,34 @@
  * CSS color support while delegating actual rendering to the Core implementation.
  */
 class CanvasCompatibleContext2D {
+    // ===== STATIC SLOW-PATH TRACKING (for testing) =====
+
+    /**
+     * Reset the slow path tracking flag
+     * Call before running tests that should use fast paths
+     */
+    static resetSlowPathFlag() {
+        Context2D.resetSlowPathFlag();
+    }
+
+    /**
+     * Check if slow path was used since last reset
+     * @returns {boolean} True if slow path was used
+     */
+    static wasSlowPathUsed() {
+        return Context2D.wasSlowPathUsed();
+    }
+
     constructor(surface) {
         this._core = new Context2D(surface);
         this._colorParser = new ColorParser();
-        
+
         // Property state (mirroring HTML5 Canvas behavior)
         this._fillStyle = '#000000';
         this._strokeStyle = '#000000';
         this._shadowColor = 'rgba(0, 0, 0, 0)'; // Transparent black (no shadow)
     }
-    
+
     /**
      * Update the underlying surface (called when canvas is resized)
      * @param {Surface} newSurface - New surface instance
