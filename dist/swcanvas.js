@@ -8479,6 +8479,19 @@ class Context2D {
             }
         }
 
+        // Fast path for thick strokes (> 1px)
+        const isThickStroke = this._lineWidth > 1;
+        if (isThickStroke && isColor && isSourceOver && noTransform && noClip && noShadow) {
+            const isOpaque = this._strokeStyle.a === 255 && this.globalAlpha >= 1.0;
+            if (isOpaque) {
+                this._strokeRectThickOpaque(x, y, width, height, this._lineWidth, this._strokeStyle);
+                return;
+            } else if (this._strokeStyle.a > 0) {
+                this._strokeRectThickAlpha(x, y, width, height, this._lineWidth, this._strokeStyle);
+                return;
+            }
+        }
+
         // Slow path: Create a rectangular path
         const rectPath = new SWPath2D();
         rectPath.rect(x, y, width, height);
@@ -9949,6 +9962,123 @@ class Context2D {
         // Draw right edge (vertical): skip corners (already drawn)
         for (let py = top + 1; py < bottom; py++) {
             blendPixel(right, py);
+        }
+    }
+
+    /**
+     * Optimized thick stroke rectangle using direct pixel drawing
+     * Ported from CrispSwCanvas's SWRendererRect.drawAxisAlignedRect() method
+     * @private
+     */
+    _strokeRectThickOpaque(x, y, width, height, lineWidth, color) {
+        const surface = this.surface;
+        const surfaceWidth = surface.width;
+        const surfaceHeight = surface.height;
+        const data32 = surface.data32;
+        const packedColor = Surface.packColor(color.r, color.g, color.b, 255);
+
+        const halfStroke = lineWidth / 2;
+
+        // Calculate stroke geometry (edge centers)
+        const left = Math.floor(x);
+        const top = Math.floor(y);
+        const right = Math.floor(x + width);
+        const bottom = Math.floor(y + height);
+
+        // Draw horizontal strokes (top and bottom edges with full thickness)
+        for (let px = Math.floor(left - halfStroke); px < right + halfStroke; px++) {
+            if (px < 0 || px >= surfaceWidth) continue;
+            for (let t = Math.floor(-halfStroke); t < halfStroke; t++) {
+                // Top edge
+                const topY = top + t;
+                if (topY >= 0 && topY < surfaceHeight) {
+                    data32[topY * surfaceWidth + px] = packedColor;
+                }
+                // Bottom edge
+                const bottomY = bottom + t;
+                if (bottomY >= 0 && bottomY < surfaceHeight) {
+                    data32[bottomY * surfaceWidth + px] = packedColor;
+                }
+            }
+        }
+
+        // Draw vertical strokes (left and right edges, excluding corners already drawn)
+        for (let py = Math.floor(top + halfStroke); py < bottom - halfStroke; py++) {
+            if (py < 0 || py >= surfaceHeight) continue;
+            for (let t = Math.floor(-halfStroke); t < halfStroke; t++) {
+                // Left edge
+                const leftX = left + t;
+                if (leftX >= 0 && leftX < surfaceWidth) {
+                    data32[py * surfaceWidth + leftX] = packedColor;
+                }
+                // Right edge
+                const rightX = right + t;
+                if (rightX >= 0 && rightX < surfaceWidth) {
+                    data32[py * surfaceWidth + rightX] = packedColor;
+                }
+            }
+        }
+    }
+
+    /**
+     * Optimized thick stroke rectangle with alpha blending
+     * Ported from CrispSwCanvas's SWRendererRect.drawAxisAlignedRect() method
+     * @private
+     */
+    _strokeRectThickAlpha(x, y, width, height, lineWidth, color) {
+        const surface = this.surface;
+        const surfaceWidth = surface.width;
+        const surfaceHeight = surface.height;
+        const data = surface.data;
+
+        // Calculate effective alpha
+        const effectiveAlpha = (color.a / 255) * this.globalAlpha;
+        if (effectiveAlpha <= 0) return;
+        const invAlpha = 1 - effectiveAlpha;
+        const r = color.r, g = color.g, b = color.b;
+
+        const halfStroke = lineWidth / 2;
+
+        // Calculate stroke geometry (edge centers)
+        const left = Math.floor(x);
+        const top = Math.floor(y);
+        const right = Math.floor(x + width);
+        const bottom = Math.floor(y + height);
+
+        // Helper function to blend a pixel
+        const blendPixel = (px, py) => {
+            if (px < 0 || px >= surfaceWidth || py < 0 || py >= surfaceHeight) return;
+            const idx = (py * surfaceWidth + px) * 4;
+            const oldAlpha = data[idx + 3] / 255;
+            const oldAlphaScaled = oldAlpha * invAlpha;
+            const newAlpha = effectiveAlpha + oldAlphaScaled;
+            if (newAlpha > 0) {
+                const blendFactor = 1 / newAlpha;
+                data[idx] = (r * effectiveAlpha + data[idx] * oldAlphaScaled) * blendFactor;
+                data[idx + 1] = (g * effectiveAlpha + data[idx + 1] * oldAlphaScaled) * blendFactor;
+                data[idx + 2] = (b * effectiveAlpha + data[idx + 2] * oldAlphaScaled) * blendFactor;
+                data[idx + 3] = newAlpha * 255;
+            }
+        };
+
+        // Draw horizontal strokes (top and bottom edges with full thickness)
+        for (let px = Math.floor(left - halfStroke); px < right + halfStroke; px++) {
+            for (let t = Math.floor(-halfStroke); t < halfStroke; t++) {
+                // Top edge
+                blendPixel(px, top + t);
+                // Bottom edge
+                blendPixel(px, bottom + t);
+            }
+        }
+
+        // Draw vertical strokes (left and right edges, excluding corners already drawn)
+        for (let py = Math.floor(top + halfStroke); py < bottom - halfStroke; py++) {
+            for (let t = Math.floor(-halfStroke); t < halfStroke; t++) {
+                // Left edge
+                blendPixel(left + t, py);
+                // Right edge
+                blendPixel(right + t, py);
+            }
         }
     }
 
