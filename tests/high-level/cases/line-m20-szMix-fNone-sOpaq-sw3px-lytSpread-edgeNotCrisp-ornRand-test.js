@@ -67,8 +67,8 @@ function drawTest(ctx, currentIterationNumber, instances = null) {
 
     for (let i = 0; i < lineCount; i++) {
         // Use getRandomPoint with no margin to get points anywhere within canvas boundaries
-        const start = getRandomPoint(0, canvasWidth, canvasHeight);
-        const end = getRandomPoint(0, canvasWidth, canvasHeight);
+        const start = getRandomPoint(0, canvasWidth, canvasHeight, 0);
+        const end = getRandomPoint(0, canvasWidth, canvasHeight, 0);
 
         // Draw the line - use strokeLine if available, otherwise use path API
         if (typeof ctx.strokeLine === 'function') {

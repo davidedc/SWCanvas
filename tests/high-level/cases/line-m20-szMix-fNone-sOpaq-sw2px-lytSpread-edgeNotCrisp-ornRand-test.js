@@ -99,14 +99,14 @@ function drawTest(ctx, currentIterationNumber, instances = null) {
                 x: Math.random() * currentCanvasWidth,
                 y: Math.random() * currentCanvasHeight
             } :
-            getRandomPoint(3, currentCanvasWidth, currentCanvasHeight);
+            getRandomPoint(0, currentCanvasWidth, currentCanvasHeight, 0);
 
         const end = isTrueMultiInstance ?
             {
                 x: Math.random() * currentCanvasWidth,
                 y: Math.random() * currentCanvasHeight
             } :
-            getRandomPoint(4, currentCanvasWidth, currentCanvasHeight);
+            getRandomPoint(0, currentCanvasWidth, currentCanvasHeight, 0);
 
         // Draw the line using the canvas-like API
         if (typeof ctx.strokeLine === 'function') {
