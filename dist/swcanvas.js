@@ -10116,18 +10116,8 @@ class Context2D {
                     this._fillSpanFast(data32, width, height, leftX, y, rightX - leftX, packedColor, clipBuffer);
                 }
             } else {
-                // Non-axis-aligned thick line - use slow path
-                Context2D._markSlowPath();
-                this.beginPath();
-                this.moveTo(x1, y1);
-                this.lineTo(x2, y2);
-                const savedTransform = this._transform;
-                this._transform = new Transform2D();
-                const savedLineWidth = this._lineWidth;
-                this._lineWidth = lineWidth;
-                this.stroke();
-                this._lineWidth = savedLineWidth;
-                this._transform = savedTransform;
+                // Non-axis-aligned thick line - use polygon scan algorithm (fast path)
+                this._strokeLineThickPolygonScan(x1, y1, x2, y2, lineWidth, paintSource);
             }
         } else {
             // Standard path for non-opaque colors
@@ -10142,6 +10132,130 @@ class Context2D {
             this.stroke();
             this._lineWidth = savedLineWidth;
             this._transform = savedTransform;
+        }
+    }
+
+    /**
+     * Fast thick line rendering using polygon scanline algorithm
+     * Treats the thick line as a quadrilateral and fills it using scanline rendering.
+     * Adapted from CrispSwCanvas's _drawLineThickPolygonScan algorithm.
+     * @private
+     */
+    _strokeLineThickPolygonScan(x1, y1, x2, y2, lineWidth, paintSource) {
+        const surface = this.surface;
+        const width = surface.width;
+        const height = surface.height;
+        const data32 = surface.data32;
+        const clipBuffer = this._clipMask ? this._clipMask.buffer : null;
+
+        // Get packed color for opaque rendering
+        const packedColor = Surface.packColor(paintSource.r, paintSource.g, paintSource.b, 255);
+
+        const dx = x2 - x1;
+        const dy = y2 - y1;
+        const lineLength = Math.sqrt(dx * dx + dy * dy);
+
+        if (lineLength === 0) {
+            // Handle zero-length line case - draw a square
+            const radius = (lineWidth / 2) | 0;
+            const centerX = x1 | 0;
+            const centerY = y1 | 0;
+
+            for (let py = -radius; py <= radius; py++) {
+                const y = centerY + py;
+                if (y < 0 || y >= height) continue;
+                const leftX = Math.max(0, centerX - radius);
+                const rightX = Math.min(width - 1, centerX + radius);
+                this._fillSpanFast(data32, width, height, leftX, y, rightX - leftX + 1, packedColor, clipBuffer);
+            }
+            return;
+        }
+
+        // Calculate perpendicular vector
+        const invLineLength = 1 / lineLength;
+        const perpX = -dy * invLineLength;
+        const perpY = dx * invLineLength;
+        const halfThick = lineWidth * 0.5;
+
+        // Calculate perpendicular offsets for corner calculations
+        const perpXHalfThick = perpX * halfThick;
+        const perpYHalfThick = perpY * halfThick;
+
+        // Calculate 4 corners of the thick line rectangle
+        const corners = [
+            { x: x1 + perpXHalfThick, y: y1 + perpYHalfThick },  // top-left
+            { x: x1 - perpXHalfThick, y: y1 - perpYHalfThick },  // bottom-left
+            { x: x2 - perpXHalfThick, y: y2 - perpYHalfThick },  // bottom-right
+            { x: x2 + perpXHalfThick, y: y2 + perpYHalfThick }   // top-right
+        ];
+
+        // Find bounding box
+        const minY = Math.max(0, Math.floor(Math.min(corners[0].y, corners[1].y, corners[2].y, corners[3].y)));
+        const maxY = Math.min(height - 1, Math.ceil(Math.max(corners[0].y, corners[1].y, corners[2].y, corners[3].y)));
+
+        // Pre-compute edge data for faster intersection calculation
+        const edges = [];
+        for (let i = 0; i < 4; i++) {
+            const p1 = corners[i];
+            const p2 = corners[(i + 1) % 4];
+
+            if (p1.y !== p2.y) {
+                edges.push({
+                    p1: p1,
+                    p2: p2,
+                    invDeltaY: 1 / (p2.y - p1.y),
+                    deltaX: p2.x - p1.x
+                });
+            }
+        }
+
+        // Pre-allocate intersections array
+        const intersections = [];
+
+        // Scanline fill
+        for (let y = minY; y <= maxY; y++) {
+            intersections.length = 0;
+
+            // Find x-intersections with polygon edges
+            for (let i = 0; i < edges.length; i++) {
+                const edge = edges[i];
+                const p1 = edge.p1;
+                const p2 = edge.p2;
+
+                // Check if scanline intersects this edge
+                if ((y >= p1.y && y < p2.y) || (y >= p2.y && y < p1.y)) {
+                    const t = (y - p1.y) * edge.invDeltaY;
+                    intersections.push(p1.x + t * edge.deltaX);
+                }
+            }
+
+            if (intersections.length === 1) {
+                // Single intersection - draw one pixel
+                const x = intersections[0] | 0;
+                if (x >= 0 && x < width) {
+                    const pixelIndex = y * width + x;
+                    if (clipBuffer) {
+                        const byteIndex = pixelIndex >> 3;
+                        const bitIndex = pixelIndex & 7;
+                        if (clipBuffer[byteIndex] & (1 << bitIndex)) {
+                            data32[pixelIndex] = packedColor;
+                        }
+                    } else {
+                        data32[pixelIndex] = packedColor;
+                    }
+                }
+            } else if (intersections.length >= 2) {
+                // Two or more intersections - draw span between min and max
+                const x1i = intersections[0];
+                const x2i = intersections[1];
+                const leftX = Math.max(0, Math.floor(Math.min(x1i, x2i)));
+                const rightX = Math.min(width - 1, Math.ceil(Math.max(x1i, x2i)));
+                const spanLength = rightX - leftX + 1;
+
+                if (spanLength > 0) {
+                    this._fillSpanFast(data32, width, height, leftX, y, spanLength, packedColor, clipBuffer);
+                }
+            }
         }
     }
 
