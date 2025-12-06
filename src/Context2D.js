@@ -1872,6 +1872,11 @@ class Context2D {
             this.globalAlpha >= 1.0 &&
             this.globalCompositeOperation === 'source-over';
 
+        // Check for semitransparent color fast path (Color with alpha blending)
+        const isSemiTransparentColor = paintSource instanceof Color &&
+            !isOpaqueColor &&
+            this.globalCompositeOperation === 'source-over';
+
         if (isOpaqueColor && lineWidth <= 1.5) {
             // Fast path for thin lines: Bresenham algorithm
             const packedColor = Surface.packColor(paintSource.r, paintSource.g, paintSource.b, 255);
@@ -1967,10 +1972,90 @@ class Context2D {
                 }
             } else {
                 // Non-axis-aligned thick line - use polygon scan algorithm (fast path)
-                this._strokeLineThickPolygonScan(x1, y1, x2, y2, lineWidth, paintSource);
+                this._strokeLineThickPolygonScan(x1, y1, x2, y2, lineWidth, paintSource, false);
             }
+        } else if (isSemiTransparentColor && lineWidth <= 1.5) {
+            // Fast path for thin semitransparent lines: Bresenham with alpha blending
+            const data = surface.data;
+            const data32 = surface.data32;
+            const r = paintSource.r;
+            const g = paintSource.g;
+            const b = paintSource.b;
+            const a = paintSource.a;
+
+            // Pre-compute alpha values for blending
+            const incomingAlpha = (a / 255) * this.globalAlpha;
+            const inverseIncomingAlpha = 1 - incomingAlpha;
+
+            let x1i = Math.floor(x1);
+            let y1i = Math.floor(y1);
+            let x2i = Math.floor(x2);
+            let y2i = Math.floor(y2);
+
+            // Shorten horizontal/vertical lines by 1 pixel to match HTML5 Canvas
+            if (x1i === x2i) {
+                if (y2i > y1i) y2i--; else y1i--;
+            }
+            if (y1i === y2i) {
+                if (x2i > x1i) x2i--; else x1i--;
+            }
+
+            let dx = Math.abs(x2i - x1i);
+            let dy = Math.abs(y2i - y1i);
+            const sx = x1i < x2i ? 1 : -1;
+            const sy = y1i < y2i ? 1 : -1;
+            let err = dx - dy;
+
+            let x = x1i;
+            let y = y1i;
+
+            while (true) {
+                if (x >= 0 && x < width && y >= 0 && y < height) {
+                    const pixelIndex = y * width + x;
+                    let drawPixel = true;
+
+                    if (clipBuffer) {
+                        const byteIndex = pixelIndex >> 3;
+                        const bitIndex = pixelIndex & 7;
+                        if (!(clipBuffer[byteIndex] & (1 << bitIndex))) {
+                            drawPixel = false;
+                        }
+                    }
+
+                    if (drawPixel) {
+                        // Alpha blending (source-over composition)
+                        const index = pixelIndex * 4;
+                        const oldAlpha = data[index + 3] / 255;
+                        const oldAlphaScaled = oldAlpha * inverseIncomingAlpha;
+                        const newAlpha = incomingAlpha + oldAlphaScaled;
+
+                        if (newAlpha > 0) {
+                            const blendFactor = 1 / newAlpha;
+                            data[index] = (r * incomingAlpha + data[index] * oldAlphaScaled) * blendFactor;
+                            data[index + 1] = (g * incomingAlpha + data[index + 1] * oldAlphaScaled) * blendFactor;
+                            data[index + 2] = (b * incomingAlpha + data[index + 2] * oldAlphaScaled) * blendFactor;
+                            data[index + 3] = newAlpha * 255;
+                        }
+                    }
+                }
+
+                if (x === x2i && y === y2i) break;
+
+                const e2 = 2 * err;
+                if (e2 > -dy) {
+                    err -= dy;
+                    x += sx;
+                }
+                if (e2 < dx) {
+                    err += dx;
+                    y += sy;
+                }
+            }
+        } else if (isSemiTransparentColor) {
+            // Fast path for thick semitransparent lines: polygon scan with alpha blending
+            this._strokeLineThickPolygonScan(x1, y1, x2, y2, lineWidth, paintSource, true);
         } else {
-            // Standard path for non-opaque colors
+            // Standard path for non-Color paint sources (gradients, patterns)
             Context2D._markSlowPath();
             this.beginPath();
             this.moveTo(x1, y1);
@@ -1990,16 +2075,28 @@ class Context2D {
      * Treats the thick line as a quadrilateral and fills it using scanline rendering.
      * Adapted from CrispSwCanvas's _drawLineThickPolygonScan algorithm.
      * @private
+     * @param {boolean} useSemiTransparent - If true, use alpha blending for semitransparent colors
      */
-    _strokeLineThickPolygonScan(x1, y1, x2, y2, lineWidth, paintSource) {
+    _strokeLineThickPolygonScan(x1, y1, x2, y2, lineWidth, paintSource, useSemiTransparent = false) {
         const surface = this.surface;
         const width = surface.width;
         const height = surface.height;
         const data32 = surface.data32;
+        const data = surface.data;
         const clipBuffer = this._clipMask ? this._clipMask.buffer : null;
 
+        // Get color components
+        const r = paintSource.r;
+        const g = paintSource.g;
+        const b = paintSource.b;
+        const a = paintSource.a;
+
         // Get packed color for opaque rendering
-        const packedColor = Surface.packColor(paintSource.r, paintSource.g, paintSource.b, 255);
+        const packedColor = useSemiTransparent ? 0 : Surface.packColor(r, g, b, 255);
+
+        // Pre-compute alpha values for semitransparent rendering
+        const incomingAlpha = useSemiTransparent ? (a / 255) * this.globalAlpha : 0;
+        const inverseIncomingAlpha = useSemiTransparent ? 1 - incomingAlpha : 0;
 
         const dx = x2 - x1;
         const dy = y2 - y1;
@@ -2016,7 +2113,11 @@ class Context2D {
                 if (y < 0 || y >= height) continue;
                 const leftX = Math.max(0, centerX - radius);
                 const rightX = Math.min(width - 1, centerX + radius);
-                this._fillSpanFast(data32, width, height, leftX, y, rightX - leftX + 1, packedColor, clipBuffer);
+                if (useSemiTransparent) {
+                    this._fillSpanAlpha(data, width, height, leftX, y, rightX - leftX + 1, r, g, b, incomingAlpha, inverseIncomingAlpha, clipBuffer);
+                } else {
+                    this._fillSpanFast(data32, width, height, leftX, y, rightX - leftX + 1, packedColor, clipBuffer);
+                }
             }
             return;
         }
@@ -2084,14 +2185,34 @@ class Context2D {
                 const x = intersections[0] | 0;
                 if (x >= 0 && x < width) {
                     const pixelIndex = y * width + x;
+                    let drawPixel = true;
+
                     if (clipBuffer) {
                         const byteIndex = pixelIndex >> 3;
                         const bitIndex = pixelIndex & 7;
-                        if (clipBuffer[byteIndex] & (1 << bitIndex)) {
+                        if (!(clipBuffer[byteIndex] & (1 << bitIndex))) {
+                            drawPixel = false;
+                        }
+                    }
+
+                    if (drawPixel) {
+                        if (useSemiTransparent) {
+                            // Alpha blending for single pixel
+                            const index = pixelIndex * 4;
+                            const oldAlpha = data[index + 3] / 255;
+                            const oldAlphaScaled = oldAlpha * inverseIncomingAlpha;
+                            const newAlpha = incomingAlpha + oldAlphaScaled;
+
+                            if (newAlpha > 0) {
+                                const blendFactor = 1 / newAlpha;
+                                data[index] = (r * incomingAlpha + data[index] * oldAlphaScaled) * blendFactor;
+                                data[index + 1] = (g * incomingAlpha + data[index + 1] * oldAlphaScaled) * blendFactor;
+                                data[index + 2] = (b * incomingAlpha + data[index + 2] * oldAlphaScaled) * blendFactor;
+                                data[index + 3] = newAlpha * 255;
+                            }
+                        } else {
                             data32[pixelIndex] = packedColor;
                         }
-                    } else {
-                        data32[pixelIndex] = packedColor;
                     }
                 }
             } else if (intersections.length >= 2) {
@@ -2103,7 +2224,11 @@ class Context2D {
                 const spanLength = rightX - leftX + 1;
 
                 if (spanLength > 0) {
-                    this._fillSpanFast(data32, width, height, leftX, y, spanLength, packedColor, clipBuffer);
+                    if (useSemiTransparent) {
+                        this._fillSpanAlpha(data, width, height, leftX, y, spanLength, r, g, b, incomingAlpha, inverseIncomingAlpha, clipBuffer);
+                    } else {
+                        this._fillSpanFast(data32, width, height, leftX, y, spanLength, packedColor, clipBuffer);
+                    }
                 }
             }
         }
