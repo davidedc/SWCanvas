@@ -492,6 +492,30 @@ class Context2D {
         // Use specified path or current internal path
         const pathToStroke = path || this._currentPath;
 
+        // Fast path: detect single full circle and use Bresenham
+        const circleInfo = this._isFullCirclePath(pathToStroke);
+        if (circleInfo) {
+            const paintSource = this._strokeStyle;
+            const isColor = paintSource instanceof Color;
+            const is1pxStroke = Math.abs(this._lineWidth - 1) < 0.001;
+            const isSourceOver = this.globalCompositeOperation === 'source-over';
+            const noTransform = this._transform.isIdentity;
+            const noClip = !this._clipMask;
+            const noShadow = !this.shadowColor || this.shadowColor === 'transparent' ||
+                            (this.shadowBlur === 0 && this.shadowOffsetX === 0 && this.shadowOffsetY === 0);
+
+            if (isColor && is1pxStroke && isSourceOver && noTransform && noClip && noShadow) {
+                const isOpaque = paintSource.a === 255 && this.globalAlpha >= 1.0;
+                if (isOpaque) {
+                    this._strokeCircle1pxOpaque(circleInfo.cx, circleInfo.cy, circleInfo.radius, paintSource);
+                    return;
+                } else if (paintSource.a > 0) {
+                    this._strokeCircle1pxAlpha(circleInfo.cx, circleInfo.cy, circleInfo.radius, paintSource);
+                    return;
+                }
+            }
+        }
+
         this.rasterizer.beginOp({
             composite: this.globalCompositeOperation,
             globalAlpha: this.globalAlpha,
@@ -1155,26 +1179,71 @@ class Context2D {
             const packedColor = Surface.packColor(paintSource.r, paintSource.g, paintSource.b, 255);
             const data32 = surface.data32;
 
-            const radiusInt = Math.round(radius);
-            let x = radiusInt;
-            let y = 0;
-            let err = 1 - radiusInt;
+            // Detect if center is at grid intersection (integer) or pixel center (half-integer)
+            // Grid-centered: diameter = 2*radius, symmetric about grid intersection
+            // Pixel-centered: diameter = 2*radius + 1, symmetric about pixel center
+            const isGridCenteredX = Number.isInteger(cx);
+            const isGridCenteredY = Number.isInteger(cy);
+            const intRadius = Math.floor(radius);
 
-            while (x >= y) {
-                // Fill horizontal spans for 4 octants
-                this._fillSpanFast(data32, width, height, cx - x, cy + y, x * 2 + 1, packedColor, clipBuffer);
-                this._fillSpanFast(data32, width, height, cx - x, cy - y, x * 2 + 1, packedColor, clipBuffer);
-                if (x !== y) {
-                    this._fillSpanFast(data32, width, height, cx - y, cy + x, y * 2 + 1, packedColor, clipBuffer);
-                    this._fillSpanFast(data32, width, height, cx - y, cy - x, y * 2 + 1, packedColor, clipBuffer);
+            let bx = intRadius;
+            let by = 0;
+            let err = 1 - intRadius;
+
+            while (bx >= by) {
+                // Calculate span parameters based on center type
+                // For grid-centered: leftX = center - extent, width = 2*extent
+                // For pixel-centered: leftX = floor(center) - extent, width = 2*extent + 1
+                const spanWidthBx = isGridCenteredX ? bx * 2 : bx * 2 + 1;
+                const spanWidthBy = isGridCenteredX ? by * 2 : by * 2 + 1;
+                const leftBx = isGridCenteredX ? cx - bx : Math.floor(cx) - bx;
+                const leftBy = isGridCenteredX ? cx - by : Math.floor(cx) - by;
+
+                // For grid-centered circles:
+                //   Top half: y from cy-radius to cy-1 (radius rows above center)
+                //   Bottom half: y from cy to cy+radius-1 (radius rows below center)
+                //   Total: 2*radius rows
+                // For pixel-centered circles:
+                //   y from floor(cy)-radius to floor(cy)+radius (2*radius+1 rows)
+
+                if (isGridCenteredY) {
+                    // Grid-centered Y: bottom at cy+by, top at cy-by-1
+                    // Skip if by >= intRadius (would be outside diameter)
+                    if (by < intRadius) {
+                        const bottomY = cy + by;
+                        const topY = cy - by - 1;
+                        this._fillSpanFast(data32, width, height, leftBx, bottomY, spanWidthBx, packedColor, clipBuffer);
+                        this._fillSpanFast(data32, width, height, leftBx, topY, spanWidthBx, packedColor, clipBuffer);
+                    }
+                    if (bx !== by && bx < intRadius) {
+                        const bottomY = cy + bx;
+                        const topY = cy - bx - 1;
+                        this._fillSpanFast(data32, width, height, leftBy, bottomY, spanWidthBy, packedColor, clipBuffer);
+                        this._fillSpanFast(data32, width, height, leftBy, topY, spanWidthBy, packedColor, clipBuffer);
+                    }
+                } else {
+                    // Pixel-centered Y: bottom at floor(cy)+by, top at floor(cy)-by
+                    const floorCy = Math.floor(cy);
+                    const bottomY = floorCy + by;
+                    const topY = floorCy - by;
+                    this._fillSpanFast(data32, width, height, leftBx, bottomY, spanWidthBx, packedColor, clipBuffer);
+                    if (by > 0) {
+                        this._fillSpanFast(data32, width, height, leftBx, topY, spanWidthBx, packedColor, clipBuffer);
+                    }
+                    if (bx !== by) {
+                        const bottomYx = floorCy + bx;
+                        const topYx = floorCy - bx;
+                        this._fillSpanFast(data32, width, height, leftBy, bottomYx, spanWidthBy, packedColor, clipBuffer);
+                        this._fillSpanFast(data32, width, height, leftBy, topYx, spanWidthBy, packedColor, clipBuffer);
+                    }
                 }
 
-                y++;
+                by++;
                 if (err < 0) {
-                    err += 2 * y + 1;
+                    err += 2 * by + 1;
                 } else {
-                    x--;
-                    err += 2 * (y - x + 1);
+                    bx--;
+                    err += 2 * (by - bx + 1);
                 }
             }
         } else if (isSemiTransparentColor) {
@@ -1225,7 +1294,7 @@ class Context2D {
 
     /**
      * Optimized circle fill with alpha blending using Bresenham scanlines
-     * Uses top/bottom symmetry with rel_y > 0 guard to prevent overdraw
+     * Uses top/bottom symmetry with grid/pixel center detection
      * @private
      */
     _fillCircleAlphaBlend(cx, cy, radius, color, clipBuffer) {
@@ -1243,32 +1312,52 @@ class Context2D {
         const g = color.g;
         const b = color.b;
 
-        const intRadius = Math.round(radius);
-        const adjCenterX = Math.floor(cx);
-        const adjCenterY = Math.floor(cy);
+        // Detect if center is at grid intersection (integer) or pixel center (half-integer)
+        const isGridCenteredX = Number.isInteger(cx);
+        const isGridCenteredY = Number.isInteger(cy);
+        const intRadius = Math.floor(radius);
 
         // Generate horizontal extents using Bresenham
         const extents = this._generateCircleExtents(intRadius);
 
         // Fill scanlines using top/bottom symmetry
+        // Loop includes intRadius for pixel-centered circles to draw cap pixels
         for (let rel_y = 0; rel_y <= intRadius; rel_y++) {
             const xExtent = extents[rel_y];
             if (xExtent === undefined) continue;
 
-            const leftX = adjCenterX - xExtent;
-            const spanWidth = xExtent * 2 + 1;
+            // Calculate span parameters based on center type
+            const leftX = isGridCenteredX ? cx - xExtent : Math.floor(cx) - xExtent;
+            const spanWidth = isGridCenteredX ? xExtent * 2 : xExtent * 2 + 1;
 
-            // Always draw bottom scanline
-            const bottomY = adjCenterY + rel_y;
-            if (bottomY >= 0 && bottomY < height) {
-                this._fillSpanAlpha(data, width, height, leftX, bottomY, spanWidth,
-                                   r, g, b, effectiveAlpha, invAlpha, clipBuffer);
-            }
+            if (isGridCenteredY) {
+                // Grid-centered circles have even diameter - skip cap row at rel_y=intRadius
+                if (rel_y >= intRadius) continue;
 
-            // Draw top scanline only when rel_y > 0 (prevents overdraw at center)
-            if (rel_y > 0) {
-                const topY = adjCenterY - rel_y;
+                // Grid-centered Y: bottom at cy+rel_y, top at cy-rel_y-1
+                const bottomY = cy + rel_y;
+                const topY = cy - rel_y - 1;
+
+                if (bottomY >= 0 && bottomY < height) {
+                    this._fillSpanAlpha(data, width, height, leftX, bottomY, spanWidth,
+                                       r, g, b, effectiveAlpha, invAlpha, clipBuffer);
+                }
                 if (topY >= 0 && topY < height) {
+                    this._fillSpanAlpha(data, width, height, leftX, topY, spanWidth,
+                                       r, g, b, effectiveAlpha, invAlpha, clipBuffer);
+                }
+            } else {
+                // Pixel-centered Y: bottom at floor(cy)+rel_y, top at floor(cy)-rel_y
+                const floorCy = Math.floor(cy);
+                const bottomY = floorCy + rel_y;
+                const topY = floorCy - rel_y;
+
+                if (bottomY >= 0 && bottomY < height) {
+                    this._fillSpanAlpha(data, width, height, leftX, bottomY, spanWidth,
+                                       r, g, b, effectiveAlpha, invAlpha, clipBuffer);
+                }
+                // Skip top span at rel_y=0 to prevent overdraw at center pixel
+                if (rel_y > 0 && topY >= 0 && topY < height) {
                     this._fillSpanAlpha(data, width, height, leftX, topY, spanWidth,
                                        r, g, b, effectiveAlpha, invAlpha, clipBuffer);
                 }
@@ -1277,15 +1366,69 @@ class Context2D {
     }
 
     /**
-     * Optimized circle stroke using Bresenham with thickness
+     * Check if path is a single full circle (0 to 2π arc)
+     * Used for fast path detection in stroke()
+     * @param {SWPath2D} pathToCheck - The path to analyze
+     * @returns {object|null} Circle info {cx, cy, radius} or null if not a full circle
+     * @private
+     */
+    _isFullCirclePath(pathToCheck) {
+        const commands = pathToCheck.commands;
+
+        // Must be exactly 1 command (arc only, no moveTo after beginPath())
+        if (commands.length !== 1) return null;
+
+        // Must be an arc command
+        if (commands[0].type !== 'arc') return null;
+
+        const arc = commands[0];
+        const startAngle = arc.startAngle;
+        const endAngle = arc.endAngle;
+
+        // Check if it's a full circle (2π difference)
+        const angleDiff = Math.abs(endAngle - startAngle);
+        const isFullCircle = Math.abs(angleDiff - 2 * Math.PI) < 1e-9;
+
+        if (!isFullCircle) return null;
+
+        return {
+            cx: arc.x,
+            cy: arc.y,
+            radius: arc.radius
+        };
+    }
+
+    /**
+     * Optimized circle stroke - dispatches to fast paths when possible
      * @private
      */
     _strokeCircleDirect(cx, cy, radius, lineWidth, paintSource) {
-        // For strokes, use the path system to ensure correct line properties
-        Context2D._markSlowPath(); // Mark slow path for testing (strokes always use path system)
+        const isColor = paintSource instanceof Color;
+        const is1pxStroke = Math.abs(lineWidth - 1) < 0.001;
+        const isSourceOver = this.globalCompositeOperation === 'source-over';
+
+        // Fast path 1: 1px strokes using Bresenham algorithm
+        if (isColor && is1pxStroke && isSourceOver) {
+            const isOpaque = paintSource.a === 255 && this.globalAlpha >= 1.0;
+            if (isOpaque) {
+                this._strokeCircle1pxOpaque(cx, cy, radius, paintSource);
+                return;
+            } else if (paintSource.a > 0) {
+                this._strokeCircle1pxAlpha(cx, cy, radius, paintSource);
+                return;
+            }
+        }
+
+        // Fast path 2: Thick strokes using scanline annulus algorithm
+        if (isColor && isSourceOver && lineWidth > 1 && paintSource.a > 0) {
+            this._strokeCircleThick(cx, cy, radius, lineWidth, paintSource);
+            return;
+        }
+
+        // Fallback to path system for gradients, patterns, or non-source-over compositing
+        Context2D._markSlowPath();
         this.beginPath();
         this.arc(cx, cy, radius, 0, Math.PI * 2);
-        // Temporarily set identity transform since we already transformed
         const savedTransform = this._transform;
         this._transform = new Transform2D();
         const savedLineWidth = this._lineWidth;
@@ -1293,6 +1436,424 @@ class Context2D {
         this.stroke();
         this._lineWidth = savedLineWidth;
         this._transform = savedTransform;
+    }
+
+    /**
+     * Optimized 1px opaque circle stroke using Bresenham's algorithm
+     * Ported from CrispSwCanvas's draw1PxStrokeFullCircleBresenhamOpaque
+     * @private
+     */
+    _strokeCircle1pxOpaque(cx, cy, radius, color) {
+        const surface = this.surface;
+        const width = surface.width;
+        const height = surface.height;
+        const data32 = surface.data32;
+        const clipBuffer = this._clipMask ? this._clipMask.buffer : null;
+
+        const packedColor = Surface.packColor(color.r, color.g, color.b, 255);
+
+        // Center calculation using floor (like CrispSwCanvas)
+        const cX = Math.floor(cx);
+        const cY = Math.floor(cy);
+        const intRadius = Math.floor(radius);
+
+        if (intRadius < 0) return;
+
+        // Handle zero radius (single pixel)
+        if (intRadius === 0) {
+            if (radius >= 0) {
+                const px = Math.round(cx);
+                const py = Math.round(cy);
+                if (px >= 0 && px < width && py >= 0 && py < height) {
+                    const pos = py * width + px;
+                    if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (7 - (pos & 7))))) {
+                        data32[pos] = packedColor;
+                    }
+                }
+            }
+            return;
+        }
+
+        // Determine offsets for .5 radius case
+        // When radius has .5 fractional part, shift top/left halves
+        let xOffset = 0, yOffset = 0;
+        if (radius > 0 && (radius * 2) % 2 === 1) {
+            xOffset = 1;
+            yOffset = 1;
+        }
+
+        // Bresenham circle algorithm
+        let x = 0;
+        let y = intRadius;
+        let d = 3 - 2 * intRadius;
+
+        while (x <= y) {
+            // Calculate 8 symmetric points with offsets for top/left halves
+            const p1x = cX + x, p1y = cY + y;                    // bottom-right
+            const p2x = cX + y, p2y = cY + x;                    // bottom-right
+            const p3x = cX + y, p3y = cY - x - yOffset;          // top-right
+            const p4x = cX + x, p4y = cY - y - yOffset;          // top-right
+            const p5x = cX - x - xOffset, p5y = cY - y - yOffset; // top-left
+            const p6x = cX - y - xOffset, p6y = cY - x - yOffset; // top-left
+            const p7x = cX - y - xOffset, p7y = cY + x;          // bottom-left
+            const p8x = cX - x - xOffset, p8y = cY + y;          // bottom-left
+
+            // Plot points with bounds checking
+            if (p1x >= 0 && p1x < width && p1y >= 0 && p1y < height) {
+                const pos = p1y * width + p1x;
+                if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (7 - (pos & 7))))) {
+                    data32[pos] = packedColor;
+                }
+            }
+            if (x !== y && p2x >= 0 && p2x < width && p2y >= 0 && p2y < height) {
+                const pos = p2y * width + p2x;
+                if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (7 - (pos & 7))))) {
+                    data32[pos] = packedColor;
+                }
+            }
+            if (p3x >= 0 && p3x < width && p3y >= 0 && p3y < height) {
+                const pos = p3y * width + p3x;
+                if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (7 - (pos & 7))))) {
+                    data32[pos] = packedColor;
+                }
+            }
+            if (p4x >= 0 && p4x < width && p4y >= 0 && p4y < height) {
+                const pos = p4y * width + p4x;
+                if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (7 - (pos & 7))))) {
+                    data32[pos] = packedColor;
+                }
+            }
+            if (p5x >= 0 && p5x < width && p5y >= 0 && p5y < height) {
+                const pos = p5y * width + p5x;
+                if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (7 - (pos & 7))))) {
+                    data32[pos] = packedColor;
+                }
+            }
+            if (x !== y && p6x >= 0 && p6x < width && p6y >= 0 && p6y < height) {
+                const pos = p6y * width + p6x;
+                if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (7 - (pos & 7))))) {
+                    data32[pos] = packedColor;
+                }
+            }
+            if (p7x >= 0 && p7x < width && p7y >= 0 && p7y < height) {
+                const pos = p7y * width + p7x;
+                if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (7 - (pos & 7))))) {
+                    data32[pos] = packedColor;
+                }
+            }
+            if (p8x >= 0 && p8x < width && p8y >= 0 && p8y < height) {
+                const pos = p8y * width + p8x;
+                if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (7 - (pos & 7))))) {
+                    data32[pos] = packedColor;
+                }
+            }
+
+            // Update Bresenham state
+            if (d < 0) {
+                d = d + 4 * x + 6;
+            } else {
+                d = d + 4 * (x - y) + 10;
+                y--;
+            }
+            x++;
+        }
+    }
+
+    /**
+     * Optimized 1px semi-transparent circle stroke using Bresenham's algorithm
+     * Uses Set to prevent overdraw for semi-transparent colors
+     * @private
+     */
+    _strokeCircle1pxAlpha(cx, cy, radius, color) {
+        const surface = this.surface;
+        const width = surface.width;
+        const height = surface.height;
+        const data = surface.data;
+        const clipBuffer = this._clipMask ? this._clipMask.buffer : null;
+
+        // Calculate effective alpha
+        const effectiveAlpha = (color.a / 255) * this.globalAlpha;
+        if (effectiveAlpha <= 0) return;
+        const invAlpha = 1 - effectiveAlpha;
+        const r = color.r, g = color.g, b = color.b;
+
+        // Center calculation
+        const cX = Math.floor(cx);
+        const cY = Math.floor(cy);
+        const intRadius = Math.floor(radius);
+
+        if (intRadius < 0) return;
+
+        // Handle zero radius (single pixel)
+        if (intRadius === 0) {
+            if (radius >= 0) {
+                const px = Math.round(cx);
+                const py = Math.round(cy);
+                if (px >= 0 && px < width && py >= 0 && py < height) {
+                    const pos = py * width + px;
+                    if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (7 - (pos & 7))))) {
+                        const idx = pos * 4;
+                        const oldAlpha = data[idx + 3] / 255;
+                        const oldAlphaScaled = oldAlpha * invAlpha;
+                        const newAlpha = effectiveAlpha + oldAlphaScaled;
+                        if (newAlpha > 0) {
+                            const blendFactor = 1 / newAlpha;
+                            data[idx] = (r * effectiveAlpha + data[idx] * oldAlphaScaled) * blendFactor;
+                            data[idx + 1] = (g * effectiveAlpha + data[idx + 1] * oldAlphaScaled) * blendFactor;
+                            data[idx + 2] = (b * effectiveAlpha + data[idx + 2] * oldAlphaScaled) * blendFactor;
+                            data[idx + 3] = newAlpha * 255;
+                        }
+                    }
+                }
+            }
+            return;
+        }
+
+        // Determine offsets for .5 radius case
+        let xOffset = 0, yOffset = 0;
+        if (radius > 0 && (radius * 2) % 2 === 1) {
+            xOffset = 1;
+            yOffset = 1;
+        }
+
+        // Use Set to collect unique pixel positions (prevents overdraw)
+        const uniquePixels = new Set();
+
+        // Bresenham circle algorithm
+        let x = 0;
+        let y = intRadius;
+        let d = 3 - 2 * intRadius;
+
+        while (x <= y) {
+            // Calculate 8 symmetric points
+            const points = [
+                [cX + x, cY + y],
+                [cX + y, cY + x],
+                [cX + y, cY - x - yOffset],
+                [cX + x, cY - y - yOffset],
+                [cX - x - xOffset, cY - y - yOffset],
+                [cX - y - xOffset, cY - x - yOffset],
+                [cX - y - xOffset, cY + x],
+                [cX - x - xOffset, cY + y]
+            ];
+
+            for (const [px, py] of points) {
+                if (px >= 0 && px < width && py >= 0 && py < height) {
+                    uniquePixels.add(py * width + px);
+                }
+            }
+
+            // Update Bresenham state
+            if (d < 0) {
+                d = d + 4 * x + 6;
+            } else {
+                d = d + 4 * (x - y) + 10;
+                y--;
+            }
+            x++;
+        }
+
+        // Render unique pixels with alpha blending
+        for (const pos of uniquePixels) {
+            if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (7 - (pos & 7))))) {
+                const idx = pos * 4;
+                const oldAlpha = data[idx + 3] / 255;
+                const oldAlphaScaled = oldAlpha * invAlpha;
+                const newAlpha = effectiveAlpha + oldAlphaScaled;
+                if (newAlpha > 0) {
+                    const blendFactor = 1 / newAlpha;
+                    data[idx] = (r * effectiveAlpha + data[idx] * oldAlphaScaled) * blendFactor;
+                    data[idx + 1] = (g * effectiveAlpha + data[idx + 1] * oldAlphaScaled) * blendFactor;
+                    data[idx + 2] = (b * effectiveAlpha + data[idx + 2] * oldAlphaScaled) * blendFactor;
+                    data[idx + 3] = newAlpha * 255;
+                }
+            }
+        }
+    }
+
+    /**
+     * Optimized thick stroke circle using scanline-based annulus rendering
+     * Ported from CrispSwCanvas's drawFullCircleFast() method (stroke-only case)
+     * @private
+     */
+    _strokeCircleThick(cx, cy, radius, lineWidth, color) {
+        const surface = this.surface;
+        const width = surface.width;
+        const height = surface.height;
+        const clipBuffer = this._clipMask ? this._clipMask.buffer : null;
+
+        // Calculate inner and outer radii for the stroke annulus
+        const innerRadius = radius - lineWidth / 2;
+        const outerRadius = radius + lineWidth / 2;
+
+        // Use exact centers for Canvas coordinate alignment (same as CrispSwCanvas)
+        const cX = cx - 0.5;
+        const cY = cy - 0.5;
+
+        // Calculate bounds with safety margin
+        const minY = Math.max(0, Math.floor(cY - outerRadius - 1));
+        const maxY = Math.min(height - 1, Math.ceil(cY + outerRadius + 1));
+        const minX = Math.max(0, Math.floor(cX - outerRadius - 1));
+        const maxX = Math.min(width - 1, Math.ceil(cX + outerRadius + 1));
+
+        const outerRadiusSquared = outerRadius * outerRadius;
+        const innerRadiusSquared = innerRadius > 0 ? innerRadius * innerRadius : 0;
+
+        // Determine if opaque or needs alpha blending
+        const isOpaque = color.a === 255 && this.globalAlpha >= 1.0;
+
+        if (isOpaque) {
+            const packedColor = Surface.packColor(color.r, color.g, color.b, 255);
+            const data32 = surface.data32;
+
+            // Process each scanline
+            for (let y = minY; y <= maxY; y++) {
+                const dy = y - cY;
+                const dySquared = dy * dy;
+
+                // Skip if outside outer circle
+                if (dySquared > outerRadiusSquared) continue;
+
+                // Calculate outer circle X intersections
+                const outerXDist = Math.sqrt(outerRadiusSquared - dySquared);
+                const outerLeftX = Math.max(minX, Math.ceil(cX - outerXDist));
+                const outerRightX = Math.min(maxX, Math.floor(cX + outerXDist));
+
+                // Case: No inner circle intersection (draw full span)
+                if (innerRadius <= 0 || dySquared > innerRadiusSquared) {
+                    for (let x = outerLeftX; x <= outerRightX; x++) {
+                        const pos = y * width + x;
+                        if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (7 - (pos & 7))))) {
+                            data32[pos] = packedColor;
+                        }
+                    }
+                } else {
+                    // Case: Intersects both circles - draw left and right segments
+                    const innerXDist = Math.sqrt(innerRadiusSquared - dySquared);
+                    const innerLeftX = Math.min(outerRightX, Math.floor(cX - innerXDist));
+                    const innerRightX = Math.max(outerLeftX, Math.ceil(cX + innerXDist));
+
+                    // Left segment
+                    for (let x = outerLeftX; x <= innerLeftX; x++) {
+                        const pos = y * width + x;
+                        if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (7 - (pos & 7))))) {
+                            data32[pos] = packedColor;
+                        }
+                    }
+
+                    // Right segment
+                    for (let x = innerRightX; x <= outerRightX; x++) {
+                        const pos = y * width + x;
+                        if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (7 - (pos & 7))))) {
+                            data32[pos] = packedColor;
+                        }
+                    }
+                }
+            }
+        } else {
+            // Semi-transparent: use alpha blending path
+            this._strokeCircleThickAlpha(cx, cy, radius, lineWidth, color);
+        }
+    }
+
+    /**
+     * Thick stroke circle with alpha blending
+     * @private
+     */
+    _strokeCircleThickAlpha(cx, cy, radius, lineWidth, color) {
+        const surface = this.surface;
+        const width = surface.width;
+        const height = surface.height;
+        const data = surface.data;
+        const clipBuffer = this._clipMask ? this._clipMask.buffer : null;
+
+        const effectiveAlpha = (color.a / 255) * this.globalAlpha;
+        if (effectiveAlpha <= 0) return;
+        const invAlpha = 1 - effectiveAlpha;
+        const r = color.r, g = color.g, b = color.b;
+
+        const innerRadius = radius - lineWidth / 2;
+        const outerRadius = radius + lineWidth / 2;
+        const cX = cx - 0.5;
+        const cY = cy - 0.5;
+
+        const minY = Math.max(0, Math.floor(cY - outerRadius - 1));
+        const maxY = Math.min(height - 1, Math.ceil(cY + outerRadius + 1));
+        const minX = Math.max(0, Math.floor(cX - outerRadius - 1));
+        const maxX = Math.min(width - 1, Math.ceil(cX + outerRadius + 1));
+
+        const outerRadiusSquared = outerRadius * outerRadius;
+        const innerRadiusSquared = innerRadius > 0 ? innerRadius * innerRadius : 0;
+
+        for (let y = minY; y <= maxY; y++) {
+            const dy = y - cY;
+            const dySquared = dy * dy;
+
+            if (dySquared > outerRadiusSquared) continue;
+
+            const outerXDist = Math.sqrt(outerRadiusSquared - dySquared);
+            const outerLeftX = Math.max(minX, Math.ceil(cX - outerXDist));
+            const outerRightX = Math.min(maxX, Math.floor(cX + outerXDist));
+
+            if (innerRadius <= 0 || dySquared > innerRadiusSquared) {
+                for (let x = outerLeftX; x <= outerRightX; x++) {
+                    const pos = y * width + x;
+                    if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (7 - (pos & 7))))) {
+                        const idx = pos * 4;
+                        const oldAlpha = data[idx + 3] / 255;
+                        const oldAlphaScaled = oldAlpha * invAlpha;
+                        const newAlpha = effectiveAlpha + oldAlphaScaled;
+                        if (newAlpha > 0) {
+                            const blendFactor = 1 / newAlpha;
+                            data[idx] = (r * effectiveAlpha + data[idx] * oldAlphaScaled) * blendFactor;
+                            data[idx + 1] = (g * effectiveAlpha + data[idx + 1] * oldAlphaScaled) * blendFactor;
+                            data[idx + 2] = (b * effectiveAlpha + data[idx + 2] * oldAlphaScaled) * blendFactor;
+                            data[idx + 3] = newAlpha * 255;
+                        }
+                    }
+                }
+            } else {
+                const innerXDist = Math.sqrt(innerRadiusSquared - dySquared);
+                const innerLeftX = Math.min(outerRightX, Math.floor(cX - innerXDist));
+                const innerRightX = Math.max(outerLeftX, Math.ceil(cX + innerXDist));
+
+                // Left segment
+                for (let x = outerLeftX; x <= innerLeftX; x++) {
+                    const pos = y * width + x;
+                    if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (7 - (pos & 7))))) {
+                        const idx = pos * 4;
+                        const oldAlpha = data[idx + 3] / 255;
+                        const oldAlphaScaled = oldAlpha * invAlpha;
+                        const newAlpha = effectiveAlpha + oldAlphaScaled;
+                        if (newAlpha > 0) {
+                            const blendFactor = 1 / newAlpha;
+                            data[idx] = (r * effectiveAlpha + data[idx] * oldAlphaScaled) * blendFactor;
+                            data[idx + 1] = (g * effectiveAlpha + data[idx + 1] * oldAlphaScaled) * blendFactor;
+                            data[idx + 2] = (b * effectiveAlpha + data[idx + 2] * oldAlphaScaled) * blendFactor;
+                            data[idx + 3] = newAlpha * 255;
+                        }
+                    }
+                }
+
+                // Right segment
+                for (let x = innerRightX; x <= outerRightX; x++) {
+                    const pos = y * width + x;
+                    if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (7 - (pos & 7))))) {
+                        const idx = pos * 4;
+                        const oldAlpha = data[idx + 3] / 255;
+                        const oldAlphaScaled = oldAlpha * invAlpha;
+                        const newAlpha = effectiveAlpha + oldAlphaScaled;
+                        if (newAlpha > 0) {
+                            const blendFactor = 1 / newAlpha;
+                            data[idx] = (r * effectiveAlpha + data[idx] * oldAlphaScaled) * blendFactor;
+                            data[idx + 1] = (g * effectiveAlpha + data[idx + 1] * oldAlphaScaled) * blendFactor;
+                            data[idx + 2] = (b * effectiveAlpha + data[idx + 2] * oldAlphaScaled) * blendFactor;
+                            data[idx + 3] = newAlpha * 255;
+                        }
+                    }
+                }
+            }
+        }
     }
 
     /**
@@ -1316,10 +1877,22 @@ class Context2D {
             const packedColor = Surface.packColor(paintSource.r, paintSource.g, paintSource.b, 255);
             const data32 = surface.data32;
 
-            const x1i = Math.round(x1);
-            const y1i = Math.round(y1);
-            const x2i = Math.round(x2);
-            const y2i = Math.round(y2);
+            let x1i = Math.floor(x1);
+            let y1i = Math.floor(y1);
+            let x2i = Math.floor(x2);
+            let y2i = Math.floor(y2);
+
+            // Shorten horizontal/vertical lines by 1 pixel to match HTML5 Canvas
+            // This accounts for the fact that a line from (0,0) to (10,0) in canvas
+            // draws 10 pixels, not 11 (the endpoint is exclusive)
+            if (x1i === x2i) {
+                // Vertical line: shorten in Y direction
+                if (y2i > y1i) y2i--; else y1i--;
+            }
+            if (y1i === y2i) {
+                // Horizontal line: shorten in X direction
+                if (x2i > x1i) x2i--; else x1i--;
+            }
 
             let dx = Math.abs(x2i - x1i);
             let dy = Math.abs(y2i - y1i);
@@ -1380,12 +1953,12 @@ class Context2D {
      * @private
      */
     _fillSpanFast(data32, surfaceWidth, surfaceHeight, startX, y, length, packedColor, clipBuffer) {
-        // Y bounds check
-        const yi = Math.round(y);
+        // Y bounds check - use floor for consistent pixel alignment
+        const yi = Math.floor(y);
         if (yi < 0 || yi >= surfaceHeight) return;
 
-        // X clipping to surface bounds
-        let x = Math.round(startX);
+        // X clipping to surface bounds - use floor for consistent pixel alignment
+        let x = Math.floor(startX);
         let len = length;
         if (x < 0) {
             len += x;
@@ -1430,12 +2003,12 @@ class Context2D {
      * @private
      */
     _fillSpanAlpha(data, surfaceWidth, surfaceHeight, startX, y, length, r, g, b, alpha, invAlpha, clipBuffer) {
-        // Y bounds check
-        const yi = Math.round(y);
+        // Y bounds check - use floor for consistent pixel alignment
+        const yi = Math.floor(y);
         if (yi < 0 || yi >= surfaceHeight) return;
 
-        // X clipping to surface bounds
-        let x = Math.round(startX);
+        // X clipping to surface bounds - use floor for consistent pixel alignment
+        let x = Math.floor(startX);
         let len = length;
         if (x < 0) {
             len += x;
