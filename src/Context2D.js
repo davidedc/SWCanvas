@@ -1931,13 +1931,60 @@ class Context2D {
                     y += sy;
                 }
             }
+        } else if (isOpaqueColor) {
+            // Fast path for thick axis-aligned lines: render as rectangle
+            const x1i = Math.floor(x1);
+            const y1i = Math.floor(y1);
+            const x2i = Math.floor(x2);
+            const y2i = Math.floor(y2);
+            const data32 = surface.data32;
+
+            if (y1i === y2i) {
+                // Horizontal thick line - render as filled rectangle
+                const halfWidth = lineWidth / 2;
+                const topY = Math.floor(y1 - halfWidth);
+                const bottomY = Math.floor(y1 + halfWidth);
+                const leftX = Math.min(x1i, x2i);
+                const rightX = Math.max(x1i, x2i);
+                const packedColor = Surface.packColor(paintSource.r, paintSource.g, paintSource.b, 255);
+
+                // Fill rectangle as horizontal spans
+                for (let y = topY; y < bottomY; y++) {
+                    this._fillSpanFast(data32, width, height, leftX, y, rightX - leftX, packedColor, clipBuffer);
+                }
+            } else if (x1i === x2i) {
+                // Vertical thick line - render as filled rectangle
+                const halfWidth = lineWidth / 2;
+                const leftX = Math.floor(x1 - halfWidth);
+                const rightX = Math.floor(x1 + halfWidth);
+                const topY = Math.min(y1i, y2i);
+                const bottomY = Math.max(y1i, y2i);
+                const packedColor = Surface.packColor(paintSource.r, paintSource.g, paintSource.b, 255);
+
+                // Fill rectangle as horizontal spans
+                for (let y = topY; y < bottomY; y++) {
+                    this._fillSpanFast(data32, width, height, leftX, y, rightX - leftX, packedColor, clipBuffer);
+                }
+            } else {
+                // Non-axis-aligned thick line - use slow path
+                Context2D._markSlowPath();
+                this.beginPath();
+                this.moveTo(x1, y1);
+                this.lineTo(x2, y2);
+                const savedTransform = this._transform;
+                this._transform = new Transform2D();
+                const savedLineWidth = this._lineWidth;
+                this._lineWidth = lineWidth;
+                this.stroke();
+                this._lineWidth = savedLineWidth;
+                this._transform = savedTransform;
+            }
         } else {
-            // Standard path for thick lines or non-opaque colors
-            Context2D._markSlowPath(); // Mark slow path for testing
+            // Standard path for non-opaque colors
+            Context2D._markSlowPath();
             this.beginPath();
             this.moveTo(x1, y1);
             this.lineTo(x2, y2);
-            // Temporarily set identity transform
             const savedTransform = this._transform;
             this._transform = new Transform2D();
             const savedLineWidth = this._lineWidth;
