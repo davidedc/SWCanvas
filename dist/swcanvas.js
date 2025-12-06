@@ -8459,7 +8459,27 @@ class Context2D {
     }
 
     strokeRect(x, y, width, height) {
-        // Create a rectangular path
+        // Fast path: 1px stroke, no transform, simple color, source-over
+        const is1pxStroke = Math.abs(this._lineWidth - 1) < 0.001;
+        const isColor = this._strokeStyle instanceof Color;
+        const isSourceOver = this.globalCompositeOperation === 'source-over';
+        const noTransform = this._transform.isIdentity;
+        const noClip = !this._clipMask;
+        const noShadow = !this.shadowColor || this.shadowColor === 'transparent' ||
+                        (this.shadowBlur === 0 && this.shadowOffsetX === 0 && this.shadowOffsetY === 0);
+
+        if (is1pxStroke && isColor && isSourceOver && noTransform && noClip && noShadow) {
+            const isOpaque = this._strokeStyle.a === 255 && this.globalAlpha >= 1.0;
+            if (isOpaque) {
+                this._strokeRect1pxOpaque(x, y, width, height, this._strokeStyle);
+                return;
+            } else if (this._strokeStyle.a > 0) {
+                this._strokeRect1pxAlpha(x, y, width, height, this._strokeStyle);
+                return;
+            }
+        }
+
+        // Slow path: Create a rectangular path
         const rectPath = new SWPath2D();
         rectPath.rect(x, y, width, height);
         rectPath.closePath();
@@ -9818,6 +9838,117 @@ class Context2D {
                     data[idx + 3] = newAlpha * 255;
                 }
             }
+        }
+    }
+
+    /**
+     * Optimized 1px opaque rectangle stroke using direct pixel drawing
+     * Matches Canvas grid-line to pixel-coordinate conversion
+     * @private
+     */
+    _strokeRect1pxOpaque(x, y, width, height, color) {
+        const surface = this.surface;
+        const surfaceWidth = surface.width;
+        const surfaceHeight = surface.height;
+        const data32 = surface.data32;
+
+        const packedColor = Surface.packColor(color.r, color.g, color.b, 255);
+
+        // Calculate rectangle pixel bounds
+        // For strokeRect(132.5, 126.5, 135, 47):
+        // - Path spans (132.5, 126.5) to (267.5, 173.5)
+        // - 1px stroke renders at: left=132, right=267, top=126, bottom=173
+        const left = Math.floor(x);
+        const top = Math.floor(y);
+        const right = Math.floor(x + width);
+        const bottom = Math.floor(y + height);
+
+        // Draw top edge (horizontal): pixels from left to right (inclusive)
+        if (top >= 0 && top < surfaceHeight) {
+            for (let px = Math.max(0, left); px <= Math.min(right, surfaceWidth - 1); px++) {
+                data32[top * surfaceWidth + px] = packedColor;
+            }
+        }
+
+        // Draw bottom edge (horizontal): pixels from left to right (inclusive)
+        if (bottom >= 0 && bottom < surfaceHeight) {
+            for (let px = Math.max(0, left); px <= Math.min(right, surfaceWidth - 1); px++) {
+                data32[bottom * surfaceWidth + px] = packedColor;
+            }
+        }
+
+        // Draw left edge (vertical): skip corners (already drawn)
+        if (left >= 0 && left < surfaceWidth) {
+            for (let py = Math.max(0, top + 1); py < Math.min(bottom, surfaceHeight); py++) {
+                data32[py * surfaceWidth + left] = packedColor;
+            }
+        }
+
+        // Draw right edge (vertical): skip corners (already drawn)
+        if (right >= 0 && right < surfaceWidth) {
+            for (let py = Math.max(0, top + 1); py < Math.min(bottom, surfaceHeight); py++) {
+                data32[py * surfaceWidth + right] = packedColor;
+            }
+        }
+    }
+
+    /**
+     * Optimized 1px semi-transparent rectangle stroke using direct pixel drawing
+     * Matches Canvas grid-line to pixel-coordinate conversion
+     * @private
+     */
+    _strokeRect1pxAlpha(x, y, width, height, color) {
+        const surface = this.surface;
+        const surfaceWidth = surface.width;
+        const surfaceHeight = surface.height;
+        const data = surface.data;
+
+        // Calculate effective alpha
+        const effectiveAlpha = (color.a / 255) * this.globalAlpha;
+        if (effectiveAlpha <= 0) return;
+        const invAlpha = 1 - effectiveAlpha;
+        const r = color.r, g = color.g, b = color.b;
+
+        // Calculate rectangle pixel bounds
+        const left = Math.floor(x);
+        const top = Math.floor(y);
+        const right = Math.floor(x + width);
+        const bottom = Math.floor(y + height);
+
+        // Helper function to blend a pixel
+        const blendPixel = (px, py) => {
+            if (px < 0 || px >= surfaceWidth || py < 0 || py >= surfaceHeight) return;
+            const idx = (py * surfaceWidth + px) * 4;
+            const oldAlpha = data[idx + 3] / 255;
+            const oldAlphaScaled = oldAlpha * invAlpha;
+            const newAlpha = effectiveAlpha + oldAlphaScaled;
+            if (newAlpha > 0) {
+                const blendFactor = 1 / newAlpha;
+                data[idx] = (r * effectiveAlpha + data[idx] * oldAlphaScaled) * blendFactor;
+                data[idx + 1] = (g * effectiveAlpha + data[idx + 1] * oldAlphaScaled) * blendFactor;
+                data[idx + 2] = (b * effectiveAlpha + data[idx + 2] * oldAlphaScaled) * blendFactor;
+                data[idx + 3] = newAlpha * 255;
+            }
+        };
+
+        // Draw top edge (horizontal): pixels from left to right (inclusive)
+        for (let px = left; px <= right; px++) {
+            blendPixel(px, top);
+        }
+
+        // Draw bottom edge (horizontal): pixels from left to right (inclusive)
+        for (let px = left; px <= right; px++) {
+            blendPixel(px, bottom);
+        }
+
+        // Draw left edge (vertical): skip corners (already drawn)
+        for (let py = top + 1; py < bottom; py++) {
+            blendPixel(left, py);
+        }
+
+        // Draw right edge (vertical): skip corners (already drawn)
+        for (let py = top + 1; py < bottom; py++) {
+            blendPixel(right, py);
         }
     }
 
