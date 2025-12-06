@@ -64,6 +64,8 @@ class HighLevelTestRunner {
     static testElements = new Map();
     static runningIterations = new Map(); // Track running multi-iteration tests
     static flipStates = new Map(); // Track flip state per test: 'sw' or 'canvas'
+    static iterationInputs = new Map(); // test.name -> <input> element for next iteration
+    static currentLabels = new Map(); // test.name -> <span> element for current iteration label
 
     // Magnifier grid dimensions
     static GRID_COLUMNS = 11;
@@ -213,28 +215,54 @@ class HighLevelTestRunner {
         const iterControls = document.createElement('div');
         iterControls.className = 'iteration-controls';
 
-        const iterLabel = document.createElement('span');
-        iterLabel.className = 'iter-label';
-        iterLabel.textContent = 'Iterations:';
-        iterControls.appendChild(iterLabel);
+        // Current iteration label
+        const currentLabel = document.createElement('span');
+        currentLabel.className = 'current-iteration-label';
+        currentLabel.textContent = 'Current Iteration #1 | ';
+        iterControls.appendChild(currentLabel);
+
+        // Store reference for later access
+        this.currentLabels.set(test.name, currentLabel);
+
+        // Next iteration label and input
+        const nextLabel = document.createElement('span');
+        nextLabel.className = 'iter-label';
+        nextLabel.textContent = 'Next #: ';
+        iterControls.appendChild(nextLabel);
+
+        const iterInput = document.createElement('input');
+        iterInput.type = 'text';
+        iterInput.value = '1';
+        iterInput.className = 'iter-input';
+        iterControls.appendChild(iterInput);
+
+        // Store reference for later access
+        this.iterationInputs.set(test.name, iterInput);
 
         const run1Btn = document.createElement('button');
         run1Btn.className = 'iter-btn';
-        run1Btn.textContent = '1';
+        run1Btn.textContent = '1 iteration';
         run1Btn.onclick = () => this.runIterations(test, 1);
         iterControls.appendChild(run1Btn);
 
         const run10Btn = document.createElement('button');
         run10Btn.className = 'iter-btn';
-        run10Btn.textContent = '10';
+        run10Btn.textContent = '10 iterations';
         run10Btn.onclick = () => this.runIterations(test, 10);
         iterControls.appendChild(run10Btn);
 
         const run100Btn = document.createElement('button');
         run100Btn.className = 'iter-btn';
-        run100Btn.textContent = '100';
+        run100Btn.textContent = '100 iterations';
         run100Btn.onclick = () => this.runIterations(test, 100);
         iterControls.appendChild(run100Btn);
+
+        // Collect defects button (doesn't stop on error)
+        const collect1kBtn = document.createElement('button');
+        collect1kBtn.className = 'iter-btn collect-btn';
+        collect1kBtn.textContent = 'Collect defects / 1k';
+        collect1kBtn.onclick = () => this.runIterations(test, 1000, false);
+        iterControls.appendChild(collect1kBtn);
 
         const stopBtn = document.createElement('button');
         stopBtn.className = 'iter-btn stop-btn';
@@ -364,6 +392,18 @@ class HighLevelTestRunner {
         const section = this.testElements.get(test.name);
         if (!section) return;
 
+        // Update current label for this test
+        const currentLabel = this.currentLabels.get(test.name);
+        if (currentLabel) {
+            currentLabel.textContent = `Current Iteration #${iterationNumber} | `;
+        }
+
+        // Update input to next iteration
+        const iterInput = this.iterationInputs.get(test.name);
+        if (iterInput) {
+            iterInput.value = (iterationNumber + 1).toString();
+        }
+
         const swCanvas = section.querySelector('canvas[data-renderer="swcanvas"]');
         const html5Canvas = section.querySelector('canvas[data-renderer="html5"]');
         const resultsDiv = section.querySelector('.test-results');
@@ -381,8 +421,8 @@ class HighLevelTestRunner {
         // Update the flip display canvas
         this.updateFlipDisplay(test.name);
 
-        // Run validation checks
-        const checkResults = this.runValidationChecks(test, swCanvas, swResult);
+        // Run validation checks comparing both canvases
+        const checkResults = this.runValidationChecks(test, swCanvas, html5Canvas, swResult);
 
         // Display results
         return this.displayResults(section, test, slowPathUsed, allowSlowPath, checkResults, swResult, iterationNumber);
@@ -390,8 +430,11 @@ class HighLevelTestRunner {
 
     /**
      * Run multiple iterations of a test
+     * @param {Object} test - The test object
+     * @param {number} count - Number of iterations to run
+     * @param {boolean} stopAtError - If true (default), stop on first failure; if false, collect all errors
      */
-    static runIterations(test, count) {
+    static runIterations(test, count, stopAtError = true) {
         const section = this.testElements.get(test.name);
         if (!section) return;
 
@@ -404,12 +447,20 @@ class HighLevelTestRunner {
         const progressDiv = iterControls.querySelector('.iter-progress');
         const iterBtns = iterControls.querySelectorAll('.iter-btn:not(.stop-btn)');
 
-        // Show progress, hide other buttons
+        // Get iteration input and current label
+        const iterInput = this.iterationInputs.get(test.name);
+        const currentLabel = this.currentLabels.get(test.name);
+
+        // Read starting iteration from input
+        let currentIter = parseInt(iterInput.value) || 1;
+        const startIter = currentIter;
+        const targetIter = currentIter + count;
+
+        // Show progress, disable other buttons
         stopBtn.style.display = 'inline-block';
         progressDiv.style.display = 'inline-block';
         iterBtns.forEach(btn => btn.disabled = true);
 
-        let current = 0;
         let passed = 0;
         let failed = 0;
         const errors = [];
@@ -419,32 +470,46 @@ class HighLevelTestRunner {
 
         const runState = {
             running: true,
-            current: 0,
-            total: count
+            errors: [],
+            passed: 0,
+            failed: 0
         };
         this.runningIterations.set(test.name, runState);
 
         const runFrame = () => {
-            if (!runState.running || current >= count) {
+            if (!runState.running || currentIter >= targetIter) {
                 // Done - show final results
-                this.finishIterations(test, section, passed, failed, errors, count);
+                this.finishIterations(test, section, passed, failed, errors, currentIter - startIter);
                 return;
             }
 
             // Update progress
-            progressDiv.textContent = `${current + 1}/${count}`;
+            const itersDone = currentIter - startIter;
+            progressDiv.textContent = `${itersDone + 1}/${count}`;
 
-            // Run iteration with different seed
-            const iterPassed = this.runTest(test, current + 1);
+            // Update current label BEFORE running
+            currentLabel.textContent = `Current Iteration #${currentIter} | `;
+
+            // Run iteration with the current iteration number
+            const iterPassed = this.runTest(test, currentIter);
+
             if (iterPassed) {
                 passed++;
             } else {
                 failed++;
-                errors.push(`Iteration ${current + 1} failed`);
+                errors.push(`Iteration ${currentIter}`);
+
+                // STOP if stopAtError is true and test failed
+                if (stopAtError) {
+                    // Update input to show the failing iteration for easy re-run
+                    iterInput.value = currentIter.toString();
+                    this.finishIterations(test, section, passed, failed, errors, currentIter - startIter + 1);
+                    return;
+                }
             }
 
-            current++;
-            runState.current = current;
+            currentIter++;
+            iterInput.value = currentIter.toString();  // Update input to next iteration
 
             // Schedule next frame
             requestAnimationFrame(runFrame);
@@ -551,53 +616,67 @@ class HighLevelTestRunner {
     }
 
     /**
-     * Run validation checks on the SWCanvas output
+     * Run validation checks comparing SWCanvas and HTML5 Canvas outputs
      */
-    static runValidationChecks(test, canvas, drawResult) {
+    static runValidationChecks(test, swCanvas, html5Canvas, drawResult) {
         const results = [];
         const checks = test.checks || {};
 
-        // Get image data for analysis
-        const ctx = canvas.getContext('2d');
-        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-
-        // Create a mock surface object for the utility functions
-        const surface = {
-            width: canvas.width,
-            height: canvas.height,
-            stride: canvas.width * 4,
-            data: imageData.data
+        // Helper to create surface object from canvas
+        const createSurface = (canvas) => {
+            const ctx = canvas.getContext('2d');
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            return {
+                width: canvas.width,
+                height: canvas.height,
+                stride: canvas.width * 4,
+                data: imageData.data
+            };
         };
 
-        // Extremes check
+        // Extremes check - analyze BOTH canvases
         if (checks.extremes) {
-            const extremes = analyzeExtremes(surface);
-            const expectedData = drawResult.checkData || {};
+            // Get color tolerance for HTML5 Canvas (to handle faint overspill)
+            const colorTolerance = typeof checks.extremes === 'object' && checks.extremes.colorTolerance
+                ? checks.extremes.colorTolerance
+                : 0;
+
+            // Analyze SWCanvas (no tolerance - should be pixel-perfect)
+            const swSurface = createSurface(swCanvas);
+            const swExtremes = analyzeExtremes(swSurface);
+
+            // Analyze HTML5 Canvas (with tolerance for overspill artifacts)
+            const canvasSurface = createSurface(html5Canvas);
+            const canvasExtremes = analyzeExtremes(canvasSurface, { r: 255, g: 255, b: 255, a: 255 }, colorTolerance);
 
             let passed = true;
             let details = '';
 
-            if (extremes.topY === surface.height || extremes.bottomY === -1) {
+            // Check if either renderer produced no drawing
+            const swNoDrawing = swExtremes.topY === swSurface.height || swExtremes.bottomY === -1;
+            const canvasNoDrawing = canvasExtremes.topY === canvasSurface.height || canvasExtremes.bottomY === -1;
+
+            if (swNoDrawing && canvasNoDrawing) {
                 passed = false;
-                details = 'No drawing detected';
-            } else if (expectedData.topY !== undefined) {
-                const tolerance = typeof checks.extremes === 'object'
-                    ? (checks.extremes.tolerance || 0) * surface.height
-                    : 0;
-
-                const topDiff = Math.abs(extremes.topY - expectedData.topY);
-                const bottomDiff = Math.abs(extremes.bottomY - expectedData.bottomY);
-                const leftDiff = Math.abs(extremes.leftX - expectedData.leftX);
-                const rightDiff = Math.abs(extremes.rightX - expectedData.rightX);
-
-                const maxDiff = Math.max(topDiff, bottomDiff, leftDiff, rightDiff);
-
-                if (maxDiff > tolerance + 2) {
-                    passed = false;
-                }
-                details = `bounds: T=${extremes.topY} B=${extremes.bottomY} L=${extremes.leftX} R=${extremes.rightX}`;
+                details = 'No drawing detected in either renderer';
+            } else if (swNoDrawing) {
+                passed = false;
+                details = 'No drawing in SW | Canvas: T=' + canvasExtremes.topY + ' B=' + canvasExtremes.bottomY + ' L=' + canvasExtremes.leftX + ' R=' + canvasExtremes.rightX;
+            } else if (canvasNoDrawing) {
+                passed = false;
+                details = 'SW: T=' + swExtremes.topY + ' B=' + swExtremes.bottomY + ' L=' + swExtremes.leftX + ' R=' + swExtremes.rightX + ' | No drawing in Canvas';
             } else {
-                details = `bounds: T=${extremes.topY} B=${extremes.bottomY} L=${extremes.leftX} R=${extremes.rightX}`;
+                // Check if bounds match exactly between renderers
+                const boundsMatch =
+                    swExtremes.topY === canvasExtremes.topY &&
+                    swExtremes.bottomY === canvasExtremes.bottomY &&
+                    swExtremes.leftX === canvasExtremes.leftX &&
+                    swExtremes.rightX === canvasExtremes.rightX;
+
+                passed = boundsMatch;
+                details = `SW: T=${swExtremes.topY} B=${swExtremes.bottomY} L=${swExtremes.leftX} R=${swExtremes.rightX} | ` +
+                         `Canvas: T=${canvasExtremes.topY} B=${canvasExtremes.bottomY} L=${canvasExtremes.leftX} R=${canvasExtremes.rightX}` +
+                         (boundsMatch ? '' : ' (MISMATCH)');
             }
 
             results.push({
@@ -607,9 +686,10 @@ class HighLevelTestRunner {
             });
         }
 
-        // Unique colors check
+        // Unique colors check (on SWCanvas)
         if (checks.totalUniqueColors !== undefined) {
-            const uniqueColors = countUniqueColors(surface);
+            const swSurface = createSurface(swCanvas);
+            const uniqueColors = countUniqueColors(swSurface);
             const passed = uniqueColors === checks.totalUniqueColors;
             results.push({
                 name: 'Unique Colors',
@@ -618,9 +698,10 @@ class HighLevelTestRunner {
             });
         }
 
-        // Speckles check
+        // Speckles check (on SWCanvas)
         if (checks.noSpeckles === true) {
-            const hasSpecklePixels = hasSpeckles(surface);
+            const swSurface = createSurface(swCanvas);
+            const hasSpecklePixels = hasSpeckles(swSurface);
             results.push({
                 name: 'No Speckles',
                 passed: !hasSpecklePixels,
@@ -867,9 +948,12 @@ class HighLevelTestRunner {
         );
 
         // Calculate pixel size for magnified view
+        // Leave room at top for coordinates/labels and bottom for RGBA text
+        const topMargin = 25;  // Space for coordinates and labels
+        const bottomMargin = 20; // Space for RGBA text
         const pixelSize = Math.min(
             (displayCanvas.width / 2) / this.GRID_COLUMNS,
-            displayCanvas.height / this.GRID_ROWS
+            (displayCanvas.height - topMargin - bottomMargin) / this.GRID_ROWS
         );
 
         // Draw magnified grids
@@ -884,6 +968,13 @@ class HighLevelTestRunner {
         displayCtx.textAlign = 'center';
         displayCtx.fillStyle = 'black';
         displayCtx.fillText(`(${x}, ${y})`, displayCanvas.width / 2, 15);
+
+        // Draw grid labels
+        displayCtx.font = 'bold 12px sans-serif';
+        displayCtx.fillStyle = '#2ecc71'; // Green for SW
+        displayCtx.fillText('SW', displayCanvas.width / 4, 15);
+        displayCtx.fillStyle = '#3498db'; // Blue for HTML5
+        displayCtx.fillText('HTML5', displayCanvas.width * 3 / 4, 15);
     }
 
     /**
@@ -901,7 +992,7 @@ class HighLevelTestRunner {
         const readOffsetX = Math.max(0, -sourceX);
         const readOffsetY = Math.max(0, -sourceY);
 
-        const gridTop = 20; // Offset for coordinates text at top
+        const gridTop = 25; // Offset for coordinates text and labels at top
 
         // Draw each pixel
         for (let py = 0; py < this.GRID_ROWS; py++) {

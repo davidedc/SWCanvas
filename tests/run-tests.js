@@ -97,6 +97,10 @@ try {
             global.SeededRandom = highLevelTestUtils.SeededRandom;
             global.getRandomColor = highLevelTestUtils.getRandomColor;
             global.getRandomOpaqueColor = highLevelTestUtils.getRandomOpaqueColor;
+            global.getRandomPoint = highLevelTestUtils.getRandomPoint;
+            global.placeCloseToCenterAtPixel = highLevelTestUtils.placeCloseToCenterAtPixel;
+            global.placeCloseToCenterAtGrid = highLevelTestUtils.placeCloseToCenterAtGrid;
+            global.adjustDimensionsForCrispStrokeRendering = highLevelTestUtils.adjustDimensionsForCrispStrokeRendering;
             global.calculateCircleTestParameters = highLevelTestUtils.calculateCircleTestParameters;
             global.registerHighLevelTest = highLevelTestUtils.registerHighLevelTest;
 

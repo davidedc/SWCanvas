@@ -18,6 +18,10 @@ const {
     SeededRandom,
     getRandomColor,
     getRandomOpaqueColor,
+    getRandomPoint,
+    placeCloseToCenterAtPixel,
+    placeCloseToCenterAtGrid,
+    adjustDimensionsForCrispStrokeRendering,
     calculateCircleTestParameters,
     registerHighLevelTest,
     analyzeExtremes,
@@ -30,6 +34,10 @@ global.SWCanvas = SWCanvas;
 global.SeededRandom = SeededRandom;
 global.getRandomColor = getRandomColor;
 global.getRandomOpaqueColor = getRandomOpaqueColor;
+global.getRandomPoint = getRandomPoint;
+global.placeCloseToCenterAtPixel = placeCloseToCenterAtPixel;
+global.placeCloseToCenterAtGrid = placeCloseToCenterAtGrid;
+global.adjustDimensionsForCrispStrokeRendering = adjustDimensionsForCrispStrokeRendering;
 global.calculateCircleTestParameters = calculateCircleTestParameters;
 global.registerHighLevelTest = registerHighLevelTest;
 

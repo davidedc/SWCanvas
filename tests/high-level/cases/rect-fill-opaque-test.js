@@ -37,9 +37,7 @@ registerHighLevelTest(
     'rects',
     {
         extremes: true,
-        totalUniqueColors: 2,
-        // fillRect goes through rasterizer - allow slow path for now
-        allowSlowPath: true
+        totalUniqueColors: 2
     },
     {
         title: 'Filled Rectangle - Opaque Color',

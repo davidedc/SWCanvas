@@ -40,13 +40,13 @@ registerHighLevelTest(
                 topY: pixelY,
                 bottomY: pixelY,
                 leftX: Math.min(x1, x2),
-                rightX: Math.max(x1, x2)
+                rightX: Math.max(x1, x2) - 1  // Inclusive right bound
             }
         };
     },
     'lines',
     {
-        extremes: { tolerance: 0.01 },  // Small tolerance for sub-pixel positioning
+        extremes: true,  // Exact match required for crisp pixel-positioned test
         // Fast path expected for 1px opaque line
     },
     {

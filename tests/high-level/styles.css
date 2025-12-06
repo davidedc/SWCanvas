@@ -264,6 +264,8 @@ button.secondary:hover {
 
 .result-value {
     flex: 1;
+    font-family: monospace;
+    font-size: 13px;
 }
 
 /* Fast Path Status */
@@ -349,6 +351,23 @@ button.secondary:hover {
     margin-right: 5px;
 }
 
+.current-iteration-label {
+    font-weight: bold;
+    font-size: 13px;
+    color: #2c3e50;
+    margin-right: 10px;
+}
+
+.iter-input {
+    width: 60px;
+    padding: 4px 8px;
+    font-size: 13px;
+    font-family: monospace;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    margin-right: 15px;
+}
+
 .iter-btn {
     padding: 5px 12px;
     font-size: 12px;
@@ -376,6 +395,15 @@ button.secondary:hover {
 
 .iter-btn.stop-btn:hover {
     background: #ef9a9a;
+}
+
+.iter-btn.collect-btn {
+    background: #fff3e0;
+    color: #e65100;
+}
+
+.iter-btn.collect-btn:hover {
+    background: #ffe0b2;
 }
 
 .iter-progress {
