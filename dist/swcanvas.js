@@ -1921,6 +1921,383 @@ class RectOps {
             }
         }
     }
+
+    // Angle tolerance for axis-aligned detection (~0.057 degrees)
+    static ANGLE_TOLERANCE = 0.001;
+
+    /**
+     * Check if rotation angle is near axis-aligned (0°, 90°, 180°, 270°)
+     * @param {number} angle - Rotation angle in radians
+     * @returns {boolean} True if near axis-aligned
+     */
+    static isNearAxisAligned(angle) {
+        const tolerance = RectOps.ANGLE_TOLERANCE;
+        const normalized = ((angle % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+        return (
+            Math.abs(normalized) < tolerance ||
+            Math.abs(normalized - Math.PI / 2) < tolerance ||
+            Math.abs(normalized - Math.PI) < tolerance ||
+            Math.abs(normalized - 3 * Math.PI / 2) < tolerance ||
+            Math.abs(normalized - 2 * Math.PI) < tolerance
+        );
+    }
+
+    /**
+     * Get adjusted dimensions for 90°/270° rotations (swap width/height)
+     * @param {number} width - Original width
+     * @param {number} height - Original height
+     * @param {number} angle - Rotation angle in radians
+     * @returns {{adjustedWidth: number, adjustedHeight: number}} Adjusted dimensions
+     */
+    static getRotatedDimensions(width, height, angle) {
+        const tolerance = RectOps.ANGLE_TOLERANCE;
+        const normalized = ((angle % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+        if (Math.abs(normalized - Math.PI / 2) < tolerance ||
+            Math.abs(normalized - 3 * Math.PI / 2) < tolerance) {
+            return { adjustedWidth: height, adjustedHeight: width };
+        }
+        return { adjustedWidth: width, adjustedHeight: height };
+    }
+
+    /**
+     * Optimized opaque rectangle fill using direct 32-bit pixel writes
+     * @param {Surface} surface - Target surface
+     * @param {number} x - Rectangle X coordinate
+     * @param {number} y - Rectangle Y coordinate
+     * @param {number} width - Rectangle width
+     * @param {number} height - Rectangle height
+     * @param {Color} color - Fill color (must be opaque)
+     * @param {Uint8Array|null} clipBuffer - Clip mask buffer
+     */
+    static fillOpaque(surface, x, y, width, height, color, clipBuffer) {
+        const surfaceWidth = surface.width;
+        const surfaceHeight = surface.height;
+        const data32 = surface.data32;
+        const packedColor = Surface.packColor(color.r, color.g, color.b, 255);
+
+        const left = Math.floor(x);
+        const top = Math.floor(y);
+        const right = Math.ceil(x + width);
+        const bottom = Math.ceil(y + height);
+
+        for (let py = Math.max(0, top); py < Math.min(bottom, surfaceHeight); py++) {
+            for (let px = Math.max(0, left); px < Math.min(right, surfaceWidth); px++) {
+                const pixelIndex = py * surfaceWidth + px;
+
+                if (clipBuffer) {
+                    const byteIndex = pixelIndex >> 3;
+                    const bitIndex = pixelIndex & 7;
+                    if (!(clipBuffer[byteIndex] & (1 << bitIndex))) continue;
+                }
+
+                data32[pixelIndex] = packedColor;
+            }
+        }
+    }
+
+    /**
+     * Optimized alpha-blended rectangle fill
+     * @param {Surface} surface - Target surface
+     * @param {number} x - Rectangle X coordinate
+     * @param {number} y - Rectangle Y coordinate
+     * @param {number} width - Rectangle width
+     * @param {number} height - Rectangle height
+     * @param {Color} color - Fill color
+     * @param {number} globalAlpha - Context global alpha (0-1)
+     * @param {Uint8Array|null} clipBuffer - Clip mask buffer
+     */
+    static fillAlpha(surface, x, y, width, height, color, globalAlpha, clipBuffer) {
+        const surfaceWidth = surface.width;
+        const surfaceHeight = surface.height;
+        const data = surface.data;
+
+        const effectiveAlpha = (color.a / 255) * globalAlpha;
+        if (effectiveAlpha <= 0) return;
+        const invAlpha = 1 - effectiveAlpha;
+        const r = color.r, g = color.g, b = color.b;
+
+        const left = Math.floor(x);
+        const top = Math.floor(y);
+        const right = Math.ceil(x + width);
+        const bottom = Math.ceil(y + height);
+
+        for (let py = Math.max(0, top); py < Math.min(bottom, surfaceHeight); py++) {
+            for (let px = Math.max(0, left); px < Math.min(right, surfaceWidth); px++) {
+                const pixelIndex = py * surfaceWidth + px;
+
+                if (clipBuffer) {
+                    const byteIndex = pixelIndex >> 3;
+                    const bitIndex = pixelIndex & 7;
+                    if (!(clipBuffer[byteIndex] & (1 << bitIndex))) continue;
+                }
+
+                const idx = pixelIndex * 4;
+                const oldAlpha = data[idx + 3] / 255;
+                const oldAlphaScaled = oldAlpha * invAlpha;
+                const newAlpha = effectiveAlpha + oldAlphaScaled;
+
+                if (newAlpha > 0) {
+                    const blendFactor = 1 / newAlpha;
+                    data[idx] = (r * effectiveAlpha + data[idx] * oldAlphaScaled) * blendFactor;
+                    data[idx + 1] = (g * effectiveAlpha + data[idx + 1] * oldAlphaScaled) * blendFactor;
+                    data[idx + 2] = (b * effectiveAlpha + data[idx + 2] * oldAlphaScaled) * blendFactor;
+                    data[idx + 3] = newAlpha * 255;
+                }
+            }
+        }
+    }
+
+    /**
+     * Rotated rectangle fill using edge-function algorithm
+     * Ported from CrispSWCanvas's SWRendererRect.fillRotatedRect()
+     * @param {Surface} surface - Target surface
+     * @param {number} centerX - Center X coordinate
+     * @param {number} centerY - Center Y coordinate
+     * @param {number} width - Rectangle width
+     * @param {number} height - Rectangle height
+     * @param {number} rotation - Rotation angle in radians
+     * @param {Color} color - Fill color
+     * @param {number} globalAlpha - Context global alpha (0-1)
+     * @param {Uint8Array|null} clipBuffer - Clip mask buffer
+     */
+    static fillRotated(surface, centerX, centerY, width, height, rotation, color, globalAlpha, clipBuffer) {
+        const surfaceWidth = surface.width;
+        const surfaceHeight = surface.height;
+        const data32 = surface.data32;
+        const data = surface.data;
+
+        const effectiveAlpha = (color.a / 255) * globalAlpha;
+        if (effectiveAlpha <= 0) return;
+
+        const isOpaque = effectiveAlpha >= 1.0;
+        const invAlpha = 1 - effectiveAlpha;
+        const r = color.r, g = color.g, b = color.b;
+        const packedColor = isOpaque ? Surface.packColor(r, g, b, 255) : 0;
+
+        const cos = Math.cos(rotation);
+        const sin = Math.sin(rotation);
+        const hw = width / 2;
+        const hh = height / 2;
+
+        // Calculate 4 corners
+        const corners = [
+            { x: centerX + hw * cos - hh * sin, y: centerY + hw * sin + hh * cos },
+            { x: centerX + hw * cos + hh * sin, y: centerY + hw * sin - hh * cos },
+            { x: centerX - hw * cos + hh * sin, y: centerY - hw * sin - hh * cos },
+            { x: centerX - hw * cos - hh * sin, y: centerY - hw * sin + hh * cos }
+        ];
+
+        // Create edge functions (ax + by + c = 0) for each edge
+        const edges = [];
+        for (let i = 0; i < 4; i++) {
+            const p1 = corners[i];
+            const p2 = corners[(i + 1) % 4];
+            edges.push({
+                a: p2.y - p1.y,
+                b: p1.x - p2.x,
+                c: p2.x * p1.y - p1.x * p2.y
+            });
+        }
+
+        // Find bounding box
+        let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+        for (const corner of corners) {
+            minX = Math.min(minX, corner.x);
+            maxX = Math.max(maxX, corner.x);
+            minY = Math.min(minY, corner.y);
+            maxY = Math.max(maxY, corner.y);
+        }
+        minX = Math.max(0, Math.floor(minX));
+        maxX = Math.min(surfaceWidth - 1, Math.ceil(maxX));
+        minY = Math.max(0, Math.floor(minY));
+        maxY = Math.min(surfaceHeight - 1, Math.ceil(maxY));
+
+        // Test each pixel using edge functions
+        for (let py = minY; py <= maxY; py++) {
+            for (let px = minX; px <= maxX; px++) {
+                // Check if point is inside all edges
+                let inside = true;
+                for (let i = 0; i < 4; i++) {
+                    if (edges[i].a * px + edges[i].b * py + edges[i].c < 0) {
+                        inside = false;
+                        break;
+                    }
+                }
+
+                if (!inside) continue;
+
+                const pixelIndex = py * surfaceWidth + px;
+
+                if (clipBuffer) {
+                    const byteIndex = pixelIndex >> 3;
+                    const bitIndex = pixelIndex & 7;
+                    if (!(clipBuffer[byteIndex] & (1 << bitIndex))) continue;
+                }
+
+                if (isOpaque) {
+                    data32[pixelIndex] = packedColor;
+                } else {
+                    const idx = pixelIndex * 4;
+                    const oldAlpha = data[idx + 3] / 255;
+                    const oldAlphaScaled = oldAlpha * invAlpha;
+                    const newAlpha = effectiveAlpha + oldAlphaScaled;
+
+                    if (newAlpha > 0) {
+                        const blendFactor = 1 / newAlpha;
+                        data[idx] = (r * effectiveAlpha + data[idx] * oldAlphaScaled) * blendFactor;
+                        data[idx + 1] = (g * effectiveAlpha + data[idx + 1] * oldAlphaScaled) * blendFactor;
+                        data[idx + 2] = (b * effectiveAlpha + data[idx + 2] * oldAlphaScaled) * blendFactor;
+                        data[idx + 3] = newAlpha * 255;
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Extends a line segment by a given amount at both ends.
+     * Used for proper miter joins at rectangle corners.
+     * @param {Object} p1 - Start point {x, y}
+     * @param {Object} p2 - End point {x, y}
+     * @param {number} amount - Amount to extend at each end
+     * @returns {Object} Extended line {start: {x, y}, end: {x, y}}
+     */
+    static _extendLine(p1, p2, amount) {
+        const dx = p2.x - p1.x;
+        const dy = p2.y - p1.y;
+        const len = Math.sqrt(dx * dx + dy * dy);
+
+        if (len === 0) return { start: p1, end: p2 };
+
+        const dirX = dx / len;
+        const dirY = dy / len;
+
+        return {
+            start: { x: p1.x - dirX * amount, y: p1.y - dirY * amount },
+            end: { x: p2.x + dirX * amount, y: p2.y + dirY * amount }
+        };
+    }
+
+    /**
+     * Shortens a line segment by a given amount at both ends.
+     * Used for proper miter joins at rectangle corners.
+     * @param {Object} p1 - Start point {x, y}
+     * @param {Object} p2 - End point {x, y}
+     * @param {number} amount - Amount to shorten at each end
+     * @returns {Object} Shortened line {start: {x, y}, end: {x, y}}
+     */
+    static _shortenLine(p1, p2, amount) {
+        const dx = p2.x - p1.x;
+        const dy = p2.y - p1.y;
+        const len = Math.sqrt(dx * dx + dy * dy);
+
+        if (len === 0) return { start: p1, end: p2 };
+
+        const dirX = dx / len;
+        const dirY = dy / len;
+
+        return {
+            start: { x: p1.x + dirX * amount, y: p1.y + dirY * amount },
+            end: { x: p2.x - dirX * amount, y: p2.y - dirY * amount }
+        };
+    }
+
+    /**
+     * Rotated rectangle stroke using LineOps for edges.
+     * Uses extend/shorten strategy for proper miter joins at corners.
+     * Ported from CrispSWCanvas's SWRendererRect.drawRotatedRect()
+     * @param {Surface} surface - Target surface
+     * @param {number} centerX - Center X coordinate
+     * @param {number} centerY - Center Y coordinate
+     * @param {number} width - Rectangle width
+     * @param {number} height - Rectangle height
+     * @param {number} rotation - Rotation angle in radians
+     * @param {number} lineWidth - Stroke width in pixels
+     * @param {Color} color - Stroke color
+     * @param {number} globalAlpha - Context global alpha (0-1)
+     * @param {Uint8Array|null} clipBuffer - Clip mask buffer
+     */
+    static strokeRotated(surface, centerX, centerY, width, height, rotation, lineWidth, color, globalAlpha, clipBuffer) {
+        const cos = Math.cos(rotation);
+        const sin = Math.sin(rotation);
+        const hw = width / 2;
+        const hh = height / 2;
+
+        // Calculate 4 corners
+        const corners = [
+            { x: centerX - hw * cos - hh * sin, y: centerY - hw * sin + hh * cos },
+            { x: centerX + hw * cos - hh * sin, y: centerY + hw * sin + hh * cos },
+            { x: centerX + hw * cos + hh * sin, y: centerY + hw * sin - hh * cos },
+            { x: centerX - hw * cos + hh * sin, y: centerY - hw * sin - hh * cos }
+        ];
+
+        const isOpaqueColor = color.a === 255 && globalAlpha >= 1.0;
+        const isSemiTransparentColor = !isOpaqueColor && color.a > 0;
+
+        // Handle 1px strokes (no corner adjustment needed - minimal overlap issue)
+        if (lineWidth <= 1) {
+            for (let i = 0; i < 4; i++) {
+                const p1 = corners[i];
+                const p2 = corners[(i + 1) % 4];
+
+                LineOps.strokeDirect(
+                    surface,
+                    p1.x, p1.y,
+                    p2.x, p2.y,
+                    lineWidth,
+                    color,
+                    globalAlpha,
+                    clipBuffer,
+                    isOpaqueColor,
+                    isSemiTransparentColor
+                );
+            }
+            return;
+        }
+
+        // Handle thick strokes with extend/shorten for proper miter corners
+        const halfStroke = lineWidth / 2;
+
+        // Draw even-indexed edges (0→1, 2→3) with EXTENDED lines
+        // These extended edges form the corner regions
+        for (let i = 0; i < 4; i += 2) {
+            const p1 = corners[i];
+            const p2 = corners[(i + 1) % 4];
+            const line = RectOps._extendLine(p1, p2, halfStroke);
+
+            LineOps.strokeDirect(
+                surface,
+                line.start.x, line.start.y,
+                line.end.x, line.end.y,
+                lineWidth,
+                color,
+                globalAlpha,
+                clipBuffer,
+                isOpaqueColor,
+                isSemiTransparentColor
+            );
+        }
+
+        // Draw odd-indexed edges (1→2, 3→0) with SHORTENED lines
+        // These shortened edges fit between the extended edges without overlap
+        for (let i = 1; i < 4; i += 2) {
+            const p1 = corners[i];
+            const p2 = corners[(i + 1) % 4];
+            const line = RectOps._shortenLine(p1, p2, halfStroke);
+
+            LineOps.strokeDirect(
+                surface,
+                line.start.x, line.start.y,
+                line.end.x, line.end.y,
+                lineWidth,
+                color,
+                globalAlpha,
+                clipBuffer,
+                isOpaqueColor,
+                isSemiTransparentColor
+            );
+        }
+    }
 }
 
 /**
@@ -2774,7 +3151,7 @@ class LineOps {
 
         // Find bounding box
         const minY = Math.max(0, Math.floor(Math.min(corners[0].y, corners[1].y, corners[2].y, corners[3].y)));
-        const maxY = Math.min(height - 1, Math.ceil(Math.max(corners[0].y, corners[1].y, corners[2].y, corners[3].y)));
+        const maxY = Math.min(height - 1, Math.floor(Math.max(corners[0].y, corners[1].y, corners[2].y, corners[3].y)));
 
         // Pre-compute edge data for faster intersection calculation
         const edges = [];
@@ -2849,7 +3226,7 @@ class LineOps {
                 const x1i = intersections[0];
                 const x2i = intersections[1];
                 const leftX = Math.max(0, Math.floor(Math.min(x1i, x2i)));
-                const rightX = Math.min(width - 1, Math.ceil(Math.max(x1i, x2i)));
+                const rightX = Math.min(width - 1, Math.floor(Math.max(x1i, x2i)));
                 const spanLength = rightX - leftX + 1;
 
                 if (spanLength > 0) {
@@ -9780,6 +10157,59 @@ class Context2D {
 
     // Drawing methods - simplified for M1 (only rectangles)
     fillRect(x, y, width, height) {
+        const paintSource = this._fillStyle;
+        const isColor = paintSource instanceof Color;
+        const isSourceOver = this.globalCompositeOperation === 'source-over';
+        const noClip = !this._clipMask;
+        const noShadow = !this.shadowColor || this.shadowColor === 'transparent' ||
+                        (this.shadowBlur === 0 && this.shadowOffsetX === 0 && this.shadowOffsetY === 0);
+
+        // Fast path: Color fill with source-over, no shadows, no clipping
+        if (isColor && isSourceOver && noClip && noShadow) {
+            const transform = this._transform;
+            const clipBuffer = null; // noClip is true
+
+            // Decompose transform
+            const center = transform.transformPoint({x: x + width / 2, y: y + height / 2});
+            const rotation = transform.rotationAngle;
+            const scaleX = transform.scaleX;
+            const scaleY = transform.scaleY;
+            const scaledWidth = width * scaleX;
+            const scaledHeight = height * scaleY;
+
+            const isOpaque = paintSource.a === 255 && this.globalAlpha >= 1.0;
+            const isAxisAligned = RectOps.isNearAxisAligned(rotation);
+            // Non-uniform scale + rotation produces a parallelogram, not a rotated rectangle
+            const isUniformScale = Math.abs(scaleX - scaleY) < 0.001;
+
+            if (isAxisAligned) {
+                // Axis-aligned: use direct fill (works with non-uniform scale)
+                const { adjustedWidth, adjustedHeight } = RectOps.getRotatedDimensions(scaledWidth, scaledHeight, rotation);
+                const topLeftX = center.x - adjustedWidth / 2;
+                const topLeftY = center.y - adjustedHeight / 2;
+
+                if (isOpaque) {
+                    RectOps.fillOpaque(this.surface, topLeftX, topLeftY, adjustedWidth, adjustedHeight, paintSource, clipBuffer);
+                    return;
+                } else if (paintSource.a > 0) {
+                    RectOps.fillAlpha(this.surface, topLeftX, topLeftY, adjustedWidth, adjustedHeight, paintSource, this.globalAlpha, clipBuffer);
+                    return;
+                }
+            } else if (isUniformScale) {
+                // Rotated with uniform scale: use edge-function algorithm
+                if (isOpaque) {
+                    RectOps.fillRotated(this.surface, center.x, center.y, scaledWidth, scaledHeight, rotation, paintSource, 1.0, clipBuffer);
+                    return;
+                } else if (paintSource.a > 0) {
+                    RectOps.fillRotated(this.surface, center.x, center.y, scaledWidth, scaledHeight, rotation, paintSource, this.globalAlpha, clipBuffer);
+                    return;
+                }
+            }
+            // Non-uniform scale + rotation: fall through to slow path (produces parallelogram)
+        }
+
+        // Slow path: gradients, patterns, non-source-over, shadows, clipping
+        Context2D._markSlowPath();
         this.rasterizer.beginOp({
             composite: this.globalCompositeOperation,
             globalAlpha: this.globalAlpha,
@@ -9798,37 +10228,66 @@ class Context2D {
     }
 
     strokeRect(x, y, width, height) {
-        // Fast path: 1px stroke, no transform, simple color, source-over
-        const is1pxStroke = Math.abs(this._lineWidth - 1) < 0.001;
-        const isColor = this._strokeStyle instanceof Color;
+        const paintSource = this._strokeStyle;
+        const isColor = paintSource instanceof Color;
         const isSourceOver = this.globalCompositeOperation === 'source-over';
-        const noTransform = this._transform.isIdentity;
         const noClip = !this._clipMask;
         const noShadow = !this.shadowColor || this.shadowColor === 'transparent' ||
                         (this.shadowBlur === 0 && this.shadowOffsetX === 0 && this.shadowOffsetY === 0);
 
-        if (is1pxStroke && isColor && isSourceOver && noTransform && noClip && noShadow) {
-            const isOpaque = this._strokeStyle.a === 255 && this.globalAlpha >= 1.0;
-            if (isOpaque) {
-                RectOps.stroke1pxOpaque(this.surface, x, y, width, height, this._strokeStyle);
-                return;
-            } else if (this._strokeStyle.a > 0) {
-                RectOps.stroke1pxAlpha(this.surface, x, y, width, height, this._strokeStyle, this.globalAlpha);
-                return;
-            }
-        }
+        // Fast path: Color stroke with source-over, no shadows, no clipping
+        if (isColor && isSourceOver && noClip && noShadow) {
+            const transform = this._transform;
+            const clipBuffer = null; // noClip is true
 
-        // Fast path for thick strokes (> 1px)
-        const isThickStroke = this._lineWidth > 1;
-        if (isThickStroke && isColor && isSourceOver && noTransform && noClip && noShadow) {
-            const isOpaque = this._strokeStyle.a === 255 && this.globalAlpha >= 1.0;
-            if (isOpaque) {
-                RectOps.strokeThickOpaque(this.surface, x, y, width, height, this._lineWidth, this._strokeStyle);
-                return;
-            } else if (this._strokeStyle.a > 0) {
-                RectOps.strokeThickAlpha(this.surface, x, y, width, height, this._lineWidth, this._strokeStyle, this.globalAlpha);
-                return;
+            // Decompose transform
+            const center = transform.transformPoint({x: x + width / 2, y: y + height / 2});
+            const rotation = transform.rotationAngle;
+            const scaleX = transform.scaleX;
+            const scaleY = transform.scaleY;
+            const scaledWidth = width * scaleX;
+            const scaledHeight = height * scaleY;
+            const scaledLineWidth = transform.getScaledLineWidth(this._lineWidth);
+
+            const isOpaque = paintSource.a === 255 && this.globalAlpha >= 1.0;
+            const isAxisAligned = RectOps.isNearAxisAligned(rotation);
+            // Non-uniform scale + rotation produces a parallelogram, not a rotated rectangle
+            const isUniformScale = Math.abs(scaleX - scaleY) < 0.001;
+
+            if (isAxisAligned) {
+                // Axis-aligned: use existing fast paths with adjusted coordinates (works with non-uniform scale)
+                const { adjustedWidth, adjustedHeight } = RectOps.getRotatedDimensions(scaledWidth, scaledHeight, rotation);
+                const topLeftX = center.x - adjustedWidth / 2;
+                const topLeftY = center.y - adjustedHeight / 2;
+
+                const is1pxStroke = Math.abs(scaledLineWidth - 1) < 0.001;
+                const isThickStroke = scaledLineWidth > 1;
+
+                if (is1pxStroke) {
+                    if (isOpaque) {
+                        RectOps.stroke1pxOpaque(this.surface, topLeftX, topLeftY, adjustedWidth, adjustedHeight, paintSource);
+                        return;
+                    } else if (paintSource.a > 0) {
+                        RectOps.stroke1pxAlpha(this.surface, topLeftX, topLeftY, adjustedWidth, adjustedHeight, paintSource, this.globalAlpha);
+                        return;
+                    }
+                } else if (isThickStroke) {
+                    if (isOpaque) {
+                        RectOps.strokeThickOpaque(this.surface, topLeftX, topLeftY, adjustedWidth, adjustedHeight, scaledLineWidth, paintSource);
+                        return;
+                    } else if (paintSource.a > 0) {
+                        RectOps.strokeThickAlpha(this.surface, topLeftX, topLeftY, adjustedWidth, adjustedHeight, scaledLineWidth, paintSource, this.globalAlpha);
+                        return;
+                    }
+                }
+            } else if (isUniformScale) {
+                // Rotated with uniform scale: use line-based stroke
+                if (paintSource.a > 0) {
+                    RectOps.strokeRotated(this.surface, center.x, center.y, scaledWidth, scaledHeight, rotation, scaledLineWidth, paintSource, this.globalAlpha, clipBuffer);
+                    return;
+                }
             }
+            // Non-uniform scale + rotation: fall through to slow path (produces parallelogram)
         }
 
         // Slow path: Create a rectangular path
@@ -9994,6 +10453,9 @@ class Context2D {
 
         fillRule = fillRule || 'nonzero';
 
+        // Mark slow path for testing (fill() has no fast path currently)
+        Context2D._markSlowPath();
+
         this.rasterizer.beginOp({
             composite: this.globalCompositeOperation,
             globalAlpha: this.globalAlpha,
@@ -10038,6 +10500,9 @@ class Context2D {
                 }
             }
         }
+
+        // Mark slow path for testing (non-circle strokes use rasterizer)
+        Context2D._markSlowPath();
 
         this.rasterizer.beginOp({
             composite: this.globalCompositeOperation,
@@ -10444,6 +10909,9 @@ class Context2D {
         if (!(image.data instanceof Uint8ClampedArray)) {
             throw new Error('ImageLike data must be a Uint8ClampedArray');
         }
+
+        // Mark slow path for testing (drawImage() has no fast path currently)
+        Context2D._markSlowPath();
 
         // Set up rasterizer operation
         this.rasterizer.beginOp({
