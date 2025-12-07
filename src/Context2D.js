@@ -312,9 +312,12 @@ class Context2D {
             const scaledHeight = height * scaleY;
 
             const isOpaque = paintSource.a === 255 && this.globalAlpha >= 1.0;
+            const isAxisAligned = RectOps.isNearAxisAligned(rotation);
+            // Non-uniform scale + rotation produces a parallelogram, not a rotated rectangle
+            const isUniformScale = Math.abs(scaleX - scaleY) < 0.001;
 
-            if (RectOps.isNearAxisAligned(rotation)) {
-                // Axis-aligned: use direct fill
+            if (isAxisAligned) {
+                // Axis-aligned: use direct fill (works with non-uniform scale)
                 const { adjustedWidth, adjustedHeight } = RectOps.getRotatedDimensions(scaledWidth, scaledHeight, rotation);
                 const topLeftX = center.x - adjustedWidth / 2;
                 const topLeftY = center.y - adjustedHeight / 2;
@@ -326,8 +329,8 @@ class Context2D {
                     RectOps.fillAlpha(this.surface, topLeftX, topLeftY, adjustedWidth, adjustedHeight, paintSource, this.globalAlpha, clipBuffer);
                     return;
                 }
-            } else {
-                // Rotated: use edge-function algorithm
+            } else if (isUniformScale) {
+                // Rotated with uniform scale: use edge-function algorithm
                 if (isOpaque) {
                     RectOps.fillRotated(this.surface, center.x, center.y, scaledWidth, scaledHeight, rotation, paintSource, 1.0, clipBuffer);
                     return;
@@ -336,6 +339,7 @@ class Context2D {
                     return;
                 }
             }
+            // Non-uniform scale + rotation: fall through to slow path (produces parallelogram)
         }
 
         // Slow path: gradients, patterns, non-source-over, shadows, clipping
@@ -380,9 +384,12 @@ class Context2D {
             const scaledLineWidth = transform.getScaledLineWidth(this._lineWidth);
 
             const isOpaque = paintSource.a === 255 && this.globalAlpha >= 1.0;
+            const isAxisAligned = RectOps.isNearAxisAligned(rotation);
+            // Non-uniform scale + rotation produces a parallelogram, not a rotated rectangle
+            const isUniformScale = Math.abs(scaleX - scaleY) < 0.001;
 
-            if (RectOps.isNearAxisAligned(rotation)) {
-                // Axis-aligned: use existing fast paths with adjusted coordinates
+            if (isAxisAligned) {
+                // Axis-aligned: use existing fast paths with adjusted coordinates (works with non-uniform scale)
                 const { adjustedWidth, adjustedHeight } = RectOps.getRotatedDimensions(scaledWidth, scaledHeight, rotation);
                 const topLeftX = center.x - adjustedWidth / 2;
                 const topLeftY = center.y - adjustedHeight / 2;
@@ -407,13 +414,14 @@ class Context2D {
                         return;
                     }
                 }
-            } else {
-                // Rotated: use line-based stroke
+            } else if (isUniformScale) {
+                // Rotated with uniform scale: use line-based stroke
                 if (paintSource.a > 0) {
                     RectOps.strokeRotated(this.surface, center.x, center.y, scaledWidth, scaledHeight, rotation, scaledLineWidth, paintSource, this.globalAlpha, clipBuffer);
                     return;
                 }
             }
+            // Non-uniform scale + rotation: fall through to slow path (produces parallelogram)
         }
 
         // Slow path: Create a rectangular path
