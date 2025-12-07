@@ -343,6 +343,7 @@ class Context2D {
         }
 
         // Slow path: Create a rectangular path
+        Context2D._markSlowPath();
         const rectPath = new SWPath2D();
         rectPath.rect(x, y, width, height);
         rectPath.closePath();
