@@ -89,8 +89,7 @@ registerHighLevelTest(
         extremes: { colorTolerance: 8, tolerance: 0.03 },
         noGapsInStrokeEdges: true,
         totalUniqueColors: 4,
-        speckles: true,
-        allowSlowPath: true
+        speckles: true
     },
     {
         title: 'Single Random Circle (Crisp, Random Center Type)',
