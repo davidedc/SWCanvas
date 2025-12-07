@@ -291,6 +291,55 @@ class Context2D {
 
     // Drawing methods - simplified for M1 (only rectangles)
     fillRect(x, y, width, height) {
+        const paintSource = this._fillStyle;
+        const isColor = paintSource instanceof Color;
+        const isSourceOver = this.globalCompositeOperation === 'source-over';
+        const noClip = !this._clipMask;
+        const noShadow = !this.shadowColor || this.shadowColor === 'transparent' ||
+                        (this.shadowBlur === 0 && this.shadowOffsetX === 0 && this.shadowOffsetY === 0);
+
+        // Fast path: Color fill with source-over, no shadows, no clipping
+        if (isColor && isSourceOver && noClip && noShadow) {
+            const transform = this._transform;
+            const clipBuffer = null; // noClip is true
+
+            // Decompose transform
+            const center = transform.transformPoint({x: x + width / 2, y: y + height / 2});
+            const rotation = transform.rotationAngle;
+            const scaleX = transform.scaleX;
+            const scaleY = transform.scaleY;
+            const scaledWidth = width * scaleX;
+            const scaledHeight = height * scaleY;
+
+            const isOpaque = paintSource.a === 255 && this.globalAlpha >= 1.0;
+
+            if (RectOps.isNearAxisAligned(rotation)) {
+                // Axis-aligned: use direct fill
+                const { adjustedWidth, adjustedHeight } = RectOps.getRotatedDimensions(scaledWidth, scaledHeight, rotation);
+                const topLeftX = center.x - adjustedWidth / 2;
+                const topLeftY = center.y - adjustedHeight / 2;
+
+                if (isOpaque) {
+                    RectOps.fillOpaque(this.surface, topLeftX, topLeftY, adjustedWidth, adjustedHeight, paintSource, clipBuffer);
+                    return;
+                } else if (paintSource.a > 0) {
+                    RectOps.fillAlpha(this.surface, topLeftX, topLeftY, adjustedWidth, adjustedHeight, paintSource, this.globalAlpha, clipBuffer);
+                    return;
+                }
+            } else {
+                // Rotated: use edge-function algorithm
+                if (isOpaque) {
+                    RectOps.fillRotated(this.surface, center.x, center.y, scaledWidth, scaledHeight, rotation, paintSource, 1.0, clipBuffer);
+                    return;
+                } else if (paintSource.a > 0) {
+                    RectOps.fillRotated(this.surface, center.x, center.y, scaledWidth, scaledHeight, rotation, paintSource, this.globalAlpha, clipBuffer);
+                    return;
+                }
+            }
+        }
+
+        // Slow path: gradients, patterns, non-source-over, shadows, clipping
+        Context2D._markSlowPath();
         this.rasterizer.beginOp({
             composite: this.globalCompositeOperation,
             globalAlpha: this.globalAlpha,
@@ -309,36 +358,61 @@ class Context2D {
     }
 
     strokeRect(x, y, width, height) {
-        // Fast path: 1px stroke, no transform, simple color, source-over
-        const is1pxStroke = Math.abs(this._lineWidth - 1) < 0.001;
-        const isColor = this._strokeStyle instanceof Color;
+        const paintSource = this._strokeStyle;
+        const isColor = paintSource instanceof Color;
         const isSourceOver = this.globalCompositeOperation === 'source-over';
-        const noTransform = this._transform.isIdentity;
         const noClip = !this._clipMask;
         const noShadow = !this.shadowColor || this.shadowColor === 'transparent' ||
                         (this.shadowBlur === 0 && this.shadowOffsetX === 0 && this.shadowOffsetY === 0);
 
-        if (is1pxStroke && isColor && isSourceOver && noTransform && noClip && noShadow) {
-            const isOpaque = this._strokeStyle.a === 255 && this.globalAlpha >= 1.0;
-            if (isOpaque) {
-                RectOps.stroke1pxOpaque(this.surface, x, y, width, height, this._strokeStyle);
-                return;
-            } else if (this._strokeStyle.a > 0) {
-                RectOps.stroke1pxAlpha(this.surface, x, y, width, height, this._strokeStyle, this.globalAlpha);
-                return;
-            }
-        }
+        // Fast path: Color stroke with source-over, no shadows, no clipping
+        if (isColor && isSourceOver && noClip && noShadow) {
+            const transform = this._transform;
+            const clipBuffer = null; // noClip is true
 
-        // Fast path for thick strokes (> 1px)
-        const isThickStroke = this._lineWidth > 1;
-        if (isThickStroke && isColor && isSourceOver && noTransform && noClip && noShadow) {
-            const isOpaque = this._strokeStyle.a === 255 && this.globalAlpha >= 1.0;
-            if (isOpaque) {
-                RectOps.strokeThickOpaque(this.surface, x, y, width, height, this._lineWidth, this._strokeStyle);
-                return;
-            } else if (this._strokeStyle.a > 0) {
-                RectOps.strokeThickAlpha(this.surface, x, y, width, height, this._lineWidth, this._strokeStyle, this.globalAlpha);
-                return;
+            // Decompose transform
+            const center = transform.transformPoint({x: x + width / 2, y: y + height / 2});
+            const rotation = transform.rotationAngle;
+            const scaleX = transform.scaleX;
+            const scaleY = transform.scaleY;
+            const scaledWidth = width * scaleX;
+            const scaledHeight = height * scaleY;
+            const scaledLineWidth = transform.getScaledLineWidth(this._lineWidth);
+
+            const isOpaque = paintSource.a === 255 && this.globalAlpha >= 1.0;
+
+            if (RectOps.isNearAxisAligned(rotation)) {
+                // Axis-aligned: use existing fast paths with adjusted coordinates
+                const { adjustedWidth, adjustedHeight } = RectOps.getRotatedDimensions(scaledWidth, scaledHeight, rotation);
+                const topLeftX = center.x - adjustedWidth / 2;
+                const topLeftY = center.y - adjustedHeight / 2;
+
+                const is1pxStroke = Math.abs(scaledLineWidth - 1) < 0.001;
+                const isThickStroke = scaledLineWidth > 1;
+
+                if (is1pxStroke) {
+                    if (isOpaque) {
+                        RectOps.stroke1pxOpaque(this.surface, topLeftX, topLeftY, adjustedWidth, adjustedHeight, paintSource);
+                        return;
+                    } else if (paintSource.a > 0) {
+                        RectOps.stroke1pxAlpha(this.surface, topLeftX, topLeftY, adjustedWidth, adjustedHeight, paintSource, this.globalAlpha);
+                        return;
+                    }
+                } else if (isThickStroke) {
+                    if (isOpaque) {
+                        RectOps.strokeThickOpaque(this.surface, topLeftX, topLeftY, adjustedWidth, adjustedHeight, scaledLineWidth, paintSource);
+                        return;
+                    } else if (paintSource.a > 0) {
+                        RectOps.strokeThickAlpha(this.surface, topLeftX, topLeftY, adjustedWidth, adjustedHeight, scaledLineWidth, paintSource, this.globalAlpha);
+                        return;
+                    }
+                }
+            } else {
+                // Rotated: use line-based stroke
+                if (paintSource.a > 0) {
+                    RectOps.strokeRotated(this.surface, center.x, center.y, scaledWidth, scaledHeight, rotation, scaledLineWidth, paintSource, this.globalAlpha, clipBuffer);
+                    return;
+                }
             }
         }
 
