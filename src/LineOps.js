@@ -273,7 +273,7 @@ class LineOps {
 
         // Find bounding box
         const minY = Math.max(0, Math.floor(Math.min(corners[0].y, corners[1].y, corners[2].y, corners[3].y)));
-        const maxY = Math.min(height - 1, Math.ceil(Math.max(corners[0].y, corners[1].y, corners[2].y, corners[3].y)));
+        const maxY = Math.min(height - 1, Math.floor(Math.max(corners[0].y, corners[1].y, corners[2].y, corners[3].y)));
 
         // Pre-compute edge data for faster intersection calculation
         const edges = [];
@@ -348,7 +348,7 @@ class LineOps {
                 const x1i = intersections[0];
                 const x2i = intersections[1];
                 const leftX = Math.max(0, Math.floor(Math.min(x1i, x2i)));
-                const rightX = Math.min(width - 1, Math.ceil(Math.max(x1i, x2i)));
+                const rightX = Math.min(width - 1, Math.floor(Math.max(x1i, x2i)));
                 const spanLength = rightX - leftX + 1;
 
                 if (spanLength > 0) {
