@@ -587,6 +587,9 @@ class Context2D {
 
         fillRule = fillRule || 'nonzero';
 
+        // Mark slow path for testing (fill() has no fast path currently)
+        Context2D._markSlowPath();
+
         this.rasterizer.beginOp({
             composite: this.globalCompositeOperation,
             globalAlpha: this.globalAlpha,
@@ -631,6 +634,9 @@ class Context2D {
                 }
             }
         }
+
+        // Mark slow path for testing (non-circle strokes use rasterizer)
+        Context2D._markSlowPath();
 
         this.rasterizer.beginOp({
             composite: this.globalCompositeOperation,
@@ -1037,6 +1043,9 @@ class Context2D {
         if (!(image.data instanceof Uint8ClampedArray)) {
             throw new Error('ImageLike data must be a Uint8ClampedArray');
         }
+
+        // Mark slow path for testing (drawImage() has no fast path currently)
+        Context2D._markSlowPath();
 
         // Set up rasterizer operation
         this.rasterizer.beginOp({
