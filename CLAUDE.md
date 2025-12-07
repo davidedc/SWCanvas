@@ -53,6 +53,12 @@ src/Rectangle.js              # Immutable rectangle operations
 src/PolygonFiller.js          # Scanline polygon filling with paint source support
 src/PathFlattener.js          # Converts paths to polygons
 src/StrokeGenerator.js        # Geometric stroke path generation with line dashing
+
+# Shape-Specific Fast Path Renderers (static utility classes)
+src/SpanOps.js                # Horizontal span filling utilities (shared by shape ops)
+src/RectOps.js                # Rectangle stroke fast paths (1px opaque/alpha, thick)
+src/CircleOps.js              # Circle fill/stroke fast paths (Bresenham, annulus)
+src/LineOps.js                # Line stroke fast paths (Bresenham, polygon scan)
 src/PngEncoder.js             # PNG file format encoding with transparency support
 src/PngEncodingOptions.js     # PNG encoding configuration (immutable options, Joshua Bloch patterns)
 src/BitmapEncoder.js          # BMP file format encoding (legacy - composites with background)

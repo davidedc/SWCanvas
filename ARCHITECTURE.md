@@ -44,6 +44,12 @@ Pattern.js          → Repeating image pattern paint sources
 SWPath2D.js         → Path definition and command recording
 ShadowBuffer.js     → Sparse shadow alpha storage with extended bounds and BoundsTracker composition
 BoxBlur.js          → Multi-pass box blur algorithm approximating Gaussian blur
+
+# Shape-Specific Fast Path Renderers (static utility classes)
+SpanOps.js          → Horizontal span fill utilities (shared by shape renderers)
+RectOps.js          → Rectangle stroke fast paths (1px opaque/alpha, thick strokes)
+CircleOps.js        → Circle fill/stroke fast paths (Bresenham, annulus rendering)
+LineOps.js          → Line stroke fast paths (Bresenham, polygon scan algorithm)
 ```
 
 **Purpose**: Maximum performance graphics operations with zero overhead.
@@ -565,5 +571,99 @@ class ShadowBuffer {
 Forcing composition would violate Item 51: "Make interfaces easy to use correctly and hard to use incorrectly."
 
 These composition patterns demonstrate how to systematically eliminate code duplication through clean object-oriented design while respecting fundamental differences between abstractions.
+
+## Shape-Specific Fast Path Renderers
+
+SWCanvas implements a **static utility class pattern** (following the existing `PolygonFiller` approach) to organize shape-specific rendering optimizations into maintainable, testable modules.
+
+### The Problem: Growing Context2D Complexity
+
+As fast paths for different shapes were added to `Context2D.js`, the file grew large with shape-specific methods scattered throughout:
+- Rectangle fast paths 400+ lines from `strokeRect()`
+- Circle methods spanning 900+ lines
+- Line methods spanning 400+ lines
+- Shared span utilities duplicated across methods
+
+### The Solution: Static Utility Classes
+
+Extract shape-specific rendering into static utility classes that:
+1. Follow the existing `PolygonFiller` pattern (static methods, no instance state)
+2. Receive all required state as parameters
+3. Maintain fast performance (one extra property lookup per call - negligible)
+4. Enable isolated testing of rendering algorithms
+
+### Architecture
+
+```
+Context2D                     # Orchestration and state management
+├── strokeRect() ────────────→ RectOps.stroke1pxOpaque()
+│                            → RectOps.stroke1pxAlpha()
+│                            → RectOps.strokeThickOpaque()
+│                            → RectOps.strokeThickAlpha()
+│
+├── _fillCircleDirect() ─────→ SpanOps.fillFast()
+│                            → CircleOps.fillAlphaBlend()
+│
+├── _strokeCircleDirect() ───→ CircleOps.stroke1pxOpaque()
+│                            → CircleOps.stroke1pxAlpha()
+│                            → CircleOps.strokeThick()
+│
+└── _strokeLineDirect() ─────→ LineOps.strokeDirect()
+                             → LineOps.strokeThickPolygonScan()
+```
+
+### Static Utility Classes
+
+**SpanOps** - Shared horizontal span filling:
+```javascript
+SpanOps.fillFast(data32, width, height, x, y, length, packedColor, clipBuffer)
+SpanOps.fillAlpha(data, width, height, x, y, length, r, g, b, alpha, invAlpha, clipBuffer)
+SpanOps.blendPixelAlpha(data, offset, r, g, b, alpha, invAlpha)
+```
+
+**RectOps** - Rectangle stroke rendering:
+```javascript
+RectOps.stroke1pxOpaque(surface, x, y, width, height, color)
+RectOps.stroke1pxAlpha(surface, x, y, width, height, color, globalAlpha)
+RectOps.strokeThickOpaque(surface, x, y, width, height, lineWidth, color)
+RectOps.strokeThickAlpha(surface, x, y, width, height, lineWidth, color, globalAlpha)
+```
+
+**CircleOps** - Circle fill and stroke rendering:
+```javascript
+CircleOps.isFullCirclePath(path)           // Detection for fast path eligibility
+CircleOps.generateExtents(radius)          // Bresenham scanline extents
+CircleOps.fillAlphaBlend(surface, cx, cy, radius, color, globalAlpha, clipBuffer)
+CircleOps.stroke1pxOpaque(surface, cx, cy, radius, color, clipBuffer)
+CircleOps.stroke1pxAlpha(surface, cx, cy, radius, color, globalAlpha, clipBuffer)
+CircleOps.strokeThick(surface, cx, cy, radius, lineWidth, color, globalAlpha, clipBuffer)
+CircleOps.strokeThickAlpha(surface, cx, cy, radius, lineWidth, color, globalAlpha, clipBuffer)
+```
+
+**LineOps** - Line stroke rendering:
+```javascript
+LineOps.strokeDirect(surface, x1, y1, x2, y2, lineWidth, color, globalAlpha, clipBuffer, isOpaque, isSemiTransparent)
+LineOps.strokeThickPolygonScan(surface, x1, y1, x2, y2, lineWidth, color, globalAlpha, clipBuffer, useSemiTransparent)
+```
+
+### Benefits
+
+1. **Reduced Context2D Size**: ~47% reduction (2,609 → 1,378 lines)
+2. **Maintainability**: Shape-specific code isolated by shape type
+3. **Testability**: Rendering algorithms can be tested in isolation
+4. **Performance**: Static methods have negligible overhead vs instance methods
+5. **Consistency**: Follows existing `PolygonFiller` pattern in codebase
+6. **Discoverability**: Related methods grouped together by namespace
+
+### Build Order Dependencies
+
+The shape ops classes depend on `Surface` and are loaded in Phase 1.5 of the build:
+```bash
+# Phase 1.5: Shape rendering operations (depend on Surface)
+cat src/SpanOps.js >> dist/swcanvas.js
+cat src/RectOps.js >> dist/swcanvas.js
+cat src/CircleOps.js >> dist/swcanvas.js
+cat src/LineOps.js >> dist/swcanvas.js
+```
 
 This architecture represents a **paradigm bridge** that successfully unifies web standards compliance, performance optimization, and clean API design in a single coherent system.
