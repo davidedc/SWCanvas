@@ -41,7 +41,7 @@
  */
 
 registerHighLevelTest(
-    'circle-sgl-szMix-fSemi-sSemi-sw1-30px-lytRand-cenRand-edgeCrisp',
+    'circle-sgl-szMix-fSemi-sSemi-sw1-30px-lytRand-cenRand-edgeCrisp-test',
     function drawTest(ctx, iterationNumber, instances) {
         const canvasWidth = ctx.canvas.width;
         const canvasHeight = ctx.canvas.height;

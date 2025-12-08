@@ -40,7 +40,7 @@
  */
 
 registerHighLevelTest(
-    'circle-sgl-szMix-fNone-sOpaq-sw1px-lytCenter-cenGrid-edgeCrisp',
+    'circle-sgl-szMix-fNone-sOpaq-sw1px-lytCenter-cenGrid-edgeCrisp-test',
     function drawTest(ctx, iterationNumber, instances) {
         const canvasWidth = ctx.canvas.width;
         const canvasHeight = ctx.canvas.height;
@@ -78,7 +78,8 @@ registerHighLevelTest(
     'circles',
     {
         extremes: { colorTolerance: 8, tolerance: 0.03 },
-        totalUniqueColors: 2
+        totalUniqueColors: 2,
+        continuousStroke: true
     },
     {
         title: 'Single 1px Stroked Circle (Crisp, Centered at Grid)',

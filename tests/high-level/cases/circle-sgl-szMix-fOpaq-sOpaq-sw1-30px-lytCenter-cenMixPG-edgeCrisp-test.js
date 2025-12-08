@@ -41,7 +41,7 @@
  */
 
 registerHighLevelTest(
-    'circle-sgl-szMix-fOpaq-sOpaq-sw1-30px-lytCenter-cenMixPG-edgeCrisp',
+    'circle-sgl-szMix-fOpaq-sOpaq-sw1-30px-lytCenter-cenMixPG-edgeCrisp-test',
     function drawTest(ctx, iterationNumber, instances) {
         const canvasWidth = ctx.canvas.width;
         const canvasHeight = ctx.canvas.height;

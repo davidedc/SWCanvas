@@ -41,7 +41,7 @@
  */
 
 registerHighLevelTest(
-    'circle-sgl-szMix-fSemi-sSemi-sw1-11px-lytRand-cenRand-edgeNotCrisp',
+    'circle-sgl-szMix-fOpaq-sOpaq-sw1-10px-lytRand-cenRand-edgeNotCrisp-test',
     function drawTest(ctx, iterationNumber, instances) {
         const canvasWidth = ctx.canvas.width;
         const canvasHeight = ctx.canvas.height;
@@ -73,6 +73,7 @@ registerHighLevelTest(
     },
     'circles',
     {
+        totalUniqueColors: 4,
         noGapsInStrokeEdges: true
     },
     {
