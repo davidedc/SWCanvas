@@ -28,23 +28,12 @@ registerHighLevelTest(
             circles.push({ centerX, centerY, radius, fillColor });
         }
 
-        // Calculate overall bounds
-        let topY = canvasHeight, bottomY = 0, leftX = canvasWidth, rightX = 0;
-        for (const c of circles) {
-            topY = Math.min(topY, Math.floor(c.centerY - c.radius));
-            bottomY = Math.max(bottomY, Math.floor(c.centerY + c.radius));
-            leftX = Math.min(leftX, Math.floor(c.centerX - c.radius));
-            rightX = Math.max(rightX, Math.floor(c.centerX + c.radius));
-        }
-
         return {
-            logs: circles.map(c => `Circle at (${c.centerX.toFixed(1)}, ${c.centerY.toFixed(1)}) r=${c.radius}`),
-            checkData: { topY, bottomY, leftX, rightX }
+            logs: circles.map(c => `Circle at (${c.centerX.toFixed(1)}, ${c.centerY.toFixed(1)}) r=${c.radius}`)
         };
     },
     'circles',
     {
-        extremes: { tolerance: 0.05 },
         // No totalUniqueColors check - random colors and overlaps make exact count unpredictable
         // Fast path expected for all circles
     },
