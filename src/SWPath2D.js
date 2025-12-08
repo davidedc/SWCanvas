@@ -40,6 +40,39 @@ class SWPath2D {
         this.closePath();
     }
 
+    /**
+     * Adds a rounded rectangle subpath to the current path.
+     * Follows the HTML5 Canvas roundRect() specification.
+     * @param {number} x - X coordinate of the rectangle's top-left corner
+     * @param {number} y - Y coordinate of the rectangle's top-left corner
+     * @param {number} width - Width of the rectangle
+     * @param {number} height - Height of the rectangle
+     * @param {number|number[]} radii - Corner radius (single value or array)
+     */
+    roundRect(x, y, width, height, radii) {
+        // Normalize radii to a single value for simplicity
+        // HTML5 Canvas spec allows array of up to 4 values, but we simplify to single radius
+        let radius = Array.isArray(radii) ? radii[0] : (radii || 0);
+
+        // Clamp radius to half the smaller dimension
+        if (width < 2 * radius) radius = width / 2;
+        if (height < 2 * radius) radius = height / 2;
+
+        // Handle zero or negative radius - just draw a regular rect
+        if (radius <= 0) {
+            this.rect(x, y, width, height);
+            return;
+        }
+
+        // Build path using arcTo for rounded corners
+        this.moveTo(x + radius, y);
+        this.arcTo(x + width, y, x + width, y + height, radius);
+        this.arcTo(x + width, y + height, x, y + height, radius);
+        this.arcTo(x, y + height, x, y, radius);
+        this.arcTo(x, y, x + radius, y, radius);
+        this.closePath();
+    }
+
     arc(x, y, radius, startAngle, endAngle, counterclockwise) {
         this.commands.push({
             type: 'arc',

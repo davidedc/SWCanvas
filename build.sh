@@ -49,6 +49,8 @@ cat src/CircleOps.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
 cat src/LineOps.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
+cat src/RoundedRectOps.js >> dist/swcanvas.js
+echo "" >> dist/swcanvas.js
 
 # Phase 2: Core Service classes (depend on foundation)
 cat src/CompositeOperations.js >> dist/swcanvas.js

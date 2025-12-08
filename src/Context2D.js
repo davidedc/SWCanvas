@@ -555,6 +555,109 @@ class Context2D {
         }
     }
 
+    /**
+     * Stroke a rounded rectangle.
+     * Uses fast path for 1px opaque strokes with no transforms/clipping/shadows.
+     * @param {number} x - Rectangle x coordinate
+     * @param {number} y - Rectangle y coordinate
+     * @param {number} width - Rectangle width
+     * @param {number} height - Rectangle height
+     * @param {number|number[]} radii - Corner radius (single value or array)
+     */
+    strokeRoundRect(x, y, width, height, radii) {
+        // Validate parameters
+        if (typeof x !== 'number' || typeof y !== 'number' ||
+            typeof width !== 'number' || typeof height !== 'number') {
+            throw new Error('Rectangle coordinates must be numbers');
+        }
+
+        if (width < 0 || height < 0) {
+            return; // Nothing to draw for negative dimensions
+        }
+
+        if (width === 0 || height === 0) {
+            return; // Nothing to draw for zero dimensions
+        }
+
+        // Normalize radius to check for zero
+        let radius = Array.isArray(radii) ? radii[0] : (radii || 0);
+
+        // Fallback to strokeRect for zero radius (rounded rect becomes regular rect)
+        if (radius <= 0) {
+            this.strokeRect(x, y, width, height);
+            return;
+        }
+
+        const paintSource = this._strokeStyle;
+
+        // Fast path conditions
+        const isColor = paintSource instanceof Color;
+        const isSourceOver = this.globalCompositeOperation === 'source-over';
+        const noClip = !this._clipMask;
+        const noTransform = this._transform.isIdentity;
+        const noShadow = !this.shadowColor || this.shadowColor === 'transparent' ||
+                        (this.shadowBlur === 0 && this.shadowOffsetX === 0 && this.shadowOffsetY === 0);
+        const is1pxStroke = Math.abs(this._lineWidth - 1) < 0.001;
+
+        if (isColor && isSourceOver && noClip && noTransform && noShadow && is1pxStroke) {
+            const isOpaque = paintSource.a === 255 && this.globalAlpha >= 1.0;
+            if (isOpaque) {
+                RoundedRectOps.stroke1pxOpaque(this.surface, x, y, width, height, radii, paintSource);
+                return;
+            } else if (paintSource.a > 0) {
+                RoundedRectOps.stroke1pxAlpha(this.surface, x, y, width, height, radii, paintSource, this.globalAlpha);
+                return;
+            }
+        }
+
+        // Slow path: use general path system
+        Context2D._markSlowPath();
+        this.beginPath();
+        this._currentPath.roundRect(x, y, width, height, radii);
+        this.stroke();
+    }
+
+    /**
+     * Fill a rounded rectangle.
+     * Currently uses slow path (general path system).
+     * @param {number} x - Rectangle x coordinate
+     * @param {number} y - Rectangle y coordinate
+     * @param {number} width - Rectangle width
+     * @param {number} height - Rectangle height
+     * @param {number|number[]} radii - Corner radius (single value or array)
+     */
+    fillRoundRect(x, y, width, height, radii) {
+        // Validate parameters
+        if (typeof x !== 'number' || typeof y !== 'number' ||
+            typeof width !== 'number' || typeof height !== 'number') {
+            throw new Error('Rectangle coordinates must be numbers');
+        }
+
+        if (width < 0 || height < 0) {
+            return; // Nothing to draw for negative dimensions
+        }
+
+        if (width === 0 || height === 0) {
+            return; // Nothing to draw for zero dimensions
+        }
+
+        // Normalize radius to check for zero
+        let radius = Array.isArray(radii) ? radii[0] : (radii || 0);
+
+        // Fallback to fillRect for zero radius (rounded rect becomes regular rect)
+        if (radius <= 0) {
+            this.fillRect(x, y, width, height);
+            return;
+        }
+
+        // For now, all fillRoundRect goes through slow path
+        // Fast path can be added later if needed
+        Context2D._markSlowPath();
+        this.beginPath();
+        this._currentPath.roundRect(x, y, width, height, radii);
+        this.fill();
+    }
+
     // M2: Path drawing methods
     fill(path, rule) {
         let pathToFill, fillRule;
