@@ -4127,6 +4127,286 @@ class RoundedRectOps {
             }
         }
     }
+
+    /**
+     * Unified fill and stroke rendering for rounded rectangles.
+     * Draws both in a single coordinated pass to prevent fill/stroke gaps (speckles).
+     * Fill is rendered first with epsilon contraction, then stroke is rendered on top.
+     *
+     * Key insight: All corner arcs (fill, outer stroke, inner stroke) must use the SAME
+     * corner center point, just with different radii. This ensures pixel-perfect alignment.
+     *
+     * @param {Surface} surface - Target surface
+     * @param {number} x - Top-left X coordinate
+     * @param {number} y - Top-left Y coordinate
+     * @param {number} width - Rectangle width
+     * @param {number} height - Rectangle height
+     * @param {number|number[]} radii - Corner radius
+     * @param {number} lineWidth - Stroke width
+     * @param {Color|null} fillColor - Fill color (null to skip fill)
+     * @param {Color|null} strokeColor - Stroke color (null to skip stroke)
+     * @param {number} globalAlpha - Global alpha value
+     * @param {Uint8Array|null} clipBuffer - Optional clip mask buffer
+     */
+    static fillAndStroke(surface, x, y, width, height, radii, lineWidth, fillColor, strokeColor, globalAlpha, clipBuffer = null) {
+        const surfaceWidth = surface.width;
+        const surfaceHeight = surface.height;
+        const data = surface.data;
+        const data32 = surface.data32;
+
+        // Check what we need to draw
+        const hasFill = fillColor && fillColor.a > 0;
+        const hasStroke = strokeColor && strokeColor.a > 0;
+
+        if (!hasFill && !hasStroke) return;
+
+        // Normalize radius
+        let radius = this._normalizeRadius(radii, width, height);
+
+        // Fallback to separate methods for zero radius
+        if (radius <= 0) {
+            if (hasFill) {
+                if (fillColor.a === 255 && globalAlpha >= 1.0) {
+                    RectOps.fillOpaque(surface, x, y, width, height, fillColor);
+                } else {
+                    RectOps.fillAlpha(surface, x, y, width, height, fillColor, globalAlpha);
+                }
+            }
+            if (hasStroke) {
+                if (strokeColor.a === 255 && globalAlpha >= 1.0) {
+                    RectOps.strokeThickOpaque(surface, x, y, width, height, lineWidth, strokeColor, clipBuffer);
+                } else {
+                    RectOps.strokeThickAlpha(surface, x, y, width, height, lineWidth, strokeColor, globalAlpha, clipBuffer);
+                }
+            }
+            return;
+        }
+
+        const halfStroke = lineWidth / 2;
+
+        // Epsilon contraction for fill boundaries (same as CircleOps)
+        const FILL_EPSILON = 0.0001;
+
+        // Use PATH coordinates as reference for fill
+        const pathX = Math.floor(x);
+        const pathY = Math.floor(y);
+        const pathW = Math.floor(width);
+        const pathH = Math.floor(height);
+        const pathRadius = radius;
+
+        // Radii for different boundaries
+        const fillRadius = pathRadius;  // Fill extends to path boundary
+        const outerRadius = pathRadius + halfStroke;  // Stroke outer edge
+        const innerRadius = Math.max(0, pathRadius - halfStroke);  // Stroke inner edge
+
+        // Calculate scan bounds - use original coordinates (not floored pathX/pathY)
+        const scanMinY = Math.floor(y - halfStroke);
+        const scanMaxY = Math.ceil(y + height + halfStroke);
+        const scanMinX = Math.floor(x - halfStroke);
+        const scanMaxX = Math.ceil(x + width + halfStroke);
+
+        // Determine rendering modes
+        const fillIsOpaque = hasFill && fillColor.a === 255 && globalAlpha >= 1.0;
+        const fillEffectiveAlpha = hasFill ? (fillColor.a / 255) * globalAlpha : 0;
+        const fillInvAlpha = 1 - fillEffectiveAlpha;
+
+        const strokeIsOpaque = hasStroke && strokeColor.a === 255 && globalAlpha >= 1.0;
+        const strokeEffectiveAlpha = hasStroke ? (strokeColor.a / 255) * globalAlpha : 0;
+        const strokeInvAlpha = 1 - strokeEffectiveAlpha;
+
+        // Packed colors for opaque rendering
+        const fillPacked = fillIsOpaque ? Surface.packColor(fillColor.r, fillColor.g, fillColor.b, 255) : 0;
+        const strokePacked = strokeIsOpaque ? Surface.packColor(strokeColor.r, strokeColor.g, strokeColor.b, 255) : 0;
+
+        // Helper to calculate X extent for a given radius at scanline py
+        // Calculates corner centers locally from the passed rectangle bounds
+        const getXExtent = (py, rectX, rectW, rectY, rectH, cornerRadius, epsilon = 0) => {
+            if (py < rectY || py >= rectY + rectH) {
+                return { leftX: -1, rightX: -1 };
+            }
+
+            let leftX = rectX;
+            let rightX = rectX + rectW - 1;
+
+            // Check if in top corner region (based on THIS rect's corner zone)
+            if (py < rectY + cornerRadius) {
+                // Top corners - calculate corner center from THIS rect's bounds
+                const cornerCenterY = rectY + cornerRadius;
+                const dy = cornerCenterY - py - 0.5;
+                const dySquared = dy * dy;
+                const radiusSquared = cornerRadius * cornerRadius;
+
+                if (dySquared < radiusSquared) {
+                    const dx = Math.sqrt(radiusSquared - dySquared);
+                    leftX = Math.ceil(rectX + cornerRadius - dx + epsilon);
+                    rightX = Math.floor(rectX + rectW - cornerRadius + dx - 1 - epsilon);
+                } else {
+                    return { leftX: -1, rightX: -1 };
+                }
+            } else if (py >= rectY + rectH - cornerRadius) {
+                // Bottom corners - calculate corner center from THIS rect's bounds
+                const cornerCenterY = rectY + rectH - cornerRadius;
+                const dy = py - cornerCenterY + 0.5;
+                const dySquared = dy * dy;
+                const radiusSquared = cornerRadius * cornerRadius;
+
+                if (dySquared < radiusSquared) {
+                    const dx = Math.sqrt(radiusSquared - dySquared);
+                    leftX = Math.ceil(rectX + cornerRadius - dx + epsilon);
+                    rightX = Math.floor(rectX + rectW - cornerRadius + dx - 1 - epsilon);
+                } else {
+                    return { leftX: -1, rightX: -1 };
+                }
+            }
+
+            return { leftX, rightX };
+        };
+
+        // Helper to render fill span
+        const renderFillSpan = (startX, endX, py) => {
+            if (startX > endX) return;
+            startX = Math.max(0, startX);
+            endX = Math.min(surfaceWidth - 1, endX);
+            if (startX > endX) return;
+
+            if (fillIsOpaque) {
+                for (let px = startX; px <= endX; px++) {
+                    const pos = py * surfaceWidth + px;
+                    if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (7 - (pos & 7))))) {
+                        data32[pos] = fillPacked;
+                    }
+                }
+            } else {
+                const fr = fillColor.r, fg = fillColor.g, fb = fillColor.b;
+                for (let px = startX; px <= endX; px++) {
+                    const pos = py * surfaceWidth + px;
+                    if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (7 - (pos & 7))))) {
+                        const idx = pos * 4;
+                        const oldAlpha = data[idx + 3] / 255;
+                        const oldAlphaScaled = oldAlpha * fillInvAlpha;
+                        const newAlpha = fillEffectiveAlpha + oldAlphaScaled;
+                        if (newAlpha > 0) {
+                            const blendFactor = 1 / newAlpha;
+                            data[idx] = (fr * fillEffectiveAlpha + data[idx] * oldAlphaScaled) * blendFactor;
+                            data[idx + 1] = (fg * fillEffectiveAlpha + data[idx + 1] * oldAlphaScaled) * blendFactor;
+                            data[idx + 2] = (fb * fillEffectiveAlpha + data[idx + 2] * oldAlphaScaled) * blendFactor;
+                            data[idx + 3] = newAlpha * 255;
+                        }
+                    }
+                }
+            }
+        };
+
+        // Helper to render stroke span
+        const renderStrokeSpan = (startX, endX, py) => {
+            if (startX > endX) return;
+            startX = Math.max(0, startX);
+            endX = Math.min(surfaceWidth - 1, endX);
+            if (startX > endX) return;
+
+            if (strokeIsOpaque) {
+                for (let px = startX; px <= endX; px++) {
+                    const pos = py * surfaceWidth + px;
+                    if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (7 - (pos & 7))))) {
+                        data32[pos] = strokePacked;
+                    }
+                }
+            } else {
+                const sr = strokeColor.r, sg = strokeColor.g, sb = strokeColor.b;
+                for (let px = startX; px <= endX; px++) {
+                    const pos = py * surfaceWidth + px;
+                    if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (7 - (pos & 7))))) {
+                        const idx = pos * 4;
+                        const oldAlpha = data[idx + 3] / 255;
+                        const oldAlphaScaled = oldAlpha * strokeInvAlpha;
+                        const newAlpha = strokeEffectiveAlpha + oldAlphaScaled;
+                        if (newAlpha > 0) {
+                            const blendFactor = 1 / newAlpha;
+                            data[idx] = (sr * strokeEffectiveAlpha + data[idx] * oldAlphaScaled) * blendFactor;
+                            data[idx + 1] = (sg * strokeEffectiveAlpha + data[idx + 1] * oldAlphaScaled) * blendFactor;
+                            data[idx + 2] = (sb * strokeEffectiveAlpha + data[idx + 2] * oldAlphaScaled) * blendFactor;
+                            data[idx + 3] = newAlpha * 255;
+                        }
+                    }
+                }
+            }
+        };
+
+        // Calculate stroke bounds - use original coordinates (like strokeThickOpaque)
+        // This avoids double-flooring which causes 1px shift when x/y have .5 fractional parts
+        const outerRectX = Math.floor(x - halfStroke);
+        const outerRectY = Math.floor(y - halfStroke);
+        const outerRectW = Math.ceil(width + lineWidth);
+        const outerRectH = Math.ceil(height + lineWidth);
+
+        const innerRectX = Math.floor(x + halfStroke);
+        const innerRectY = Math.floor(y + halfStroke);
+        const innerRectW = Math.floor(width - lineWidth);
+        const innerRectH = Math.floor(height - lineWidth);
+
+        // Process each scanline in the scan bounds
+        for (let py = scanMinY; py < scanMaxY; py++) {
+            if (py < 0 || py >= surfaceHeight) continue;
+
+            // Get outer stroke extent - uses pre-calculated bounds from original coordinates
+            const outerExtent = hasStroke ? getXExtent(py, outerRectX, outerRectW, outerRectY, outerRectH, outerRadius, 0) : { leftX: -1, rightX: -1 };
+
+            // Get inner stroke extent - uses pre-calculated bounds from original coordinates
+            const innerExtent = (hasStroke && innerRectH > 0) ? getXExtent(py, innerRectX, innerRectW, innerRectY, innerRectH, innerRadius, 0) : { leftX: -1, rightX: -1 };
+
+            // Determine fill extent - must coordinate with stroke to prevent speckles
+            let fillExtent = { leftX: -1, rightX: -1 };
+            if (hasFill) {
+                if (hasStroke) {
+                    // With stroke: fill is the inner region (within the stroke annulus)
+                    // Use inner extent if available, otherwise fill entire outer region
+                    if (innerExtent.leftX >= 0 && innerExtent.rightX >= innerExtent.leftX) {
+                        // Inner region exists - fill is strictly within inner boundary
+                        fillExtent.leftX = innerExtent.leftX;
+                        fillExtent.rightX = innerExtent.rightX;
+                    } else if (outerExtent.leftX >= 0) {
+                        // No inner region on this scanline - no fill (stroke covers everything)
+                        fillExtent = { leftX: -1, rightX: -1 };
+                    }
+                } else {
+                    // Fill-only: use standard fill extent calculation
+                    fillExtent = getXExtent(py, pathX, pathW, pathY, pathH, fillRadius, FILL_EPSILON);
+                }
+            }
+
+            // STEP 1: Render fill first (with epsilon contraction, clamped to stroke boundary)
+            if (hasFill && fillExtent.leftX >= 0 && fillExtent.leftX <= fillExtent.rightX) {
+                renderFillSpan(fillExtent.leftX, fillExtent.rightX, py);
+            }
+
+            // STEP 2: Render stroke on top (covers any micro-gaps at boundary)
+            if (hasStroke && outerExtent.leftX >= 0) {
+                const outerLeft = Math.max(0, outerExtent.leftX);
+                const outerRight = Math.min(surfaceWidth - 1, outerExtent.rightX);
+
+                if (outerLeft <= outerRight) {
+                    if (innerExtent.leftX >= 0 && innerExtent.rightX >= innerExtent.leftX) {
+                        // Has inner region - draw left and right stroke segments
+                        const innerLeft = Math.max(0, innerExtent.leftX);
+                        const innerRight = Math.min(surfaceWidth - 1, innerExtent.rightX);
+
+                        // Left stroke segment
+                        if (outerLeft < innerLeft) {
+                            renderStrokeSpan(outerLeft, innerLeft - 1, py);
+                        }
+
+                        // Right stroke segment
+                        if (innerRight < outerRight) {
+                            renderStrokeSpan(innerRight + 1, outerRight, py);
+                        }
+                    } else {
+                        // No inner region - fill entire stroke span
+                        renderStrokeSpan(outerLeft, outerRight, py);
+                    }
+                }
+            }
+        }
+    }
 }
 
 /**
@@ -11447,6 +11727,78 @@ class Context2D {
         this.fill();
     }
 
+    /**
+     * Fill and stroke a rounded rectangle in a single unified operation.
+     * Uses unified fast path to prevent fill/stroke boundary speckles.
+     * @param {number} x - Rectangle x coordinate
+     * @param {number} y - Rectangle y coordinate
+     * @param {number} width - Rectangle width
+     * @param {number} height - Rectangle height
+     * @param {number|number[]} radii - Corner radius (single value or array)
+     */
+    fillAndStrokeRoundRect(x, y, width, height, radii) {
+        // Validate parameters
+        if (typeof x !== 'number' || typeof y !== 'number' ||
+            typeof width !== 'number' || typeof height !== 'number') {
+            throw new Error('Rectangle coordinates must be numbers');
+        }
+
+        if (width < 0 || height < 0) {
+            return; // Nothing to draw for negative dimensions
+        }
+
+        if (width === 0 || height === 0) {
+            return; // Nothing to draw for zero dimensions
+        }
+
+        // Normalize radius to check for zero
+        let radius = Array.isArray(radii) ? radii[0] : (radii || 0);
+
+        // Fallback to separate fill + stroke for zero radius
+        if (radius <= 0) {
+            this.fillRect(x, y, width, height);
+            this.strokeRect(x, y, width, height);
+            return;
+        }
+
+        // Check for fast path conditions
+        const fillPaint = this._fillStyle;
+        const strokePaint = this._strokeStyle;
+        const fillIsColor = fillPaint instanceof Color;
+        const strokeIsColor = strokePaint instanceof Color;
+        const isSourceOver = this.globalCompositeOperation === 'source-over';
+        const noClip = !this._clipMask;
+        const noTransform = this._transform.isIdentity;
+        const noShadow = !this.shadowColor || this.shadowColor === 'transparent' ||
+                        (this.shadowBlur === 0 && this.shadowOffsetX === 0 && this.shadowOffsetY === 0);
+        const clipBuffer = this._clipMask ? this._clipMask.buffer : null;
+
+        // Unified fast path: both fill and stroke are solid colors, source-over, no transforms/clips/shadows
+        if (fillIsColor && strokeIsColor && isSourceOver && noClip && noTransform && noShadow) {
+            const hasFill = fillPaint.a > 0;
+            const hasStroke = strokePaint.a > 0 && this._lineWidth > 0;
+
+            if (hasFill || hasStroke) {
+                RoundedRectOps.fillAndStroke(
+                    this.surface,
+                    x, y, width, height,
+                    radii,
+                    this._lineWidth,
+                    hasFill ? fillPaint : null,
+                    hasStroke ? strokePaint : null,
+                    this.globalAlpha,
+                    clipBuffer
+                );
+                return;
+            }
+        }
+
+        // Slow path: use sequential fill + stroke
+        Context2D._markSlowPath();
+        this.fillRoundRect(x, y, width, height, radii);
+        this.strokeRoundRect(x, y, width, height, radii);
+    }
+
     // M2: Path drawing methods
     fill(path, rule) {
         let pathToFill, fillRule;
@@ -12675,6 +13027,10 @@ class CanvasCompatibleContext2D {
 
     fillRoundRect(x, y, width, height, radii) {
         this._core.fillRoundRect(x, y, width, height, radii);
+    }
+
+    fillAndStrokeRoundRect(x, y, width, height, radii) {
+        this._core.fillAndStrokeRoundRect(x, y, width, height, radii);
     }
 
     fill(pathOrFillRule, fillRule) {
