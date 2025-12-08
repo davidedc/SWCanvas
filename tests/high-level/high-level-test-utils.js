@@ -196,6 +196,109 @@ function adjustDimensionsForCrispStrokeRendering(width, height, strokeWidth, cen
 }
 
 /**
+ * Round point coordinates to integers
+ * @param {Object} point - Point with x, y coordinates
+ * @returns {Object} Rounded point
+ */
+function roundPoint(point) {
+    return {
+        x: Math.round(point.x),
+        y: Math.round(point.y)
+    };
+}
+
+/**
+ * Adjusts center coordinates for crisp 1px stroke rendering
+ * For even width+height with 1px stroke, center should be on pixel center (*.5)
+ * @param {number} centerX - Center X coordinate
+ * @param {number} centerY - Center Y coordinate
+ * @param {number} width - Rectangle width
+ * @param {number} height - Rectangle height
+ * @param {number} strokeWidth - Stroke width
+ * @returns {Object} Adjusted center coordinates {x, y}
+ */
+function adjustCenterForCrispStrokeRendering(centerX, centerY, width, height, strokeWidth) {
+    let adjX = centerX;
+    let adjY = centerY;
+
+    // For 1px stroke with even dimensions, shift to pixel center
+    if (strokeWidth === 1) {
+        if (width % 2 === 0 && Number.isInteger(centerX)) {
+            adjX = centerX + 0.5;
+        }
+        if (height % 2 === 0 && Number.isInteger(centerY)) {
+            adjY = centerY + 0.5;
+        }
+    }
+
+    return { x: adjX, y: adjY };
+}
+
+/**
+ * Calculate crisp fill and stroke rectangle parameters
+ * Combines random dimension generation with crisp adjustment
+ * @param {Object} options - Configuration options
+ * @param {number} options.canvasWidth - Canvas width
+ * @param {number} options.canvasHeight - Canvas height
+ * @param {number} options.minWidth - Minimum rectangle width (default 50)
+ * @param {number} options.maxWidth - Maximum rectangle width (default 400)
+ * @param {number} options.minHeight - Minimum rectangle height (default 50)
+ * @param {number} options.maxHeight - Maximum rectangle height (default 400)
+ * @param {number} options.maxStrokeWidth - Maximum stroke width (default 10)
+ * @param {boolean} options.ensureEvenStroke - Force even stroke width (default false)
+ * @param {boolean} options.randomPosition - Use random positioning (default false)
+ * @returns {Object} { center, adjustedDimensions, strokeWidth }
+ */
+function calculateCrispFillAndStrokeRectParams(options) {
+    const {
+        canvasWidth,
+        canvasHeight,
+        minWidth = 50,
+        maxWidth = 400,
+        minHeight = 50,
+        maxHeight = 400,
+        maxStrokeWidth = 10,
+        ensureEvenStroke = false,
+        randomPosition = false
+    } = options;
+
+    // SeededRandom Call 1: baseWidth
+    const baseWidth = Math.round(minWidth + SeededRandom.getRandom() * (maxWidth - minWidth));
+    // SeededRandom Call 2: baseHeight
+    const baseHeight = Math.round(minHeight + SeededRandom.getRandom() * (maxHeight - minHeight));
+    // SeededRandom Call 3: strokeWidth (optionally ensure even)
+    let strokeWidth = Math.round(2 + SeededRandom.getRandom() * (maxStrokeWidth - 2));
+    if (ensureEvenStroke && strokeWidth % 2 !== 0) {
+        strokeWidth++;
+    }
+    // SeededRandom Call 4: center type (grid vs pixel)
+    const atPixel = SeededRandom.getRandom() < 0.5;
+
+    // Calculate center
+    let center;
+    if (randomPosition) {
+        const randomPt = getRandomPoint(1, canvasWidth, canvasHeight);
+        center = atPixel ? randomPt : roundPoint(randomPt);
+    } else {
+        center = atPixel
+            ? placeCloseToCenterAtPixel(canvasWidth, canvasHeight)
+            : placeCloseToCenterAtGrid(canvasWidth, canvasHeight);
+        center = { x: center.centerX, y: center.centerY };
+    }
+
+    // Adjust dimensions for crisp rendering
+    const adjusted = adjustDimensionsForCrispStrokeRendering(
+        baseWidth, baseHeight, strokeWidth, center
+    );
+
+    return {
+        center,
+        adjustedDimensions: { width: adjusted.width, height: adjusted.height },
+        strokeWidth
+    };
+}
+
+/**
  * Calculates circle parameters with proper positioning and dimensions.
  * Adapted from CrispSwCanvas test-helper-functions.js for SWCanvas.
  *
@@ -424,6 +527,9 @@ if (typeof module !== 'undefined' && module.exports) {
         placeCloseToCenterAtPixel,
         placeCloseToCenterAtGrid,
         adjustDimensionsForCrispStrokeRendering,
+        roundPoint,
+        adjustCenterForCrispStrokeRendering,
+        calculateCrispFillAndStrokeRectParams,
         calculateCircleTestParameters,
         registerHighLevelTest,
         analyzeExtremes,
@@ -442,6 +548,9 @@ if (typeof window !== 'undefined') {
     window.placeCloseToCenterAtPixel = placeCloseToCenterAtPixel;
     window.placeCloseToCenterAtGrid = placeCloseToCenterAtGrid;
     window.adjustDimensionsForCrispStrokeRendering = adjustDimensionsForCrispStrokeRendering;
+    window.roundPoint = roundPoint;
+    window.adjustCenterForCrispStrokeRendering = adjustCenterForCrispStrokeRendering;
+    window.calculateCrispFillAndStrokeRectParams = calculateCrispFillAndStrokeRectParams;
     window.calculateCircleTestParameters = calculateCircleTestParameters;
     window.registerHighLevelTest = registerHighLevelTest;
     window.analyzeExtremes = analyzeExtremes;

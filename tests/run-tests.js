@@ -103,6 +103,9 @@ try {
             global.adjustDimensionsForCrispStrokeRendering = highLevelTestUtils.adjustDimensionsForCrispStrokeRendering;
             global.calculateCircleTestParameters = highLevelTestUtils.calculateCircleTestParameters;
             global.registerHighLevelTest = highLevelTestUtils.registerHighLevelTest;
+            global.roundPoint = highLevelTestUtils.roundPoint;
+            global.adjustCenterForCrispStrokeRendering = highLevelTestUtils.adjustCenterForCrispStrokeRendering;
+            global.calculateCrispFillAndStrokeRectParams = highLevelTestUtils.calculateCrispFillAndStrokeRectParams;
 
             for (const file of caseFiles) {
                 try {

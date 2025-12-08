@@ -22,6 +22,9 @@ const {
     placeCloseToCenterAtPixel,
     placeCloseToCenterAtGrid,
     adjustDimensionsForCrispStrokeRendering,
+    roundPoint,
+    adjustCenterForCrispStrokeRendering,
+    calculateCrispFillAndStrokeRectParams,
     calculateCircleTestParameters,
     registerHighLevelTest,
     analyzeExtremes,
@@ -38,6 +41,9 @@ global.getRandomPoint = getRandomPoint;
 global.placeCloseToCenterAtPixel = placeCloseToCenterAtPixel;
 global.placeCloseToCenterAtGrid = placeCloseToCenterAtGrid;
 global.adjustDimensionsForCrispStrokeRendering = adjustDimensionsForCrispStrokeRendering;
+global.roundPoint = roundPoint;
+global.adjustCenterForCrispStrokeRendering = adjustCenterForCrispStrokeRendering;
+global.calculateCrispFillAndStrokeRectParams = calculateCrispFillAndStrokeRectParams;
 global.calculateCircleTestParameters = calculateCircleTestParameters;
 global.registerHighLevelTest = registerHighLevelTest;
 
