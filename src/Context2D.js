@@ -1376,13 +1376,55 @@ class Context2D {
 
     /**
      * Fill and stroke a circle in one operation
+     * Uses unified rendering when possible to prevent fill/stroke gaps.
      * @param {number} centerX - Center X coordinate
      * @param {number} centerY - Center Y coordinate
      * @param {number} radius - Circle radius
      */
     fillAndStrokeCircle(centerX, centerY, radius) {
-        this.fillCircle(centerX, centerY, radius);
-        this.strokeCircle(centerX, centerY, radius);
+        if (radius <= 0) return;
+
+        // Transform center point
+        const center = this._transform.transformPoint({ x: centerX, y: centerY });
+
+        // Calculate effective radius and line width
+        const scale = Math.sqrt(
+            Math.abs(this._transform.a * this._transform.d - this._transform.b * this._transform.c)
+        );
+        const scaledRadius = radius * scale;
+        const scaledLineWidth = this._lineWidth * scale;
+
+        // Get paint sources
+        const fillPaintSource = this._fillStyle;
+        const strokePaintSource = this._strokeStyle;
+
+        // Check if we can use the unified fast path:
+        // - Both fill and stroke are solid Colors
+        // - Composite operation is source-over
+        const fillIsColor = fillPaintSource instanceof Color;
+        const strokeIsColor = strokePaintSource instanceof Color;
+        const isSourceOver = this.globalCompositeOperation === 'source-over';
+        const hasFill = fillIsColor && fillPaintSource.a > 0;
+        const hasStroke = strokeIsColor && strokePaintSource.a > 0;
+
+        if (fillIsColor && strokeIsColor && isSourceOver && (hasFill || hasStroke)) {
+            // Use unified method for coordinated fill+stroke rendering (no gaps)
+            const clipBuffer = this._clipMask ? this._clipMask.buffer : null;
+            CircleOps.fillAndStroke(
+                this.surface,
+                center.x, center.y,
+                scaledRadius,
+                scaledLineWidth,
+                hasFill ? fillPaintSource : null,
+                hasStroke ? strokePaintSource : null,
+                this.globalAlpha,
+                clipBuffer
+            );
+        } else {
+            // Fallback to sequential rendering for gradients, patterns, or non-source-over
+            this._fillCircleDirect(center.x, center.y, scaledRadius, fillPaintSource);
+            this._strokeCircleDirect(center.x, center.y, scaledRadius, scaledLineWidth, strokePaintSource);
+        }
     }
 
     /**
