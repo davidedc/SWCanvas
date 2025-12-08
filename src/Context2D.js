@@ -1404,74 +1404,40 @@ class Context2D {
 
         if (isOpaqueColor) {
             // Fast path 1: 32-bit packed writes for opaque colors
+            // Uses CrispSWCanvas algorithm for correct extreme pixel rendering
             const packedColor = Surface.packColor(paintSource.r, paintSource.g, paintSource.b, 255);
             const data32 = surface.data32;
 
-            // Detect if center is at grid intersection (integer) or pixel center (half-integer)
-            // Grid-centered: diameter = 2*radius, symmetric about grid intersection
-            // Pixel-centered: diameter = 2*radius + 1, symmetric about pixel center
-            const isGridCenteredX = Number.isInteger(cx);
-            const isGridCenteredY = Number.isInteger(cy);
-            const intRadius = Math.floor(radius);
+            // Generate extents with CrispSWCanvas algorithm
+            const extentData = CircleOps.generateExtents(radius);
+            if (!extentData) return;
+            const { extents, intRadius, xOffset, yOffset } = extentData;
 
-            let bx = intRadius;
-            let by = 0;
-            let err = 1 - intRadius;
+            // CrispSWCanvas center adjustment
+            const adjCenterX = Math.floor(cx - 0.5);
+            const adjCenterY = Math.floor(cy - 0.5);
 
-            while (bx >= by) {
-                // Calculate span parameters based on center type
-                // For grid-centered: leftX = center - extent, width = 2*extent
-                // For pixel-centered: leftX = floor(center) - extent, width = 2*extent + 1
-                const spanWidthBx = isGridCenteredX ? bx * 2 : bx * 2 + 1;
-                const spanWidthBy = isGridCenteredX ? by * 2 : by * 2 + 1;
-                const leftBx = isGridCenteredX ? cx - bx : Math.floor(cx) - bx;
-                const leftBy = isGridCenteredX ? cx - by : Math.floor(cx) - by;
+            // Fill scanlines - iterate through ALL rows (no skipping)
+            for (let rel_y = 0; rel_y <= intRadius; rel_y++) {
+                const max_rel_x = extents[rel_y];
 
-                // For grid-centered circles:
-                //   Top half: y from cy-radius to cy-1 (radius rows above center)
-                //   Bottom half: y from cy to cy+radius-1 (radius rows below center)
-                //   Total: 2*radius rows
-                // For pixel-centered circles:
-                //   y from floor(cy)-radius to floor(cy)+radius (2*radius+1 rows)
+                // +1 corrections on min boundaries (CrispSWCanvas technique)
+                const abs_x_min = adjCenterX - max_rel_x - xOffset + 1;
+                const abs_x_max = adjCenterX + max_rel_x;
+                const abs_y_bottom = adjCenterY + rel_y;
+                const abs_y_top = adjCenterY - rel_y - yOffset + 1;
 
-                if (isGridCenteredY) {
-                    // Grid-centered Y: bottom at cy+by, top at cy-by-1
-                    // Skip if by >= intRadius (would be outside diameter)
-                    if (by < intRadius) {
-                        const bottomY = cy + by;
-                        const topY = cy - by - 1;
-                        SpanOps.fillFast(data32, width, height, leftBx, bottomY, spanWidthBx, packedColor, clipBuffer);
-                        SpanOps.fillFast(data32, width, height, leftBx, topY, spanWidthBx, packedColor, clipBuffer);
-                    }
-                    if (bx !== by && bx < intRadius) {
-                        const bottomY = cy + bx;
-                        const topY = cy - bx - 1;
-                        SpanOps.fillFast(data32, width, height, leftBy, bottomY, spanWidthBy, packedColor, clipBuffer);
-                        SpanOps.fillFast(data32, width, height, leftBy, topY, spanWidthBy, packedColor, clipBuffer);
-                    }
-                } else {
-                    // Pixel-centered Y: bottom at floor(cy)+by, top at floor(cy)-by
-                    const floorCy = Math.floor(cy);
-                    const bottomY = floorCy + by;
-                    const topY = floorCy - by;
-                    SpanOps.fillFast(data32, width, height, leftBx, bottomY, spanWidthBx, packedColor, clipBuffer);
-                    if (by > 0) {
-                        SpanOps.fillFast(data32, width, height, leftBx, topY, spanWidthBx, packedColor, clipBuffer);
-                    }
-                    if (bx !== by) {
-                        const bottomYx = floorCy + bx;
-                        const topYx = floorCy - bx;
-                        SpanOps.fillFast(data32, width, height, leftBy, bottomYx, spanWidthBy, packedColor, clipBuffer);
-                        SpanOps.fillFast(data32, width, height, leftBy, topYx, spanWidthBy, packedColor, clipBuffer);
-                    }
+                const spanWidth = abs_x_max - abs_x_min + 1;
+
+                // Draw bottom scanline
+                if (abs_y_bottom >= 0 && abs_y_bottom < height) {
+                    SpanOps.fillFast(data32, width, height, abs_x_min, abs_y_bottom, spanWidth, packedColor, clipBuffer);
                 }
 
-                by++;
-                if (err < 0) {
-                    err += 2 * by + 1;
-                } else {
-                    bx--;
-                    err += 2 * (by - bx + 1);
+                // Draw top scanline (skip overdraw conditions)
+                const drawTop = rel_y > 0 && !(rel_y === 1 && yOffset === 0);
+                if (drawTop && abs_y_top >= 0 && abs_y_top < height) {
+                    SpanOps.fillFast(data32, width, height, abs_x_min, abs_y_top, spanWidth, packedColor, clipBuffer);
                 }
             }
         } else if (isSemiTransparentColor) {

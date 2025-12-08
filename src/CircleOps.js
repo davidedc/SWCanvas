@@ -37,36 +37,52 @@ class CircleOps {
 
     /**
      * Generate horizontal extents for each scanline of a circle using Bresenham
-     * @param {number} radius - Circle radius
-     * @returns {number[]} Array where extents[y] = x extent at that y offset from center
+     * Uses CrispSWCanvas algorithm for correct extreme pixel rendering
+     * @param {number} radius - Circle radius (can be float)
+     * @returns {object|null} { extents, intRadius, xOffset, yOffset } or null for invalid radius
      */
     static generateExtents(radius) {
-        const extents = new Array(radius + 1);
-        let x = radius;
-        let y = 0;
-        let err = 1 - radius;
+        const intRadius = Math.floor(radius);
+        if (intRadius < 0) return null;
 
-        while (x >= y) {
-            // Record the x extent at this y position
-            extents[y] = x;
-            if (x !== y) {
-                extents[x] = y;  // Mirror for the other octant
-            }
-
-            y++;
-            if (err < 0) {
-                err += 2 * y + 1;
-            } else {
-                x--;
-                err += 2 * (y - x) + 1;
-            }
+        // Determine offsets for .5 radius case (affects boundary calculations)
+        let xOffset = 0, yOffset = 0;
+        if (radius > 0 && (radius * 2) % 2 === 1) {
+            xOffset = 1;
+            yOffset = 1;
         }
 
-        return extents;
+        // Handle zero radius (single pixel)
+        if (intRadius === 0) {
+            return { extents: [0], intRadius: 0, xOffset, yOffset };
+        }
+
+        // Bresenham initialization (CrispSWCanvas variant)
+        const extents = new Array(intRadius + 1).fill(0);
+        let x = 0;
+        let y = intRadius;
+        let d = 3 - 2 * intRadius;
+
+        while (x <= y) {
+            // Record extents using max to handle octant overlap
+            extents[y] = Math.max(extents[y], x);
+            extents[x] = Math.max(extents[x], y);
+
+            if (d < 0) {
+                d = d + 4 * x + 6;
+            } else {
+                d = d + 4 * (x - y) + 10;
+                y--;
+            }
+            x++;
+        }
+
+        return { extents, intRadius, xOffset, yOffset };
     }
 
     /**
      * Optimized circle fill with alpha blending using Bresenham scanlines
+     * Uses CrispSWCanvas algorithm for correct extreme pixel rendering
      * @param {Surface} surface - Target surface
      * @param {number} cx - Center X
      * @param {number} cy - Center Y
@@ -89,54 +105,38 @@ class CircleOps {
         const g = color.g;
         const b = color.b;
 
-        // Detect if center is at grid intersection (integer) or pixel center (half-integer)
-        const isGridCenteredX = Number.isInteger(cx);
-        const isGridCenteredY = Number.isInteger(cy);
-        const intRadius = Math.floor(radius);
+        // Generate extents with CrispSWCanvas algorithm
+        const extentData = CircleOps.generateExtents(radius);
+        if (!extentData) return;
+        const { extents, intRadius, xOffset, yOffset } = extentData;
 
-        // Generate horizontal extents using Bresenham
-        const extents = CircleOps.generateExtents(intRadius);
+        // CrispSWCanvas center adjustment
+        const adjCenterX = Math.floor(cx - 0.5);
+        const adjCenterY = Math.floor(cy - 0.5);
 
-        // Fill scanlines using top/bottom symmetry
+        // Fill scanlines - iterate through ALL rows (no skipping)
         for (let rel_y = 0; rel_y <= intRadius; rel_y++) {
-            const xExtent = extents[rel_y];
-            if (xExtent === undefined) continue;
+            const max_rel_x = extents[rel_y];
 
-            // Calculate span parameters based on center type
-            const leftX = isGridCenteredX ? cx - xExtent : Math.floor(cx) - xExtent;
-            const spanWidth = isGridCenteredX ? xExtent * 2 : xExtent * 2 + 1;
+            // +1 corrections on min boundaries (CrispSWCanvas technique)
+            const abs_x_min = adjCenterX - max_rel_x - xOffset + 1;
+            const abs_x_max = adjCenterX + max_rel_x;
+            const abs_y_bottom = adjCenterY + rel_y;
+            const abs_y_top = adjCenterY - rel_y - yOffset + 1;
 
-            if (isGridCenteredY) {
-                // Grid-centered circles have even diameter - skip cap row at rel_y=intRadius
-                if (rel_y >= intRadius) continue;
+            const spanWidth = abs_x_max - abs_x_min + 1;
 
-                // Grid-centered Y: bottom at cy+rel_y, top at cy-rel_y-1
-                const bottomY = cy + rel_y;
-                const topY = cy - rel_y - 1;
+            // Draw bottom scanline
+            if (abs_y_bottom >= 0 && abs_y_bottom < height) {
+                SpanOps.fillAlpha(data, width, height, abs_x_min, abs_y_bottom, spanWidth,
+                                   r, g, b, effectiveAlpha, invAlpha, clipBuffer);
+            }
 
-                if (bottomY >= 0 && bottomY < height) {
-                    SpanOps.fillAlpha(data, width, height, leftX, bottomY, spanWidth,
-                                       r, g, b, effectiveAlpha, invAlpha, clipBuffer);
-                }
-                if (topY >= 0 && topY < height) {
-                    SpanOps.fillAlpha(data, width, height, leftX, topY, spanWidth,
-                                       r, g, b, effectiveAlpha, invAlpha, clipBuffer);
-                }
-            } else {
-                // Pixel-centered Y: bottom at floor(cy)+rel_y, top at floor(cy)-rel_y
-                const floorCy = Math.floor(cy);
-                const bottomY = floorCy + rel_y;
-                const topY = floorCy - rel_y;
-
-                if (bottomY >= 0 && bottomY < height) {
-                    SpanOps.fillAlpha(data, width, height, leftX, bottomY, spanWidth,
-                                       r, g, b, effectiveAlpha, invAlpha, clipBuffer);
-                }
-                // Skip top span at rel_y=0 to prevent overdraw at center pixel
-                if (rel_y > 0 && topY >= 0 && topY < height) {
-                    SpanOps.fillAlpha(data, width, height, leftX, topY, spanWidth,
-                                       r, g, b, effectiveAlpha, invAlpha, clipBuffer);
-                }
+            // Draw top scanline (skip overdraw conditions)
+            const drawTop = rel_y > 0 && !(rel_y === 1 && yOffset === 0);
+            if (drawTop && abs_y_top >= 0 && abs_y_top < height) {
+                SpanOps.fillAlpha(data, width, height, abs_x_min, abs_y_top, spanWidth,
+                                   r, g, b, effectiveAlpha, invAlpha, clipBuffer);
             }
         }
     }
