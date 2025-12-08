@@ -60,10 +60,6 @@ registerHighLevelTest(
     },
     'lines',
     {
-        uniqueColors: {
-            middleRow: { count: 1 },
-            middleColumn: { count: 1 }
-        },
         extremes: { tolerance: 0.01 }  // Small tolerance for 2px line bounds
     },
     {

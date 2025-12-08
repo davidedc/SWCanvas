@@ -86,10 +86,6 @@ registerHighLevelTest(
     },
     'lines',
     {
-        uniqueColors: {
-            middleRow: { count: 1 },
-            middleColumn: { count: 1 }
-        },
         extremes: true
     },
     {

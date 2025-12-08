@@ -516,6 +516,105 @@ function hasSpeckles(surface, maxSpeckleSize = 1) {
     return speckleCount > 0;
 }
 
+/**
+ * Count unique colors in the middle row of the surface
+ * Skips transparent pixels (alpha === 0)
+ * @param {Object} surface - Surface with data, width, height, stride
+ * @returns {number} Count of unique non-transparent colors
+ */
+function countUniqueColorsInMiddleRow(surface) {
+    const colors = new Set();
+    const middleY = Math.floor(surface.height / 2);
+
+    for (let x = 0; x < surface.width; x++) {
+        const offset = middleY * surface.stride + x * 4;
+        const a = surface.data[offset + 3];
+        if (a === 0) continue; // Skip transparent pixels
+        const colorKey = `${surface.data[offset]},${surface.data[offset + 1]},${surface.data[offset + 2]},${a}`;
+        colors.add(colorKey);
+    }
+
+    return colors.size;
+}
+
+/**
+ * Count unique colors in the middle column of the surface
+ * Skips transparent pixels (alpha === 0)
+ * @param {Object} surface - Surface with data, width, height, stride
+ * @returns {number} Count of unique non-transparent colors
+ */
+function countUniqueColorsInMiddleColumn(surface) {
+    const colors = new Set();
+    const middleX = Math.floor(surface.width / 2);
+
+    for (let y = 0; y < surface.height; y++) {
+        const offset = y * surface.stride + middleX * 4;
+        const a = surface.data[offset + 3];
+        if (a === 0) continue; // Skip transparent pixels
+        const colorKey = `${surface.data[offset]},${surface.data[offset + 1]},${surface.data[offset + 2]},${a}`;
+        colors.add(colorKey);
+    }
+
+    return colors.size;
+}
+
+/**
+ * Count speckles in the surface (matching CrispSWCanvas algorithm)
+ * A speckle is a pixel that differs from its neighbors when those neighbors match each other
+ * @param {Object} surface - Surface with data, width, height, stride
+ * @returns {number} Number of speckles found
+ */
+function countSpeckles(surface) {
+    let speckleCount = 0;
+    const data = surface.data;
+    const width = surface.width;
+    const stride = surface.stride;
+
+    for (let y = 1; y < surface.height - 1; y++) {
+        for (let x = 1; x < width - 1; x++) {
+            const currentIdx = y * stride + x * 4;
+            const leftIdx = y * stride + (x - 1) * 4;
+            const rightIdx = y * stride + (x + 1) * 4;
+            const topIdx = (y - 1) * stride + x * 4;
+            const bottomIdx = (y + 1) * stride + x * 4;
+
+            // Check if horizontal neighbors match
+            const horizontalMatch =
+                data[leftIdx] === data[rightIdx] &&
+                data[leftIdx + 1] === data[rightIdx + 1] &&
+                data[leftIdx + 2] === data[rightIdx + 2] &&
+                data[leftIdx + 3] === data[rightIdx + 3];
+
+            // Check if vertical neighbors match
+            const verticalMatch =
+                data[topIdx] === data[bottomIdx] &&
+                data[topIdx + 1] === data[bottomIdx + 1] &&
+                data[topIdx + 2] === data[bottomIdx + 2] &&
+                data[topIdx + 3] === data[bottomIdx + 3];
+
+            // Check if current pixel differs from neighbors
+            const differentFromHorizontal =
+                data[currentIdx] !== data[leftIdx] ||
+                data[currentIdx + 1] !== data[leftIdx + 1] ||
+                data[currentIdx + 2] !== data[leftIdx + 2] ||
+                data[currentIdx + 3] !== data[leftIdx + 3];
+
+            const differentFromVertical =
+                data[currentIdx] !== data[topIdx] ||
+                data[currentIdx + 1] !== data[topIdx + 1] ||
+                data[currentIdx + 2] !== data[topIdx + 2] ||
+                data[currentIdx + 3] !== data[topIdx + 3];
+
+            if ((horizontalMatch && differentFromHorizontal) ||
+                (verticalMatch && differentFromVertical)) {
+                speckleCount++;
+            }
+        }
+    }
+
+    return speckleCount;
+}
+
 // Export for Node.js
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
@@ -534,6 +633,9 @@ if (typeof module !== 'undefined' && module.exports) {
         registerHighLevelTest,
         analyzeExtremes,
         countUniqueColors,
+        countUniqueColorsInMiddleRow,
+        countUniqueColorsInMiddleColumn,
+        countSpeckles,
         hasSpeckles
     };
 }
@@ -555,5 +657,8 @@ if (typeof window !== 'undefined') {
     window.registerHighLevelTest = registerHighLevelTest;
     window.analyzeExtremes = analyzeExtremes;
     window.countUniqueColors = countUniqueColors;
+    window.countUniqueColorsInMiddleRow = countUniqueColorsInMiddleRow;
+    window.countUniqueColorsInMiddleColumn = countUniqueColorsInMiddleColumn;
+    window.countSpeckles = countSpeckles;
     window.hasSpeckles = hasSpeckles;
 }

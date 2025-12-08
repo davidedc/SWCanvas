@@ -150,6 +150,11 @@ button.secondary:hover {
     color: #d32f2f;
 }
 
+.nav-link.warning {
+    background: #fff8e1;
+    color: #f9a825;
+}
+
 /* Test Container */
 #test-container {
     display: flex;
@@ -291,6 +296,10 @@ button.secondary:hover {
 
 .check-fail {
     color: #d32f2f;
+}
+
+.check-warning {
+    color: #f9a825;
 }
 
 .check-icon {

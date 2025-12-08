@@ -441,6 +441,10 @@ class HighLevelTestRunner {
         // Stop any existing run
         this.stopIterations(test);
 
+        // Reset tracking for fresh iteration run
+        section.dataset.everFailed = 'false';
+        section.dataset.hasKnownFailure = 'false';
+
         // Get UI elements
         const iterControls = section.querySelector('.iteration-controls');
         const stopBtn = iterControls.querySelector('.stop-btn');
@@ -698,7 +702,54 @@ class HighLevelTestRunner {
             });
         }
 
-        // Speckles check (on SWCanvas)
+        // Middle row unique colors check (both SW and HTML5 Canvas)
+        if (checks.uniqueColors && checks.uniqueColors.middleRow) {
+            const expected = checks.uniqueColors.middleRow.count;
+            const swSurface = createSurface(swCanvas);
+            const canvasSurface = createSurface(html5Canvas);
+            const swCount = countUniqueColorsInMiddleRow(swSurface);
+            const canvasCount = countUniqueColorsInMiddleRow(canvasSurface);
+            const passed = swCount === expected && canvasCount === expected;
+            results.push({
+                name: 'Middle Row Unique Colors',
+                passed,
+                details: `SW: ${swCount}, Canvas: ${canvasCount}` + (passed ? '' : ` (expected ${expected})`)
+            });
+        }
+
+        // Middle column unique colors check (both SW and HTML5 Canvas)
+        if (checks.uniqueColors && checks.uniqueColors.middleColumn) {
+            const expected = checks.uniqueColors.middleColumn.count;
+            const swSurface = createSurface(swCanvas);
+            const canvasSurface = createSurface(html5Canvas);
+            const swCount = countUniqueColorsInMiddleColumn(swSurface);
+            const canvasCount = countUniqueColorsInMiddleColumn(canvasSurface);
+            const passed = swCount === expected && canvasCount === expected;
+            results.push({
+                name: 'Middle Column Unique Colors',
+                passed,
+                details: `SW: ${swCount}, Canvas: ${canvasCount}` + (passed ? '' : ` (expected ${expected})`)
+            });
+        }
+
+        // Speckle count check (SW only)
+        if (checks.speckles === true || (checks.speckles && typeof checks.speckles === 'object')) {
+            const expected = (typeof checks.speckles === 'object' && checks.speckles.expected !== undefined)
+                ? checks.speckles.expected : 0;
+            const isKnownFailure = typeof checks.speckles === 'object' && checks.speckles.knownFailure === true;
+            const swSurface = createSurface(swCanvas);
+            const speckleCount = countSpeckles(swSurface);
+            const passed = speckleCount === expected;
+            results.push({
+                name: 'Speckle Count',
+                passed,
+                knownFailure: isKnownFailure && !passed,
+                details: `SW: ${speckleCount}` + (passed ? '' : ` (expected ${expected})`) +
+                         (!passed && isKnownFailure ? ' [KNOWN]' : '')
+            });
+        }
+
+        // Legacy speckles check (on SWCanvas)
         if (checks.noSpeckles === true) {
             const swSurface = createSurface(swCanvas);
             const hasSpecklePixels = hasSpeckles(swSurface);
@@ -766,14 +817,26 @@ class HighLevelTestRunner {
             row.appendChild(label);
 
             const value = document.createElement('span');
-            value.className = 'result-value ' + (check.passed ? 'check-pass' : 'check-fail');
-            const icon = check.passed ? '&#x2705;' : '&#x274C;';
+            let icon, cssClass;
+            if (check.knownFailure) {
+                // Known failure - show as warning (yellow)
+                icon = '&#x26A0;';
+                cssClass = 'check-warning';
+            } else if (check.passed) {
+                icon = '&#x2705;';
+                cssClass = 'check-pass';
+            } else {
+                icon = '&#x274C;';
+                cssClass = 'check-fail';
+            }
+            value.className = 'result-value ' + cssClass;
             value.innerHTML = `<span class="check-icon">${icon}</span>${check.details}`;
             row.appendChild(value);
 
             resultsDiv.appendChild(row);
 
-            if (!check.passed) {
+            // Known failures don't count as actual failures
+            if (!check.passed && !check.knownFailure) {
                 allChecksPassed = false;
             }
         });
@@ -803,11 +866,32 @@ class HighLevelTestRunner {
             resultsDiv.appendChild(logsDiv);
         }
 
+        // Track if this test ever failed across iterations
+        if (!overallPassed) {
+            section.dataset.everFailed = 'true';
+        }
+
         // Update navigation link color
         const navLink = document.querySelector(`.nav-link[data-test-name="${test.name}"]`);
         if (navLink) {
-            navLink.classList.remove('passed', 'failed');
-            navLink.classList.add(overallPassed ? 'passed' : 'failed');
+            // Track if ANY iteration had known failures (persist across iterations)
+            const hasKnownFailuresThisIteration = checkResults.some(r => r.knownFailure);
+            if (hasKnownFailuresThisIteration) {
+                section.dataset.hasKnownFailure = 'true';
+            }
+            const everHadKnownFailure = section.dataset.hasKnownFailure === 'true';
+
+            // Check if test EVER failed across iterations (not just this one)
+            const everFailed = section.dataset.everFailed === 'true';
+
+            navLink.classList.remove('passed', 'failed', 'warning');
+            if (everFailed) {
+                navLink.classList.add('failed');
+            } else if (everHadKnownFailure) {
+                navLink.classList.add('warning');
+            } else {
+                navLink.classList.add('passed');
+            }
         }
 
         // Update global results
@@ -1152,6 +1236,8 @@ class HighLevelTestRunner {
         this.results = { passed: 0, failed: 0 };
         this.testElements.forEach(section => {
             section.dataset.hasRun = 'false';
+            section.dataset.everFailed = 'false';  // Track if any iteration failed
+            section.dataset.hasKnownFailure = 'false';  // Track if any iteration had known failures
         });
 
         this.globalRunState = {
@@ -1178,13 +1264,16 @@ class HighLevelTestRunner {
             const passed = this.runTest(test, currentIter + 1);
             if (passed) {
                 totalPassed++;
+                // Move to next iteration
+                currentIter++;
+                if (currentIter >= iterCount) {
+                    currentIter = 0;
+                    currentTest++;
+                }
             } else {
                 totalFailed++;
-            }
-
-            // Move to next
-            currentIter++;
-            if (currentIter >= iterCount) {
+                // Test failed - stop at this iteration (so user can see the failing case)
+                // Skip remaining iterations for this test and move to next test
                 currentIter = 0;
                 currentTest++;
             }

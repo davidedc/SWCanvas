@@ -147,7 +147,12 @@ registerHighLevelTest(
     drawTest,
     'rounded-rects',
     {
-        extremes: { colorTolerance: 8 }
+        extremes: { colorTolerance: 8 },
+        uniqueColors: {
+            middleRow: { count: 3 },
+            middleColumn: { count: 3 }
+        },
+        speckles: { expected: 0, knownFailure: true }
     },
     {
         title: 'Single Centered Rounded Rectangle (Random Opaque Stroke, Random Fill, Grid Center)',

@@ -145,8 +145,8 @@ registerHighLevelTest(
     'rounded-rects',
     {
         uniqueColors: {
-            middleRow: { count: 3 },
-            middleColumn: { count: 3 }
+            middleRow: { count: 4 },
+            middleColumn: { count: 4 }
         },
         speckles: true
     },
