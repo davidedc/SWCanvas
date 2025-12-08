@@ -557,7 +557,7 @@ class Context2D {
 
     /**
      * Stroke a rounded rectangle.
-     * Uses fast path for 1px opaque strokes with no transforms/clipping/shadows.
+     * Uses fast path for strokes with no transforms/clipping/shadows.
      * @param {number} x - Rectangle x coordinate
      * @param {number} y - Rectangle y coordinate
      * @param {number} width - Rectangle width
@@ -598,15 +598,29 @@ class Context2D {
         const noShadow = !this.shadowColor || this.shadowColor === 'transparent' ||
                         (this.shadowBlur === 0 && this.shadowOffsetX === 0 && this.shadowOffsetY === 0);
         const is1pxStroke = Math.abs(this._lineWidth - 1) < 0.001;
+        const clipBuffer = this._clipMask ? this._clipMask.buffer : null;
 
-        if (isColor && isSourceOver && noClip && noTransform && noShadow && is1pxStroke) {
+        if (isColor && isSourceOver && noClip && noTransform && noShadow) {
             const isOpaque = paintSource.a === 255 && this.globalAlpha >= 1.0;
-            if (isOpaque) {
-                RoundedRectOps.stroke1pxOpaque(this.surface, x, y, width, height, radii, paintSource);
-                return;
-            } else if (paintSource.a > 0) {
-                RoundedRectOps.stroke1pxAlpha(this.surface, x, y, width, height, radii, paintSource, this.globalAlpha);
-                return;
+
+            if (is1pxStroke) {
+                // 1px stroke fast paths
+                if (isOpaque) {
+                    RoundedRectOps.stroke1pxOpaque(this.surface, x, y, width, height, radii, paintSource, clipBuffer);
+                    return;
+                } else if (paintSource.a > 0) {
+                    RoundedRectOps.stroke1pxAlpha(this.surface, x, y, width, height, radii, paintSource, this.globalAlpha, clipBuffer);
+                    return;
+                }
+            } else {
+                // Thick stroke fast paths
+                if (isOpaque) {
+                    RoundedRectOps.strokeThickOpaque(this.surface, x, y, width, height, radii, this._lineWidth, paintSource, clipBuffer);
+                    return;
+                } else if (paintSource.a > 0) {
+                    RoundedRectOps.strokeThickAlpha(this.surface, x, y, width, height, radii, this._lineWidth, paintSource, this.globalAlpha, clipBuffer);
+                    return;
+                }
             }
         }
 
@@ -619,7 +633,7 @@ class Context2D {
 
     /**
      * Fill a rounded rectangle.
-     * Currently uses slow path (general path system).
+     * Uses fast path when possible (solid color, source-over, no clip/transform/shadow).
      * @param {number} x - Rectangle x coordinate
      * @param {number} y - Rectangle y coordinate
      * @param {number} width - Rectangle width
@@ -650,8 +664,29 @@ class Context2D {
             return;
         }
 
-        // For now, all fillRoundRect goes through slow path
-        // Fast path can be added later if needed
+        // Check for fast path conditions
+        const paintSource = this._fillStyle;
+        const isColor = paintSource instanceof Color;
+        const isSourceOver = this.globalCompositeOperation === 'source-over';
+        const noClip = !this._clipMask;
+        const noTransform = this._transform.isIdentity;
+        const noShadow = !this.shadowColor || this.shadowColor === 'transparent' ||
+                        (this.shadowBlur === 0 && this.shadowOffsetX === 0 && this.shadowOffsetY === 0);
+
+        if (isColor && isSourceOver && noClip && noTransform && noShadow) {
+            const isOpaque = paintSource.a === 255 && this.globalAlpha >= 1.0;
+            const clipBuffer = this._clipMask ? this._clipMask.buffer : null;
+
+            if (isOpaque) {
+                RoundedRectOps.fillOpaque(this.surface, x, y, width, height, radii, paintSource, clipBuffer);
+                return;
+            } else if (paintSource.a > 0) {
+                RoundedRectOps.fillAlpha(this.surface, x, y, width, height, radii, paintSource, this.globalAlpha, clipBuffer);
+                return;
+            }
+        }
+
+        // Slow path: use general path system
         Context2D._markSlowPath();
         this.beginPath();
         this._currentPath.roundRect(x, y, width, height, radii);

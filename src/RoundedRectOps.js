@@ -207,4 +207,452 @@ class RoundedRectOps {
         drawCorner(posX + posW - radius, posY + posH - radius, 0, Math.PI / 2);
         drawCorner(posX + radius, posY + posH - radius, Math.PI / 2, Math.PI);
     }
+
+    /**
+     * Normalize radius for rounded rectangle, clamping to valid range.
+     * @param {number|number[]} radii - Corner radius
+     * @param {number} width - Rectangle width
+     * @param {number} height - Rectangle height
+     * @returns {number} Normalized radius
+     */
+    static _normalizeRadius(radii, width, height) {
+        let radius = Array.isArray(radii) ? radii[0] : (radii || 0);
+        if (width < 2 * radius) radius = width / 2;
+        if (height < 2 * radius) radius = height / 2;
+        return Math.round(Math.min(radius, Math.min(width, height) / 2));
+    }
+
+    /**
+     * Fast path for opaque fill on axis-aligned rounded rectangle.
+     * Uses scanline algorithm with 32-bit packed writes.
+     *
+     * @param {Surface} surface - Target surface
+     * @param {number} x - Top-left X coordinate
+     * @param {number} y - Top-left Y coordinate
+     * @param {number} width - Rectangle width
+     * @param {number} height - Rectangle height
+     * @param {number|number[]} radii - Corner radius
+     * @param {Color} color - Fill color (must be opaque)
+     * @param {Uint8Array|null} clipBuffer - Optional clip mask buffer
+     */
+    static fillOpaque(surface, x, y, width, height, radii, color, clipBuffer = null) {
+        const surfaceWidth = surface.width;
+        const surfaceHeight = surface.height;
+        const data32 = surface.data32;
+
+        // Normalize radius
+        let radius = this._normalizeRadius(radii, width, height);
+
+        // Fallback to RectOps for zero radius
+        if (radius <= 0) {
+            RectOps.fillOpaque(surface, x, y, width, height, color);
+            return;
+        }
+
+        const packedColor = Surface.packColor(color.r, color.g, color.b, 255);
+
+        // Calculate integer bounds
+        const rectX = Math.floor(x);
+        const rectY = Math.floor(y);
+        const rectW = Math.floor(width);
+        const rectH = Math.floor(height);
+
+        // For each scanline
+        for (let py = rectY; py < rectY + rectH; py++) {
+            if (py < 0 || py >= surfaceHeight) continue;
+
+            let leftX = rectX;
+            let rightX = rectX + rectW - 1;
+
+            // Adjust for rounded corners
+            if (py < rectY + radius) {
+                // Top corners - calculate x extent based on circle equation
+                const cornerCenterY = rectY + radius;
+                const dy = cornerCenterY - py - 0.5;
+                const dySquared = dy * dy;
+                const radiusSquared = radius * radius;
+
+                if (dySquared < radiusSquared) {
+                    const dx = Math.sqrt(radiusSquared - dySquared);
+                    leftX = Math.ceil(rectX + radius - dx);
+                    rightX = Math.floor(rectX + rectW - radius + dx - 1);
+                } else {
+                    continue; // Outside the rounded area
+                }
+            } else if (py >= rectY + rectH - radius) {
+                // Bottom corners
+                const cornerCenterY = rectY + rectH - radius;
+                const dy = py - cornerCenterY + 0.5;
+                const dySquared = dy * dy;
+                const radiusSquared = radius * radius;
+
+                if (dySquared < radiusSquared) {
+                    const dx = Math.sqrt(radiusSquared - dySquared);
+                    leftX = Math.ceil(rectX + radius - dx);
+                    rightX = Math.floor(rectX + rectW - radius + dx - 1);
+                } else {
+                    continue; // Outside the rounded area
+                }
+            }
+
+            // Clamp to surface bounds
+            leftX = Math.max(0, leftX);
+            rightX = Math.min(surfaceWidth - 1, rightX);
+
+            if (leftX > rightX) continue;
+
+            // Fill scanline
+            const spanLength = rightX - leftX + 1;
+            SpanOps.fillFast(data32, surfaceWidth, surfaceHeight, leftX, py, spanLength, packedColor, clipBuffer);
+        }
+    }
+
+    /**
+     * Fast path for semi-transparent fill on axis-aligned rounded rectangle.
+     * Uses scanline algorithm with alpha blending.
+     *
+     * @param {Surface} surface - Target surface
+     * @param {number} x - Top-left X coordinate
+     * @param {number} y - Top-left Y coordinate
+     * @param {number} width - Rectangle width
+     * @param {number} height - Rectangle height
+     * @param {number|number[]} radii - Corner radius
+     * @param {Color} color - Fill color
+     * @param {number} globalAlpha - Global alpha value
+     * @param {Uint8Array|null} clipBuffer - Optional clip mask buffer
+     */
+    static fillAlpha(surface, x, y, width, height, radii, color, globalAlpha, clipBuffer = null) {
+        const surfaceWidth = surface.width;
+        const surfaceHeight = surface.height;
+        const data = surface.data;
+
+        // Normalize radius
+        let radius = this._normalizeRadius(radii, width, height);
+
+        // Fallback to RectOps for zero radius
+        if (radius <= 0) {
+            RectOps.fillAlpha(surface, x, y, width, height, color, globalAlpha);
+            return;
+        }
+
+        const r = color.r;
+        const g = color.g;
+        const b = color.b;
+        const incomingAlpha = (color.a / 255) * globalAlpha;
+        const inverseIncomingAlpha = 1 - incomingAlpha;
+
+        // Calculate integer bounds
+        const rectX = Math.floor(x);
+        const rectY = Math.floor(y);
+        const rectW = Math.floor(width);
+        const rectH = Math.floor(height);
+
+        // For each scanline
+        for (let py = rectY; py < rectY + rectH; py++) {
+            if (py < 0 || py >= surfaceHeight) continue;
+
+            let leftX = rectX;
+            let rightX = rectX + rectW - 1;
+
+            // Adjust for rounded corners (same logic as fillOpaque)
+            if (py < rectY + radius) {
+                const cornerCenterY = rectY + radius;
+                const dy = cornerCenterY - py - 0.5;
+                const dySquared = dy * dy;
+                const radiusSquared = radius * radius;
+
+                if (dySquared < radiusSquared) {
+                    const dx = Math.sqrt(radiusSquared - dySquared);
+                    leftX = Math.ceil(rectX + radius - dx);
+                    rightX = Math.floor(rectX + rectW - radius + dx - 1);
+                } else {
+                    continue;
+                }
+            } else if (py >= rectY + rectH - radius) {
+                const cornerCenterY = rectY + rectH - radius;
+                const dy = py - cornerCenterY + 0.5;
+                const dySquared = dy * dy;
+                const radiusSquared = radius * radius;
+
+                if (dySquared < radiusSquared) {
+                    const dx = Math.sqrt(radiusSquared - dySquared);
+                    leftX = Math.ceil(rectX + radius - dx);
+                    rightX = Math.floor(rectX + rectW - radius + dx - 1);
+                } else {
+                    continue;
+                }
+            }
+
+            // Clamp to surface bounds
+            leftX = Math.max(0, leftX);
+            rightX = Math.min(surfaceWidth - 1, rightX);
+
+            if (leftX > rightX) continue;
+
+            // Fill scanline with alpha blending
+            const spanLength = rightX - leftX + 1;
+            SpanOps.fillAlpha(data, surfaceWidth, surfaceHeight, leftX, py, spanLength, r, g, b, incomingAlpha, inverseIncomingAlpha, clipBuffer);
+        }
+    }
+
+    /**
+     * Fast path for thick opaque stroke on axis-aligned rounded rectangle.
+     * Uses scanline algorithm to fill the stroke region between inner and outer bounds.
+     *
+     * @param {Surface} surface - Target surface
+     * @param {number} x - Top-left X coordinate
+     * @param {number} y - Top-left Y coordinate
+     * @param {number} width - Rectangle width
+     * @param {number} height - Rectangle height
+     * @param {number|number[]} radii - Corner radius
+     * @param {number} lineWidth - Stroke width
+     * @param {Color} color - Stroke color (must be opaque)
+     * @param {Uint8Array|null} clipBuffer - Optional clip mask buffer
+     */
+    static strokeThickOpaque(surface, x, y, width, height, radii, lineWidth, color, clipBuffer = null) {
+        const surfaceWidth = surface.width;
+        const surfaceHeight = surface.height;
+        const data32 = surface.data32;
+
+        // Normalize radius
+        let radius = this._normalizeRadius(radii, width, height);
+
+        // Fallback to RectOps for zero radius (rounded rect becomes regular rect)
+        if (radius <= 0) {
+            RectOps.strokeThickOpaque(surface, x, y, width, height, lineWidth, color, clipBuffer);
+            return;
+        }
+
+        const halfStroke = lineWidth / 2;
+
+        const packedColor = Surface.packColor(color.r, color.g, color.b, 255);
+
+        // Calculate outer and inner bounds
+        const outerX = Math.floor(x - halfStroke);
+        const outerY = Math.floor(y - halfStroke);
+        const outerW = Math.ceil(width + lineWidth);
+        const outerH = Math.ceil(height + lineWidth);
+        const outerRadius = radius + halfStroke;
+
+        const innerX = Math.floor(x + halfStroke);
+        const innerY = Math.floor(y + halfStroke);
+        const innerW = Math.floor(width - lineWidth);
+        const innerH = Math.floor(height - lineWidth);
+        const innerRadius = Math.max(0, radius - halfStroke);
+
+        // Helper to calculate x extent for rounded corner at a given y
+        const getXExtent = (py, rectX, rectW, rectY, rectH, r) => {
+            if (r <= 0) {
+                return { leftX: rectX, rightX: rectX + rectW - 1 };
+            }
+
+            let leftX = rectX;
+            let rightX = rectX + rectW - 1;
+
+            if (py < rectY + r) {
+                const cornerCenterY = rectY + r;
+                const dy = cornerCenterY - py - 0.5;
+                const dySquared = dy * dy;
+                const radiusSquared = r * r;
+
+                if (dySquared < radiusSquared) {
+                    const dx = Math.sqrt(radiusSquared - dySquared);
+                    leftX = Math.ceil(rectX + r - dx);
+                    rightX = Math.floor(rectX + rectW - r + dx - 1);
+                } else {
+                    return { leftX: -1, rightX: -1 }; // Outside
+                }
+            } else if (py >= rectY + rectH - r) {
+                const cornerCenterY = rectY + rectH - r;
+                const dy = py - cornerCenterY + 0.5;
+                const dySquared = dy * dy;
+                const radiusSquared = r * r;
+
+                if (dySquared < radiusSquared) {
+                    const dx = Math.sqrt(radiusSquared - dySquared);
+                    leftX = Math.ceil(rectX + r - dx);
+                    rightX = Math.floor(rectX + rectW - r + dx - 1);
+                } else {
+                    return { leftX: -1, rightX: -1 }; // Outside
+                }
+            }
+
+            return { leftX, rightX };
+        };
+
+        // For each scanline in the outer bounds
+        for (let py = outerY; py < outerY + outerH; py++) {
+            if (py < 0 || py >= surfaceHeight) continue;
+
+            // Get outer extent
+            const outer = getXExtent(py, outerX, outerW, outerY, outerH, outerRadius);
+            if (outer.leftX < 0) continue; // Outside outer bounds
+
+            // Clamp outer to surface
+            const outerLeft = Math.max(0, outer.leftX);
+            const outerRight = Math.min(surfaceWidth - 1, outer.rightX);
+            if (outerLeft > outerRight) continue;
+
+            // Check if we're in the inner region (hollow part)
+            if (innerW > 0 && innerH > 0 && py >= innerY && py < innerY + innerH) {
+                const inner = getXExtent(py, innerX, innerW, innerY, innerH, innerRadius);
+
+                if (inner.leftX >= 0 && inner.rightX >= inner.leftX) {
+                    // Draw left and right stroke spans around the inner region
+                    const innerLeft = Math.max(0, inner.leftX);
+                    const innerRight = Math.min(surfaceWidth - 1, inner.rightX);
+
+                    // Left span: from outerLeft to just before innerLeft
+                    if (outerLeft < innerLeft) {
+                        const leftSpanLength = innerLeft - outerLeft;
+                        SpanOps.fillFast(data32, surfaceWidth, surfaceHeight, outerLeft, py, leftSpanLength, packedColor, clipBuffer);
+                    }
+
+                    // Right span: from just after innerRight to outerRight
+                    if (innerRight < outerRight) {
+                        const rightSpanStart = innerRight + 1;
+                        const rightSpanLength = outerRight - innerRight;
+                        SpanOps.fillFast(data32, surfaceWidth, surfaceHeight, rightSpanStart, py, rightSpanLength, packedColor, clipBuffer);
+                    }
+                } else {
+                    // Inner region invalid at this Y, fill entire outer span
+                    const spanLength = outerRight - outerLeft + 1;
+                    SpanOps.fillFast(data32, surfaceWidth, surfaceHeight, outerLeft, py, spanLength, packedColor, clipBuffer);
+                }
+            } else {
+                // Not in inner region, fill entire outer span
+                const spanLength = outerRight - outerLeft + 1;
+                SpanOps.fillFast(data32, surfaceWidth, surfaceHeight, outerLeft, py, spanLength, packedColor, clipBuffer);
+            }
+        }
+    }
+
+    /**
+     * Fast path for thick semi-transparent stroke on axis-aligned rounded rectangle.
+     * Uses scanline algorithm with alpha blending.
+     *
+     * @param {Surface} surface - Target surface
+     * @param {number} x - Top-left X coordinate
+     * @param {number} y - Top-left Y coordinate
+     * @param {number} width - Rectangle width
+     * @param {number} height - Rectangle height
+     * @param {number|number[]} radii - Corner radius
+     * @param {number} lineWidth - Stroke width
+     * @param {Color} color - Stroke color
+     * @param {number} globalAlpha - Global alpha value
+     * @param {Uint8Array|null} clipBuffer - Optional clip mask buffer
+     */
+    static strokeThickAlpha(surface, x, y, width, height, radii, lineWidth, color, globalAlpha, clipBuffer = null) {
+        const surfaceWidth = surface.width;
+        const surfaceHeight = surface.height;
+        const data = surface.data;
+
+        // Normalize radius
+        let radius = this._normalizeRadius(radii, width, height);
+
+        // Fallback to RectOps for zero radius (rounded rect becomes regular rect)
+        if (radius <= 0) {
+            RectOps.strokeThickAlpha(surface, x, y, width, height, lineWidth, color, globalAlpha, clipBuffer);
+            return;
+        }
+
+        const halfStroke = lineWidth / 2;
+
+        const r = color.r;
+        const g = color.g;
+        const b = color.b;
+        const incomingAlpha = (color.a / 255) * globalAlpha;
+        const inverseIncomingAlpha = 1 - incomingAlpha;
+
+        // Calculate outer and inner bounds
+        const outerX = Math.floor(x - halfStroke);
+        const outerY = Math.floor(y - halfStroke);
+        const outerW = Math.ceil(width + lineWidth);
+        const outerH = Math.ceil(height + lineWidth);
+        const outerRadius = radius + halfStroke;
+
+        const innerX = Math.floor(x + halfStroke);
+        const innerY = Math.floor(y + halfStroke);
+        const innerW = Math.floor(width - lineWidth);
+        const innerH = Math.floor(height - lineWidth);
+        const innerRadius = Math.max(0, radius - halfStroke);
+
+        // Helper to calculate x extent (same as strokeThickOpaque)
+        const getXExtent = (py, rectX, rectW, rectY, rectH, rad) => {
+            if (rad <= 0) {
+                return { leftX: rectX, rightX: rectX + rectW - 1 };
+            }
+
+            let leftX = rectX;
+            let rightX = rectX + rectW - 1;
+
+            if (py < rectY + rad) {
+                const cornerCenterY = rectY + rad;
+                const dy = cornerCenterY - py - 0.5;
+                const dySquared = dy * dy;
+                const radiusSquared = rad * rad;
+
+                if (dySquared < radiusSquared) {
+                    const dx = Math.sqrt(radiusSquared - dySquared);
+                    leftX = Math.ceil(rectX + rad - dx);
+                    rightX = Math.floor(rectX + rectW - rad + dx - 1);
+                } else {
+                    return { leftX: -1, rightX: -1 };
+                }
+            } else if (py >= rectY + rectH - rad) {
+                const cornerCenterY = rectY + rectH - rad;
+                const dy = py - cornerCenterY + 0.5;
+                const dySquared = dy * dy;
+                const radiusSquared = rad * rad;
+
+                if (dySquared < radiusSquared) {
+                    const dx = Math.sqrt(radiusSquared - dySquared);
+                    leftX = Math.ceil(rectX + rad - dx);
+                    rightX = Math.floor(rectX + rectW - rad + dx - 1);
+                } else {
+                    return { leftX: -1, rightX: -1 };
+                }
+            }
+
+            return { leftX, rightX };
+        };
+
+        // For each scanline in the outer bounds
+        for (let py = outerY; py < outerY + outerH; py++) {
+            if (py < 0 || py >= surfaceHeight) continue;
+
+            const outer = getXExtent(py, outerX, outerW, outerY, outerH, outerRadius);
+            if (outer.leftX < 0) continue;
+
+            const outerLeft = Math.max(0, outer.leftX);
+            const outerRight = Math.min(surfaceWidth - 1, outer.rightX);
+            if (outerLeft > outerRight) continue;
+
+            if (innerW > 0 && innerH > 0 && py >= innerY && py < innerY + innerH) {
+                const inner = getXExtent(py, innerX, innerW, innerY, innerH, innerRadius);
+
+                if (inner.leftX >= 0 && inner.rightX >= inner.leftX) {
+                    const innerLeft = Math.max(0, inner.leftX);
+                    const innerRight = Math.min(surfaceWidth - 1, inner.rightX);
+
+                    if (outerLeft < innerLeft) {
+                        const leftSpanLength = innerLeft - outerLeft;
+                        SpanOps.fillAlpha(data, surfaceWidth, surfaceHeight, outerLeft, py, leftSpanLength, r, g, b, incomingAlpha, inverseIncomingAlpha, clipBuffer);
+                    }
+
+                    if (innerRight < outerRight) {
+                        const rightSpanStart = innerRight + 1;
+                        const rightSpanLength = outerRight - innerRight;
+                        SpanOps.fillAlpha(data, surfaceWidth, surfaceHeight, rightSpanStart, py, rightSpanLength, r, g, b, incomingAlpha, inverseIncomingAlpha, clipBuffer);
+                    }
+                } else {
+                    const spanLength = outerRight - outerLeft + 1;
+                    SpanOps.fillAlpha(data, surfaceWidth, surfaceHeight, outerLeft, py, spanLength, r, g, b, incomingAlpha, inverseIncomingAlpha, clipBuffer);
+                }
+            } else {
+                const spanLength = outerRight - outerLeft + 1;
+                SpanOps.fillAlpha(data, surfaceWidth, surfaceHeight, outerLeft, py, spanLength, r, g, b, incomingAlpha, inverseIncomingAlpha, clipBuffer);
+            }
+        }
+    }
 }

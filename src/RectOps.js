@@ -133,8 +133,9 @@ class RectOps {
      * @param {number} height - Rectangle height
      * @param {number} lineWidth - Stroke width in pixels
      * @param {Color} color - Stroke color (must be opaque)
+     * @param {Uint8Array|null} clipBuffer - Optional clip mask buffer
      */
-    static strokeThickOpaque(surface, x, y, width, height, lineWidth, color) {
+    static strokeThickOpaque(surface, x, y, width, height, lineWidth, color, clipBuffer = null) {
         const surfaceWidth = surface.width;
         const surfaceHeight = surface.height;
         const data32 = surface.data32;
@@ -143,42 +144,44 @@ class RectOps {
         const halfStroke = lineWidth / 2;
 
         // Calculate stroke geometry (edge centers)
-        const left = Math.floor(x);
-        const top = Math.floor(y);
-        const right = Math.floor(x + width);
-        const bottom = Math.floor(y + height);
+        // Keep as floats - don't floor early! CrispSWCanvas keeps strokePos.x/y as floats
+        // and only floors when calculating actual pixel positions
+        const left = x;
+        const top = y;
+        const right = x + width;
+        const bottom = y + height;
+
+        // Helper to set pixel with optional clipping
+        const setPixel = (px, py) => {
+            if (px < 0 || px >= surfaceWidth || py < 0 || py >= surfaceHeight) return;
+
+            if (clipBuffer) {
+                const pixelIndex = py * surfaceWidth + px;
+                const byteIndex = pixelIndex >> 3;
+                const bitIndex = pixelIndex & 7;
+                if (!(clipBuffer[byteIndex] & (1 << bitIndex))) return;
+            }
+
+            data32[py * surfaceWidth + px] = packedColor;
+        };
 
         // Draw horizontal strokes (top and bottom edges with full thickness)
         for (let px = Math.floor(left - halfStroke); px < right + halfStroke; px++) {
-            if (px < 0 || px >= surfaceWidth) continue;
-            for (let t = Math.floor(-halfStroke); t < halfStroke; t++) {
+            for (let t = -halfStroke; t < halfStroke; t++) {
                 // Top edge
-                const topY = top + t;
-                if (topY >= 0 && topY < surfaceHeight) {
-                    data32[topY * surfaceWidth + px] = packedColor;
-                }
+                setPixel(px, Math.floor(top + t));
                 // Bottom edge
-                const bottomY = bottom + t;
-                if (bottomY >= 0 && bottomY < surfaceHeight) {
-                    data32[bottomY * surfaceWidth + px] = packedColor;
-                }
+                setPixel(px, Math.floor(bottom + t));
             }
         }
 
         // Draw vertical strokes (left and right edges, excluding corners already drawn)
         for (let py = Math.floor(top + halfStroke); py < bottom - halfStroke; py++) {
-            if (py < 0 || py >= surfaceHeight) continue;
-            for (let t = Math.floor(-halfStroke); t < halfStroke; t++) {
+            for (let t = -halfStroke; t < halfStroke; t++) {
                 // Left edge
-                const leftX = left + t;
-                if (leftX >= 0 && leftX < surfaceWidth) {
-                    data32[py * surfaceWidth + leftX] = packedColor;
-                }
+                setPixel(Math.floor(left + t), py);
                 // Right edge
-                const rightX = right + t;
-                if (rightX >= 0 && rightX < surfaceWidth) {
-                    data32[py * surfaceWidth + rightX] = packedColor;
-                }
+                setPixel(Math.floor(right + t), py);
             }
         }
     }
@@ -194,8 +197,9 @@ class RectOps {
      * @param {number} lineWidth - Stroke width in pixels
      * @param {Color} color - Stroke color
      * @param {number} globalAlpha - Context global alpha (0-1)
+     * @param {Uint8Array|null} clipBuffer - Optional clip mask buffer
      */
-    static strokeThickAlpha(surface, x, y, width, height, lineWidth, color, globalAlpha) {
+    static strokeThickAlpha(surface, x, y, width, height, lineWidth, color, globalAlpha, clipBuffer = null) {
         const surfaceWidth = surface.width;
         const surfaceHeight = surface.height;
         const data = surface.data;
@@ -209,15 +213,26 @@ class RectOps {
         const halfStroke = lineWidth / 2;
 
         // Calculate stroke geometry (edge centers)
-        const left = Math.floor(x);
-        const top = Math.floor(y);
-        const right = Math.floor(x + width);
-        const bottom = Math.floor(y + height);
+        // Keep as floats - don't floor early! CrispSWCanvas keeps strokePos.x/y as floats
+        // and only floors when calculating actual pixel positions
+        const left = x;
+        const top = y;
+        const right = x + width;
+        const bottom = y + height;
 
-        // Helper function to blend a pixel
+        // Helper function to blend a pixel with optional clipping
         const blendPixel = (px, py) => {
             if (px < 0 || px >= surfaceWidth || py < 0 || py >= surfaceHeight) return;
-            const idx = (py * surfaceWidth + px) * 4;
+
+            const pixelIndex = py * surfaceWidth + px;
+
+            if (clipBuffer) {
+                const byteIndex = pixelIndex >> 3;
+                const bitIndex = pixelIndex & 7;
+                if (!(clipBuffer[byteIndex] & (1 << bitIndex))) return;
+            }
+
+            const idx = pixelIndex * 4;
             const oldAlpha = data[idx + 3] / 255;
             const oldAlphaScaled = oldAlpha * invAlpha;
             const newAlpha = effectiveAlpha + oldAlphaScaled;
@@ -232,21 +247,21 @@ class RectOps {
 
         // Draw horizontal strokes (top and bottom edges with full thickness)
         for (let px = Math.floor(left - halfStroke); px < right + halfStroke; px++) {
-            for (let t = Math.floor(-halfStroke); t < halfStroke; t++) {
+            for (let t = -halfStroke; t < halfStroke; t++) {
                 // Top edge
-                blendPixel(px, top + t);
+                blendPixel(px, Math.floor(top + t));
                 // Bottom edge
-                blendPixel(px, bottom + t);
+                blendPixel(px, Math.floor(bottom + t));
             }
         }
 
         // Draw vertical strokes (left and right edges, excluding corners already drawn)
         for (let py = Math.floor(top + halfStroke); py < bottom - halfStroke; py++) {
-            for (let t = Math.floor(-halfStroke); t < halfStroke; t++) {
+            for (let t = -halfStroke; t < halfStroke; t++) {
                 // Left edge
-                blendPixel(left + t, py);
+                blendPixel(Math.floor(left + t), py);
                 // Right edge
-                blendPixel(right + t, py);
+                blendPixel(Math.floor(right + t), py);
             }
         }
     }
