@@ -693,6 +693,78 @@ class Context2D {
         this.fill();
     }
 
+    /**
+     * Fill and stroke a rounded rectangle in a single unified operation.
+     * Uses unified fast path to prevent fill/stroke boundary speckles.
+     * @param {number} x - Rectangle x coordinate
+     * @param {number} y - Rectangle y coordinate
+     * @param {number} width - Rectangle width
+     * @param {number} height - Rectangle height
+     * @param {number|number[]} radii - Corner radius (single value or array)
+     */
+    fillAndStrokeRoundRect(x, y, width, height, radii) {
+        // Validate parameters
+        if (typeof x !== 'number' || typeof y !== 'number' ||
+            typeof width !== 'number' || typeof height !== 'number') {
+            throw new Error('Rectangle coordinates must be numbers');
+        }
+
+        if (width < 0 || height < 0) {
+            return; // Nothing to draw for negative dimensions
+        }
+
+        if (width === 0 || height === 0) {
+            return; // Nothing to draw for zero dimensions
+        }
+
+        // Normalize radius to check for zero
+        let radius = Array.isArray(radii) ? radii[0] : (radii || 0);
+
+        // Fallback to separate fill + stroke for zero radius
+        if (radius <= 0) {
+            this.fillRect(x, y, width, height);
+            this.strokeRect(x, y, width, height);
+            return;
+        }
+
+        // Check for fast path conditions
+        const fillPaint = this._fillStyle;
+        const strokePaint = this._strokeStyle;
+        const fillIsColor = fillPaint instanceof Color;
+        const strokeIsColor = strokePaint instanceof Color;
+        const isSourceOver = this.globalCompositeOperation === 'source-over';
+        const noClip = !this._clipMask;
+        const noTransform = this._transform.isIdentity;
+        const noShadow = !this.shadowColor || this.shadowColor === 'transparent' ||
+                        (this.shadowBlur === 0 && this.shadowOffsetX === 0 && this.shadowOffsetY === 0);
+        const clipBuffer = this._clipMask ? this._clipMask.buffer : null;
+
+        // Unified fast path: both fill and stroke are solid colors, source-over, no transforms/clips/shadows
+        if (fillIsColor && strokeIsColor && isSourceOver && noClip && noTransform && noShadow) {
+            const hasFill = fillPaint.a > 0;
+            const hasStroke = strokePaint.a > 0 && this._lineWidth > 0;
+
+            if (hasFill || hasStroke) {
+                RoundedRectOps.fillAndStroke(
+                    this.surface,
+                    x, y, width, height,
+                    radii,
+                    this._lineWidth,
+                    hasFill ? fillPaint : null,
+                    hasStroke ? strokePaint : null,
+                    this.globalAlpha,
+                    clipBuffer
+                );
+                return;
+            }
+        }
+
+        // Slow path: use sequential fill + stroke
+        Context2D._markSlowPath();
+        this.fillRoundRect(x, y, width, height, radii);
+        this.strokeRoundRect(x, y, width, height, radii);
+    }
+
     // M2: Path drawing methods
     fill(path, rule) {
         let pathToFill, fillRule;

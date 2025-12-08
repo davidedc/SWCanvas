@@ -307,6 +307,10 @@ class CanvasCompatibleContext2D {
         this._core.fillRoundRect(x, y, width, height, radii);
     }
 
+    fillAndStrokeRoundRect(x, y, width, height, radii) {
+        this._core.fillAndStrokeRoundRect(x, y, width, height, radii);
+    }
+
     fill(pathOrFillRule, fillRule) {
         if (typeof pathOrFillRule === 'string') {
             // fill(fillRule)
