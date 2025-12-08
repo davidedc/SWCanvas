@@ -35,7 +35,7 @@
  * UNCAPTURED ASPECTS IN FILENAME / FACETS ABOVE:
  * ----------------------------------------------
  * - The fill and stroke colors are randomized semitransparent colors.
- * - Uses SWCanvas direct API methods `ctx.fillCircle()` and `ctx.strokeCircle()`.
+ * - Uses SWCanvas direct API method `ctx.fillAndStrokeCircle()` for unified fill+stroke rendering.
  * - The stroke width's dependency on the circle's radius is handled by calculateCircleTestParameters.
  *
  */
@@ -66,12 +66,12 @@ registerHighLevelTest(
         const strokeColor = getRandomColor('semitransparent');
         const fillColor = getRandomColor('semitransparent');
 
-        // Draw filled and stroked circle using Direct API
+        // Draw filled and stroked circle using unified Direct API
+        // Using fillAndStrokeCircle ensures no gaps between fill and stroke
         ctx.fillStyle = fillColor;
         ctx.strokeStyle = strokeColor;
         ctx.lineWidth = strokeWidth;
-        ctx.fillCircle(centerX, centerY, radius);
-        ctx.strokeCircle(centerX, centerY, radius);
+        ctx.fillAndStrokeCircle(centerX, centerY, radius);
 
         return {
             logs: [`Circle: center=(${centerX.toFixed(1)},${centerY.toFixed(1)}), r=${radius.toFixed(1)}, sw=${strokeWidth.toFixed(1)}, centerType=${atPixel ? 'pixel' : 'grid'}`],

@@ -9,7 +9,7 @@
  *
  * | Facet                  | Value          | Reason
  * |------------------------|----------------|-----------------------------------------------------------------------------------------------------
- * | Shape category         | circles        | The test draws circles using `ctx.fillCircle()` and `ctx.strokeCircle()`.
+ * | Shape category         | circles        | The test draws circles using `ctx.fillAndStrokeCircle()`.
  * | Count                  | single         | The test is designed to draw a single circle instance in its primary visual test mode.
  * | SizeCategory           | mixed          | The `baseRadius` is randomized in a range of [10, 224], spanning multiple size categories (XS-XL).
  * | FillStyle              | semitransparent | `getRandomColor('semitransparent')` is called for the fill.
@@ -36,7 +36,7 @@
  * ----------------------------------------------
  * - The `strokeWidth` is randomized from 1px up to a maximum of 30px, but it's also capped by the `baseRadius` of the circle.
  * - The final position is randomized within the canvas boundaries while respecting a 10px margin.
- * - Uses SWCanvas direct API methods `ctx.fillCircle()` and `ctx.strokeCircle()`.
+ * - Uses SWCanvas direct API method `ctx.fillAndStrokeCircle()` for unified fill+stroke rendering.
  *
  */
 
@@ -66,12 +66,12 @@ registerHighLevelTest(
         const strokeColor = getRandomColor('semitransparent');
         const fillColor = getRandomColor('semitransparent');
 
-        // Draw filled and stroked circle using Direct API
+        // Draw filled and stroked circle using unified Direct API
+        // Using fillAndStrokeCircle ensures no gaps between fill and stroke
         ctx.fillStyle = fillColor;
         ctx.strokeStyle = strokeColor;
         ctx.lineWidth = strokeWidth;
-        ctx.fillCircle(centerX, centerY, radius);
-        ctx.strokeCircle(centerX, centerY, radius);
+        ctx.fillAndStrokeCircle(centerX, centerY, radius);
 
         return {
             logs: [`RandPos Circle: center=(${centerX.toFixed(1)},${centerY.toFixed(1)}), r=${radius.toFixed(1)}, sw=${strokeWidth.toFixed(1)}`],
