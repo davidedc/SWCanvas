@@ -9,7 +9,7 @@
  *
  * | Facet                  | Value          | Reason
  * |------------------------|----------------|----------------------------------------------------------------------------------------------------------------------------------
- * | Shape category         | rounded-rects  | The test draws rounded rectangles using `ctx.fillRoundRect` and `ctx.strokeRoundRect`.
+ * | Shape category         | rounded-rects  | The test draws rounded rectangles using `ctx.fillAndStrokeRoundRect()` (unified method to prevent speckles).
  * | Count                  | multi-10       | The test draws 10 instances in a loop for visual regression.
  * | SizeCategory           | mixed          | `width` and `height` are randomized in `[50, 150]`, which spans 'M' (40-79px) and 'L' (80-159px) size categories.
  * | FillStyle              | semitransparent| `fillColorObj` is created via `getRandomColor("semitransparent")`, resulting in an alpha channel between 100-200.
@@ -100,20 +100,14 @@ function drawTest(ctx, currentIterationNumber, instances = null) {
         ctx.strokeStyle = strokeColorStr;
         ctx.lineWidth = 1; // Fixed 1px stroke
 
-        // Use SWCanvas fast path methods if available, otherwise standard HTML5 Canvas path
-        if (typeof ctx.fillRoundRect === 'function') {
-            ctx.fillRoundRect(geomX, geomY, width, height, radius);
+        // Use SWCanvas unified fillAndStrokeRoundRect to prevent fill/stroke speckles
+        if (typeof ctx.fillAndStrokeRoundRect === 'function') {
+            ctx.fillAndStrokeRoundRect(geomX, geomY, width, height, radius);
         } else {
+            // Fallback for HTML5 Canvas: use standard path-based approach
             ctx.beginPath();
             ctx.roundRect(geomX, geomY, width, height, radius);
             ctx.fill();
-        }
-
-        if (typeof ctx.strokeRoundRect === 'function') {
-            ctx.strokeRoundRect(geomX, geomY, width, height, radius);
-        } else {
-            ctx.beginPath();
-            ctx.roundRect(geomX, geomY, width, height, radius);
             ctx.stroke();
         }
 
@@ -136,7 +130,7 @@ registerHighLevelTest(
     drawTest,
     'rounded-rects',
     {
-        // Default visual comparison
+        speckles: { expected: 0 }
     },
     {
         title: '10 Thin Opaque-Stroke Rounded Rectangles (1px, Crisp Center Adj.)',

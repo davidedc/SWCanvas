@@ -9,7 +9,7 @@
  *
  * | Facet                  | Value          | Reason
  * |------------------------|----------------|-----------------------------------------------------------------------------------------------------
- * | Shape category         | rounded-rects  | The test draws rounded rectangles using `ctx.fillRoundRect` and `ctx.strokeRoundRect`.
+ * | Shape category         | rounded-rects  | The test draws rounded rectangles using `ctx.fillAndStrokeRoundRect()` (unified method to prevent speckles).
  * | Count                  | multi-8        | The test draws 8 instances when not in performance mode.
  * | SizeCategory           | mixed          | Width/Height are randomized in a range of [50, ~530] which spans M, L, and XL size categories.
  * | FillStyle              | semitransparent| `getRandomColor("semitransparent")` is called for fill, which produces an alpha value in that range.
@@ -113,21 +113,15 @@ function drawTest(ctx, currentIterationNumber, instances = null) {
         ctx.strokeStyle = strokeColorStr;
         ctx.lineWidth = strokeWidth;
 
-        // Use SWCanvas fast path methods if available, otherwise standard HTML5 Canvas path
-        if (typeof ctx.fillRoundRect === 'function') {
-            ctx.fillRoundRect(geomX, geomY, finalRectWidth, finalRectHeight, radius);
+        // Use SWCanvas unified fillAndStrokeRoundRect to prevent fill/stroke speckles
+        if (typeof ctx.fillAndStrokeRoundRect === 'function') {
+            ctx.fillAndStrokeRoundRect(geomX, geomY, finalRectWidth, finalRectHeight, radius);
         } else {
+            // Fallback for HTML5 Canvas: use standard path-based approach
             ctx.beginPath();
             ctx.roundRect(geomX, geomY, finalRectWidth, finalRectHeight, radius);
             ctx.fill();
-        }
-
-        if (strokeWidth > 0) {
-            if (typeof ctx.strokeRoundRect === 'function') {
-                ctx.strokeRoundRect(geomX, geomY, finalRectWidth, finalRectHeight, radius);
-            } else {
-                ctx.beginPath();
-                ctx.roundRect(geomX, geomY, finalRectWidth, finalRectHeight, radius);
+            if (strokeWidth > 0) {
                 ctx.stroke();
             }
         }
@@ -151,7 +145,7 @@ registerHighLevelTest(
     drawTest,
     'rounded-rects',
     {
-        // Default visual comparison
+        speckles: { expected: 0 }
     },
     {
         title: 'Axis-Aligned Rounded Rectangles (Multiple, Random Params)',

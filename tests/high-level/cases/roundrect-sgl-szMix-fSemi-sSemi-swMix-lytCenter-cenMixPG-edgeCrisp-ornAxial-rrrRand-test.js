@@ -9,7 +9,7 @@
  *
  * | Facet                  | Value               | Reason
  * |------------------------|---------------------|----------------------------------------------------------------------------------------------------------------------------
- * | Shape category         | `rounded-rects`     | The test renders a rounded rectangle using `ctx.fillRoundRect()` and `ctx.strokeRoundRect()`.
+ * | Shape category         | `rounded-rects`     | The test renders a rounded rectangle using `ctx.fillAndStrokeRoundRect()` (unified method to prevent speckles).
  * | Count                  | `single`            | The test logic draws only one shape instance in visual test mode.
  * | SizeCategory           | `mixed`             | The rectangle's width/height are randomized (e.g., from `50` to `~530px`), spanning M, L, and XL size categories.
  * | FillStyle              | `semitransparent`   | Fill color is set with a random alpha between 50 and 150 (out of 255) using `getRandomColor("semitransparent-light")`.
@@ -105,21 +105,15 @@ function drawTest(ctx, currentIterationNumber, instances = null) {
         ctx.strokeStyle = strokeColorStr;
         ctx.lineWidth = strokeWidth;
 
-        // Use SWCanvas fast path methods if available, otherwise standard HTML5 Canvas path
-        if (typeof ctx.fillRoundRect === 'function') {
-            ctx.fillRoundRect(geomX, geomY, finalRectWidth, finalRectHeight, radius);
+        // Use SWCanvas unified fillAndStrokeRoundRect to prevent fill/stroke speckles
+        if (typeof ctx.fillAndStrokeRoundRect === 'function') {
+            ctx.fillAndStrokeRoundRect(geomX, geomY, finalRectWidth, finalRectHeight, radius);
         } else {
+            // Fallback for HTML5 Canvas: use standard path-based approach
             ctx.beginPath();
             ctx.roundRect(geomX, geomY, finalRectWidth, finalRectHeight, radius);
             ctx.fill();
-        }
-
-        if (strokeWidth > 0) {
-            if (typeof ctx.strokeRoundRect === 'function') {
-                ctx.strokeRoundRect(geomX, geomY, finalRectWidth, finalRectHeight, radius);
-            } else {
-                ctx.beginPath();
-                ctx.roundRect(geomX, geomY, finalRectWidth, finalRectHeight, radius);
+            if (strokeWidth > 0) {
                 ctx.stroke();
             }
         }
@@ -148,7 +142,7 @@ registerHighLevelTest(
             middleRow: { count: 4 },
             middleColumn: { count: 4 }
         },
-        speckles: true
+        speckles: { expected: 0 }
     },
     {
         title: 'Single Centered Rounded Rectangle (Semi-Transparent Stroke & Fill, Crisp Center)',
