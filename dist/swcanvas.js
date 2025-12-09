@@ -4354,19 +4354,29 @@ class RoundedRectOps {
             // Get inner stroke extent - uses pre-calculated bounds from original coordinates
             const innerExtent = (hasStroke && innerRectH > 0) ? getXExtent(py, innerRectX, innerRectW, innerRectY, innerRectH, innerRadius, 0) : { leftX: -1, rightX: -1 };
 
-            // Determine fill extent - must coordinate with stroke to prevent speckles
+            // Determine fill extent based on stroke transparency
             let fillExtent = { leftX: -1, rightX: -1 };
             if (hasFill) {
                 if (hasStroke) {
-                    // With stroke: fill is the inner region (within the stroke annulus)
-                    // Use inner extent if available, otherwise fill entire outer region
-                    if (innerExtent.leftX >= 0 && innerExtent.rightX >= innerExtent.leftX) {
-                        // Inner region exists - fill is strictly within inner boundary
-                        fillExtent.leftX = innerExtent.leftX;
-                        fillExtent.rightX = innerExtent.rightX;
-                    } else if (outerExtent.leftX >= 0) {
+                    // Check if stroke is semi-transparent (needs overlap blending)
+                    const strokeIsSemiTransparent = strokeEffectiveAlpha < 1.0;
+
+                    if (strokeIsSemiTransparent) {
+                        // Semi-transparent stroke: fill uses PATH extent for proper overlap blending
+                        // Stroke will render on top and blend in the overlap region
+                        fillExtent = getXExtent(py, pathX, pathW, pathY, pathH, fillRadius, FILL_EPSILON);
+                        // Clamp fill to outer boundary to prevent speckles at the edge
+                        if (fillExtent.leftX >= 0 && outerExtent.leftX >= 0) {
+                            fillExtent.leftX = Math.max(fillExtent.leftX, outerExtent.leftX);
+                            fillExtent.rightX = Math.min(fillExtent.rightX, outerExtent.rightX);
+                        }
+                    } else {
+                        // Opaque stroke: fill uses inner extent (no overlap needed, prevents speckles)
+                        if (innerExtent.leftX >= 0 && innerExtent.rightX >= innerExtent.leftX) {
+                            fillExtent.leftX = innerExtent.leftX;
+                            fillExtent.rightX = innerExtent.rightX;
+                        }
                         // No inner region on this scanline - no fill (stroke covers everything)
-                        fillExtent = { leftX: -1, rightX: -1 };
                     }
                 } else {
                     // Fill-only: use standard fill extent calculation
