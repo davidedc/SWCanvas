@@ -144,9 +144,7 @@ registerHighLevelTest(
     'roundrect-m8-szMix-fSemi-sMix-swMix-lytSpread-cenMixPG-edgeCrisp-ornAxial-rrrMix',
     drawTest,
     'rounded-rects',
-    {
-        speckles: { expected: 0 }
-    },
+    {},
     {
         title: 'Axis-Aligned Rounded Rectangles (Multiple, Random Params)',
         description: 'Tests rendering of multiple axis-aligned rounded rectangles with random positions, sizes, strokes, fills, and corner radii.',

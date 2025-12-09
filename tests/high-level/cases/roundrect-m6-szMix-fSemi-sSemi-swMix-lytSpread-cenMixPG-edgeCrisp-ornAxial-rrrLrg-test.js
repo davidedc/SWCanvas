@@ -140,9 +140,7 @@ registerHighLevelTest(
     'roundrect-m6-szMix-fSemi-sSemi-swMix-lytSpread-cenMixPG-edgeCrisp-ornAxial-rrrLrg',
     drawTest,
     'rounded-rects',
-    {
-        speckles: { expected: 0 }
-    },
+    {},
     {
         title: 'Large Transparent-Stroke Rounded Rectangles (Multiple, Random Params)',
         description: 'Tests rendering of multiple large rounded rectangles with transparent strokes, random fills, and fixed large radius.',

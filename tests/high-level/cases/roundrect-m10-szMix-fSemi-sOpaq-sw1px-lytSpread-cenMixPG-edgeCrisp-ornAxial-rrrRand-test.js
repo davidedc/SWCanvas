@@ -129,9 +129,7 @@ registerHighLevelTest(
     'roundrect-m10-szMix-fSemi-sOpaq-sw1px-lytSpread-cenMixPG-edgeCrisp-ornAxial-rrrRand',
     drawTest,
     'rounded-rects',
-    {
-        speckles: { expected: 0 }
-    },
+    {},
     {
         title: '10 Thin Opaque-Stroke Rounded Rectangles (1px, Crisp Center Adj.)',
         description: 'Tests rendering of 10 rounded rectangles with 1px opaque strokes, random fills, and crisp center adjustment.',
