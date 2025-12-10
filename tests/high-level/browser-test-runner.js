@@ -54,6 +54,41 @@
             this.strokeRect(x, y, w, h);
         };
     }
+
+    // Arc method polyfills
+    if (!proto.fillArc) {
+        proto.fillArc = function(cx, cy, r, startAngle, endAngle, anticlockwise = false) {
+            this.beginPath();
+            this.moveTo(cx, cy);
+            this.arc(cx, cy, r, startAngle, endAngle, anticlockwise);
+            this.closePath();
+            this.fill();
+        };
+    }
+
+    if (!proto.outerStrokeArc) {
+        proto.outerStrokeArc = function(cx, cy, r, startAngle, endAngle, anticlockwise = false) {
+            this.beginPath();
+            this.arc(cx, cy, r, startAngle, endAngle, anticlockwise);
+            this.stroke();
+        };
+    }
+
+    if (!proto.fillAndOuterStrokeArc) {
+        proto.fillAndOuterStrokeArc = function(cx, cy, r, startAngle, endAngle, anticlockwise = false) {
+            // Fill the pie slice
+            this.beginPath();
+            this.moveTo(cx, cy);
+            this.arc(cx, cy, r, startAngle, endAngle, anticlockwise);
+            this.closePath();
+            this.fill();
+
+            // Stroke only the outer arc
+            this.beginPath();
+            this.arc(cx, cy, r, startAngle, endAngle, anticlockwise);
+            this.stroke();
+        };
+    }
 })();
 
 /**
