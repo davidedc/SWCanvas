@@ -2521,7 +2521,7 @@ class CircleOps {
                 const py = Math.round(cy);
                 if (px >= 0 && px < width && py >= 0 && py < height) {
                     const pos = py * width + px;
-                    if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (7 - (pos & 7))))) {
+                    if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (pos & 7)))) {
                         data32[pos] = packedColor;
                     }
                 }
@@ -2555,49 +2555,49 @@ class CircleOps {
             // Plot points with bounds checking
             if (p1x >= 0 && p1x < width && p1y >= 0 && p1y < height) {
                 const pos = p1y * width + p1x;
-                if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (7 - (pos & 7))))) {
+                if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (pos & 7)))) {
                     data32[pos] = packedColor;
                 }
             }
             if (x !== y && p2x >= 0 && p2x < width && p2y >= 0 && p2y < height) {
                 const pos = p2y * width + p2x;
-                if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (7 - (pos & 7))))) {
+                if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (pos & 7)))) {
                     data32[pos] = packedColor;
                 }
             }
             if (p3x >= 0 && p3x < width && p3y >= 0 && p3y < height) {
                 const pos = p3y * width + p3x;
-                if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (7 - (pos & 7))))) {
+                if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (pos & 7)))) {
                     data32[pos] = packedColor;
                 }
             }
             if (p4x >= 0 && p4x < width && p4y >= 0 && p4y < height) {
                 const pos = p4y * width + p4x;
-                if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (7 - (pos & 7))))) {
+                if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (pos & 7)))) {
                     data32[pos] = packedColor;
                 }
             }
             if (p5x >= 0 && p5x < width && p5y >= 0 && p5y < height) {
                 const pos = p5y * width + p5x;
-                if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (7 - (pos & 7))))) {
+                if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (pos & 7)))) {
                     data32[pos] = packedColor;
                 }
             }
             if (x !== y && p6x >= 0 && p6x < width && p6y >= 0 && p6y < height) {
                 const pos = p6y * width + p6x;
-                if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (7 - (pos & 7))))) {
+                if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (pos & 7)))) {
                     data32[pos] = packedColor;
                 }
             }
             if (p7x >= 0 && p7x < width && p7y >= 0 && p7y < height) {
                 const pos = p7y * width + p7x;
-                if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (7 - (pos & 7))))) {
+                if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (pos & 7)))) {
                     data32[pos] = packedColor;
                 }
             }
             if (p8x >= 0 && p8x < width && p8y >= 0 && p8y < height) {
                 const pos = p8y * width + p8x;
-                if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (7 - (pos & 7))))) {
+                if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (pos & 7)))) {
                     data32[pos] = packedColor;
                 }
             }
@@ -2649,7 +2649,7 @@ class CircleOps {
                 const py = Math.round(cy);
                 if (px >= 0 && px < width && py >= 0 && py < height) {
                     const pos = py * width + px;
-                    if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (7 - (pos & 7))))) {
+                    if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (pos & 7)))) {
                         const idx = pos * 4;
                         const oldAlpha = data[idx + 3] / 255;
                         const oldAlphaScaled = oldAlpha * invAlpha;
@@ -2713,7 +2713,7 @@ class CircleOps {
 
         // Render unique pixels with alpha blending
         for (const pos of uniquePixels) {
-            if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (7 - (pos & 7))))) {
+            if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (pos & 7)))) {
                 const idx = pos * 4;
                 const oldAlpha = data[idx + 3] / 255;
                 const oldAlphaScaled = oldAlpha * invAlpha;
@@ -2840,7 +2840,7 @@ class CircleOps {
                 if (fillIsOpaque) {
                     for (let x = leftFillX; x <= rightFillX; x++) {
                         const pos = y * width + x;
-                        if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (7 - (pos & 7))))) {
+                        if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (pos & 7)))) {
                             data32[pos] = fillPacked;
                         }
                     }
@@ -2848,7 +2848,7 @@ class CircleOps {
                     const fr = fillColor.r, fg = fillColor.g, fb = fillColor.b;
                     for (let x = leftFillX; x <= rightFillX; x++) {
                         const pos = y * width + x;
-                        if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (7 - (pos & 7))))) {
+                        if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (pos & 7)))) {
                             const idx = pos * 4;
                             const oldAlpha = data[idx + 3] / 255;
                             const oldAlphaScaled = oldAlpha * fillInvAlpha;
@@ -2873,7 +2873,7 @@ class CircleOps {
                     if (strokeIsOpaque) {
                         for (let x = startX; x <= endX; x++) {
                             const pos = y * width + x;
-                            if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (7 - (pos & 7))))) {
+                            if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (pos & 7)))) {
                                 data32[pos] = strokePacked;
                             }
                         }
@@ -2881,7 +2881,7 @@ class CircleOps {
                         const sr = strokeColor.r, sg = strokeColor.g, sb = strokeColor.b;
                         for (let x = startX; x <= endX; x++) {
                             const pos = y * width + x;
-                            if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (7 - (pos & 7))))) {
+                            if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (pos & 7)))) {
                                 const idx = pos * 4;
                                 const oldAlpha = data[idx + 3] / 255;
                                 const oldAlphaScaled = oldAlpha * strokeInvAlpha;
@@ -2966,7 +2966,7 @@ class CircleOps {
                 if (innerRadius <= 0 || dySquared > innerRadiusSquared) {
                     for (let x = outerLeftX; x <= outerRightX; x++) {
                         const pos = y * width + x;
-                        if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (7 - (pos & 7))))) {
+                        if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (pos & 7)))) {
                             data32[pos] = packedColor;
                         }
                     }
@@ -2979,7 +2979,7 @@ class CircleOps {
                     // Left segment
                     for (let x = outerLeftX; x <= innerLeftX; x++) {
                         const pos = y * width + x;
-                        if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (7 - (pos & 7))))) {
+                        if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (pos & 7)))) {
                             data32[pos] = packedColor;
                         }
                     }
@@ -2987,7 +2987,7 @@ class CircleOps {
                     // Right segment
                     for (let x = innerRightX; x <= outerRightX; x++) {
                         const pos = y * width + x;
-                        if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (7 - (pos & 7))))) {
+                        if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (pos & 7)))) {
                             data32[pos] = packedColor;
                         }
                     }
@@ -3046,7 +3046,7 @@ class CircleOps {
             if (innerRadius <= 0 || dySquared > innerRadiusSquared) {
                 for (let x = outerLeftX; x <= outerRightX; x++) {
                     const pos = y * width + x;
-                    if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (7 - (pos & 7))))) {
+                    if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (pos & 7)))) {
                         const idx = pos * 4;
                         const oldAlpha = data[idx + 3] / 255;
                         const oldAlphaScaled = oldAlpha * invAlpha;
@@ -3068,7 +3068,7 @@ class CircleOps {
                 // Left segment
                 for (let x = outerLeftX; x <= innerLeftX; x++) {
                     const pos = y * width + x;
-                    if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (7 - (pos & 7))))) {
+                    if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (pos & 7)))) {
                         const idx = pos * 4;
                         const oldAlpha = data[idx + 3] / 255;
                         const oldAlphaScaled = oldAlpha * invAlpha;
@@ -3086,7 +3086,7 @@ class CircleOps {
                 // Right segment
                 for (let x = innerRightX; x <= outerRightX; x++) {
                     const pos = y * width + x;
-                    if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (7 - (pos & 7))))) {
+                    if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (pos & 7)))) {
                         const idx = pos * 4;
                         const oldAlpha = data[idx + 3] / 255;
                         const oldAlphaScaled = oldAlpha * invAlpha;
@@ -3200,7 +3200,7 @@ class ArcOps {
                 if (dx * dx + dy * dy <= radiusSquared &&
                     ArcOps.isAngleInRange(dx, dy, startAngle, endAngle)) {
                     const pos = py * width + px;
-                    if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (7 - (pos & 7))))) {
+                    if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (pos & 7)))) {
                         data32[pos] = packedColor;
                     }
                 }
@@ -3250,7 +3250,7 @@ class ArcOps {
                 if (dx * dx + dy * dy <= radiusSquared &&
                     ArcOps.isAngleInRange(dx, dy, startAngle, endAngle)) {
                     const pos = py * width + px;
-                    if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (7 - (pos & 7))))) {
+                    if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (pos & 7)))) {
                         const idx = pos * 4;
                         const oldAlpha = data[idx + 3] / 255;
                         const oldAlphaScaled = oldAlpha * invAlpha;
@@ -3343,7 +3343,7 @@ class ArcOps {
                 const py = Math.round(cy);
                 if (px >= 0 && px < width && py >= 0 && py < height) {
                     const pos = py * width + px;
-                    if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (7 - (pos & 7))))) {
+                    if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (pos & 7)))) {
                         data32[pos] = packedColor;
                     }
                 }
@@ -3382,7 +3382,7 @@ class ArcOps {
 
         // Render collected pixels
         for (const pos of strokePixels) {
-            if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (7 - (pos & 7))))) {
+            if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (pos & 7)))) {
                 data32[pos] = packedColor;
             }
         }
@@ -3429,7 +3429,7 @@ class ArcOps {
                 const py = Math.round(cy);
                 if (px >= 0 && px < width && py >= 0 && py < height) {
                     const pos = py * width + px;
-                    if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (7 - (pos & 7))))) {
+                    if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (pos & 7)))) {
                         const idx = pos * 4;
                         const oldAlpha = data[idx + 3] / 255;
                         const oldAlphaScaled = oldAlpha * invAlpha;
@@ -3477,7 +3477,7 @@ class ArcOps {
 
         // Render with alpha blending
         for (const pos of strokePixels) {
-            if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (7 - (pos & 7))))) {
+            if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (pos & 7)))) {
                 const idx = pos * 4;
                 const oldAlpha = data[idx + 3] / 255;
                 const oldAlphaScaled = oldAlpha * invAlpha;
@@ -4703,7 +4703,7 @@ class RoundedRectOps {
             if (fillIsOpaque) {
                 for (let px = startX; px <= endX; px++) {
                     const pos = py * surfaceWidth + px;
-                    if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (7 - (pos & 7))))) {
+                    if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (pos & 7)))) {
                         data32[pos] = fillPacked;
                     }
                 }
@@ -4711,7 +4711,7 @@ class RoundedRectOps {
                 const fr = fillColor.r, fg = fillColor.g, fb = fillColor.b;
                 for (let px = startX; px <= endX; px++) {
                     const pos = py * surfaceWidth + px;
-                    if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (7 - (pos & 7))))) {
+                    if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (pos & 7)))) {
                         const idx = pos * 4;
                         const oldAlpha = data[idx + 3] / 255;
                         const oldAlphaScaled = oldAlpha * fillInvAlpha;
@@ -4738,7 +4738,7 @@ class RoundedRectOps {
             if (strokeIsOpaque) {
                 for (let px = startX; px <= endX; px++) {
                     const pos = py * surfaceWidth + px;
-                    if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (7 - (pos & 7))))) {
+                    if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (pos & 7)))) {
                         data32[pos] = strokePacked;
                     }
                 }
@@ -4746,7 +4746,7 @@ class RoundedRectOps {
                 const sr = strokeColor.r, sg = strokeColor.g, sb = strokeColor.b;
                 for (let px = startX; px <= endX; px++) {
                     const pos = py * surfaceWidth + px;
-                    if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (7 - (pos & 7))))) {
+                    if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (pos & 7)))) {
                         const idx = pos * 4;
                         const oldAlpha = data[idx + 3] / 255;
                         const oldAlphaScaled = oldAlpha * strokeInvAlpha;
@@ -13063,8 +13063,10 @@ class Context2D {
         // Check for fast path conditions
         const isColor = paintSource instanceof Color;
         const isSourceOver = this.globalCompositeOperation === 'source-over';
+        // Fast paths only support butt line caps (open arc shapes need cap handling)
+        const isButtCap = this.lineCap === 'butt';
 
-        if (isColor && isSourceOver) {
+        if (isColor && isSourceOver && isButtCap) {
             const isOpaque = paintSource.a === 255 && this.globalAlpha >= 1.0;
             if (isOpaque) {
                 ArcOps.strokeOuterOpaque(this.surface, center.x, center.y, scaledRadius,
@@ -13119,8 +13121,10 @@ class Context2D {
         const isSourceOver = this.globalCompositeOperation === 'source-over';
         const hasFill = fillIsColor && fillPaintSource.a > 0;
         const hasStroke = strokeIsColor && strokePaintSource.a > 0;
+        // Fast paths only support butt line caps (open arc shapes need cap handling)
+        const isButtCap = this.lineCap === 'butt';
 
-        if (fillIsColor && strokeIsColor && isSourceOver && (hasFill || hasStroke)) {
+        if (fillIsColor && strokeIsColor && isSourceOver && isButtCap && (hasFill || hasStroke)) {
             // Use unified fast path
             ArcOps.fillAndStrokeOuter(
                 this.surface,
@@ -13310,16 +13314,21 @@ class Context2D {
     _strokeLineDirect(x1, y1, x2, y2, lineWidth, paintSource) {
         const clipBuffer = this._clipMask ? this._clipMask.buffer : null;
 
+        // Fast paths only support butt line caps (open shapes need cap handling)
+        const isButtCap = this.lineCap === 'butt';
+
         // Get color for solid color fast path
         const isOpaqueColor = paintSource instanceof Color &&
             paintSource.a === 255 &&
             this.globalAlpha >= 1.0 &&
-            this.globalCompositeOperation === 'source-over';
+            this.globalCompositeOperation === 'source-over' &&
+            isButtCap;
 
         // Check for semitransparent color fast path (Color with alpha blending)
         const isSemiTransparentColor = paintSource instanceof Color &&
             !isOpaqueColor &&
-            this.globalCompositeOperation === 'source-over';
+            this.globalCompositeOperation === 'source-over' &&
+            isButtCap;
 
         // Try fast path via LineOps
         const fastPathUsed = LineOps.strokeDirect(
