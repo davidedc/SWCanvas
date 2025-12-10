@@ -310,7 +310,169 @@ SWCanvas Fast Paths - Comprehensive Analysis & Comparison
  | Set deduplication     | ✗    | ✗         | ✓ (alpha) | ✗    | ✓   |
 
  ---
- 9. Code File Summary
+ 9. Potential Improvements Identified
+
+ 1. Add RectOps.fillAndStroke() - Prevent fill/stroke boundary speckles for rectangles
+ 2. Add clipping support to Rectangle fast paths - Currently bails to slow path for any clipping
+ 3. Add rotated fast path for RoundedRect - Currently requires identity transform
+ 4. Add byte-skip optimization to SpanOps.fillAlpha() - Currently only in fillFast()
+ 5. Separate 1px/thick paths for Arc - Could optimize common 1px arc strokes
+ 6. Standardize clipping check pattern - Rectangles use noClip bailout while others use clipBuffer parameter
+
+ ---
+ 10. Missing lineCap = 'butt' Check (IMPORTANT BUG)
+
+ Current State: The fast paths for lines and arcs do NOT check that lineCap === 'butt'. They render as if butt caps are used, but if the user has set lineCap = 'round' or lineCap = 'square', the fast path will produce incorrect output.
+
+ Affected Fast Paths:
+
+ | Shape       | Affected?           | Location                                | Reason                         |
+ |-------------|---------------------|-----------------------------------------|--------------------------------|
+ | Line        | YES                 | Context2D._strokeLineDirect():1835-1869 | Open shape, always has caps    |
+ | Arc         | YES (if not closed) | ArcOps.strokeOuter*()                   | Open shape, has caps unless 2π |
+ | Rectangle   | NO                  | Always closed path, no caps             |                                |
+ | RoundedRect | NO                  | Always closed path, no caps             |                                |
+ | Circle      | NO                  | Always closed path (2π), no caps        |                                |
+
+ Required Fix:
+
+ Add check to fast path conditions:
+ const isButtCap = this.lineCap === 'butt';
+ // Add isButtCap to the fast path eligibility check
+
+ For lines: Context2D.js line ~1842 should include && this.lineCap === 'butt'
+ For arcs: Check before calling ArcOps.strokeOuter*() methods
+
+ ---
+ 11. Method Naming Consistency Analysis
+
+ Current Method Naming Patterns:
+
+ | Class          | Public Methods                                                                                                                   | Private Methods           | Naming Style           |
+ |----------------|----------------------------------------------------------------------------------------------------------------------------------|---------------------------|------------------------|
+ | RectOps        | fillOpaque, fillAlpha, fillRotated, stroke1pxOpaque, stroke1pxAlpha, strokeThickOpaque, strokeThickAlpha, strokeRotated          | _extendLine, _shortenLine | camelCase, descriptive |
+ | RoundedRectOps | fillOpaque, fillAlpha, stroke1pxOpaque, stroke1pxAlpha, strokeThickOpaque, strokeThickAlpha, fillAndStroke                       | _normalizeRadius          | camelCase, descriptive |
+ | CircleOps      | fillAlphaBlend, stroke1pxOpaque, stroke1pxAlpha, strokeThick, strokeThickAlpha, fillAndStroke, generateExtents, isFullCirclePath | -                         | camelCase, descriptive |
+ | LineOps        | strokeDirect, strokeThickPolygonScan                                                                                             | -                         | camelCase, descriptive |
+ | ArcOps         | fillOpaque, fillAlpha, strokeOuterOpaque, strokeOuterAlpha, fillAndStrokeOuter, normalizeAngles, isAngleInRange                  | addThickArcPoint          | camelCase, descriptive |
+ | SpanOps        | fillFast, fillAlpha, blendPixelAlpha                                                                                             | -                         | camelCase              |
+
+ Inconsistencies Found:
+
+ | Issue                      | Current                              | Suggested                | Reason                                |
+ |----------------------------|--------------------------------------|--------------------------|---------------------------------------|
+ | Circle fill opaque missing | Uses SpanOps inline                  | Add fillOpaque()         | Consistency with Rect/RoundedRect     |
+ | CircleOps fillAlphaBlend   | fillAlphaBlend                       | fillAlpha                | Match other shapes                    |
+ | CircleOps strokeThick      | strokeThick                          | strokeThickOpaque        | Match other shapes                    |
+ | LineOps naming             | strokeDirect, strokeThickPolygonScan | stroke1px*, strokeThick* | Match pattern                         |
+ | ArcOps "Outer" suffix      | strokeOuterOpaque                    | stroke1pxOpaque or keep  | "Outer" refers to arc outline vs fill |
+ | SpanOps "Fast" suffix      | fillFast                             | fillOpaque               | Match pattern                         |
+
+ Recommended Renames (if desired for consistency):
+
+ CircleOps:
+   fillAlphaBlend → fillAlpha
+   strokeThick → strokeThickOpaque
+
+ LineOps:
+   strokeDirect → (keep, but could split into stroke1pxOpaque/stroke1pxAlpha/strokeThick*)
+   strokeThickPolygonScan → (keep as internal, or rename to _strokeThickDiagonal)
+
+ SpanOps:
+   fillFast → fillOpaque (match pattern)
+
+ ArcOps:
+   Keep "Outer" suffix - it distinguishes from stroke of radial lines (pie slice edges)
+
+ Private Method Conventions:
+
+ - Underscore prefix used: _extendLine, _shortenLine, _normalizeRadius
+ - Missing underscore: addThickArcPoint should be _addThickArcPoint
+
+ ---
+ 12. Analysis: Should We Add clipRect/clipCircle etc.?
+
+ Current Clipping API:
+
+ // Current approach - path-based clipping
+ ctx.beginPath();
+ ctx.rect(x, y, width, height);
+ ctx.clip();
+
+ // Or with SWPath2D
+ const path = new SWPath2D();
+ path.rect(x, y, width, height);
+ ctx.clip(path);
+
+ Proposed Direct Clipping API:
+
+ // Direct clipping methods
+ ctx.clipRect(x, y, width, height);
+ ctx.clipCircle(cx, cy, radius);
+ ctx.clipRoundRect(x, y, width, height, radii);
+ ctx.clipArc(cx, cy, radius, startAngle, endAngle);
+
+ Analysis:
+
+ | Aspect                | Path-based clip()        | Direct clipShape()                    |
+ |-----------------------|--------------------------|---------------------------------------|
+ | HTML5 Canvas Standard | YES - standard API       | NO - non-standard                     |
+ | Flexibility           | Any path shape           | Limited to predefined shapes          |
+ | Performance           | Creates path, then clips | Could optimize (bypass path creation) |
+ | Code complexity       | 3 lines for rect         | 1 line for rect                       |
+ | Implementation effort | Already done             | New code needed                       |
+
+ Recommendation: LOW PRIORITY / OPTIONAL
+
+ Reasons NOT to add:
+ 1. Non-standard - HTML5 Canvas doesn't have clipRect() etc.
+ 2. Minimal benefit - The current path-based approach is only 2-3 lines
+ 3. Redundant - The path-based clip() already works
+
+ Reasons TO add (if desired):
+ 1. Convenience - One-liner for common cases
+ 2. Potential optimization - Could use shape-specific fast paths for clipping
+ 3. API completeness - Would parallel the direct fill/stroke methods
+
+ If Implemented:
+
+ The implementation would be straightforward:
+ clipRect(x, y, width, height) {
+     const path = new SWPath2D();
+     path.rect(x, y, width, height);
+     this.clip(path);
+ }
+
+ clipCircle(cx, cy, radius) {
+     const path = new SWPath2D();
+     path.arc(cx, cy, radius, 0, 2 * Math.PI);
+     this.clip(path);
+ }
+
+ Verdict: Not redundant, but low value. The path-based API is standard and sufficient. Could be added as convenience methods without fast path optimization - they would just wrap the existing clip() functionality.
+
+ ---
+ 13. Summary of Issues to Address
+
+ High Priority (Correctness):
+
+ 1. Add lineCap check - Lines and arcs fast paths incorrectly render non-butt caps
+
+ Medium Priority (Consistency):
+
+ 2. Add RectOps.fillAndStroke() - Missing unified fill+stroke for rectangles
+ 3. Add clipping support to Rectangle fast paths - Currently bails to slow path
+ 4. Standardize method naming - Several inconsistencies noted above
+
+ Low Priority (Nice to have):
+
+ 5. Add clipRect/clipCircle - Convenience methods (optional)
+ 6. Add byte-skip optimization to SpanOps.fillAlpha() - Performance
+ 7. Add rotated fast path for RoundedRect - Currently requires identity transform
+ 8. Separate 1px/thick paths for Arc - Optimization
+
+ ---
+ 14. Code File Summary
 
  | File                  | Lines | Purpose                          |
  |-----------------------|-------|----------------------------------|
