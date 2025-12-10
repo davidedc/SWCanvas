@@ -390,7 +390,57 @@ SWCanvas Fast Paths - Comprehensive Analysis & Comparison
  - Missing underscore: addThickArcPoint should be _addThickArcPoint
 
  ---
- 12. Analysis: Should We Add clipRect/clipCircle etc.?
+ 12. Code Organization Analysis: Where Should Implementations Live?
+
+ Current Organization:
+
+ | Shape              | Public API                                       | Dispatch Logic      | Actual Implementation        |
+ |--------------------|--------------------------------------------------|---------------------|------------------------------|
+ | Rectangle          | Context2D.fillRect()                             | Context2D:293-342   | RectOps.* ✓                  |
+ | Rectangle          | Context2D.strokeRect()                           | Context2D:364-424   | RectOps.* ✓                  |
+ | RoundedRect        | Context2D.fillRoundRect()                        | Context2D:643+      | RoundedRectOps.* ✓           |
+ | RoundedRect        | Context2D.strokeRoundRect()                      | Context2D:567-625   | RoundedRectOps.* ✓           |
+ | Circle fill opaque | Context2D.fillCircle() → _fillCircleDirect()     | Context2D:1717-1773 | ❌ INLINE in Context2D        |
+ | Circle fill alpha  | Context2D.fillCircle() → _fillCircleDirect()     | Context2D:1774-1776 | CircleOps.fillAlphaBlend() ✓ |
+ | Circle stroke      | Context2D.strokeCircle() → _strokeCircleDirect() | Context2D:1794-1816 | CircleOps.stroke()* ✓        |
+ | Circle fill+stroke | Context2D.fillAndStrokeCircle()                  | Context2D:1485-1494 | CircleOps.fillAndStroke() ✓  |
+ | Arc fill           | Context2D.fillArc()                              | Context2D:1538-1547 | ArcOps.fill()* ✓             |
+ | Arc stroke         | Context2D.outerStrokeArc()                       | Context2D:1592-1601 | ArcOps.strokeOuter()* ✓      |
+ | Line               | Context2D._strokeLineDirect()                    | Context2D:1835-1853 | LineOps.strokeDirect() ✓     |
+
+ Inconsistency Found:
+
+ Circle opaque fill is implemented inline in Context2D.js (lines 1736-1773) instead of being in CircleOps like all other fast paths.
+
+ The implementation includes:
+ - CircleOps.generateExtents(radius) call
+ - CrispSWCanvas center adjustment
+ - Scanline loop with SpanOps.fillFast() calls
+
+ This should be extracted to CircleOps.fillOpaque() for consistency.
+
+ Recommended Refactoring:
+
+ // In CircleOps.js - add new method:
+ static fillOpaque(surface, cx, cy, radius, color, clipBuffer) {
+     // Move code from Context2D._fillCircleDirect() lines 1736-1773
+ }
+
+ // In Context2D._fillCircleDirect() - replace inline code:
+ if (isOpaqueColor) {
+     CircleOps.fillOpaque(this.surface, cx, cy, radius, paintSource, clipBuffer);
+ }
+
+ Summary of Organization Issues:
+
+ | Issue                    | Current Location       | Should Be              |
+ |--------------------------|------------------------|------------------------|
+ | Circle opaque fill logic | Context2D.js:1736-1773 | CircleOps.fillOpaque() |
+
+ All other shapes correctly delegate to their *Ops classes.
+
+ ---
+ 13. Analysis: Should We Add clipRect/clipCircle etc.?
 
  Current Clipping API:
 
@@ -452,7 +502,7 @@ SWCanvas Fast Paths - Comprehensive Analysis & Comparison
  Verdict: Not redundant, but low value. The path-based API is standard and sufficient. Could be added as convenience methods without fast path optimization - they would just wrap the existing clip() functionality.
 
  ---
- 13. Summary of Issues to Address
+ 14. Summary of Issues to Address
 
  High Priority (Correctness):
 
@@ -460,19 +510,24 @@ SWCanvas Fast Paths - Comprehensive Analysis & Comparison
 
  Medium Priority (Consistency):
 
- 2. Add RectOps.fillAndStroke() - Missing unified fill+stroke for rectangles
- 3. Add clipping support to Rectangle fast paths - Currently bails to slow path
- 4. Standardize method naming - Several inconsistencies noted above
+ 2. Move circle opaque fill to CircleOps.fillOpaque() - Currently inline in Context2D
+ 3. Add RectOps.fillAndStroke() - Missing unified fill+stroke for rectangles
+ 4. Add clipping support to Rectangle fast paths - Currently bails to slow path
+ 5. Standardize method naming - Several inconsistencies noted above:
+   - CircleOps.fillAlphaBlend → fillAlpha
+   - CircleOps.strokeThick → strokeThickOpaque
+   - SpanOps.fillFast → fillOpaque
+   - ArcOps.addThickArcPoint → _addThickArcPoint
 
  Low Priority (Nice to have):
 
- 5. Add clipRect/clipCircle - Convenience methods (optional)
- 6. Add byte-skip optimization to SpanOps.fillAlpha() - Performance
- 7. Add rotated fast path for RoundedRect - Currently requires identity transform
- 8. Separate 1px/thick paths for Arc - Optimization
+ 6. Add clipRect/clipCircle - Convenience methods (optional)
+ 7. Add byte-skip optimization to SpanOps.fillAlpha() - Performance
+ 8. Add rotated fast path for RoundedRect - Currently requires identity transform
+ 9. Separate 1px/thick paths for Arc - Optimization
 
  ---
- 14. Code File Summary
+ 15. Code File Summary
 
  | File                  | Lines | Purpose                          |
  |-----------------------|-------|----------------------------------|
