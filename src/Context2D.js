@@ -1588,8 +1588,10 @@ class Context2D {
         // Check for fast path conditions
         const isColor = paintSource instanceof Color;
         const isSourceOver = this.globalCompositeOperation === 'source-over';
+        // Fast paths only support butt line caps (open arc shapes need cap handling)
+        const isButtCap = this.lineCap === 'butt';
 
-        if (isColor && isSourceOver) {
+        if (isColor && isSourceOver && isButtCap) {
             const isOpaque = paintSource.a === 255 && this.globalAlpha >= 1.0;
             if (isOpaque) {
                 ArcOps.strokeOuterOpaque(this.surface, center.x, center.y, scaledRadius,
@@ -1644,8 +1646,10 @@ class Context2D {
         const isSourceOver = this.globalCompositeOperation === 'source-over';
         const hasFill = fillIsColor && fillPaintSource.a > 0;
         const hasStroke = strokeIsColor && strokePaintSource.a > 0;
+        // Fast paths only support butt line caps (open arc shapes need cap handling)
+        const isButtCap = this.lineCap === 'butt';
 
-        if (fillIsColor && strokeIsColor && isSourceOver && (hasFill || hasStroke)) {
+        if (fillIsColor && strokeIsColor && isSourceOver && isButtCap && (hasFill || hasStroke)) {
             // Use unified fast path
             ArcOps.fillAndStrokeOuter(
                 this.surface,
@@ -1835,16 +1839,21 @@ class Context2D {
     _strokeLineDirect(x1, y1, x2, y2, lineWidth, paintSource) {
         const clipBuffer = this._clipMask ? this._clipMask.buffer : null;
 
+        // Fast paths only support butt line caps (open shapes need cap handling)
+        const isButtCap = this.lineCap === 'butt';
+
         // Get color for solid color fast path
         const isOpaqueColor = paintSource instanceof Color &&
             paintSource.a === 255 &&
             this.globalAlpha >= 1.0 &&
-            this.globalCompositeOperation === 'source-over';
+            this.globalCompositeOperation === 'source-over' &&
+            isButtCap;
 
         // Check for semitransparent color fast path (Color with alpha blending)
         const isSemiTransparentColor = paintSource instanceof Color &&
             !isOpaqueColor &&
-            this.globalCompositeOperation === 'source-over';
+            this.globalCompositeOperation === 'source-over' &&
+            isButtCap;
 
         // Try fast path via LineOps
         const fastPathUsed = LineOps.strokeDirect(

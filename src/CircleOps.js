@@ -171,7 +171,7 @@ class CircleOps {
                 const py = Math.round(cy);
                 if (px >= 0 && px < width && py >= 0 && py < height) {
                     const pos = py * width + px;
-                    if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (7 - (pos & 7))))) {
+                    if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (pos & 7)))) {
                         data32[pos] = packedColor;
                     }
                 }
@@ -205,49 +205,49 @@ class CircleOps {
             // Plot points with bounds checking
             if (p1x >= 0 && p1x < width && p1y >= 0 && p1y < height) {
                 const pos = p1y * width + p1x;
-                if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (7 - (pos & 7))))) {
+                if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (pos & 7)))) {
                     data32[pos] = packedColor;
                 }
             }
             if (x !== y && p2x >= 0 && p2x < width && p2y >= 0 && p2y < height) {
                 const pos = p2y * width + p2x;
-                if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (7 - (pos & 7))))) {
+                if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (pos & 7)))) {
                     data32[pos] = packedColor;
                 }
             }
             if (p3x >= 0 && p3x < width && p3y >= 0 && p3y < height) {
                 const pos = p3y * width + p3x;
-                if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (7 - (pos & 7))))) {
+                if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (pos & 7)))) {
                     data32[pos] = packedColor;
                 }
             }
             if (p4x >= 0 && p4x < width && p4y >= 0 && p4y < height) {
                 const pos = p4y * width + p4x;
-                if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (7 - (pos & 7))))) {
+                if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (pos & 7)))) {
                     data32[pos] = packedColor;
                 }
             }
             if (p5x >= 0 && p5x < width && p5y >= 0 && p5y < height) {
                 const pos = p5y * width + p5x;
-                if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (7 - (pos & 7))))) {
+                if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (pos & 7)))) {
                     data32[pos] = packedColor;
                 }
             }
             if (x !== y && p6x >= 0 && p6x < width && p6y >= 0 && p6y < height) {
                 const pos = p6y * width + p6x;
-                if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (7 - (pos & 7))))) {
+                if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (pos & 7)))) {
                     data32[pos] = packedColor;
                 }
             }
             if (p7x >= 0 && p7x < width && p7y >= 0 && p7y < height) {
                 const pos = p7y * width + p7x;
-                if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (7 - (pos & 7))))) {
+                if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (pos & 7)))) {
                     data32[pos] = packedColor;
                 }
             }
             if (p8x >= 0 && p8x < width && p8y >= 0 && p8y < height) {
                 const pos = p8y * width + p8x;
-                if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (7 - (pos & 7))))) {
+                if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (pos & 7)))) {
                     data32[pos] = packedColor;
                 }
             }
@@ -299,7 +299,7 @@ class CircleOps {
                 const py = Math.round(cy);
                 if (px >= 0 && px < width && py >= 0 && py < height) {
                     const pos = py * width + px;
-                    if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (7 - (pos & 7))))) {
+                    if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (pos & 7)))) {
                         const idx = pos * 4;
                         const oldAlpha = data[idx + 3] / 255;
                         const oldAlphaScaled = oldAlpha * invAlpha;
@@ -363,7 +363,7 @@ class CircleOps {
 
         // Render unique pixels with alpha blending
         for (const pos of uniquePixels) {
-            if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (7 - (pos & 7))))) {
+            if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (pos & 7)))) {
                 const idx = pos * 4;
                 const oldAlpha = data[idx + 3] / 255;
                 const oldAlphaScaled = oldAlpha * invAlpha;
@@ -490,7 +490,7 @@ class CircleOps {
                 if (fillIsOpaque) {
                     for (let x = leftFillX; x <= rightFillX; x++) {
                         const pos = y * width + x;
-                        if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (7 - (pos & 7))))) {
+                        if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (pos & 7)))) {
                             data32[pos] = fillPacked;
                         }
                     }
@@ -498,7 +498,7 @@ class CircleOps {
                     const fr = fillColor.r, fg = fillColor.g, fb = fillColor.b;
                     for (let x = leftFillX; x <= rightFillX; x++) {
                         const pos = y * width + x;
-                        if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (7 - (pos & 7))))) {
+                        if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (pos & 7)))) {
                             const idx = pos * 4;
                             const oldAlpha = data[idx + 3] / 255;
                             const oldAlphaScaled = oldAlpha * fillInvAlpha;
@@ -523,7 +523,7 @@ class CircleOps {
                     if (strokeIsOpaque) {
                         for (let x = startX; x <= endX; x++) {
                             const pos = y * width + x;
-                            if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (7 - (pos & 7))))) {
+                            if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (pos & 7)))) {
                                 data32[pos] = strokePacked;
                             }
                         }
@@ -531,7 +531,7 @@ class CircleOps {
                         const sr = strokeColor.r, sg = strokeColor.g, sb = strokeColor.b;
                         for (let x = startX; x <= endX; x++) {
                             const pos = y * width + x;
-                            if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (7 - (pos & 7))))) {
+                            if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (pos & 7)))) {
                                 const idx = pos * 4;
                                 const oldAlpha = data[idx + 3] / 255;
                                 const oldAlphaScaled = oldAlpha * strokeInvAlpha;
@@ -616,7 +616,7 @@ class CircleOps {
                 if (innerRadius <= 0 || dySquared > innerRadiusSquared) {
                     for (let x = outerLeftX; x <= outerRightX; x++) {
                         const pos = y * width + x;
-                        if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (7 - (pos & 7))))) {
+                        if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (pos & 7)))) {
                             data32[pos] = packedColor;
                         }
                     }
@@ -629,7 +629,7 @@ class CircleOps {
                     // Left segment
                     for (let x = outerLeftX; x <= innerLeftX; x++) {
                         const pos = y * width + x;
-                        if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (7 - (pos & 7))))) {
+                        if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (pos & 7)))) {
                             data32[pos] = packedColor;
                         }
                     }
@@ -637,7 +637,7 @@ class CircleOps {
                     // Right segment
                     for (let x = innerRightX; x <= outerRightX; x++) {
                         const pos = y * width + x;
-                        if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (7 - (pos & 7))))) {
+                        if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (pos & 7)))) {
                             data32[pos] = packedColor;
                         }
                     }
@@ -696,7 +696,7 @@ class CircleOps {
             if (innerRadius <= 0 || dySquared > innerRadiusSquared) {
                 for (let x = outerLeftX; x <= outerRightX; x++) {
                     const pos = y * width + x;
-                    if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (7 - (pos & 7))))) {
+                    if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (pos & 7)))) {
                         const idx = pos * 4;
                         const oldAlpha = data[idx + 3] / 255;
                         const oldAlphaScaled = oldAlpha * invAlpha;
@@ -718,7 +718,7 @@ class CircleOps {
                 // Left segment
                 for (let x = outerLeftX; x <= innerLeftX; x++) {
                     const pos = y * width + x;
-                    if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (7 - (pos & 7))))) {
+                    if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (pos & 7)))) {
                         const idx = pos * 4;
                         const oldAlpha = data[idx + 3] / 255;
                         const oldAlphaScaled = oldAlpha * invAlpha;
@@ -736,7 +736,7 @@ class CircleOps {
                 // Right segment
                 for (let x = innerRightX; x <= outerRightX; x++) {
                     const pos = y * width + x;
-                    if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (7 - (pos & 7))))) {
+                    if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (pos & 7)))) {
                         const idx = pos * 4;
                         const oldAlpha = data[idx + 3] / 255;
                         const oldAlphaScaled = oldAlpha * invAlpha;

@@ -93,7 +93,7 @@ class ArcOps {
                 if (dx * dx + dy * dy <= radiusSquared &&
                     ArcOps.isAngleInRange(dx, dy, startAngle, endAngle)) {
                     const pos = py * width + px;
-                    if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (7 - (pos & 7))))) {
+                    if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (pos & 7)))) {
                         data32[pos] = packedColor;
                     }
                 }
@@ -143,7 +143,7 @@ class ArcOps {
                 if (dx * dx + dy * dy <= radiusSquared &&
                     ArcOps.isAngleInRange(dx, dy, startAngle, endAngle)) {
                     const pos = py * width + px;
-                    if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (7 - (pos & 7))))) {
+                    if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (pos & 7)))) {
                         const idx = pos * 4;
                         const oldAlpha = data[idx + 3] / 255;
                         const oldAlphaScaled = oldAlpha * invAlpha;
@@ -236,7 +236,7 @@ class ArcOps {
                 const py = Math.round(cy);
                 if (px >= 0 && px < width && py >= 0 && py < height) {
                     const pos = py * width + px;
-                    if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (7 - (pos & 7))))) {
+                    if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (pos & 7)))) {
                         data32[pos] = packedColor;
                     }
                 }
@@ -275,7 +275,7 @@ class ArcOps {
 
         // Render collected pixels
         for (const pos of strokePixels) {
-            if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (7 - (pos & 7))))) {
+            if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (pos & 7)))) {
                 data32[pos] = packedColor;
             }
         }
@@ -322,7 +322,7 @@ class ArcOps {
                 const py = Math.round(cy);
                 if (px >= 0 && px < width && py >= 0 && py < height) {
                     const pos = py * width + px;
-                    if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (7 - (pos & 7))))) {
+                    if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (pos & 7)))) {
                         const idx = pos * 4;
                         const oldAlpha = data[idx + 3] / 255;
                         const oldAlphaScaled = oldAlpha * invAlpha;
@@ -370,7 +370,7 @@ class ArcOps {
 
         // Render with alpha blending
         for (const pos of strokePixels) {
-            if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (7 - (pos & 7))))) {
+            if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (pos & 7)))) {
                 const idx = pos * 4;
                 const oldAlpha = data[idx + 3] / 255;
                 const oldAlphaScaled = oldAlpha * invAlpha;

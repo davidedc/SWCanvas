@@ -800,7 +800,7 @@ class RoundedRectOps {
             if (fillIsOpaque) {
                 for (let px = startX; px <= endX; px++) {
                     const pos = py * surfaceWidth + px;
-                    if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (7 - (pos & 7))))) {
+                    if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (pos & 7)))) {
                         data32[pos] = fillPacked;
                     }
                 }
@@ -808,7 +808,7 @@ class RoundedRectOps {
                 const fr = fillColor.r, fg = fillColor.g, fb = fillColor.b;
                 for (let px = startX; px <= endX; px++) {
                     const pos = py * surfaceWidth + px;
-                    if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (7 - (pos & 7))))) {
+                    if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (pos & 7)))) {
                         const idx = pos * 4;
                         const oldAlpha = data[idx + 3] / 255;
                         const oldAlphaScaled = oldAlpha * fillInvAlpha;
@@ -835,7 +835,7 @@ class RoundedRectOps {
             if (strokeIsOpaque) {
                 for (let px = startX; px <= endX; px++) {
                     const pos = py * surfaceWidth + px;
-                    if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (7 - (pos & 7))))) {
+                    if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (pos & 7)))) {
                         data32[pos] = strokePacked;
                     }
                 }
@@ -843,7 +843,7 @@ class RoundedRectOps {
                 const sr = strokeColor.r, sg = strokeColor.g, sb = strokeColor.b;
                 for (let px = startX; px <= endX; px++) {
                     const pos = py * surfaceWidth + px;
-                    if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (7 - (pos & 7))))) {
+                    if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (pos & 7)))) {
                         const idx = pos * 4;
                         const oldAlpha = data[idx + 3] / 255;
                         const oldAlphaScaled = oldAlpha * strokeInvAlpha;
