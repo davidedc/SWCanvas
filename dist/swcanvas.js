@@ -1575,7 +1575,7 @@ class SpanOps {
      * @param {number} packedColor - Pre-packed 32-bit RGBA color
      * @param {Uint8Array|null} clipBuffer - Optional clip mask buffer
      */
-    static fillFast(data32, surfaceWidth, surfaceHeight, startX, y, length, packedColor, clipBuffer) {
+    static fillOpaque(data32, surfaceWidth, surfaceHeight, startX, y, length, packedColor, clipBuffer) {
         // Y bounds check - use floor for consistent pixel alignment
         const yi = Math.floor(y);
         if (yi < 0 || yi >= surfaceHeight) return;
@@ -1657,15 +1657,26 @@ class SpanOps {
         const rowOffset = yi * surfaceWidth * 4;
 
         if (clipBuffer) {
-            // With clipping
-            for (let px = x; px < endX; px++) {
-                const bitIndex = yi * surfaceWidth + px;
-                const byteIndex = bitIndex >> 3;
-                const bitOffset = bitIndex & 7;
-                if ((clipBuffer[byteIndex] & (1 << bitOffset)) === 0) continue;
+            // With clipping - includes byte-skip optimization
+            let px = x;
+            while (px < endX) {
+                const pixelIndex = yi * surfaceWidth + px;
+                const byteIndex = pixelIndex >> 3;
 
-                const offset = rowOffset + px * 4;
-                SpanOps.blendPixelAlpha(data, offset, r, g, b, alpha, invAlpha);
+                // Skip fully clipped bytes (8 pixels at a time)
+                if (clipBuffer[byteIndex] === 0) {
+                    const nextByteBoundary = (byteIndex + 1) << 3;
+                    // Convert back to X coordinate with bounds check
+                    px = Math.min(nextByteBoundary - yi * surfaceWidth, endX);
+                    continue;
+                }
+
+                const bitOffset = pixelIndex & 7;
+                if ((clipBuffer[byteIndex] & (1 << bitOffset)) !== 0) {
+                    const offset = rowOffset + px * 4;
+                    SpanOps.blendPixelAlpha(data, offset, r, g, b, alpha, invAlpha);
+                }
+                px++;
             }
         } else {
             // No clipping
@@ -1716,8 +1727,9 @@ class RectOps {
      * @param {number} width - Rectangle width
      * @param {number} height - Rectangle height
      * @param {Color} color - Stroke color (must be opaque)
+     * @param {Uint8Array|null} clipBuffer - Optional clip mask buffer
      */
-    static stroke1pxOpaque(surface, x, y, width, height, color) {
+    static stroke1pxOpaque(surface, x, y, width, height, color, clipBuffer = null) {
         const surfaceWidth = surface.width;
         const surfaceHeight = surface.height;
         const data32 = surface.data32;
@@ -1733,31 +1745,42 @@ class RectOps {
         const right = Math.floor(x + width);
         const bottom = Math.floor(y + height);
 
+        // Helper to set pixel with clipping check
+        const setPixel = (px, py) => {
+            const pos = py * surfaceWidth + px;
+            if (clipBuffer) {
+                const byteIndex = pos >> 3;
+                const bitIndex = pos & 7;
+                if (!(clipBuffer[byteIndex] & (1 << bitIndex))) return;
+            }
+            data32[pos] = packedColor;
+        };
+
         // Draw top edge (horizontal): pixels from left to right (inclusive)
         if (top >= 0 && top < surfaceHeight) {
             for (let px = Math.max(0, left); px <= Math.min(right, surfaceWidth - 1); px++) {
-                data32[top * surfaceWidth + px] = packedColor;
+                setPixel(px, top);
             }
         }
 
         // Draw bottom edge (horizontal): pixels from left to right (inclusive)
         if (bottom >= 0 && bottom < surfaceHeight) {
             for (let px = Math.max(0, left); px <= Math.min(right, surfaceWidth - 1); px++) {
-                data32[bottom * surfaceWidth + px] = packedColor;
+                setPixel(px, bottom);
             }
         }
 
         // Draw left edge (vertical): skip corners (already drawn)
         if (left >= 0 && left < surfaceWidth) {
             for (let py = Math.max(0, top + 1); py < Math.min(bottom, surfaceHeight); py++) {
-                data32[py * surfaceWidth + left] = packedColor;
+                setPixel(left, py);
             }
         }
 
         // Draw right edge (vertical): skip corners (already drawn)
         if (right >= 0 && right < surfaceWidth) {
             for (let py = Math.max(0, top + 1); py < Math.min(bottom, surfaceHeight); py++) {
-                data32[py * surfaceWidth + right] = packedColor;
+                setPixel(right, py);
             }
         }
     }
@@ -1772,8 +1795,9 @@ class RectOps {
      * @param {number} height - Rectangle height
      * @param {Color} color - Stroke color
      * @param {number} globalAlpha - Context global alpha (0-1)
+     * @param {Uint8Array|null} clipBuffer - Optional clip mask buffer
      */
-    static stroke1pxAlpha(surface, x, y, width, height, color, globalAlpha) {
+    static stroke1pxAlpha(surface, x, y, width, height, color, globalAlpha, clipBuffer = null) {
         const surfaceWidth = surface.width;
         const surfaceHeight = surface.height;
         const data = surface.data;
@@ -1790,10 +1814,16 @@ class RectOps {
         const right = Math.floor(x + width);
         const bottom = Math.floor(y + height);
 
-        // Helper function to blend a pixel
+        // Helper function to blend a pixel with clipping check
         const blendPixel = (px, py) => {
             if (px < 0 || px >= surfaceWidth || py < 0 || py >= surfaceHeight) return;
-            const idx = (py * surfaceWidth + px) * 4;
+            const pos = py * surfaceWidth + px;
+            if (clipBuffer) {
+                const byteIndex = pos >> 3;
+                const bitIndex = pos & 7;
+                if (!(clipBuffer[byteIndex] & (1 << bitIndex))) return;
+            }
+            const idx = pos * 4;
             const oldAlpha = data[idx + 3] / 255;
             const oldAlphaScaled = oldAlpha * invAlpha;
             const newAlpha = effectiveAlpha + oldAlphaScaled;
@@ -2090,6 +2120,139 @@ class RectOps {
                     data[idx + 1] = (g * effectiveAlpha + data[idx + 1] * oldAlphaScaled) * blendFactor;
                     data[idx + 2] = (b * effectiveAlpha + data[idx + 2] * oldAlphaScaled) * blendFactor;
                     data[idx + 3] = newAlpha * 255;
+                }
+            }
+        }
+    }
+
+    /**
+     * Combined fill and stroke for rectangles - avoids boundary artifacts
+     * Uses scanline approach for efficient single-pass rendering
+     * @param {Surface} surface - Target surface
+     * @param {number} x - Rectangle X coordinate
+     * @param {number} y - Rectangle Y coordinate
+     * @param {number} width - Rectangle width
+     * @param {number} height - Rectangle height
+     * @param {number} lineWidth - Stroke width in pixels
+     * @param {Color} fillColor - Fill color (may be null)
+     * @param {Color} strokeColor - Stroke color (may be null)
+     * @param {number} globalAlpha - Context global alpha (0-1)
+     * @param {Uint8Array|null} clipBuffer - Clip mask buffer
+     */
+    static fillAndStroke(surface, x, y, width, height, lineWidth, fillColor, strokeColor, globalAlpha, clipBuffer = null) {
+        const surfaceWidth = surface.width;
+        const surfaceHeight = surface.height;
+        const data = surface.data;
+        const data32 = surface.data32;
+
+        // Check what we need to draw
+        const hasFill = fillColor && fillColor.a > 0;
+        const hasStroke = strokeColor && strokeColor.a > 0;
+
+        if (!hasFill && !hasStroke) return;
+
+        const halfStroke = lineWidth / 2;
+
+        // Determine rendering modes
+        const fillIsOpaque = hasFill && fillColor.a === 255 && globalAlpha >= 1.0;
+        const fillEffectiveAlpha = hasFill ? (fillColor.a / 255) * globalAlpha : 0;
+        const fillInvAlpha = 1 - fillEffectiveAlpha;
+
+        const strokeIsOpaque = hasStroke && strokeColor.a === 255 && globalAlpha >= 1.0;
+        const strokeEffectiveAlpha = hasStroke ? (strokeColor.a / 255) * globalAlpha : 0;
+        const strokeInvAlpha = 1 - strokeEffectiveAlpha;
+
+        // Packed colors for opaque rendering
+        const fillPacked = fillIsOpaque ? Surface.packColor(fillColor.r, fillColor.g, fillColor.b, 255) : 0;
+        const strokePacked = strokeIsOpaque ? Surface.packColor(strokeColor.r, strokeColor.g, strokeColor.b, 255) : 0;
+
+        // Calculate bounds
+        // Path bounds (fill boundary)
+        const pathLeft = Math.floor(x);
+        const pathTop = Math.floor(y);
+        const pathRight = Math.ceil(x + width);
+        const pathBottom = Math.ceil(y + height);
+
+        // Stroke outer bounds
+        const strokeOuterLeft = Math.floor(x - halfStroke);
+        const strokeOuterTop = Math.floor(y - halfStroke);
+        const strokeOuterRight = Math.ceil(x + width + halfStroke);
+        const strokeOuterBottom = Math.ceil(y + height + halfStroke);
+
+        // Stroke inner bounds (where fill starts if stroke present)
+        const strokeInnerLeft = Math.ceil(x + halfStroke);
+        const strokeInnerTop = Math.ceil(y + halfStroke);
+        const strokeInnerRight = Math.floor(x + width - halfStroke);
+        const strokeInnerBottom = Math.floor(y + height - halfStroke);
+
+        // Helper to set pixel with optional clipping
+        const setPixelOpaque = (px, py, packed) => {
+            if (px < 0 || px >= surfaceWidth || py < 0 || py >= surfaceHeight) return;
+            const pos = py * surfaceWidth + px;
+            if (clipBuffer) {
+                const byteIndex = pos >> 3;
+                const bitIndex = pos & 7;
+                if (!(clipBuffer[byteIndex] & (1 << bitIndex))) return;
+            }
+            data32[pos] = packed;
+        };
+
+        const blendPixelAlpha = (px, py, r, g, b, effectiveAlpha, invAlpha) => {
+            if (px < 0 || px >= surfaceWidth || py < 0 || py >= surfaceHeight) return;
+            const pos = py * surfaceWidth + px;
+            if (clipBuffer) {
+                const byteIndex = pos >> 3;
+                const bitIndex = pos & 7;
+                if (!(clipBuffer[byteIndex] & (1 << bitIndex))) return;
+            }
+            const idx = pos * 4;
+            const oldAlpha = data[idx + 3] / 255;
+            const oldAlphaScaled = oldAlpha * invAlpha;
+            const newAlpha = effectiveAlpha + oldAlphaScaled;
+            if (newAlpha > 0) {
+                const blendFactor = 1 / newAlpha;
+                data[idx] = (r * effectiveAlpha + data[idx] * oldAlphaScaled) * blendFactor;
+                data[idx + 1] = (g * effectiveAlpha + data[idx + 1] * oldAlphaScaled) * blendFactor;
+                data[idx + 2] = (b * effectiveAlpha + data[idx + 2] * oldAlphaScaled) * blendFactor;
+                data[idx + 3] = newAlpha * 255;
+            }
+        };
+
+        // Process each scanline
+        for (let py = strokeOuterTop; py < strokeOuterBottom; py++) {
+            if (py < 0 || py >= surfaceHeight) continue;
+
+            const inTopStroke = py < strokeInnerTop;
+            const inBottomStroke = py >= strokeInnerBottom;
+            const inVerticalStrokeZone = inTopStroke || inBottomStroke;
+
+            // Horizontal extent for this scanline
+            const leftBound = Math.max(0, strokeOuterLeft);
+            const rightBound = Math.min(surfaceWidth - 1, strokeOuterRight - 1);
+
+            for (let px = leftBound; px <= rightBound; px++) {
+                const inLeftStroke = px < strokeInnerLeft;
+                const inRightStroke = px >= strokeInnerRight;
+                const inHorizontalStrokeZone = inLeftStroke || inRightStroke;
+
+                // Determine what to draw at this pixel
+                const inStrokeZone = hasStroke && (inVerticalStrokeZone || inHorizontalStrokeZone);
+                const inFillZone = hasFill && !inStrokeZone &&
+                    px >= pathLeft && px < pathRight &&
+                    py >= pathTop && py < pathBottom;
+
+                if (inStrokeZone) {
+                    if (strokeIsOpaque) {
+                        setPixelOpaque(px, py, strokePacked);
+                    } else {
+                        blendPixelAlpha(px, py, strokeColor.r, strokeColor.g, strokeColor.b, strokeEffectiveAlpha, strokeInvAlpha);
+                    }
+                } else if (inFillZone) {
+                    if (fillIsOpaque) {
+                        setPixelOpaque(px, py, fillPacked);
+                    } else {
+                        blendPixelAlpha(px, py, fillColor.r, fillColor.g, fillColor.b, fillEffectiveAlpha, fillInvAlpha);
+                    }
                 }
             }
         }
@@ -2431,6 +2594,57 @@ class CircleOps {
     }
 
     /**
+     * Optimized opaque circle fill using Bresenham scanlines with 32-bit packed writes
+     * Uses CrispSWCanvas algorithm for correct extreme pixel rendering
+     * @param {Surface} surface - Target surface
+     * @param {number} cx - Center X
+     * @param {number} cy - Center Y
+     * @param {number} radius - Circle radius
+     * @param {Color} color - Fill color (must be opaque, alpha=255)
+     * @param {Uint8Array|null} clipBuffer - Clip mask buffer
+     */
+    static fillOpaque(surface, cx, cy, radius, color, clipBuffer) {
+        const width = surface.width;
+        const height = surface.height;
+        const data32 = surface.data32;
+
+        const packedColor = Surface.packColor(color.r, color.g, color.b, 255);
+
+        // Generate extents with CrispSWCanvas algorithm
+        const extentData = CircleOps.generateExtents(radius);
+        if (!extentData) return;
+        const { extents, intRadius, xOffset, yOffset } = extentData;
+
+        // CrispSWCanvas center adjustment
+        const adjCenterX = Math.floor(cx - 0.5);
+        const adjCenterY = Math.floor(cy - 0.5);
+
+        // Fill scanlines - iterate through ALL rows (no skipping)
+        for (let rel_y = 0; rel_y <= intRadius; rel_y++) {
+            const max_rel_x = extents[rel_y];
+
+            // +1 corrections on min boundaries (CrispSWCanvas technique)
+            const abs_x_min = adjCenterX - max_rel_x - xOffset + 1;
+            const abs_x_max = adjCenterX + max_rel_x;
+            const abs_y_bottom = adjCenterY + rel_y;
+            const abs_y_top = adjCenterY - rel_y - yOffset + 1;
+
+            const spanWidth = abs_x_max - abs_x_min + 1;
+
+            // Draw bottom scanline
+            if (abs_y_bottom >= 0 && abs_y_bottom < height) {
+                SpanOps.fillOpaque(data32, width, height, abs_x_min, abs_y_bottom, spanWidth, packedColor, clipBuffer);
+            }
+
+            // Draw top scanline (skip overdraw conditions)
+            const drawTop = rel_y > 0 && !(rel_y === 1 && yOffset === 0);
+            if (drawTop && abs_y_top >= 0 && abs_y_top < height) {
+                SpanOps.fillOpaque(data32, width, height, abs_x_min, abs_y_top, spanWidth, packedColor, clipBuffer);
+            }
+        }
+    }
+
+    /**
      * Optimized circle fill with alpha blending using Bresenham scanlines
      * Uses CrispSWCanvas algorithm for correct extreme pixel rendering
      * @param {Surface} surface - Target surface
@@ -2441,7 +2655,7 @@ class CircleOps {
      * @param {number} globalAlpha - Context global alpha
      * @param {Uint8Array|null} clipBuffer - Clip mask buffer
      */
-    static fillAlphaBlend(surface, cx, cy, radius, color, globalAlpha, clipBuffer) {
+    static fillAlpha(surface, cx, cy, radius, color, globalAlpha, clipBuffer) {
         const width = surface.width;
         const height = surface.height;
         const data = surface.data;
@@ -3281,7 +3495,7 @@ class ArcOps {
      * @param {number} width - Surface width
      * @param {number} height - Surface height
      */
-    static addThickArcPoint(strokePixels, cx, cy, px, py, thickness, startAngle, endAngle, width, height) {
+    static _addThickArcPoint(strokePixels, cx, cy, px, py, thickness, startAngle, endAngle, width, height) {
         const halfThick = Math.floor(thickness / 2);
         for (let tdy = -halfThick; tdy < thickness - halfThick; tdy++) {
             for (let tdx = -halfThick; tdx < thickness - halfThick; tdx++) {
@@ -3366,7 +3580,7 @@ class ArcOps {
 
             for (const [px, py] of points) {
                 if (ArcOps.isAngleInRange(px, py, startAngle, endAngle)) {
-                    ArcOps.addThickArcPoint(strokePixels, adjCX, adjCY,
+                    ArcOps._addThickArcPoint(strokePixels, adjCX, adjCY,
                         adjCX + px, adjCY + py, thickness, startAngle, endAngle, width, height);
                 }
             }
@@ -3461,7 +3675,7 @@ class ArcOps {
 
             for (const [px, py] of points) {
                 if (ArcOps.isAngleInRange(px, py, startAngle, endAngle)) {
-                    ArcOps.addThickArcPoint(strokePixels, adjCX, adjCY,
+                    ArcOps._addThickArcPoint(strokePixels, adjCX, adjCY,
                         adjCX + px, adjCY + py, thickness, startAngle, endAngle, width, height);
                 }
             }
@@ -3633,7 +3847,7 @@ class LineOps {
                 const packedColor = Surface.packColor(paintSource.r, paintSource.g, paintSource.b, 255);
 
                 for (let y = topY; y < bottomY; y++) {
-                    SpanOps.fillFast(data32, width, height, leftX, y, rightX - leftX, packedColor, clipBuffer);
+                    SpanOps.fillOpaque(data32, width, height, leftX, y, rightX - leftX, packedColor, clipBuffer);
                 }
                 return true;
             } else if (x1i === x2i) {
@@ -3646,7 +3860,7 @@ class LineOps {
                 const packedColor = Surface.packColor(paintSource.r, paintSource.g, paintSource.b, 255);
 
                 for (let y = topY; y < bottomY; y++) {
-                    SpanOps.fillFast(data32, width, height, leftX, y, rightX - leftX, packedColor, clipBuffer);
+                    SpanOps.fillOpaque(data32, width, height, leftX, y, rightX - leftX, packedColor, clipBuffer);
                 }
                 return true;
             } else {
@@ -3786,7 +4000,7 @@ class LineOps {
                 if (useSemiTransparent) {
                     SpanOps.fillAlpha(data, width, height, leftX, y, rightX - leftX + 1, r, g, b, incomingAlpha, inverseIncomingAlpha, clipBuffer);
                 } else {
-                    SpanOps.fillFast(data32, width, height, leftX, y, rightX - leftX + 1, packedColor, clipBuffer);
+                    SpanOps.fillOpaque(data32, width, height, leftX, y, rightX - leftX + 1, packedColor, clipBuffer);
                 }
             }
             return;
@@ -3893,7 +4107,7 @@ class LineOps {
                     if (useSemiTransparent) {
                         SpanOps.fillAlpha(data, width, height, leftX, y, spanLength, r, g, b, incomingAlpha, inverseIncomingAlpha, clipBuffer);
                     } else {
-                        SpanOps.fillFast(data32, width, height, leftX, y, spanLength, packedColor, clipBuffer);
+                        SpanOps.fillOpaque(data32, width, height, leftX, y, spanLength, packedColor, clipBuffer);
                     }
                 }
             }
@@ -4206,7 +4420,7 @@ class RoundedRectOps {
 
             // Fill scanline
             const spanLength = rightX - leftX + 1;
-            SpanOps.fillFast(data32, surfaceWidth, surfaceHeight, leftX, py, spanLength, packedColor, clipBuffer);
+            SpanOps.fillOpaque(data32, surfaceWidth, surfaceHeight, leftX, py, spanLength, packedColor, clipBuffer);
         }
     }
 
@@ -4408,24 +4622,24 @@ class RoundedRectOps {
                     // Left span: from outerLeft to just before innerLeft
                     if (outerLeft < innerLeft) {
                         const leftSpanLength = innerLeft - outerLeft;
-                        SpanOps.fillFast(data32, surfaceWidth, surfaceHeight, outerLeft, py, leftSpanLength, packedColor, clipBuffer);
+                        SpanOps.fillOpaque(data32, surfaceWidth, surfaceHeight, outerLeft, py, leftSpanLength, packedColor, clipBuffer);
                     }
 
                     // Right span: from just after innerRight to outerRight
                     if (innerRight < outerRight) {
                         const rightSpanStart = innerRight + 1;
                         const rightSpanLength = outerRight - innerRight;
-                        SpanOps.fillFast(data32, surfaceWidth, surfaceHeight, rightSpanStart, py, rightSpanLength, packedColor, clipBuffer);
+                        SpanOps.fillOpaque(data32, surfaceWidth, surfaceHeight, rightSpanStart, py, rightSpanLength, packedColor, clipBuffer);
                     }
                 } else {
                     // Inner region invalid at this Y, fill entire outer span
                     const spanLength = outerRight - outerLeft + 1;
-                    SpanOps.fillFast(data32, surfaceWidth, surfaceHeight, outerLeft, py, spanLength, packedColor, clipBuffer);
+                    SpanOps.fillOpaque(data32, surfaceWidth, surfaceHeight, outerLeft, py, spanLength, packedColor, clipBuffer);
                 }
             } else {
                 // Not in inner region, fill entire outer span
                 const spanLength = outerRight - outerLeft + 1;
-                SpanOps.fillFast(data32, surfaceWidth, surfaceHeight, outerLeft, py, spanLength, packedColor, clipBuffer);
+                SpanOps.fillOpaque(data32, surfaceWidth, surfaceHeight, outerLeft, py, spanLength, packedColor, clipBuffer);
             }
         }
     }
@@ -11773,10 +11987,10 @@ class Context2D {
         const noShadow = !this.shadowColor || this.shadowColor === 'transparent' ||
                         (this.shadowBlur === 0 && this.shadowOffsetX === 0 && this.shadowOffsetY === 0);
 
-        // Fast path: Color fill with source-over, no shadows, no clipping
-        if (isColor && isSourceOver && noClip && noShadow) {
+        // Fast path: Color fill with source-over, no shadows (clipping supported)
+        if (isColor && isSourceOver && noShadow) {
             const transform = this._transform;
-            const clipBuffer = null; // noClip is true
+            const clipBuffer = this._clipMask ? this._clipMask.buffer : null;
 
             // Decompose transform
             const center = transform.transformPoint({x: x + width / 2, y: y + height / 2});
@@ -11789,7 +12003,9 @@ class Context2D {
             const isOpaque = paintSource.a === 255 && this.globalAlpha >= 1.0;
             const isAxisAligned = RectOps.isNearAxisAligned(rotation);
             // Non-uniform scale + rotation produces a parallelogram, not a rotated rectangle
-            const isUniformScale = Math.abs(scaleX - scaleY) < 0.001;
+            // Check matrix structure: for uniform scale+rotation, a=d and b=-c
+            const isUniformScale = Math.abs(transform.a - transform.d) < 0.001 &&
+                                   Math.abs(transform.b + transform.c) < 0.001;
 
             if (isAxisAligned) {
                 // Axis-aligned: use direct fill (works with non-uniform scale)
@@ -11844,10 +12060,10 @@ class Context2D {
         const noShadow = !this.shadowColor || this.shadowColor === 'transparent' ||
                         (this.shadowBlur === 0 && this.shadowOffsetX === 0 && this.shadowOffsetY === 0);
 
-        // Fast path: Color stroke with source-over, no shadows, no clipping
-        if (isColor && isSourceOver && noClip && noShadow) {
+        // Fast path: Color stroke with source-over, no shadows (clipping supported)
+        if (isColor && isSourceOver && noShadow) {
             const transform = this._transform;
-            const clipBuffer = null; // noClip is true
+            const clipBuffer = this._clipMask ? this._clipMask.buffer : null;
 
             // Decompose transform
             const center = transform.transformPoint({x: x + width / 2, y: y + height / 2});
@@ -11861,7 +12077,9 @@ class Context2D {
             const isOpaque = paintSource.a === 255 && this.globalAlpha >= 1.0;
             const isAxisAligned = RectOps.isNearAxisAligned(rotation);
             // Non-uniform scale + rotation produces a parallelogram, not a rotated rectangle
-            const isUniformScale = Math.abs(scaleX - scaleY) < 0.001;
+            // Check matrix structure: for uniform scale+rotation, a=d and b=-c
+            const isUniformScale = Math.abs(transform.a - transform.d) < 0.001 &&
+                                   Math.abs(transform.b + transform.c) < 0.001;
 
             if (isAxisAligned) {
                 // Axis-aligned: use existing fast paths with adjusted coordinates (works with non-uniform scale)
@@ -11874,18 +12092,18 @@ class Context2D {
 
                 if (is1pxStroke) {
                     if (isOpaque) {
-                        RectOps.stroke1pxOpaque(this.surface, topLeftX, topLeftY, adjustedWidth, adjustedHeight, paintSource);
+                        RectOps.stroke1pxOpaque(this.surface, topLeftX, topLeftY, adjustedWidth, adjustedHeight, paintSource, clipBuffer);
                         return;
                     } else if (paintSource.a > 0) {
-                        RectOps.stroke1pxAlpha(this.surface, topLeftX, topLeftY, adjustedWidth, adjustedHeight, paintSource, this.globalAlpha);
+                        RectOps.stroke1pxAlpha(this.surface, topLeftX, topLeftY, adjustedWidth, adjustedHeight, paintSource, this.globalAlpha, clipBuffer);
                         return;
                     }
                 } else if (isThickStroke) {
                     if (isOpaque) {
-                        RectOps.strokeThickOpaque(this.surface, topLeftX, topLeftY, adjustedWidth, adjustedHeight, scaledLineWidth, paintSource);
+                        RectOps.strokeThickOpaque(this.surface, topLeftX, topLeftY, adjustedWidth, adjustedHeight, scaledLineWidth, paintSource, clipBuffer);
                         return;
                     } else if (paintSource.a > 0) {
-                        RectOps.strokeThickAlpha(this.surface, topLeftX, topLeftY, adjustedWidth, adjustedHeight, scaledLineWidth, paintSource, this.globalAlpha);
+                        RectOps.strokeThickAlpha(this.surface, topLeftX, topLeftY, adjustedWidth, adjustedHeight, scaledLineWidth, paintSource, this.globalAlpha, clipBuffer);
                         return;
                     }
                 }
@@ -13195,8 +13413,6 @@ class Context2D {
      */
     _fillCircleDirect(cx, cy, radius, paintSource) {
         const surface = this.surface;
-        const width = surface.width;
-        const height = surface.height;
         const clipBuffer = this._clipMask ? this._clipMask.buffer : null;
 
         // Check for solid color fast paths
@@ -13214,45 +13430,10 @@ class Context2D {
 
         if (isOpaqueColor) {
             // Fast path 1: 32-bit packed writes for opaque colors
-            // Uses CrispSWCanvas algorithm for correct extreme pixel rendering
-            const packedColor = Surface.packColor(paintSource.r, paintSource.g, paintSource.b, 255);
-            const data32 = surface.data32;
-
-            // Generate extents with CrispSWCanvas algorithm
-            const extentData = CircleOps.generateExtents(radius);
-            if (!extentData) return;
-            const { extents, intRadius, xOffset, yOffset } = extentData;
-
-            // CrispSWCanvas center adjustment
-            const adjCenterX = Math.floor(cx - 0.5);
-            const adjCenterY = Math.floor(cy - 0.5);
-
-            // Fill scanlines - iterate through ALL rows (no skipping)
-            for (let rel_y = 0; rel_y <= intRadius; rel_y++) {
-                const max_rel_x = extents[rel_y];
-
-                // +1 corrections on min boundaries (CrispSWCanvas technique)
-                const abs_x_min = adjCenterX - max_rel_x - xOffset + 1;
-                const abs_x_max = adjCenterX + max_rel_x;
-                const abs_y_bottom = adjCenterY + rel_y;
-                const abs_y_top = adjCenterY - rel_y - yOffset + 1;
-
-                const spanWidth = abs_x_max - abs_x_min + 1;
-
-                // Draw bottom scanline
-                if (abs_y_bottom >= 0 && abs_y_bottom < height) {
-                    SpanOps.fillFast(data32, width, height, abs_x_min, abs_y_bottom, spanWidth, packedColor, clipBuffer);
-                }
-
-                // Draw top scanline (skip overdraw conditions)
-                const drawTop = rel_y > 0 && !(rel_y === 1 && yOffset === 0);
-                if (drawTop && abs_y_top >= 0 && abs_y_top < height) {
-                    SpanOps.fillFast(data32, width, height, abs_x_min, abs_y_top, spanWidth, packedColor, clipBuffer);
-                }
-            }
+            CircleOps.fillOpaque(surface, cx, cy, radius, paintSource, clipBuffer);
         } else if (isSemiTransparentColor) {
             // Fast path 2: Bresenham scanlines with per-pixel alpha blending
-            CircleOps.fillAlphaBlend(this.surface, cx, cy, radius, paintSource, this.globalAlpha, clipBuffer);
+            CircleOps.fillAlpha(this.surface, cx, cy, radius, paintSource, this.globalAlpha, clipBuffer);
         } else {
             // Standard path: use path system for gradients/patterns/non-source-over compositing
             Context2D._markSlowPath(); // Mark slow path for testing
