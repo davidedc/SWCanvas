@@ -1499,6 +1499,188 @@ class Context2D {
         }
     }
 
+    // ========================================================================
+    // Arc rendering methods (partial arcs, not full circles)
+    // ========================================================================
+
+    /**
+     * Fill an arc (pie slice) directly without using the path system
+     * @param {number} centerX - Center X coordinate
+     * @param {number} centerY - Center Y coordinate
+     * @param {number} radius - Arc radius
+     * @param {number} startAngle - Start angle in radians
+     * @param {number} endAngle - End angle in radians
+     * @param {boolean} [anticlockwise=false] - Direction
+     */
+    fillArc(centerX, centerY, radius, startAngle, endAngle, anticlockwise = false) {
+        if (radius <= 0) return;
+
+        // Transform center point
+        const center = this._transform.transformPoint({ x: centerX, y: centerY });
+
+        // Calculate effective radius
+        const scale = Math.sqrt(
+            Math.abs(this._transform.a * this._transform.d - this._transform.b * this._transform.c)
+        );
+        const scaledRadius = radius * scale;
+
+        // Normalize angles
+        const angles = ArcOps.normalizeAngles(startAngle, endAngle, anticlockwise);
+
+        // Get paint source
+        const paintSource = this._fillStyle;
+        const clipBuffer = this._clipMask ? this._clipMask.buffer : null;
+
+        // Check for fast path conditions
+        const isColor = paintSource instanceof Color;
+        const isSourceOver = this.globalCompositeOperation === 'source-over';
+
+        if (isColor && isSourceOver) {
+            const isOpaque = paintSource.a === 255 && this.globalAlpha >= 1.0;
+            if (isOpaque) {
+                ArcOps.fillOpaque(this.surface, center.x, center.y, scaledRadius,
+                    angles.start, angles.end, paintSource, clipBuffer);
+            } else if (paintSource.a > 0) {
+                ArcOps.fillAlpha(this.surface, center.x, center.y, scaledRadius,
+                    angles.start, angles.end, paintSource, this.globalAlpha, clipBuffer);
+            }
+            return;
+        }
+
+        // Slow path: use path system
+        Context2D._markSlowPath();
+        this.beginPath();
+        this.moveTo(center.x, center.y);
+        this.arc(center.x, center.y, scaledRadius, startAngle, endAngle, anticlockwise);
+        this.closePath();
+        this.fill();
+    }
+
+    /**
+     * Stroke only the outer arc curve (not the lines to center)
+     * @param {number} centerX - Center X coordinate
+     * @param {number} centerY - Center Y coordinate
+     * @param {number} radius - Arc radius
+     * @param {number} startAngle - Start angle in radians
+     * @param {number} endAngle - End angle in radians
+     * @param {boolean} [anticlockwise=false] - Direction
+     */
+    outerStrokeArc(centerX, centerY, radius, startAngle, endAngle, anticlockwise = false) {
+        if (radius <= 0) return;
+
+        // Transform center point
+        const center = this._transform.transformPoint({ x: centerX, y: centerY });
+
+        // Calculate effective radius and line width
+        const scale = Math.sqrt(
+            Math.abs(this._transform.a * this._transform.d - this._transform.b * this._transform.c)
+        );
+        const scaledRadius = radius * scale;
+        const scaledLineWidth = this._lineWidth * scale;
+
+        // Normalize angles
+        const angles = ArcOps.normalizeAngles(startAngle, endAngle, anticlockwise);
+
+        // Get paint source
+        const paintSource = this._strokeStyle;
+        const clipBuffer = this._clipMask ? this._clipMask.buffer : null;
+
+        // Check for fast path conditions
+        const isColor = paintSource instanceof Color;
+        const isSourceOver = this.globalCompositeOperation === 'source-over';
+
+        if (isColor && isSourceOver) {
+            const isOpaque = paintSource.a === 255 && this.globalAlpha >= 1.0;
+            if (isOpaque) {
+                ArcOps.strokeOuterOpaque(this.surface, center.x, center.y, scaledRadius,
+                    angles.start, angles.end, scaledLineWidth, paintSource, clipBuffer);
+            } else if (paintSource.a > 0) {
+                ArcOps.strokeOuterAlpha(this.surface, center.x, center.y, scaledRadius,
+                    angles.start, angles.end, scaledLineWidth, paintSource, this.globalAlpha, clipBuffer);
+            }
+            return;
+        }
+
+        // Slow path: use path system (arc only, not pie slice)
+        Context2D._markSlowPath();
+        this.beginPath();
+        this.arc(center.x, center.y, scaledRadius, startAngle, endAngle, anticlockwise);
+        this.stroke();
+    }
+
+    /**
+     * Fill an arc (pie slice) and stroke only the outer curve in one operation
+     * @param {number} centerX - Center X coordinate
+     * @param {number} centerY - Center Y coordinate
+     * @param {number} radius - Arc radius
+     * @param {number} startAngle - Start angle in radians
+     * @param {number} endAngle - End angle in radians
+     * @param {boolean} [anticlockwise=false] - Direction
+     */
+    fillAndOuterStrokeArc(centerX, centerY, radius, startAngle, endAngle, anticlockwise = false) {
+        if (radius <= 0) return;
+
+        // Transform center point
+        const center = this._transform.transformPoint({ x: centerX, y: centerY });
+
+        // Calculate effective radius and line width
+        const scale = Math.sqrt(
+            Math.abs(this._transform.a * this._transform.d - this._transform.b * this._transform.c)
+        );
+        const scaledRadius = radius * scale;
+        const scaledLineWidth = this._lineWidth * scale;
+
+        // Normalize angles
+        const angles = ArcOps.normalizeAngles(startAngle, endAngle, anticlockwise);
+
+        // Get paint sources
+        const fillPaintSource = this._fillStyle;
+        const strokePaintSource = this._strokeStyle;
+        const clipBuffer = this._clipMask ? this._clipMask.buffer : null;
+
+        // Check for unified fast path
+        const fillIsColor = fillPaintSource instanceof Color;
+        const strokeIsColor = strokePaintSource instanceof Color;
+        const isSourceOver = this.globalCompositeOperation === 'source-over';
+        const hasFill = fillIsColor && fillPaintSource.a > 0;
+        const hasStroke = strokeIsColor && strokePaintSource.a > 0;
+
+        if (fillIsColor && strokeIsColor && isSourceOver && (hasFill || hasStroke)) {
+            // Use unified fast path
+            ArcOps.fillAndStrokeOuter(
+                this.surface,
+                center.x, center.y,
+                scaledRadius,
+                angles.start, angles.end,
+                scaledLineWidth,
+                hasFill ? fillPaintSource : null,
+                hasStroke ? strokePaintSource : null,
+                this.globalAlpha,
+                clipBuffer
+            );
+            return;
+        }
+
+        // Slow path: sequential rendering
+        Context2D._markSlowPath();
+
+        // Fill pie slice
+        if (hasFill) {
+            this.beginPath();
+            this.moveTo(center.x, center.y);
+            this.arc(center.x, center.y, scaledRadius, startAngle, endAngle, anticlockwise);
+            this.closePath();
+            this.fill();
+        }
+
+        // Stroke outer arc only
+        if (hasStroke) {
+            this.beginPath();
+            this.arc(center.x, center.y, scaledRadius, startAngle, endAngle, anticlockwise);
+            this.stroke();
+        }
+    }
+
     /**
      * Stroke a line directly without using the path system
      * @param {number} x1 - Start X coordinate

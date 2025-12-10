@@ -614,4 +614,45 @@ class CanvasCompatibleContext2D {
     strokeLine(x1, y1, x2, y2) {
         this._core.strokeLine(x1, y1, x2, y2);
     }
+
+    // ===== ARC DIRECT APIs (fast path) =====
+
+    /**
+     * Fill an arc (pie slice) directly without using the path system
+     * @param {number} centerX - Center X coordinate
+     * @param {number} centerY - Center Y coordinate
+     * @param {number} radius - Arc radius
+     * @param {number} startAngle - Start angle in radians
+     * @param {number} endAngle - End angle in radians
+     * @param {boolean} [anticlockwise=false] - Direction of arc
+     */
+    fillArc(centerX, centerY, radius, startAngle, endAngle, anticlockwise = false) {
+        this._core.fillArc(centerX, centerY, radius, startAngle, endAngle, anticlockwise);
+    }
+
+    /**
+     * Stroke only the outer curved part of an arc (not radial lines to center)
+     * @param {number} centerX - Center X coordinate
+     * @param {number} centerY - Center Y coordinate
+     * @param {number} radius - Arc radius
+     * @param {number} startAngle - Start angle in radians
+     * @param {number} endAngle - End angle in radians
+     * @param {boolean} [anticlockwise=false] - Direction of arc
+     */
+    outerStrokeArc(centerX, centerY, radius, startAngle, endAngle, anticlockwise = false) {
+        this._core.outerStrokeArc(centerX, centerY, radius, startAngle, endAngle, anticlockwise);
+    }
+
+    /**
+     * Fill an arc and stroke only its outer curve in one operation
+     * @param {number} centerX - Center X coordinate
+     * @param {number} centerY - Center Y coordinate
+     * @param {number} radius - Arc radius
+     * @param {number} startAngle - Start angle in radians
+     * @param {number} endAngle - End angle in radians
+     * @param {boolean} [anticlockwise=false] - Direction of arc
+     */
+    fillAndOuterStrokeArc(centerX, centerY, radius, startAngle, endAngle, anticlockwise = false) {
+        this._core.fillAndOuterStrokeArc(centerX, centerY, radius, startAngle, endAngle, anticlockwise);
+    }
 }

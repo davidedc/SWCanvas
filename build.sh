@@ -47,6 +47,8 @@ cat src/RectOps.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
 cat src/CircleOps.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
+cat src/ArcOps.js >> dist/swcanvas.js
+echo "" >> dist/swcanvas.js
 cat src/LineOps.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
 cat src/RoundedRectOps.js >> dist/swcanvas.js
