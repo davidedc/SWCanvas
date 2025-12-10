@@ -303,7 +303,7 @@ class RoundedRectOps {
 
             // Fill scanline
             const spanLength = rightX - leftX + 1;
-            SpanOps.fillFast(data32, surfaceWidth, surfaceHeight, leftX, py, spanLength, packedColor, clipBuffer);
+            SpanOps.fillOpaque(data32, surfaceWidth, surfaceHeight, leftX, py, spanLength, packedColor, clipBuffer);
         }
     }
 
@@ -505,24 +505,24 @@ class RoundedRectOps {
                     // Left span: from outerLeft to just before innerLeft
                     if (outerLeft < innerLeft) {
                         const leftSpanLength = innerLeft - outerLeft;
-                        SpanOps.fillFast(data32, surfaceWidth, surfaceHeight, outerLeft, py, leftSpanLength, packedColor, clipBuffer);
+                        SpanOps.fillOpaque(data32, surfaceWidth, surfaceHeight, outerLeft, py, leftSpanLength, packedColor, clipBuffer);
                     }
 
                     // Right span: from just after innerRight to outerRight
                     if (innerRight < outerRight) {
                         const rightSpanStart = innerRight + 1;
                         const rightSpanLength = outerRight - innerRight;
-                        SpanOps.fillFast(data32, surfaceWidth, surfaceHeight, rightSpanStart, py, rightSpanLength, packedColor, clipBuffer);
+                        SpanOps.fillOpaque(data32, surfaceWidth, surfaceHeight, rightSpanStart, py, rightSpanLength, packedColor, clipBuffer);
                     }
                 } else {
                     // Inner region invalid at this Y, fill entire outer span
                     const spanLength = outerRight - outerLeft + 1;
-                    SpanOps.fillFast(data32, surfaceWidth, surfaceHeight, outerLeft, py, spanLength, packedColor, clipBuffer);
+                    SpanOps.fillOpaque(data32, surfaceWidth, surfaceHeight, outerLeft, py, spanLength, packedColor, clipBuffer);
                 }
             } else {
                 // Not in inner region, fill entire outer span
                 const spanLength = outerRight - outerLeft + 1;
-                SpanOps.fillFast(data32, surfaceWidth, surfaceHeight, outerLeft, py, spanLength, packedColor, clipBuffer);
+                SpanOps.fillOpaque(data32, surfaceWidth, surfaceHeight, outerLeft, py, spanLength, packedColor, clipBuffer);
             }
         }
     }

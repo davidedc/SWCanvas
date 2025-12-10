@@ -12,8 +12,9 @@ class RectOps {
      * @param {number} width - Rectangle width
      * @param {number} height - Rectangle height
      * @param {Color} color - Stroke color (must be opaque)
+     * @param {Uint8Array|null} clipBuffer - Optional clip mask buffer
      */
-    static stroke1pxOpaque(surface, x, y, width, height, color) {
+    static stroke1pxOpaque(surface, x, y, width, height, color, clipBuffer = null) {
         const surfaceWidth = surface.width;
         const surfaceHeight = surface.height;
         const data32 = surface.data32;
@@ -29,31 +30,42 @@ class RectOps {
         const right = Math.floor(x + width);
         const bottom = Math.floor(y + height);
 
+        // Helper to set pixel with clipping check
+        const setPixel = (px, py) => {
+            const pos = py * surfaceWidth + px;
+            if (clipBuffer) {
+                const byteIndex = pos >> 3;
+                const bitIndex = pos & 7;
+                if (!(clipBuffer[byteIndex] & (1 << bitIndex))) return;
+            }
+            data32[pos] = packedColor;
+        };
+
         // Draw top edge (horizontal): pixels from left to right (inclusive)
         if (top >= 0 && top < surfaceHeight) {
             for (let px = Math.max(0, left); px <= Math.min(right, surfaceWidth - 1); px++) {
-                data32[top * surfaceWidth + px] = packedColor;
+                setPixel(px, top);
             }
         }
 
         // Draw bottom edge (horizontal): pixels from left to right (inclusive)
         if (bottom >= 0 && bottom < surfaceHeight) {
             for (let px = Math.max(0, left); px <= Math.min(right, surfaceWidth - 1); px++) {
-                data32[bottom * surfaceWidth + px] = packedColor;
+                setPixel(px, bottom);
             }
         }
 
         // Draw left edge (vertical): skip corners (already drawn)
         if (left >= 0 && left < surfaceWidth) {
             for (let py = Math.max(0, top + 1); py < Math.min(bottom, surfaceHeight); py++) {
-                data32[py * surfaceWidth + left] = packedColor;
+                setPixel(left, py);
             }
         }
 
         // Draw right edge (vertical): skip corners (already drawn)
         if (right >= 0 && right < surfaceWidth) {
             for (let py = Math.max(0, top + 1); py < Math.min(bottom, surfaceHeight); py++) {
-                data32[py * surfaceWidth + right] = packedColor;
+                setPixel(right, py);
             }
         }
     }
@@ -68,8 +80,9 @@ class RectOps {
      * @param {number} height - Rectangle height
      * @param {Color} color - Stroke color
      * @param {number} globalAlpha - Context global alpha (0-1)
+     * @param {Uint8Array|null} clipBuffer - Optional clip mask buffer
      */
-    static stroke1pxAlpha(surface, x, y, width, height, color, globalAlpha) {
+    static stroke1pxAlpha(surface, x, y, width, height, color, globalAlpha, clipBuffer = null) {
         const surfaceWidth = surface.width;
         const surfaceHeight = surface.height;
         const data = surface.data;
@@ -86,10 +99,16 @@ class RectOps {
         const right = Math.floor(x + width);
         const bottom = Math.floor(y + height);
 
-        // Helper function to blend a pixel
+        // Helper function to blend a pixel with clipping check
         const blendPixel = (px, py) => {
             if (px < 0 || px >= surfaceWidth || py < 0 || py >= surfaceHeight) return;
-            const idx = (py * surfaceWidth + px) * 4;
+            const pos = py * surfaceWidth + px;
+            if (clipBuffer) {
+                const byteIndex = pos >> 3;
+                const bitIndex = pos & 7;
+                if (!(clipBuffer[byteIndex] & (1 << bitIndex))) return;
+            }
+            const idx = pos * 4;
             const oldAlpha = data[idx + 3] / 255;
             const oldAlphaScaled = oldAlpha * invAlpha;
             const newAlpha = effectiveAlpha + oldAlphaScaled;
@@ -386,6 +405,139 @@ class RectOps {
                     data[idx + 1] = (g * effectiveAlpha + data[idx + 1] * oldAlphaScaled) * blendFactor;
                     data[idx + 2] = (b * effectiveAlpha + data[idx + 2] * oldAlphaScaled) * blendFactor;
                     data[idx + 3] = newAlpha * 255;
+                }
+            }
+        }
+    }
+
+    /**
+     * Combined fill and stroke for rectangles - avoids boundary artifacts
+     * Uses scanline approach for efficient single-pass rendering
+     * @param {Surface} surface - Target surface
+     * @param {number} x - Rectangle X coordinate
+     * @param {number} y - Rectangle Y coordinate
+     * @param {number} width - Rectangle width
+     * @param {number} height - Rectangle height
+     * @param {number} lineWidth - Stroke width in pixels
+     * @param {Color} fillColor - Fill color (may be null)
+     * @param {Color} strokeColor - Stroke color (may be null)
+     * @param {number} globalAlpha - Context global alpha (0-1)
+     * @param {Uint8Array|null} clipBuffer - Clip mask buffer
+     */
+    static fillAndStroke(surface, x, y, width, height, lineWidth, fillColor, strokeColor, globalAlpha, clipBuffer = null) {
+        const surfaceWidth = surface.width;
+        const surfaceHeight = surface.height;
+        const data = surface.data;
+        const data32 = surface.data32;
+
+        // Check what we need to draw
+        const hasFill = fillColor && fillColor.a > 0;
+        const hasStroke = strokeColor && strokeColor.a > 0;
+
+        if (!hasFill && !hasStroke) return;
+
+        const halfStroke = lineWidth / 2;
+
+        // Determine rendering modes
+        const fillIsOpaque = hasFill && fillColor.a === 255 && globalAlpha >= 1.0;
+        const fillEffectiveAlpha = hasFill ? (fillColor.a / 255) * globalAlpha : 0;
+        const fillInvAlpha = 1 - fillEffectiveAlpha;
+
+        const strokeIsOpaque = hasStroke && strokeColor.a === 255 && globalAlpha >= 1.0;
+        const strokeEffectiveAlpha = hasStroke ? (strokeColor.a / 255) * globalAlpha : 0;
+        const strokeInvAlpha = 1 - strokeEffectiveAlpha;
+
+        // Packed colors for opaque rendering
+        const fillPacked = fillIsOpaque ? Surface.packColor(fillColor.r, fillColor.g, fillColor.b, 255) : 0;
+        const strokePacked = strokeIsOpaque ? Surface.packColor(strokeColor.r, strokeColor.g, strokeColor.b, 255) : 0;
+
+        // Calculate bounds
+        // Path bounds (fill boundary)
+        const pathLeft = Math.floor(x);
+        const pathTop = Math.floor(y);
+        const pathRight = Math.ceil(x + width);
+        const pathBottom = Math.ceil(y + height);
+
+        // Stroke outer bounds
+        const strokeOuterLeft = Math.floor(x - halfStroke);
+        const strokeOuterTop = Math.floor(y - halfStroke);
+        const strokeOuterRight = Math.ceil(x + width + halfStroke);
+        const strokeOuterBottom = Math.ceil(y + height + halfStroke);
+
+        // Stroke inner bounds (where fill starts if stroke present)
+        const strokeInnerLeft = Math.ceil(x + halfStroke);
+        const strokeInnerTop = Math.ceil(y + halfStroke);
+        const strokeInnerRight = Math.floor(x + width - halfStroke);
+        const strokeInnerBottom = Math.floor(y + height - halfStroke);
+
+        // Helper to set pixel with optional clipping
+        const setPixelOpaque = (px, py, packed) => {
+            if (px < 0 || px >= surfaceWidth || py < 0 || py >= surfaceHeight) return;
+            const pos = py * surfaceWidth + px;
+            if (clipBuffer) {
+                const byteIndex = pos >> 3;
+                const bitIndex = pos & 7;
+                if (!(clipBuffer[byteIndex] & (1 << bitIndex))) return;
+            }
+            data32[pos] = packed;
+        };
+
+        const blendPixelAlpha = (px, py, r, g, b, effectiveAlpha, invAlpha) => {
+            if (px < 0 || px >= surfaceWidth || py < 0 || py >= surfaceHeight) return;
+            const pos = py * surfaceWidth + px;
+            if (clipBuffer) {
+                const byteIndex = pos >> 3;
+                const bitIndex = pos & 7;
+                if (!(clipBuffer[byteIndex] & (1 << bitIndex))) return;
+            }
+            const idx = pos * 4;
+            const oldAlpha = data[idx + 3] / 255;
+            const oldAlphaScaled = oldAlpha * invAlpha;
+            const newAlpha = effectiveAlpha + oldAlphaScaled;
+            if (newAlpha > 0) {
+                const blendFactor = 1 / newAlpha;
+                data[idx] = (r * effectiveAlpha + data[idx] * oldAlphaScaled) * blendFactor;
+                data[idx + 1] = (g * effectiveAlpha + data[idx + 1] * oldAlphaScaled) * blendFactor;
+                data[idx + 2] = (b * effectiveAlpha + data[idx + 2] * oldAlphaScaled) * blendFactor;
+                data[idx + 3] = newAlpha * 255;
+            }
+        };
+
+        // Process each scanline
+        for (let py = strokeOuterTop; py < strokeOuterBottom; py++) {
+            if (py < 0 || py >= surfaceHeight) continue;
+
+            const inTopStroke = py < strokeInnerTop;
+            const inBottomStroke = py >= strokeInnerBottom;
+            const inVerticalStrokeZone = inTopStroke || inBottomStroke;
+
+            // Horizontal extent for this scanline
+            const leftBound = Math.max(0, strokeOuterLeft);
+            const rightBound = Math.min(surfaceWidth - 1, strokeOuterRight - 1);
+
+            for (let px = leftBound; px <= rightBound; px++) {
+                const inLeftStroke = px < strokeInnerLeft;
+                const inRightStroke = px >= strokeInnerRight;
+                const inHorizontalStrokeZone = inLeftStroke || inRightStroke;
+
+                // Determine what to draw at this pixel
+                const inStrokeZone = hasStroke && (inVerticalStrokeZone || inHorizontalStrokeZone);
+                const inFillZone = hasFill && !inStrokeZone &&
+                    px >= pathLeft && px < pathRight &&
+                    py >= pathTop && py < pathBottom;
+
+                if (inStrokeZone) {
+                    if (strokeIsOpaque) {
+                        setPixelOpaque(px, py, strokePacked);
+                    } else {
+                        blendPixelAlpha(px, py, strokeColor.r, strokeColor.g, strokeColor.b, strokeEffectiveAlpha, strokeInvAlpha);
+                    }
+                } else if (inFillZone) {
+                    if (fillIsOpaque) {
+                        setPixelOpaque(px, py, fillPacked);
+                    } else {
+                        blendPixelAlpha(px, py, fillColor.r, fillColor.g, fillColor.b, fillEffectiveAlpha, fillInvAlpha);
+                    }
                 }
             }
         }

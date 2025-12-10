@@ -15,7 +15,7 @@ class SpanOps {
      * @param {number} packedColor - Pre-packed 32-bit RGBA color
      * @param {Uint8Array|null} clipBuffer - Optional clip mask buffer
      */
-    static fillFast(data32, surfaceWidth, surfaceHeight, startX, y, length, packedColor, clipBuffer) {
+    static fillOpaque(data32, surfaceWidth, surfaceHeight, startX, y, length, packedColor, clipBuffer) {
         // Y bounds check - use floor for consistent pixel alignment
         const yi = Math.floor(y);
         if (yi < 0 || yi >= surfaceHeight) return;
@@ -97,15 +97,26 @@ class SpanOps {
         const rowOffset = yi * surfaceWidth * 4;
 
         if (clipBuffer) {
-            // With clipping
-            for (let px = x; px < endX; px++) {
-                const bitIndex = yi * surfaceWidth + px;
-                const byteIndex = bitIndex >> 3;
-                const bitOffset = bitIndex & 7;
-                if ((clipBuffer[byteIndex] & (1 << bitOffset)) === 0) continue;
+            // With clipping - includes byte-skip optimization
+            let px = x;
+            while (px < endX) {
+                const pixelIndex = yi * surfaceWidth + px;
+                const byteIndex = pixelIndex >> 3;
 
-                const offset = rowOffset + px * 4;
-                SpanOps.blendPixelAlpha(data, offset, r, g, b, alpha, invAlpha);
+                // Skip fully clipped bytes (8 pixels at a time)
+                if (clipBuffer[byteIndex] === 0) {
+                    const nextByteBoundary = (byteIndex + 1) << 3;
+                    // Convert back to X coordinate with bounds check
+                    px = Math.min(nextByteBoundary - yi * surfaceWidth, endX);
+                    continue;
+                }
+
+                const bitOffset = pixelIndex & 7;
+                if ((clipBuffer[byteIndex] & (1 << bitOffset)) !== 0) {
+                    const offset = rowOffset + px * 4;
+                    SpanOps.blendPixelAlpha(data, offset, r, g, b, alpha, invAlpha);
+                }
+                px++;
             }
         } else {
             // No clipping

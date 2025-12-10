@@ -298,10 +298,10 @@ class Context2D {
         const noShadow = !this.shadowColor || this.shadowColor === 'transparent' ||
                         (this.shadowBlur === 0 && this.shadowOffsetX === 0 && this.shadowOffsetY === 0);
 
-        // Fast path: Color fill with source-over, no shadows, no clipping
-        if (isColor && isSourceOver && noClip && noShadow) {
+        // Fast path: Color fill with source-over, no shadows (clipping supported)
+        if (isColor && isSourceOver && noShadow) {
             const transform = this._transform;
-            const clipBuffer = null; // noClip is true
+            const clipBuffer = this._clipMask ? this._clipMask.buffer : null;
 
             // Decompose transform
             const center = transform.transformPoint({x: x + width / 2, y: y + height / 2});
@@ -314,7 +314,9 @@ class Context2D {
             const isOpaque = paintSource.a === 255 && this.globalAlpha >= 1.0;
             const isAxisAligned = RectOps.isNearAxisAligned(rotation);
             // Non-uniform scale + rotation produces a parallelogram, not a rotated rectangle
-            const isUniformScale = Math.abs(scaleX - scaleY) < 0.001;
+            // Check matrix structure: for uniform scale+rotation, a=d and b=-c
+            const isUniformScale = Math.abs(transform.a - transform.d) < 0.001 &&
+                                   Math.abs(transform.b + transform.c) < 0.001;
 
             if (isAxisAligned) {
                 // Axis-aligned: use direct fill (works with non-uniform scale)
@@ -369,10 +371,10 @@ class Context2D {
         const noShadow = !this.shadowColor || this.shadowColor === 'transparent' ||
                         (this.shadowBlur === 0 && this.shadowOffsetX === 0 && this.shadowOffsetY === 0);
 
-        // Fast path: Color stroke with source-over, no shadows, no clipping
-        if (isColor && isSourceOver && noClip && noShadow) {
+        // Fast path: Color stroke with source-over, no shadows (clipping supported)
+        if (isColor && isSourceOver && noShadow) {
             const transform = this._transform;
-            const clipBuffer = null; // noClip is true
+            const clipBuffer = this._clipMask ? this._clipMask.buffer : null;
 
             // Decompose transform
             const center = transform.transformPoint({x: x + width / 2, y: y + height / 2});
@@ -386,7 +388,9 @@ class Context2D {
             const isOpaque = paintSource.a === 255 && this.globalAlpha >= 1.0;
             const isAxisAligned = RectOps.isNearAxisAligned(rotation);
             // Non-uniform scale + rotation produces a parallelogram, not a rotated rectangle
-            const isUniformScale = Math.abs(scaleX - scaleY) < 0.001;
+            // Check matrix structure: for uniform scale+rotation, a=d and b=-c
+            const isUniformScale = Math.abs(transform.a - transform.d) < 0.001 &&
+                                   Math.abs(transform.b + transform.c) < 0.001;
 
             if (isAxisAligned) {
                 // Axis-aligned: use existing fast paths with adjusted coordinates (works with non-uniform scale)
@@ -399,18 +403,18 @@ class Context2D {
 
                 if (is1pxStroke) {
                     if (isOpaque) {
-                        RectOps.stroke1pxOpaque(this.surface, topLeftX, topLeftY, adjustedWidth, adjustedHeight, paintSource);
+                        RectOps.stroke1pxOpaque(this.surface, topLeftX, topLeftY, adjustedWidth, adjustedHeight, paintSource, clipBuffer);
                         return;
                     } else if (paintSource.a > 0) {
-                        RectOps.stroke1pxAlpha(this.surface, topLeftX, topLeftY, adjustedWidth, adjustedHeight, paintSource, this.globalAlpha);
+                        RectOps.stroke1pxAlpha(this.surface, topLeftX, topLeftY, adjustedWidth, adjustedHeight, paintSource, this.globalAlpha, clipBuffer);
                         return;
                     }
                 } else if (isThickStroke) {
                     if (isOpaque) {
-                        RectOps.strokeThickOpaque(this.surface, topLeftX, topLeftY, adjustedWidth, adjustedHeight, scaledLineWidth, paintSource);
+                        RectOps.strokeThickOpaque(this.surface, topLeftX, topLeftY, adjustedWidth, adjustedHeight, scaledLineWidth, paintSource, clipBuffer);
                         return;
                     } else if (paintSource.a > 0) {
-                        RectOps.strokeThickAlpha(this.surface, topLeftX, topLeftY, adjustedWidth, adjustedHeight, scaledLineWidth, paintSource, this.globalAlpha);
+                        RectOps.strokeThickAlpha(this.surface, topLeftX, topLeftY, adjustedWidth, adjustedHeight, scaledLineWidth, paintSource, this.globalAlpha, clipBuffer);
                         return;
                     }
                 }
@@ -1720,8 +1724,6 @@ class Context2D {
      */
     _fillCircleDirect(cx, cy, radius, paintSource) {
         const surface = this.surface;
-        const width = surface.width;
-        const height = surface.height;
         const clipBuffer = this._clipMask ? this._clipMask.buffer : null;
 
         // Check for solid color fast paths
@@ -1739,45 +1741,10 @@ class Context2D {
 
         if (isOpaqueColor) {
             // Fast path 1: 32-bit packed writes for opaque colors
-            // Uses CrispSWCanvas algorithm for correct extreme pixel rendering
-            const packedColor = Surface.packColor(paintSource.r, paintSource.g, paintSource.b, 255);
-            const data32 = surface.data32;
-
-            // Generate extents with CrispSWCanvas algorithm
-            const extentData = CircleOps.generateExtents(radius);
-            if (!extentData) return;
-            const { extents, intRadius, xOffset, yOffset } = extentData;
-
-            // CrispSWCanvas center adjustment
-            const adjCenterX = Math.floor(cx - 0.5);
-            const adjCenterY = Math.floor(cy - 0.5);
-
-            // Fill scanlines - iterate through ALL rows (no skipping)
-            for (let rel_y = 0; rel_y <= intRadius; rel_y++) {
-                const max_rel_x = extents[rel_y];
-
-                // +1 corrections on min boundaries (CrispSWCanvas technique)
-                const abs_x_min = adjCenterX - max_rel_x - xOffset + 1;
-                const abs_x_max = adjCenterX + max_rel_x;
-                const abs_y_bottom = adjCenterY + rel_y;
-                const abs_y_top = adjCenterY - rel_y - yOffset + 1;
-
-                const spanWidth = abs_x_max - abs_x_min + 1;
-
-                // Draw bottom scanline
-                if (abs_y_bottom >= 0 && abs_y_bottom < height) {
-                    SpanOps.fillFast(data32, width, height, abs_x_min, abs_y_bottom, spanWidth, packedColor, clipBuffer);
-                }
-
-                // Draw top scanline (skip overdraw conditions)
-                const drawTop = rel_y > 0 && !(rel_y === 1 && yOffset === 0);
-                if (drawTop && abs_y_top >= 0 && abs_y_top < height) {
-                    SpanOps.fillFast(data32, width, height, abs_x_min, abs_y_top, spanWidth, packedColor, clipBuffer);
-                }
-            }
+            CircleOps.fillOpaque(surface, cx, cy, radius, paintSource, clipBuffer);
         } else if (isSemiTransparentColor) {
             // Fast path 2: Bresenham scanlines with per-pixel alpha blending
-            CircleOps.fillAlphaBlend(this.surface, cx, cy, radius, paintSource, this.globalAlpha, clipBuffer);
+            CircleOps.fillAlpha(this.surface, cx, cy, radius, paintSource, this.globalAlpha, clipBuffer);
         } else {
             // Standard path: use path system for gradients/patterns/non-source-over compositing
             Context2D._markSlowPath(); // Mark slow path for testing

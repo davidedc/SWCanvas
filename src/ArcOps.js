@@ -174,7 +174,7 @@ class ArcOps {
      * @param {number} width - Surface width
      * @param {number} height - Surface height
      */
-    static addThickArcPoint(strokePixels, cx, cy, px, py, thickness, startAngle, endAngle, width, height) {
+    static _addThickArcPoint(strokePixels, cx, cy, px, py, thickness, startAngle, endAngle, width, height) {
         const halfThick = Math.floor(thickness / 2);
         for (let tdy = -halfThick; tdy < thickness - halfThick; tdy++) {
             for (let tdx = -halfThick; tdx < thickness - halfThick; tdx++) {
@@ -259,7 +259,7 @@ class ArcOps {
 
             for (const [px, py] of points) {
                 if (ArcOps.isAngleInRange(px, py, startAngle, endAngle)) {
-                    ArcOps.addThickArcPoint(strokePixels, adjCX, adjCY,
+                    ArcOps._addThickArcPoint(strokePixels, adjCX, adjCY,
                         adjCX + px, adjCY + py, thickness, startAngle, endAngle, width, height);
                 }
             }
@@ -354,7 +354,7 @@ class ArcOps {
 
             for (const [px, py] of points) {
                 if (ArcOps.isAngleInRange(px, py, startAngle, endAngle)) {
-                    ArcOps.addThickArcPoint(strokePixels, adjCX, adjCY,
+                    ArcOps._addThickArcPoint(strokePixels, adjCX, adjCY,
                         adjCX + px, adjCY + py, thickness, startAngle, endAngle, width, height);
                 }
             }

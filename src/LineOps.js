@@ -95,7 +95,7 @@ class LineOps {
                 const packedColor = Surface.packColor(paintSource.r, paintSource.g, paintSource.b, 255);
 
                 for (let y = topY; y < bottomY; y++) {
-                    SpanOps.fillFast(data32, width, height, leftX, y, rightX - leftX, packedColor, clipBuffer);
+                    SpanOps.fillOpaque(data32, width, height, leftX, y, rightX - leftX, packedColor, clipBuffer);
                 }
                 return true;
             } else if (x1i === x2i) {
@@ -108,7 +108,7 @@ class LineOps {
                 const packedColor = Surface.packColor(paintSource.r, paintSource.g, paintSource.b, 255);
 
                 for (let y = topY; y < bottomY; y++) {
-                    SpanOps.fillFast(data32, width, height, leftX, y, rightX - leftX, packedColor, clipBuffer);
+                    SpanOps.fillOpaque(data32, width, height, leftX, y, rightX - leftX, packedColor, clipBuffer);
                 }
                 return true;
             } else {
@@ -248,7 +248,7 @@ class LineOps {
                 if (useSemiTransparent) {
                     SpanOps.fillAlpha(data, width, height, leftX, y, rightX - leftX + 1, r, g, b, incomingAlpha, inverseIncomingAlpha, clipBuffer);
                 } else {
-                    SpanOps.fillFast(data32, width, height, leftX, y, rightX - leftX + 1, packedColor, clipBuffer);
+                    SpanOps.fillOpaque(data32, width, height, leftX, y, rightX - leftX + 1, packedColor, clipBuffer);
                 }
             }
             return;
@@ -355,7 +355,7 @@ class LineOps {
                     if (useSemiTransparent) {
                         SpanOps.fillAlpha(data, width, height, leftX, y, spanLength, r, g, b, incomingAlpha, inverseIncomingAlpha, clipBuffer);
                     } else {
-                        SpanOps.fillFast(data32, width, height, leftX, y, spanLength, packedColor, clipBuffer);
+                        SpanOps.fillOpaque(data32, width, height, leftX, y, spanLength, packedColor, clipBuffer);
                     }
                 }
             }

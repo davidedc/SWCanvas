@@ -81,6 +81,57 @@ class CircleOps {
     }
 
     /**
+     * Optimized opaque circle fill using Bresenham scanlines with 32-bit packed writes
+     * Uses CrispSWCanvas algorithm for correct extreme pixel rendering
+     * @param {Surface} surface - Target surface
+     * @param {number} cx - Center X
+     * @param {number} cy - Center Y
+     * @param {number} radius - Circle radius
+     * @param {Color} color - Fill color (must be opaque, alpha=255)
+     * @param {Uint8Array|null} clipBuffer - Clip mask buffer
+     */
+    static fillOpaque(surface, cx, cy, radius, color, clipBuffer) {
+        const width = surface.width;
+        const height = surface.height;
+        const data32 = surface.data32;
+
+        const packedColor = Surface.packColor(color.r, color.g, color.b, 255);
+
+        // Generate extents with CrispSWCanvas algorithm
+        const extentData = CircleOps.generateExtents(radius);
+        if (!extentData) return;
+        const { extents, intRadius, xOffset, yOffset } = extentData;
+
+        // CrispSWCanvas center adjustment
+        const adjCenterX = Math.floor(cx - 0.5);
+        const adjCenterY = Math.floor(cy - 0.5);
+
+        // Fill scanlines - iterate through ALL rows (no skipping)
+        for (let rel_y = 0; rel_y <= intRadius; rel_y++) {
+            const max_rel_x = extents[rel_y];
+
+            // +1 corrections on min boundaries (CrispSWCanvas technique)
+            const abs_x_min = adjCenterX - max_rel_x - xOffset + 1;
+            const abs_x_max = adjCenterX + max_rel_x;
+            const abs_y_bottom = adjCenterY + rel_y;
+            const abs_y_top = adjCenterY - rel_y - yOffset + 1;
+
+            const spanWidth = abs_x_max - abs_x_min + 1;
+
+            // Draw bottom scanline
+            if (abs_y_bottom >= 0 && abs_y_bottom < height) {
+                SpanOps.fillOpaque(data32, width, height, abs_x_min, abs_y_bottom, spanWidth, packedColor, clipBuffer);
+            }
+
+            // Draw top scanline (skip overdraw conditions)
+            const drawTop = rel_y > 0 && !(rel_y === 1 && yOffset === 0);
+            if (drawTop && abs_y_top >= 0 && abs_y_top < height) {
+                SpanOps.fillOpaque(data32, width, height, abs_x_min, abs_y_top, spanWidth, packedColor, clipBuffer);
+            }
+        }
+    }
+
+    /**
      * Optimized circle fill with alpha blending using Bresenham scanlines
      * Uses CrispSWCanvas algorithm for correct extreme pixel rendering
      * @param {Surface} surface - Target surface
@@ -91,7 +142,7 @@ class CircleOps {
      * @param {number} globalAlpha - Context global alpha
      * @param {Uint8Array|null} clipBuffer - Clip mask buffer
      */
-    static fillAlphaBlend(surface, cx, cy, radius, color, globalAlpha, clipBuffer) {
+    static fillAlpha(surface, cx, cy, radius, color, globalAlpha, clipBuffer) {
         const width = surface.width;
         const height = surface.height;
         const data = surface.data;
