@@ -1,0 +1,54 @@
+/**
+ * Test: Filled Arc with Semi-transparent Color
+ *
+ * Tests that fillArc works correctly with semi-transparent colors.
+ * Arc extends > 270 degrees with gap < 90 degrees within a single quadrant.
+ */
+
+registerHighLevelTest(
+    'arc-semitransparent',
+    function drawTest(ctx, iterationNumber, instances) {
+        const canvasWidth = ctx.canvas.width;
+        const canvasHeight = ctx.canvas.height;
+
+        // Use semi-transparent fill color
+        const fillColor = getRandomColor('semitransparent');
+
+        // Calculate arc parameters
+        const params = calculateArcTestParameters({
+            canvasWidth,
+            canvasHeight,
+            minRadius: 30,
+            maxRadius: 80,
+            hasStroke: false,
+            randomPosition: false
+        });
+
+        const { centerX, centerY, radius, startAngle, endAngle, gapSizeDeg } = params;
+
+        // Draw filled arc using direct shape API
+        ctx.fillStyle = fillColor;
+        ctx.fillArc(centerX, centerY, radius, startAngle, endAngle);
+
+        // Return check data
+        return {
+            logs: [`Arc at (${centerX}, ${centerY}) radius ${radius} gap ${gapSizeDeg.toFixed(1)}° color ${fillColor}`],
+            checkData: {
+                topY: Math.floor(centerY - radius),
+                bottomY: Math.floor(centerY + radius),
+                leftX: Math.floor(centerX - radius),
+                rightX: Math.floor(centerX + radius)
+            }
+        };
+    },
+    'arcs',
+    {
+        extremes: { colorTolerance: 8, tolerance: 0.03 },
+        totalUniqueColors: 2, // background + fill (blended)
+        allowSlowPath: true // Semi-transparent may use slow path
+    },
+    {
+        title: 'Filled Arc - Semi-transparent Color',
+        description: 'Tests fillArc with semi-transparent color rendering'
+    }
+);

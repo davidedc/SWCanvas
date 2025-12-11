@@ -771,15 +771,23 @@ class HighLevelTestRunner {
         if (checks.speckles === true || (checks.speckles && typeof checks.speckles === 'object')) {
             const expected = (typeof checks.speckles === 'object' && checks.speckles.expected !== undefined)
                 ? checks.speckles.expected : 0;
+            const maxSpeckles = typeof checks.speckles === 'object' ? checks.speckles.maxSpeckles : undefined;
             const isKnownFailure = typeof checks.speckles === 'object' && checks.speckles.knownFailure === true;
             const swSurface = createSurface(swCanvas);
-            const speckleCount = countSpeckles(swSurface);
-            const passed = speckleCount === expected;
+            const speckleResult = countSpeckles(swSurface);
+            const speckleCount = speckleResult.count;
+            const passed = maxSpeckles !== undefined
+                ? speckleCount <= maxSpeckles
+                : speckleCount === expected;
+            const firstInfo = speckleResult.firstSpeckle
+                ? ` (first at ${speckleResult.firstSpeckle.x},${speckleResult.firstSpeckle.y})`
+                : '';
+            const expectedMsg = maxSpeckles !== undefined ? `≤${maxSpeckles}` : `${expected}`;
             results.push({
                 name: 'Speckle Count',
                 passed,
                 knownFailure: isKnownFailure && !passed,
-                details: `SW: ${speckleCount}` + (passed ? '' : ` (expected ${expected})`) +
+                details: `SW: ${speckleCount}` + (passed ? '' : ` (expected ${expectedMsg})${firstInfo}`) +
                          (!passed && isKnownFailure ? ' [KNOWN]' : '')
             });
         }

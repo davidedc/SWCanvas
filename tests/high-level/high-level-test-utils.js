@@ -401,6 +401,92 @@ function calculateCircleTestParameters(options) {
 }
 
 /**
+ * Generate arc angles with gap constrained to a single quadrant.
+ * Ensures gap doesn't cross cardinal points (0°, 90°, 180°, 270°).
+ * Gap is always ≤ 85° and completely within one quadrant.
+ * @returns {Object} { startAngle, endAngle, gapQuadrant, gapSizeDeg }
+ */
+function generateConstrainedArcAngles() {
+    const quadrantBases = [0, Math.PI / 2, Math.PI, Math.PI * 3 / 2];
+    const gapQuadrant = Math.floor(SeededRandom.getRandom() * 4);
+    const quadrantStart = quadrantBases[gapQuadrant];
+
+    const margin = 5 * Math.PI / 180;  // 5° margin from quadrant edges
+    const minGapSize = 30 * Math.PI / 180;  // 30° minimum gap
+    const maxGapSize = 85 * Math.PI / 180;  // 85° maximum gap
+
+    // Calculate available space for gap start (leaving room for minimum gap + margins)
+    const availableForStart = Math.PI / 2 - margin * 2 - minGapSize;
+    const gapStartOffset = margin + SeededRandom.getRandom() * Math.max(0, availableForStart);
+    const gapStart = quadrantStart + gapStartOffset;
+
+    // Constrain gap size to stay within quadrant
+    const maxAllowedGap = Math.min(maxGapSize, quadrantStart + Math.PI / 2 - gapStart - margin);
+    const gapSize = minGapSize + SeededRandom.getRandom() * Math.max(0, maxAllowedGap - minGapSize);
+    const gapEnd = gapStart + gapSize;
+
+    return {
+        startAngle: gapEnd,
+        endAngle: gapStart + Math.PI * 2,
+        gapQuadrant,
+        gapSizeDeg: gapSize * 180 / Math.PI
+    };
+}
+
+/**
+ * Calculate arc test parameters with gap constrained to a single quadrant.
+ * Arc extends > 270° (3/4 circle) to include all cardinal points for extremes checks.
+ * @param {Object} options - Same as calculateCircleTestParameters
+ * @param {number} options.canvasWidth - Canvas width
+ * @param {number} options.canvasHeight - Canvas height
+ * @param {number} options.minRadius - Minimum radius (default 8)
+ * @param {number} options.maxRadius - Maximum radius (default 42)
+ * @param {boolean} options.hasStroke - Whether arc has stroke
+ * @param {number} options.minStrokeWidth - Minimum stroke width (default 1)
+ * @param {number} options.maxStrokeWidth - Maximum stroke width (default 4)
+ * @param {boolean} options.randomPosition - Use random position vs centered
+ * @param {number} options.marginX - Horizontal margin (default 60)
+ * @param {number} options.marginY - Vertical margin (default 60)
+ * @returns {Object} Circle params + {startAngle, endAngle, gapQuadrant, gapSizeDeg}
+ */
+function calculateArcTestParameters(options) {
+    // Get base circle parameters
+    const circleParams = calculateCircleTestParameters(options);
+
+    // Generate arc angles with gap in single quadrant
+    // Quadrant bases: Q1=0°, Q2=90°, Q3=180°, Q4=270°
+    const quadrantBases = [0, Math.PI / 2, Math.PI, Math.PI * 3 / 2];
+    const gapQuadrant = Math.floor(SeededRandom.getRandom() * 4);
+    const quadrantStart = quadrantBases[gapQuadrant];
+
+    // Gap position within quadrant (with 5° margin from quadrant edges)
+    const margin = 5 * Math.PI / 180; // 5 degrees in radians
+    const maxGapSize = 85 * Math.PI / 180; // 85 degrees max gap
+    const minGapSize = 30 * Math.PI / 180; // 30 degrees min gap
+
+    // Calculate available space for gap start within quadrant
+    // quadrant is 90° (PI/2), we need margin at start and space for gap at end
+    const availableForStart = Math.PI / 2 - margin * 2 - minGapSize;
+    const gapStartOffset = margin + SeededRandom.getRandom() * Math.max(0, availableForStart);
+    const gapStart = quadrantStart + gapStartOffset;
+
+    // Gap size: 30° to 85° (ensures arc > 275°), but must fit within quadrant
+    const maxAllowedGap = Math.min(maxGapSize, quadrantStart + Math.PI / 2 - gapStart - margin);
+    const gapSize = minGapSize + SeededRandom.getRandom() * Math.max(0, maxAllowedGap - minGapSize);
+    const gapEnd = gapStart + gapSize;
+
+    // Arc draws the non-gap portion: startAngle = gapEnd, endAngle = gapStart + 2π
+    // This makes the arc go from gapEnd all the way around to gapStart
+    return {
+        ...circleParams,
+        startAngle: gapEnd,
+        endAngle: gapStart + Math.PI * 2,
+        gapQuadrant,
+        gapSizeDeg: gapSize * 180 / Math.PI
+    };
+}
+
+/**
  * Register a high-level test
  * @param {string} name - Test name
  * @param {function} drawFunction - Function that draws the test
@@ -562,10 +648,11 @@ function countUniqueColorsInMiddleColumn(surface) {
  * Count speckles in the surface (matching CrispSWCanvas algorithm)
  * A speckle is a pixel that differs from its neighbors when those neighbors match each other
  * @param {Object} surface - Surface with data, width, height, stride
- * @returns {number} Number of speckles found
+ * @returns {{count: number, firstSpeckle: {x: number, y: number}|null}} Speckle count and first location
  */
 function countSpeckles(surface) {
     let speckleCount = 0;
+    let firstSpeckle = null;
     const data = surface.data;
     const width = surface.width;
     const stride = surface.stride;
@@ -608,11 +695,14 @@ function countSpeckles(surface) {
             if ((horizontalMatch && differentFromHorizontal) ||
                 (verticalMatch && differentFromVertical)) {
                 speckleCount++;
+                if (!firstSpeckle) {
+                    firstSpeckle = { x, y };
+                }
             }
         }
     }
 
-    return speckleCount;
+    return { count: speckleCount, firstSpeckle };
 }
 
 // Export for Node.js
@@ -630,6 +720,8 @@ if (typeof module !== 'undefined' && module.exports) {
         adjustCenterForCrispStrokeRendering,
         calculateCrispFillAndStrokeRectParams,
         calculateCircleTestParameters,
+        calculateArcTestParameters,
+        generateConstrainedArcAngles,
         registerHighLevelTest,
         analyzeExtremes,
         countUniqueColors,
@@ -654,6 +746,8 @@ if (typeof window !== 'undefined') {
     window.adjustCenterForCrispStrokeRendering = adjustCenterForCrispStrokeRendering;
     window.calculateCrispFillAndStrokeRectParams = calculateCrispFillAndStrokeRectParams;
     window.calculateCircleTestParameters = calculateCircleTestParameters;
+    window.calculateArcTestParameters = calculateArcTestParameters;
+    window.generateConstrainedArcAngles = generateConstrainedArcAngles;
     window.registerHighLevelTest = registerHighLevelTest;
     window.analyzeExtremes = analyzeExtremes;
     window.countUniqueColors = countUniqueColors;

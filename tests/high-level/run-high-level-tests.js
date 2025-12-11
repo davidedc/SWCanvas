@@ -26,6 +26,8 @@ const {
     adjustCenterForCrispStrokeRendering,
     calculateCrispFillAndStrokeRectParams,
     calculateCircleTestParameters,
+    calculateArcTestParameters,
+    generateConstrainedArcAngles,
     registerHighLevelTest,
     analyzeExtremes,
     countUniqueColors,
@@ -48,6 +50,8 @@ global.roundPoint = roundPoint;
 global.adjustCenterForCrispStrokeRendering = adjustCenterForCrispStrokeRendering;
 global.calculateCrispFillAndStrokeRectParams = calculateCrispFillAndStrokeRectParams;
 global.calculateCircleTestParameters = calculateCircleTestParameters;
+global.calculateArcTestParameters = calculateArcTestParameters;
+global.generateConstrainedArcAngles = generateConstrainedArcAngles;
 global.registerHighLevelTest = registerHighLevelTest;
 global.countUniqueColorsInMiddleRow = countUniqueColorsInMiddleRow;
 global.countUniqueColorsInMiddleColumn = countUniqueColorsInMiddleColumn;
@@ -171,15 +175,25 @@ function runTest(test, iterationNumber = 1) {
     if (checks.speckles === true || (checks.speckles && typeof checks.speckles === 'object')) {
         const expected = (typeof checks.speckles === 'object' && checks.speckles.expected !== undefined)
             ? checks.speckles.expected : 0;
+        const maxSpeckles = typeof checks.speckles === 'object' ? checks.speckles.maxSpeckles : undefined;
         const isKnownFailure = typeof checks.speckles === 'object' && checks.speckles.knownFailure === true;
-        const speckleCount = countSpeckles(surface);
+        const speckleResult = countSpeckles(surface);
+        const speckleCount = speckleResult.count;
 
-        if (speckleCount !== expected) {
+        const speckleCheckPassed = maxSpeckles !== undefined
+            ? speckleCount <= maxSpeckles
+            : speckleCount === expected;
+
+        if (!speckleCheckPassed) {
+            const firstInfo = speckleResult.firstSpeckle
+                ? ` (first at ${speckleResult.firstSpeckle.x},${speckleResult.firstSpeckle.y})`
+                : '';
+            const expectedMsg = maxSpeckles !== undefined ? `≤${maxSpeckles}` : `${expected}`;
             if (isKnownFailure) {
-                knownFailureIssues.push(`Speckle count: SW: ${speckleCount} (expected ${expected}) [KNOWN]`);
+                knownFailureIssues.push(`Speckle count: SW: ${speckleCount} (expected ${expectedMsg})${firstInfo} [KNOWN]`);
             } else {
                 testPassed = false;
-                issues.push(`Speckle count: SW: ${speckleCount} (expected ${expected})`);
+                issues.push(`Speckle count: SW: ${speckleCount} (expected ${expectedMsg})${firstInfo}`);
             }
         }
     } else if (checks.noSpeckles === true || checks.speckles === false) {

@@ -102,6 +102,8 @@ try {
             global.placeCloseToCenterAtGrid = highLevelTestUtils.placeCloseToCenterAtGrid;
             global.adjustDimensionsForCrispStrokeRendering = highLevelTestUtils.adjustDimensionsForCrispStrokeRendering;
             global.calculateCircleTestParameters = highLevelTestUtils.calculateCircleTestParameters;
+            global.calculateArcTestParameters = highLevelTestUtils.calculateArcTestParameters;
+            global.generateConstrainedArcAngles = highLevelTestUtils.generateConstrainedArcAngles;
             global.registerHighLevelTest = highLevelTestUtils.registerHighLevelTest;
             global.roundPoint = highLevelTestUtils.roundPoint;
             global.adjustCenterForCrispStrokeRendering = highLevelTestUtils.adjustCenterForCrispStrokeRendering;
