@@ -13,7 +13,7 @@
  * | Count                  | single         | The test draws a single rectangle instance.
  * | SizeCategory           | mixed          | The width and height are randomized in the range `[30, 130)`, which spans the S, M, and L size categories.
  * | FillStyle              | semitransparent| Fill alpha is randomized in the range `[100, 200]` (out of 255), which is always semi-transparent.
- * | StrokeStyle            | mixed          | Stroke alpha is randomized in the range `[200, 255]`, which includes both semi-transparent and fully opaque values.
+ * | StrokeStyle            | semitransparent| Stroke alpha is randomized in the range `[100, 200]` (out of 255), which is always semi-transparent.
  * | StrokeThickness        | 1px-10px       | The stroke width is randomized in the range `[1, 11)`, resulting in integer values from 1 to 10.
  * | Layout                 | random         | The `getRandomPoint()` function is called for placement at a random position on the canvas.
  * | CenteredAt             | random         | The geometric center of the rectangle is placed at a fully random point on the canvas.
@@ -79,7 +79,7 @@ function drawTest(ctx, currentIterationNumber, instances = null) {
         const strokeWidth = SeededRandom.getRandom() * 10 + 1;
 
         // 6. strokeColor (getRandomColor uses SeededRandom) - SWCanvas returns CSS strings directly
-        const strokeColorStr = getRandomColor("mixed"); // Opaque or semi-transparent stroke
+        const strokeColorStr = getRandomColor("semitransparent"); // Semi-transparent stroke
         // 7. fillColor (getRandomColor uses SeededRandom)
         const fillColorStr = getRandomColor("semitransparent");   // Semi-transparent fill
 
@@ -125,17 +125,17 @@ function drawTest(ctx, currentIterationNumber, instances = null) {
 
 // Register the test
 registerHighLevelTest(
-    'rect-sgl-szMix-fSemi-sMix-sw1-10px-lytRand-cenRand-edgeNotCrisp-ornRand-ctxTransRand-ctxRotRand-test',
+    'rect-sgl-szMix-fSemi-sSemi-sw1-10px-lytRand-cenRand-edgeNotCrisp-ornRand-ctxTransRand-ctxRotRand-test',
     drawTest,
     'rectangles',
     {
         // No extremes check - original test had none
         // allowSlowPath: false is the default - test MUST use fast paths
-        maxUniqueColors: 4  // background + fill + stroke + blend (maximum)
+        totalUniqueColors: 4  // background + fill + stroke + blend (semitransparent stroke causes blending)
     },
     {
-        title: 'Rectangle: Rotated, Single, Variable Size & Params, Random Position & Rotation',
-        description: 'Tests rendering of a single rotated rectangle with random position, size, angle, stroke, and fill.',
-        displayName: 'Perf: Rect Rotated Single Random'
+        title: 'Rectangle: Rotated, Single, Semitransparent Stroke, Random Position & Rotation',
+        description: 'Tests rendering of a single rotated rectangle with semitransparent stroke (exercises strokeRotatedAlpha code path).',
+        displayName: 'Perf: Rect Rotated Single Semi Stroke'
     }
 );
