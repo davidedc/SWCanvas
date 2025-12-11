@@ -465,9 +465,7 @@ class ArcOps {
         }
 
         // Annulus boundaries - stroke width distributed around the arc path
-        // Add overlap (1px) to inner radius to ensure stroke covers fill edge
-        // This prevents gaps between Bresenham-based fill and analytical stroke boundaries
-        const innerRadius = Math.max(0, radius - lineWidth / 2 - 1.0);
+        const innerRadius = Math.max(0, radius - lineWidth / 2);
         const outerRadius = radius + lineWidth / 2;
 
         // Bounds
@@ -580,9 +578,7 @@ class ArcOps {
         }
 
         // Annulus boundaries - stroke width distributed around the arc path
-        // Add overlap (1px) to inner radius to ensure stroke covers fill edge
-        // This prevents gaps between Bresenham-based fill and analytical stroke boundaries
-        const innerRadius = Math.max(0, radius - lineWidth / 2 - 1.0);
+        const innerRadius = Math.max(0, radius - lineWidth / 2);
         const outerRadius = radius + lineWidth / 2;
 
         // Bounds
