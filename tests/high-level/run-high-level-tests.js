@@ -34,7 +34,8 @@ const {
     countUniqueColorsInMiddleRow,
     countUniqueColorsInMiddleColumn,
     countSpeckles,
-    hasSpeckles
+    hasSpeckles,
+    runValidationChecks
 } = require('./high-level-test-utils.js');
 
 // Make utilities globally available for test files
@@ -139,78 +140,13 @@ function runTest(test, iterationNumber = 1) {
     // In browser, this compares SWCanvas vs HTML5 Canvas bounds (meaningful).
     // In Node.js, there's no HTML5 Canvas to compare against, so skip this check.
 
-    // Unique colors check (total) - checks for exactly N colors
-    if (checks.totalUniqueColors) {
-        const expected = typeof checks.totalUniqueColors === 'number' ?
-            checks.totalUniqueColors : checks.totalUniqueColors.count;
-        const actual = countUniqueColors(surface);
-        if (actual !== expected) {
-            testPassed = false;
-            issues.push(`Unique colors: expected exactly ${expected}, got ${actual}`);
-        }
+    // Run shared validation checks (color counts, speckles, etc.)
+    const validationResult = runValidationChecks(surface, checks);
+    if (!validationResult.passed) {
+        testPassed = false;
+        issues.push(...validationResult.issues);
     }
-
-    // Max unique colors check
-    if (checks.maxUniqueColors) {
-        const maxExpected = checks.maxUniqueColors;
-        const actual = countUniqueColors(surface);
-        if (actual > maxExpected) {
-            testPassed = false;
-            issues.push(`Unique colors: ${actual} exceeds maximum of ${maxExpected}`);
-        }
-    }
-
-    // Middle row unique colors check
-    if (checks.uniqueColors && checks.uniqueColors.middleRow) {
-        const expected = checks.uniqueColors.middleRow.count;
-        const actual = countUniqueColorsInMiddleRow(surface);
-        if (actual !== expected) {
-            testPassed = false;
-            issues.push(`Middle row unique colors: SW: ${actual} (expected ${expected})`);
-        }
-    }
-
-    // Middle column unique colors check
-    if (checks.uniqueColors && checks.uniqueColors.middleColumn) {
-        const expected = checks.uniqueColors.middleColumn.count;
-        const actual = countUniqueColorsInMiddleColumn(surface);
-        if (actual !== expected) {
-            testPassed = false;
-            issues.push(`Middle column unique colors: SW: ${actual} (expected ${expected})`);
-        }
-    }
-
-    // Speckle count check
-    if (checks.speckles === true || (checks.speckles && typeof checks.speckles === 'object')) {
-        const expected = (typeof checks.speckles === 'object' && checks.speckles.expected !== undefined)
-            ? checks.speckles.expected : 0;
-        const maxSpeckles = typeof checks.speckles === 'object' ? checks.speckles.maxSpeckles : undefined;
-        const isKnownFailure = typeof checks.speckles === 'object' && checks.speckles.knownFailure === true;
-        const speckleResult = countSpeckles(surface);
-        const speckleCount = speckleResult.count;
-
-        const speckleCheckPassed = maxSpeckles !== undefined
-            ? speckleCount <= maxSpeckles
-            : speckleCount === expected;
-
-        if (!speckleCheckPassed) {
-            const firstInfo = speckleResult.firstSpeckle
-                ? ` (first at ${speckleResult.firstSpeckle.x},${speckleResult.firstSpeckle.y})`
-                : '';
-            const expectedMsg = maxSpeckles !== undefined ? `≤${maxSpeckles}` : `${expected}`;
-            if (isKnownFailure) {
-                knownFailureIssues.push(`Speckle count: SW: ${speckleCount} (expected ${expectedMsg})${firstInfo} [KNOWN]`);
-            } else {
-                testPassed = false;
-                issues.push(`Speckle count: SW: ${speckleCount} (expected ${expectedMsg})${firstInfo}`);
-            }
-        }
-    } else if (checks.noSpeckles === true || checks.speckles === false) {
-        if (hasSpeckles(surface)) {
-            testPassed = false;
-            issues.push('Unexpected speckles found');
-        }
-    }
+    knownFailureIssues.push(...validationResult.knownFailureIssues);
 
     if (testPassed && knownFailureIssues.length === 0) {
         passed++;

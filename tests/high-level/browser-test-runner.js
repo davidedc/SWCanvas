@@ -725,9 +725,13 @@ class HighLevelTestRunner {
             });
         }
 
-        // Unique colors check (on SWCanvas)
+        // Run shared validation checks on SW surface (color counts, speckles, etc.)
+        const swSurface = createSurface(swCanvas);
+        const validationResult = runValidationChecks(swSurface, checks);
+
+        // Convert shared validation results to browser display format
+        // Unique colors check
         if (checks.totalUniqueColors !== undefined) {
-            const swSurface = createSurface(swCanvas);
             const uniqueColors = countUniqueColors(swSurface);
             const passed = uniqueColors === checks.totalUniqueColors;
             results.push({
@@ -737,9 +741,8 @@ class HighLevelTestRunner {
             });
         }
 
-        // Max unique colors check (on SWCanvas)
+        // Max unique colors check
         if (checks.maxUniqueColors !== undefined) {
-            const swSurface = createSurface(swCanvas);
             const uniqueColors = countUniqueColors(swSurface);
             const passed = uniqueColors <= checks.maxUniqueColors;
             results.push({
@@ -749,10 +752,9 @@ class HighLevelTestRunner {
             });
         }
 
-        // Middle row unique colors check (both SW and HTML5 Canvas)
+        // Middle row unique colors check (both SW and HTML5 Canvas for comparison)
         if (checks.uniqueColors && checks.uniqueColors.middleRow) {
             const expected = checks.uniqueColors.middleRow.count;
-            const swSurface = createSurface(swCanvas);
             const canvasSurface = createSurface(html5Canvas);
             const swCount = countUniqueColorsInMiddleRow(swSurface);
             const canvasCount = countUniqueColorsInMiddleRow(canvasSurface);
@@ -764,10 +766,9 @@ class HighLevelTestRunner {
             });
         }
 
-        // Middle column unique colors check (both SW and HTML5 Canvas)
+        // Middle column unique colors check (both SW and HTML5 Canvas for comparison)
         if (checks.uniqueColors && checks.uniqueColors.middleColumn) {
             const expected = checks.uniqueColors.middleColumn.count;
-            const swSurface = createSurface(swCanvas);
             const canvasSurface = createSurface(html5Canvas);
             const swCount = countUniqueColorsInMiddleColumn(swSurface);
             const canvasCount = countUniqueColorsInMiddleColumn(canvasSurface);
@@ -785,7 +786,6 @@ class HighLevelTestRunner {
                 ? checks.speckles.expected : 0;
             const maxSpeckles = typeof checks.speckles === 'object' ? checks.speckles.maxSpeckles : undefined;
             const isKnownFailure = typeof checks.speckles === 'object' && checks.speckles.knownFailure === true;
-            const swSurface = createSurface(swCanvas);
             const speckleResult = countSpeckles(swSurface);
             const speckleCount = speckleResult.count;
             const passed = maxSpeckles !== undefined
@@ -806,7 +806,6 @@ class HighLevelTestRunner {
 
         // Legacy speckles check (on SWCanvas)
         if (checks.noSpeckles === true) {
-            const swSurface = createSurface(swCanvas);
             const hasSpecklePixels = hasSpeckles(swSurface);
             results.push({
                 name: 'No Speckles',

@@ -705,6 +705,91 @@ function countSpeckles(surface) {
     return { count: speckleCount, firstSpeckle };
 }
 
+/**
+ * Run all validation checks on a surface
+ * Shared between Node.js and browser test runners for consistency.
+ * @param {Object} surface - Surface with data, width, height, stride
+ * @param {Object} checks - Checks configuration from test
+ * @returns {Object} { passed: boolean, issues: string[], knownFailureIssues: string[] }
+ */
+function runValidationChecks(surface, checks) {
+    const issues = [];
+    const knownFailureIssues = [];
+
+    // Total unique colors check (exactly N)
+    if (checks.totalUniqueColors) {
+        const expected = typeof checks.totalUniqueColors === 'number' ?
+            checks.totalUniqueColors : checks.totalUniqueColors.count;
+        const actual = countUniqueColors(surface);
+        if (actual !== expected) {
+            issues.push(`Unique colors: expected exactly ${expected}, got ${actual}`);
+        }
+    }
+
+    // Max unique colors check (at most N)
+    if (checks.maxUniqueColors) {
+        const actual = countUniqueColors(surface);
+        if (actual > checks.maxUniqueColors) {
+            issues.push(`Unique colors: ${actual} exceeds maximum of ${checks.maxUniqueColors}`);
+        }
+    }
+
+    // Middle row unique colors
+    if (checks.uniqueColors && checks.uniqueColors.middleRow) {
+        const expected = checks.uniqueColors.middleRow.count;
+        const actual = countUniqueColorsInMiddleRow(surface);
+        if (actual !== expected) {
+            issues.push(`Middle row unique colors: ${actual} (expected ${expected})`);
+        }
+    }
+
+    // Middle column unique colors
+    if (checks.uniqueColors && checks.uniqueColors.middleColumn) {
+        const expected = checks.uniqueColors.middleColumn.count;
+        const actual = countUniqueColorsInMiddleColumn(surface);
+        if (actual !== expected) {
+            issues.push(`Middle column unique colors: ${actual} (expected ${expected})`);
+        }
+    }
+
+    // Speckle checks
+    if (checks.speckles === true || (checks.speckles && typeof checks.speckles === 'object')) {
+        const expected = (typeof checks.speckles === 'object' && checks.speckles.expected !== undefined)
+            ? checks.speckles.expected : 0;
+        const maxSpeckles = typeof checks.speckles === 'object' ? checks.speckles.maxSpeckles : undefined;
+        const isKnownFailure = typeof checks.speckles === 'object' && checks.speckles.knownFailure === true;
+        const speckleResult = countSpeckles(surface);
+        const speckleCount = speckleResult.count;
+
+        const speckleCheckPassed = maxSpeckles !== undefined
+            ? speckleCount <= maxSpeckles
+            : speckleCount === expected;
+
+        if (!speckleCheckPassed) {
+            const firstInfo = speckleResult.firstSpeckle
+                ? ` (first at ${speckleResult.firstSpeckle.x},${speckleResult.firstSpeckle.y})`
+                : '';
+            const expectedMsg = maxSpeckles !== undefined ? `≤${maxSpeckles}` : `${expected}`;
+            const message = `Speckle count: ${speckleCount} (expected ${expectedMsg})${firstInfo}`;
+            if (isKnownFailure) {
+                knownFailureIssues.push(message + ' [KNOWN]');
+            } else {
+                issues.push(message);
+            }
+        }
+    } else if (checks.noSpeckles === true || checks.speckles === false) {
+        if (hasSpeckles(surface)) {
+            issues.push('Unexpected speckles found');
+        }
+    }
+
+    return {
+        passed: issues.length === 0,
+        issues,
+        knownFailureIssues
+    };
+}
+
 // Export for Node.js
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
@@ -728,7 +813,8 @@ if (typeof module !== 'undefined' && module.exports) {
         countUniqueColorsInMiddleRow,
         countUniqueColorsInMiddleColumn,
         countSpeckles,
-        hasSpeckles
+        hasSpeckles,
+        runValidationChecks
     };
 }
 
@@ -755,4 +841,5 @@ if (typeof window !== 'undefined') {
     window.countUniqueColorsInMiddleColumn = countUniqueColorsInMiddleColumn;
     window.countSpeckles = countSpeckles;
     window.hasSpeckles = hasSpeckles;
+    window.runValidationChecks = runValidationChecks;
 }
