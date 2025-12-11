@@ -1597,12 +1597,26 @@ class Context2D {
 
         if (isColor && isSourceOver && isButtCap) {
             const isOpaque = paintSource.a === 255 && this.globalAlpha >= 1.0;
-            if (isOpaque) {
-                ArcOps.strokeOuterOpaque(this.surface, center.x, center.y, scaledRadius,
-                    angles.start, angles.end, scaledLineWidth, paintSource, clipBuffer);
-            } else if (paintSource.a > 0) {
-                ArcOps.strokeOuterAlpha(this.surface, center.x, center.y, scaledRadius,
-                    angles.start, angles.end, scaledLineWidth, paintSource, this.globalAlpha, clipBuffer);
+            const is1pxStroke = Math.abs(scaledLineWidth - 1) < 0.001;
+
+            if (is1pxStroke) {
+                // Optimized 1px stroke path
+                if (isOpaque) {
+                    ArcOps.stroke1pxOpaque(this.surface, center.x, center.y, scaledRadius,
+                        angles.start, angles.end, paintSource, clipBuffer);
+                } else if (paintSource.a > 0) {
+                    ArcOps.stroke1pxAlpha(this.surface, center.x, center.y, scaledRadius,
+                        angles.start, angles.end, paintSource, this.globalAlpha, clipBuffer);
+                }
+            } else {
+                // Thick stroke path
+                if (isOpaque) {
+                    ArcOps.strokeOuterOpaque(this.surface, center.x, center.y, scaledRadius,
+                        angles.start, angles.end, scaledLineWidth, paintSource, clipBuffer);
+                } else if (paintSource.a > 0) {
+                    ArcOps.strokeOuterAlpha(this.surface, center.x, center.y, scaledRadius,
+                        angles.start, angles.end, scaledLineWidth, paintSource, this.globalAlpha, clipBuffer);
+                }
             }
             return;
         }

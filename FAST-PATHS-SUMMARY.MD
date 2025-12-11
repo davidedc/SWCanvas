@@ -92,11 +92,13 @@ Note: Lines already handle all orientations - no separate "rotated" variant need
 |--------------|------------------|-----------------------------|----------|
 | N/A (fill)   | Opaque           | ArcOps.fillOpaque()         | YES      |
 | N/A (fill)   | Semi-transparent | ArcOps.fillAlpha()          | YES      |
-| Any          | Opaque           | ArcOps.strokeOuterOpaque()  | YES      |
-| Any          | Semi-transparent | ArcOps.strokeOuterAlpha()   | YES      |
+| 1px          | Opaque           | ArcOps.stroke1pxOpaque()    | YES      |
+| 1px          | Semi-transparent | ArcOps.stroke1pxAlpha()     | YES      |
+| >1px         | Opaque           | ArcOps.strokeOuterOpaque()  | YES      |
+| >1px         | Semi-transparent | ArcOps.strokeOuterAlpha()   | YES      |
 | Any          | Both             | ArcOps.fillAndStrokeOuter() | YES      |
 
-Note: Arc stroke uses Bresenham + angle filtering, no separate 1px/thick variants.
+Note: Arc uses Bresenham + angle filtering. 1px paths skip Set overhead for opaque.
 **Requires lineCap === 'butt' for fast path (non-butt caps fall to slow path).**
 
 ---
@@ -242,8 +244,8 @@ if (clipBuffer[byteIndex] === 0) {
 |-----------------------|------|-----------|--------|------|-----|
 | Fill opaque           | ✓    | ✓         | ✓      | N/A  | ✓   |
 | Fill alpha            | ✓    | ✓         | ✓      | N/A  | ✓   |
-| Stroke 1px opaque     | ✓    | ✓         | ✓      | ✓    | -   |
-| Stroke 1px alpha      | ✓    | ✓         | ✓      | ✓    | -   |
+| Stroke 1px opaque     | ✓    | ✓         | ✓      | ✓    | ✓   |
+| Stroke 1px alpha      | ✓    | ✓         | ✓      | ✓    | ✓   |
 | Stroke thick opaque   | ✓    | ✓         | ✓      | ✓    | ✓   |
 | Stroke thick alpha    | ✓    | ✓         | ✓      | ✓    | ✓   |
 | fillAndStroke()       | ✓    | ✓         | ✓      | N/A  | ✓   |
@@ -266,7 +268,7 @@ if (clipBuffer[byteIndex] === 0) {
 | RoundedRectOps | fillOpaque, fillAlpha               | stroke1pxOpaque, stroke1pxAlpha, strokeThickOpaque, strokeThickAlpha          |
 | CircleOps      | fillOpaque, fillAlpha               | stroke1pxOpaque, stroke1pxAlpha, strokeThick, strokeThickAlpha                |
 | LineOps        | N/A                                 | strokeDirect, strokeThickPolygonScan                                          |
-| ArcOps         | fillOpaque, fillAlpha               | strokeOuterOpaque, strokeOuterAlpha                                           |
+| ArcOps         | fillOpaque, fillAlpha               | stroke1pxOpaque, stroke1pxAlpha, strokeOuterOpaque, strokeOuterAlpha          |
 | SpanOps        | fillOpaque, fillAlpha               | N/A                                                                           |
 
 ### Combined Methods
@@ -292,8 +294,7 @@ if (clipBuffer[byteIndex] === 0) {
 ### Low Priority Enhancements:
 
 1. **Rotated RoundedRect fast path** - Currently requires identity transform
-2. **Separate 1px/thick paths for Arc** - Uses same algorithm with thickness parameter
-3. **clipRect/clipCircle convenience methods** - Optional non-standard API additions
+2. **clipRect/clipCircle convenience methods** - Optional non-standard API additions
 
 ---
 
