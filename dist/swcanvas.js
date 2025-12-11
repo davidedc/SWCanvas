@@ -3976,42 +3976,185 @@ class ArcOps {
     }
 
     /**
-     * Combined fill arc + stroke outer arc in a single coordinated operation
-     * Draws fill first, then stroke on top
+     * Fill and stroke an arc in a unified pass using sqrt-based analytical boundaries.
+     * Mirrors CircleOps.fillAndStroke() approach to prevent speckles between fill and stroke.
+     * Uses epsilon contraction on fill boundaries to ensure clean fill/stroke interface.
      * @param {Surface} surface - Target surface
      * @param {number} cx - Center X
      * @param {number} cy - Center Y
-     * @param {number} radius - Arc radius
-     * @param {number} startAngle - Start angle in radians
-     * @param {number} endAngle - End angle in radians
+     * @param {number} radius - Arc radius (path radius - center of stroke)
+     * @param {number} startAngle - Start angle in radians (normalized)
+     * @param {number} endAngle - End angle in radians (normalized, > startAngle)
      * @param {number} lineWidth - Stroke width
-     * @param {Color} fillColor - Fill color (can be null/transparent)
-     * @param {Color} strokeColor - Stroke color (can be null/transparent)
+     * @param {Color} fillColor - Fill color (null/undefined for no fill)
+     * @param {Color} strokeColor - Stroke color (null/undefined for no stroke)
      * @param {number} globalAlpha - Context global alpha
      * @param {Uint8Array|null} clipBuffer - Clip mask buffer
      */
     static fillAndStrokeOuter(surface, cx, cy, radius, startAngle, endAngle, lineWidth,
                                fillColor, strokeColor, globalAlpha, clipBuffer) {
+        const width = surface.width;
+        const height = surface.height;
+        const data = surface.data;
+        const data32 = surface.data32;
+
+        // Check what we need to draw
         const hasFill = fillColor && fillColor.a > 0;
         const hasStroke = strokeColor && strokeColor.a > 0 && lineWidth > 0;
 
-        // Draw fill first (if present)
-        if (hasFill) {
-            const fillIsOpaque = fillColor.a === 255 && globalAlpha >= 1.0;
-            if (fillIsOpaque) {
-                ArcOps.fillOpaque(surface, cx, cy, radius, startAngle, endAngle, fillColor, clipBuffer);
-            } else {
-                ArcOps.fillAlpha(surface, cx, cy, radius, startAngle, endAngle, fillColor, globalAlpha, clipBuffer);
-            }
-        }
+        if (!hasFill && !hasStroke) return;
 
-        // Draw stroke on top (if present)
-        if (hasStroke) {
-            const strokeIsOpaque = strokeColor.a === 255 && globalAlpha >= 1.0;
-            if (strokeIsOpaque) {
-                ArcOps.strokeOuterOpaque(surface, cx, cy, radius, startAngle, endAngle, lineWidth, strokeColor, clipBuffer);
-            } else {
-                ArcOps.strokeOuterAlpha(surface, cx, cy, radius, startAngle, endAngle, lineWidth, strokeColor, globalAlpha, clipBuffer);
+        // Single floating-point center for both fill and stroke (CircleOps.fillAndStroke approach)
+        const cX = cx - 0.5;
+        const cY = cy - 0.5;
+
+        // Calculate radii based on stroke width
+        // The path radius is the center of the stroke
+        // Inner radius = radius - lineWidth/2 (fill boundary / stroke inner edge)
+        // Outer radius = radius + lineWidth/2 (stroke outer edge)
+        // Fill extends to the path radius (center of stroke)
+        const innerRadius = hasStroke ? radius - lineWidth / 2 : radius;
+        const outerRadius = hasStroke ? radius + lineWidth / 2 : radius;
+        const fillRadius = radius; // Path radius is the fill boundary
+
+        // Calculate bounds
+        const minY = Math.max(0, Math.floor(cY - outerRadius - 1));
+        const maxY = Math.min(height - 1, Math.ceil(cY + outerRadius + 1));
+        const minX = Math.max(0, Math.floor(cX - outerRadius - 1));
+        const maxX = Math.min(width - 1, Math.ceil(cX + outerRadius + 1));
+
+        // Skip if completely outside canvas
+        if (minY > maxY || minX > maxX) return;
+
+        const outerRadiusSquared = outerRadius * outerRadius;
+        const innerRadiusSquared = innerRadius > 0 ? innerRadius * innerRadius : 0;
+        const fillRadiusSquared = fillRadius * fillRadius;
+
+        // Determine rendering mode for fill
+        const fillIsOpaque = hasFill && fillColor.a === 255 && globalAlpha >= 1.0;
+        const fillEffectiveAlpha = hasFill ? (fillColor.a / 255) * globalAlpha : 0;
+        const fillInvAlpha = 1 - fillEffectiveAlpha;
+
+        // Determine rendering mode for stroke
+        const strokeIsOpaque = hasStroke && strokeColor.a === 255 && globalAlpha >= 1.0;
+        const strokeEffectiveAlpha = hasStroke ? (strokeColor.a / 255) * globalAlpha : 0;
+        const strokeInvAlpha = 1 - strokeEffectiveAlpha;
+
+        // Packed colors for opaque rendering
+        const fillPacked = fillIsOpaque ? Surface.packColor(fillColor.r, fillColor.g, fillColor.b, 255) : 0;
+        const strokePacked = strokeIsOpaque ? Surface.packColor(strokeColor.r, strokeColor.g, strokeColor.b, 255) : 0;
+
+        // Process each scanline
+        for (let y = minY; y <= maxY; y++) {
+            const dy = y - cY;
+            const dySquared = dy * dy;
+
+            // Skip if outside outer circle
+            if (dySquared > outerRadiusSquared) continue;
+
+            // Calculate outer circle X intersections (stroke outer boundary)
+            const outerXDist = Math.sqrt(outerRadiusSquared - dySquared);
+            const outerLeftX = Math.max(minX, Math.ceil(cX - outerXDist));
+            const outerRightX = Math.min(maxX, Math.floor(cX + outerXDist));
+
+            // Calculate fill boundaries if this row intersects the fill area
+            let leftFillX = -1;
+            let rightFillX = -1;
+            const fillDistSquared = fillRadiusSquared - dySquared;
+            if (hasFill && fillDistSquared >= 0) {
+                const fillXDist = Math.sqrt(fillDistSquared);
+                // Epsilon contraction to prevent speckles at boundary (CircleOps approach)
+                leftFillX = Math.max(minX, Math.ceil(cX - fillXDist + 0.0001));
+                rightFillX = Math.min(maxX, Math.floor(cX + fillXDist - 0.0001));
+            }
+
+            // Calculate inner circle boundaries (stroke inner boundary)
+            let innerLeftX = outerRightX + 1; // Default: no inner circle intersection
+            let innerRightX = outerLeftX - 1;
+            if (innerRadius > 0 && dySquared <= innerRadiusSquared) {
+                const innerXDist = Math.sqrt(innerRadiusSquared - dySquared);
+                innerLeftX = Math.floor(cX - innerXDist);
+                innerRightX = Math.ceil(cX + innerXDist);
+            }
+
+            // STEP 1: Render fill first (if this row intersects the fill circle)
+            if (hasFill && leftFillX >= 0 && leftFillX <= rightFillX) {
+                if (fillIsOpaque) {
+                    for (let x = leftFillX; x <= rightFillX; x++) {
+                        const dx = x - cX;
+                        // Apply angle filtering for arc
+                        if (!ArcOps.isAngleInRange(dx, dy, startAngle, endAngle)) continue;
+                        const pos = y * width + x;
+                        if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (pos & 7)))) {
+                            data32[pos] = fillPacked;
+                        }
+                    }
+                } else {
+                    const fr = fillColor.r, fg = fillColor.g, fb = fillColor.b;
+                    for (let x = leftFillX; x <= rightFillX; x++) {
+                        const dx = x - cX;
+                        // Apply angle filtering for arc
+                        if (!ArcOps.isAngleInRange(dx, dy, startAngle, endAngle)) continue;
+                        const pos = y * width + x;
+                        if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (pos & 7)))) {
+                            const idx = pos * 4;
+                            const oldAlpha = data[idx + 3] / 255;
+                            const oldAlphaScaled = oldAlpha * fillInvAlpha;
+                            const newAlpha = fillEffectiveAlpha + oldAlphaScaled;
+                            if (newAlpha > 0) {
+                                const blendFactor = 1 / newAlpha;
+                                data[idx] = (fr * fillEffectiveAlpha + data[idx] * oldAlphaScaled) * blendFactor;
+                                data[idx + 1] = (fg * fillEffectiveAlpha + data[idx + 1] * oldAlphaScaled) * blendFactor;
+                                data[idx + 2] = (fb * fillEffectiveAlpha + data[idx + 2] * oldAlphaScaled) * blendFactor;
+                                data[idx + 3] = newAlpha * 255;
+                            }
+                        }
+                    }
+                }
+            }
+
+            // STEP 2: Render stroke on top (covers any micro-gaps)
+            if (hasStroke) {
+                // Helper function to render a stroke pixel with angle filtering
+                const renderStrokePixel = (x) => {
+                    const dx = x - cX;
+                    // Apply angle filtering for arc
+                    if (!ArcOps.isAngleInRange(dx, dy, startAngle, endAngle)) return;
+                    const pos = y * width + x;
+                    if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (pos & 7)))) {
+                        if (strokeIsOpaque) {
+                            data32[pos] = strokePacked;
+                        } else {
+                            const sr = strokeColor.r, sg = strokeColor.g, sb = strokeColor.b;
+                            const idx = pos * 4;
+                            const oldAlpha = data[idx + 3] / 255;
+                            const oldAlphaScaled = oldAlpha * strokeInvAlpha;
+                            const newAlpha = strokeEffectiveAlpha + oldAlphaScaled;
+                            if (newAlpha > 0) {
+                                const blendFactor = 1 / newAlpha;
+                                data[idx] = (sr * strokeEffectiveAlpha + data[idx] * oldAlphaScaled) * blendFactor;
+                                data[idx + 1] = (sg * strokeEffectiveAlpha + data[idx + 1] * oldAlphaScaled) * blendFactor;
+                                data[idx + 2] = (sb * strokeEffectiveAlpha + data[idx + 2] * oldAlphaScaled) * blendFactor;
+                                data[idx + 3] = newAlpha * 255;
+                            }
+                        }
+                    }
+                };
+
+                if (innerRadius <= 0 || dySquared > innerRadiusSquared) {
+                    // No inner circle intersection - draw entire stroke span
+                    for (let x = outerLeftX; x <= outerRightX; x++) {
+                        renderStrokePixel(x);
+                    }
+                } else {
+                    // Intersects both inner and outer circles - draw left and right segments
+                    for (let x = outerLeftX; x <= innerLeftX; x++) {
+                        renderStrokePixel(x);
+                    }
+                    for (let x = innerRightX; x <= outerRightX; x++) {
+                        renderStrokePixel(x);
+                    }
+                }
             }
         }
     }
