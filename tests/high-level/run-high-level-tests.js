@@ -139,15 +139,24 @@ function runTest(test, iterationNumber = 1) {
     // In browser, this compares SWCanvas vs HTML5 Canvas bounds (meaningful).
     // In Node.js, there's no HTML5 Canvas to compare against, so skip this check.
 
-    // Unique colors check (total)
+    // Unique colors check (total) - checks for exactly N colors
     if (checks.totalUniqueColors) {
         const expected = typeof checks.totalUniqueColors === 'number' ?
             checks.totalUniqueColors : checks.totalUniqueColors.count;
         const actual = countUniqueColors(surface);
-        // We check for at least the expected number (background + shapes)
-        if (actual < expected) {
+        if (actual !== expected) {
             testPassed = false;
-            issues.push(`Unique colors: expected at least ${expected}, got ${actual}`);
+            issues.push(`Unique colors: expected exactly ${expected}, got ${actual}`);
+        }
+    }
+
+    // Max unique colors check
+    if (checks.maxUniqueColors) {
+        const maxExpected = checks.maxUniqueColors;
+        const actual = countUniqueColors(surface);
+        if (actual > maxExpected) {
+            testPassed = false;
+            issues.push(`Unique colors: ${actual} exceeds maximum of ${maxExpected}`);
         }
     }
 

@@ -737,6 +737,18 @@ class HighLevelTestRunner {
             });
         }
 
+        // Max unique colors check (on SWCanvas)
+        if (checks.maxUniqueColors !== undefined) {
+            const swSurface = createSurface(swCanvas);
+            const uniqueColors = countUniqueColors(swSurface);
+            const passed = uniqueColors <= checks.maxUniqueColors;
+            results.push({
+                name: 'Max Unique Colors',
+                passed,
+                details: `${uniqueColors} colors` + (passed ? '' : ` (exceeds max ${checks.maxUniqueColors})`)
+            });
+        }
+
         // Middle row unique colors check (both SW and HTML5 Canvas)
         if (checks.uniqueColors && checks.uniqueColors.middleRow) {
             const expected = checks.uniqueColors.middleRow.count;
