@@ -274,13 +274,23 @@ class RectOps {
             }
         }
 
-        // Draw vertical strokes (left and right edges, excluding corners already drawn)
-        for (let py = Math.floor(top + halfStroke); py < bottom - halfStroke; py++) {
-            for (let t = -halfStroke; t < halfStroke; t++) {
-                // Left edge
-                blendPixel(Math.floor(left + t), py);
-                // Right edge
-                blendPixel(Math.floor(right + t), py);
+        // Calculate exact Y bounds to prevent corner overlap with non-integer geometry
+        // The t loop iterates ceil(lineWidth) times, so the last t value is:
+        const numTIterations = Math.ceil(lineWidth);
+        const lastT = -halfStroke + numTIterations - 1;
+        const topStrokeMaxY = Math.floor(top + lastT);
+        const bottomStrokeMinY = Math.floor(bottom - halfStroke);
+
+        // Draw vertical strokes (left and right edges, excluding corners)
+        // Use px-based iteration to match horizontal stroke X coverage
+        for (let py = topStrokeMaxY + 1; py < bottomStrokeMinY; py++) {
+            // Left edge
+            for (let px = Math.floor(left - halfStroke); px < left + halfStroke; px++) {
+                blendPixel(px, py);
+            }
+            // Right edge
+            for (let px = Math.floor(right - halfStroke); px < right + halfStroke; px++) {
+                blendPixel(px, py);
             }
         }
     }
