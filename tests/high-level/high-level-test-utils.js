@@ -487,6 +487,109 @@ function calculateArcTestParameters(options) {
 }
 
 /**
+ * Calculates parameters for a single 90-degree arc spanning one quadrant.
+ * Used for crisp 90° arc tests with extent validation.
+ *
+ * @param {Object} options
+ * @param {number} options.canvasWidth - Canvas width
+ * @param {number} options.canvasHeight - Canvas height
+ * @param {number} options.minDiameter - Minimum diameter (default 40)
+ * @param {number} options.maxDiameter - Maximum diameter (default 200)
+ * @param {number} options.strokeWidth - Stroke width for crisp adjustment (default 1)
+ * @returns {Object} {centerX, centerY, radius, atPixel, quadrantIndex, quadrant, startAngle, endAngle, checkData}
+ */
+function calculate90DegQuadrantArcParams(options) {
+    const {
+        canvasWidth,
+        canvasHeight,
+        minDiameter = 40,
+        maxDiameter = 200,
+        strokeWidth = 1
+    } = options;
+
+    // Determine center type: pixel (*.5) or grid (integer)
+    const atPixel = SeededRandom.getRandom() < 0.5;
+
+    // Calculate center position
+    let centerX, centerY;
+    if (atPixel) {
+        const pos = placeCloseToCenterAtPixel(canvasWidth, canvasHeight);
+        centerX = pos.centerX;
+        centerY = pos.centerY;
+    } else {
+        const pos = placeCloseToCenterAtGrid(canvasWidth, canvasHeight);
+        centerX = pos.centerX;
+        centerY = pos.centerY;
+    }
+
+    // Generate random base diameter
+    const diameterRange = maxDiameter - minDiameter;
+    const baseDiameter = minDiameter + Math.floor(SeededRandom.getRandom() * diameterRange);
+
+    // Adjust diameter for crisp rendering
+    const center = { x: centerX, y: centerY };
+    const adjustedDiameter = adjustDimensionsForCrispStrokeRendering(
+        baseDiameter, baseDiameter, strokeWidth, center
+    ).width;
+
+    // Calculate final radius
+    const radius = adjustedDiameter / 2;
+
+    // Select random quadrant (0-3)
+    const quadrantIndex = Math.floor(SeededRandom.getRandom() * 4);
+    const quadrants = [
+        { start: 0, end: Math.PI / 2, name: 'Q1 (0-90)' },
+        { start: Math.PI / 2, end: Math.PI, name: 'Q2 (90-180)' },
+        { start: Math.PI, end: Math.PI * 3 / 2, name: 'Q3 (180-270)' },
+        { start: Math.PI * 3 / 2, end: Math.PI * 2, name: 'Q4 (270-360)' }
+    ];
+    const quadrant = quadrants[quadrantIndex];
+
+    // Calculate extent bounds based on quadrant
+    const effectiveRadius = radius + strokeWidth / 2;
+    const checkData = { effectiveRadius };
+
+    switch (quadrantIndex) {
+        case 0: // Q1: 0-90 (right, bottom)
+            checkData.leftX = Math.floor(centerX);
+            checkData.rightX = Math.floor(centerX + effectiveRadius);
+            checkData.topY = Math.floor(centerY);
+            checkData.bottomY = Math.floor(centerY + effectiveRadius);
+            break;
+        case 1: // Q2: 90-180 (left, bottom)
+            checkData.leftX = Math.floor(centerX - effectiveRadius);
+            checkData.rightX = Math.floor(centerX);
+            checkData.topY = Math.floor(centerY);
+            checkData.bottomY = Math.floor(centerY + effectiveRadius);
+            break;
+        case 2: // Q3: 180-270 (left, top)
+            checkData.leftX = Math.floor(centerX - effectiveRadius);
+            checkData.rightX = Math.floor(centerX);
+            checkData.topY = Math.floor(centerY - effectiveRadius);
+            checkData.bottomY = Math.floor(centerY);
+            break;
+        case 3: // Q4: 270-360 (right, top)
+            checkData.leftX = Math.floor(centerX);
+            checkData.rightX = Math.floor(centerX + effectiveRadius);
+            checkData.topY = Math.floor(centerY - effectiveRadius);
+            checkData.bottomY = Math.floor(centerY);
+            break;
+    }
+
+    return {
+        centerX,
+        centerY,
+        radius,
+        atPixel,
+        quadrantIndex,
+        quadrant,
+        startAngle: quadrant.start,
+        endAngle: quadrant.end,
+        checkData
+    };
+}
+
+/**
  * Register a high-level test
  * @param {string} name - Test name
  * @param {function} drawFunction - Function that draws the test
@@ -806,6 +909,7 @@ if (typeof module !== 'undefined' && module.exports) {
         calculateCrispFillAndStrokeRectParams,
         calculateCircleTestParameters,
         calculateArcTestParameters,
+        calculate90DegQuadrantArcParams,
         generateConstrainedArcAngles,
         registerHighLevelTest,
         analyzeExtremes,
@@ -833,6 +937,7 @@ if (typeof window !== 'undefined') {
     window.calculateCrispFillAndStrokeRectParams = calculateCrispFillAndStrokeRectParams;
     window.calculateCircleTestParameters = calculateCircleTestParameters;
     window.calculateArcTestParameters = calculateArcTestParameters;
+    window.calculate90DegQuadrantArcParams = calculate90DegQuadrantArcParams;
     window.generateConstrainedArcAngles = generateConstrainedArcAngles;
     window.registerHighLevelTest = registerHighLevelTest;
     window.analyzeExtremes = analyzeExtremes;

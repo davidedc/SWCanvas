@@ -3,7 +3,7 @@
  * =================
  *
  * Description: Tests a single 90-degree arc spanning one random quadrant with crisp stroke ends,
- *              mixed fill (opaque or semitransparent), and opaque 1px stroke.
+ *              mixed fill (opaque or semitransparent), and semitransparent 1px stroke.
  *
  *
  * ---
@@ -14,7 +14,7 @@
  * | Count                  | single             | The test draws a single arc instance.
  * | SizeCategory           | mixed              | The radius is randomized in a range of [20, 100], spanning multiple size categories.
  * | FillStyle              | mixed              | Fill is randomly opaque or semitransparent (50% chance each).
- * | StrokeStyle            | opaque             | Stroke color is always fully opaque (alpha = 255).
+ * | StrokeStyle            | semitransparent    | Stroke color is semitransparent (alpha < 255).
  * | StrokeThickness        | 1px                | Fixed 1px stroke width for crisp rendering.
  * | Layout                 | centered           | The arc's center is at the canvas center.
  * | CenteredAt             | mixed-pixel-grid   | A random flag determines if center is on pixel (*.5) or grid (integer) line.
@@ -43,7 +43,7 @@
  */
 
 registerHighLevelTest(
-    'arc-sgl-szMix-fMix-sOpaq-sw1px-lytCenter-cenMixPG-edgeCrisp-arcADeg90-quadRand-test',
+    'arc-sgl-szMix-fMix-sSemi-sw1px-lytCenter-cenMixPG-edgeCrisp-arcADeg90-quadRand-test',
     function drawTest(ctx, iterationNumber, instances) {
         const canvasWidth = ctx.canvas.width;
         const canvasHeight = ctx.canvas.height;
@@ -64,8 +64,8 @@ registerHighLevelTest(
         const fillType = SeededRandom.getRandom() < 0.5 ? 'opaque' : 'semitransparent';
         const fillColor = getRandomColor(fillType);
 
-        // Fixed opaque stroke
-        const strokeColor = getRandomOpaqueColor();
+        // Semitransparent stroke
+        const strokeColor = getRandomColor('semitransparent');
 
         // Draw filled and stroked arc using unified Direct API
         ctx.fillStyle = fillColor;
@@ -74,7 +74,7 @@ registerHighLevelTest(
         ctx.fillAndOuterStrokeArc(centerX, centerY, radius, startAngle, endAngle);
 
         return {
-            logs: [`90deg Arc: center=(${centerX.toFixed(1)},${centerY.toFixed(1)}), r=${radius.toFixed(1)}, sw=${strokeWidth}, quadrant=${quadrant.name}, fillType=${fillType}, centerType=${atPixel ? 'pixel' : 'grid'}`],
+            logs: [`90deg Arc: center=(${centerX.toFixed(1)},${centerY.toFixed(1)}), r=${radius.toFixed(1)}, sw=${strokeWidth}, quadrant=${quadrant.name}, fillType=${fillType}, strokeType=semi, centerType=${atPixel ? 'pixel' : 'grid'}`],
             checkData
         };
     },
@@ -85,8 +85,8 @@ registerHighLevelTest(
         speckles: { maxSpeckles: 4 }
     },
     {
-        title: 'Single 90deg Arc (Crisp, Random Quadrant, Opaque 1px Stroke)',
-        description: 'Tests a single 90-degree arc spanning one random quadrant with crisp stroke ends, mixed fill (opaque or semitransparent), and opaque 1px stroke.',
-        displayName: 'Perf: Arc 90deg Crisp Opaq1px'
+        title: 'Single 90deg Arc (Crisp, Random Quadrant, Semi 1px Stroke)',
+        description: 'Tests a single 90-degree arc spanning one random quadrant with crisp stroke ends, mixed fill (opaque or semitransparent), and semitransparent 1px stroke.',
+        displayName: 'Perf: Arc 90deg Crisp Semi1px'
     }
 );

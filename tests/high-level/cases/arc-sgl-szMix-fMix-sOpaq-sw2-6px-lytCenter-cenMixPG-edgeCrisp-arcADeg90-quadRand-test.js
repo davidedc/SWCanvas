@@ -3,7 +3,7 @@
  * =================
  *
  * Description: Tests a single 90-degree arc spanning one random quadrant with crisp stroke ends,
- *              mixed fill (opaque or semitransparent), and opaque 1px stroke.
+ *              mixed fill (opaque or semitransparent), and opaque thick stroke (2-6px).
  *
  *
  * ---
@@ -15,7 +15,7 @@
  * | SizeCategory           | mixed              | The radius is randomized in a range of [20, 100], spanning multiple size categories.
  * | FillStyle              | mixed              | Fill is randomly opaque or semitransparent (50% chance each).
  * | StrokeStyle            | opaque             | Stroke color is always fully opaque (alpha = 255).
- * | StrokeThickness        | 1px                | Fixed 1px stroke width for crisp rendering.
+ * | StrokeThickness        | 2-6px              | Randomly selected thick stroke width (2, 3, 4, 5, or 6 pixels).
  * | Layout                 | centered           | The arc's center is at the canvas center.
  * | CenteredAt             | mixed-pixel-grid   | A random flag determines if center is on pixel (*.5) or grid (integer) line.
  * | EdgeAlignment          | crisp              | Diameter adjusted via `adjustDimensionsForCrispStrokeRendering()` for sharp edges.
@@ -43,11 +43,13 @@
  */
 
 registerHighLevelTest(
-    'arc-sgl-szMix-fMix-sOpaq-sw1px-lytCenter-cenMixPG-edgeCrisp-arcADeg90-quadRand-test',
+    'arc-sgl-szMix-fMix-sOpaq-sw2-6px-lytCenter-cenMixPG-edgeCrisp-arcADeg90-quadRand-test',
     function drawTest(ctx, iterationNumber, instances) {
         const canvasWidth = ctx.canvas.width;
         const canvasHeight = ctx.canvas.height;
-        const strokeWidth = 1;
+
+        // Random thick stroke width (2-6px)
+        const strokeWidth = 2 + Math.floor(SeededRandom.getRandom() * 5);
 
         // Use shared helper for crisp 90° arc parameters
         const params = calculate90DegQuadrantArcParams({
@@ -80,13 +82,13 @@ registerHighLevelTest(
     },
     'arcs',
     {
-        extremes: { colorTolerance: 20, tolerance: 0.03 },
+        extremes: { colorTolerance: 30, tolerance: 0.03 },
         maxUniqueColors: 4,  // background + fill + stroke + blend (may be fewer if colors overlap)
         speckles: { maxSpeckles: 4 }
     },
     {
-        title: 'Single 90deg Arc (Crisp, Random Quadrant, Opaque 1px Stroke)',
-        description: 'Tests a single 90-degree arc spanning one random quadrant with crisp stroke ends, mixed fill (opaque or semitransparent), and opaque 1px stroke.',
-        displayName: 'Perf: Arc 90deg Crisp Opaq1px'
+        title: 'Single 90deg Arc (Crisp, Random Quadrant, Opaque 2-6px Stroke)',
+        description: 'Tests a single 90-degree arc spanning one random quadrant with crisp stroke ends, mixed fill (opaque or semitransparent), and opaque thick stroke (2-6px).',
+        displayName: 'Perf: Arc 90deg Crisp Opaq2-6px'
     }
 );

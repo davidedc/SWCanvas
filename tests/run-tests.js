@@ -103,6 +103,7 @@ try {
             global.adjustDimensionsForCrispStrokeRendering = highLevelTestUtils.adjustDimensionsForCrispStrokeRendering;
             global.calculateCircleTestParameters = highLevelTestUtils.calculateCircleTestParameters;
             global.calculateArcTestParameters = highLevelTestUtils.calculateArcTestParameters;
+            global.calculate90DegQuadrantArcParams = highLevelTestUtils.calculate90DegQuadrantArcParams;
             global.generateConstrainedArcAngles = highLevelTestUtils.generateConstrainedArcAngles;
             global.registerHighLevelTest = highLevelTestUtils.registerHighLevelTest;
             global.roundPoint = highLevelTestUtils.roundPoint;
