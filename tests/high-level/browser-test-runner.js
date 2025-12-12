@@ -826,6 +826,18 @@ class HighLevelTestRunner {
             });
         }
 
+        // Dimension consistency check (SW only)
+        if (checks.dimensionConsistency) {
+            const result = checkDimensionConsistency(swSurface);
+            const passed = result.widthConsistent && result.heightConsistent;
+            results.push({
+                name: 'Dimension Consistency',
+                passed,
+                details: passed ? `${result.expectedWidth}x${result.expectedHeight}px` :
+                                 result.issues.join('; ')
+            });
+        }
+
         return results;
     }
 

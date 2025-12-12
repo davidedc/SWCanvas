@@ -647,6 +647,96 @@ function analyzeExtremes(surface, backgroundColor = { r: 255, g: 255, b: 255, a:
 }
 
 /**
+ * Check that rendered shape has consistent width across all content rows
+ * and consistent height across all content columns.
+ * Detects issues like missing pixels on edges.
+ * @param {Object} surface - Surface with data, width, height, stride
+ * @param {Object} backgroundColor - Background color {r, g, b, a}
+ * @returns {Object} { widthConsistent, heightConsistent, expectedWidth, minWidth, maxWidth,
+ *                     expectedHeight, minHeight, maxHeight, issues: string[] }
+ */
+function checkDimensionConsistency(surface, backgroundColor = { r: 255, g: 255, b: 255, a: 255 }) {
+    const issues = [];
+
+    // First get overall bounds
+    const extremes = analyzeExtremes(surface, backgroundColor);
+    if (extremes.leftX >= surface.width || extremes.rightX < 0) {
+        return { widthConsistent: true, heightConsistent: true, issues }; // No content
+    }
+
+    const expectedWidth = extremes.rightX - extremes.leftX + 1;
+    const expectedHeight = extremes.bottomY - extremes.topY + 1;
+
+    // Check width consistency (scan rows)
+    let minRowWidth = expectedWidth, maxRowWidth = expectedWidth;
+    let inconsistentWidthRow = null;
+
+    for (let y = extremes.topY; y <= extremes.bottomY; y++) {
+        let rowLeft = -1, rowRight = -1;
+        for (let x = extremes.leftX; x <= extremes.rightX; x++) {
+            const offset = y * surface.stride + x * 4;
+            const isBackground =
+                surface.data[offset] === backgroundColor.r &&
+                surface.data[offset + 1] === backgroundColor.g &&
+                surface.data[offset + 2] === backgroundColor.b &&
+                surface.data[offset + 3] === backgroundColor.a;
+            if (!isBackground) {
+                if (rowLeft === -1) rowLeft = x;
+                rowRight = x;
+            }
+        }
+        if (rowLeft !== -1) {
+            const rowWidth = rowRight - rowLeft + 1;
+            if (rowWidth < minRowWidth) { minRowWidth = rowWidth; inconsistentWidthRow = y; }
+            if (rowWidth > maxRowWidth) maxRowWidth = rowWidth;
+        }
+    }
+
+    const widthConsistent = minRowWidth === maxRowWidth;
+    if (!widthConsistent) {
+        issues.push(`Width inconsistent: rows vary from ${minRowWidth} to ${maxRowWidth}px (Y=${inconsistentWidthRow})`);
+    }
+
+    // Check height consistency (scan columns)
+    let minColHeight = expectedHeight, maxColHeight = expectedHeight;
+    let inconsistentHeightCol = null;
+
+    for (let x = extremes.leftX; x <= extremes.rightX; x++) {
+        let colTop = -1, colBottom = -1;
+        for (let y = extremes.topY; y <= extremes.bottomY; y++) {
+            const offset = y * surface.stride + x * 4;
+            const isBackground =
+                surface.data[offset] === backgroundColor.r &&
+                surface.data[offset + 1] === backgroundColor.g &&
+                surface.data[offset + 2] === backgroundColor.b &&
+                surface.data[offset + 3] === backgroundColor.a;
+            if (!isBackground) {
+                if (colTop === -1) colTop = y;
+                colBottom = y;
+            }
+        }
+        if (colTop !== -1) {
+            const colHeight = colBottom - colTop + 1;
+            if (colHeight < minColHeight) { minColHeight = colHeight; inconsistentHeightCol = x; }
+            if (colHeight > maxColHeight) maxColHeight = colHeight;
+        }
+    }
+
+    const heightConsistent = minColHeight === maxColHeight;
+    if (!heightConsistent) {
+        issues.push(`Height inconsistent: columns vary from ${minColHeight} to ${maxColHeight}px (X=${inconsistentHeightCol})`);
+    }
+
+    return {
+        widthConsistent,
+        heightConsistent,
+        expectedWidth, minWidth: minRowWidth, maxWidth: maxRowWidth,
+        expectedHeight, minHeight: minColHeight, maxHeight: maxColHeight,
+        issues
+    };
+}
+
+/**
  * Count unique colors in the surface
  */
 function countUniqueColors(surface) {
@@ -886,6 +976,14 @@ function runValidationChecks(surface, checks) {
         }
     }
 
+    // Dimension consistency check (stroke width/height uniformity)
+    if (checks.dimensionConsistency) {
+        const result = checkDimensionConsistency(surface);
+        if (!result.widthConsistent || !result.heightConsistent) {
+            issues.push(...result.issues);
+        }
+    }
+
     return {
         passed: issues.length === 0,
         issues,
@@ -913,6 +1011,7 @@ if (typeof module !== 'undefined' && module.exports) {
         generateConstrainedArcAngles,
         registerHighLevelTest,
         analyzeExtremes,
+        checkDimensionConsistency,
         countUniqueColors,
         countUniqueColorsInMiddleRow,
         countUniqueColorsInMiddleColumn,
@@ -941,6 +1040,7 @@ if (typeof window !== 'undefined') {
     window.generateConstrainedArcAngles = generateConstrainedArcAngles;
     window.registerHighLevelTest = registerHighLevelTest;
     window.analyzeExtremes = analyzeExtremes;
+    window.checkDimensionConsistency = checkDimensionConsistency;
     window.countUniqueColors = countUniqueColors;
     window.countUniqueColorsInMiddleRow = countUniqueColorsInMiddleRow;
     window.countUniqueColorsInMiddleColumn = countUniqueColorsInMiddleColumn;
