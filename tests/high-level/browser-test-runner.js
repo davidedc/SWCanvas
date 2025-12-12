@@ -180,6 +180,12 @@ class HighLevelTestRunner {
         run100Btn.onclick = () => this.runAllIterations(100);
         controls.appendChild(run100Btn);
 
+        const run1000Btn = document.createElement('button');
+        run1000Btn.className = 'secondary iter-btn';
+        run1000Btn.textContent = '1000 iter';
+        run1000Btn.onclick = () => this.runAllIterations(1000);
+        controls.appendChild(run1000Btn);
+
         const stopAllBtn = document.createElement('button');
         stopAllBtn.id = 'stop-all-btn';
         stopAllBtn.className = 'secondary iter-btn stop-btn';
@@ -291,6 +297,12 @@ class HighLevelTestRunner {
         run100Btn.textContent = '100 iterations';
         run100Btn.onclick = () => this.runIterations(test, 100);
         iterControls.appendChild(run100Btn);
+
+        const run1000Btn = document.createElement('button');
+        run1000Btn.className = 'iter-btn';
+        run1000Btn.textContent = '1000 iterations';
+        run1000Btn.onclick = () => this.runIterations(test, 1000);
+        iterControls.appendChild(run1000Btn);
 
         // Collect defects button (doesn't stop on error)
         const collect1kBtn = document.createElement('button');
