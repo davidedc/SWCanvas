@@ -66,11 +66,11 @@ function drawTest(ctx, currentIterationNumber, instances = null) {
         // --- Visual Regression Mode: Draw the fixed grid of 12 arcs ---
         const strokeSizes = [1, 2, 3, 4];
         const radii = [20, 40, 60];
-        let xOffset = 150;
+        let xOffset = 50;
         const fixedStrokeColorStr = 'rgba(200, 100, 100, 255)';
 
         for (const strokeWidth of strokeSizes) {
-            let yOffset = 150;
+            let yOffset = 40;
             for (const radius of radii) {
                 const centerX = xOffset;
                 const centerY = yOffset;
@@ -84,9 +84,9 @@ function drawTest(ctx, currentIterationNumber, instances = null) {
                 logs.push(
                     `\u25DC 90\u00B0 Arc (Fixed Grid): center=(${centerX},${centerY}), r=${radius}, sw=${strokeWidth}`
                 );
-                yOffset += radius * 2 + 20;
+                yOffset += radius * 2 + 10;
             }
-            xOffset += 120;
+            xOffset += 90;
         }
         return { logs };
 
