@@ -847,7 +847,7 @@ class HighLevelTestRunner {
                     name: 'Speckle Count',
                     passed,
                     knownFailure: isKnownFailure && !passed,
-                    details: `SW: ${speckleCount}` + (passed ? '' : ` (expected ${expectedMsg})${firstInfo}`) +
+                    details: `SW: ${speckleCount} (${expectedMsg})` + (passed ? '' : `${firstInfo}`) +
                              (!passed && isKnownFailure ? ' [KNOWN]' : '')
                 });
             }
