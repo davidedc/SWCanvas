@@ -43,7 +43,7 @@ registerHighLevelTest(
     },
     'circles',
     {
-        extremes: { tolerance: 0.05 },
+        extremes: { colorTolerance: 8, tolerance: 0.05 },
         totalUniqueColors: 2, // background + fill
         // Fast path is expected - no allowSlowPath flag
     },

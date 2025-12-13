@@ -82,7 +82,7 @@ registerHighLevelTest(
     },
     'arcs',
     {
-        extremes: { colorTolerance: 30, tolerance: 0.03 },
+        extremes: { colorTolerance: 10, tolerance: 0.03 },
         maxUniqueColors: 4,  // background + fill + stroke + blend (may be fewer if colors overlap)
         speckles: { maxSpeckles: 4 }
     },

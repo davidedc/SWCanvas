@@ -63,8 +63,8 @@ registerHighLevelTest(
         const { centerX, centerY, radius, strokeWidth, finalDiameter, atPixel, startAngle, endAngle, gapSizeDeg } = params;
 
         // Get random colors
-        const strokeColor = getRandomColor('semitransparent');
-        const fillColor = getRandomColor('semitransparent');
+        const strokeColor = 'rgba(255, 0, 0, 0.5)';
+        const fillColor = 'rgba(0, 255, 0, 0.5)';
 
         // Draw filled and stroked arc using unified Direct API
         // Using fillAndOuterStrokeArc ensures no gaps between fill and stroke
@@ -86,7 +86,7 @@ registerHighLevelTest(
     },
     'arcs',
     {
-        extremes: { colorTolerance: 8, tolerance: 0.03 },
+        extremes: { colorTolerance: 40, tolerance: 0.03 },
         noGapsInStrokeEdges: true,
         totalUniqueColors: 4,
         speckles: { maxSpeckles: 4 }

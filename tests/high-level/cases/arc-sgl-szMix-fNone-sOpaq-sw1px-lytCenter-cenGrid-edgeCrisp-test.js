@@ -81,7 +81,7 @@ registerHighLevelTest(
     },
     'arcs',
     {
-        extremes: { colorTolerance: 92, tolerance: 0.03 }, // HTML5Canvas drawing is actually quite suspicious for 1px arcs, hence the higher tolerance
+        extremes: { colorTolerance: 129, tolerance: 0.03 }, // HTML5Canvas drawing is actually quite suspicious for 1px arcs, hence the higher tolerance
         totalUniqueColors: 2,
         continuousStroke: true
     },

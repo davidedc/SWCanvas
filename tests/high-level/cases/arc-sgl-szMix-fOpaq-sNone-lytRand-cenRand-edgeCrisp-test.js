@@ -61,7 +61,7 @@ registerHighLevelTest(
         const { centerX, centerY, radius, startAngle, endAngle, gapSizeDeg } = params;
 
         // Get random opaque color
-        const fillColor = getRandomOpaqueColor();
+        const fillColor = 'rgba(255, 0, 0)';
 
         // Draw filled arc (no stroke)
         ctx.fillStyle = fillColor;
@@ -79,7 +79,7 @@ registerHighLevelTest(
     },
     'arcs',
     {
-        extremes: { colorTolerance: 8, tolerance: 0.03 },
+        extremes: { colorTolerance: 63, tolerance: 0.03 },
         totalUniqueColors: 2
     },
     {

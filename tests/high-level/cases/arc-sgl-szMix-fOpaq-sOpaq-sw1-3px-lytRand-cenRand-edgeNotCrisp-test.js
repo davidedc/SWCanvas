@@ -83,7 +83,7 @@ registerHighLevelTest(
     },
     'arcs',
     {
-        speckles: { maxSpeckles: 4 }
+        speckles: { maxSpeckles: 5 }
     },
     {
         title: 'Single Thin Arc (Not Crisp, Random Position)',

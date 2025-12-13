@@ -97,6 +97,7 @@ try {
             global.SeededRandom = highLevelTestUtils.SeededRandom;
             global.getRandomColor = highLevelTestUtils.getRandomColor;
             global.getRandomOpaqueColor = highLevelTestUtils.getRandomOpaqueColor;
+            global.getRandomOpaqueVisibleColor = highLevelTestUtils.getRandomOpaqueVisibleColor;
             global.getRandomPoint = highLevelTestUtils.getRandomPoint;
             global.placeCloseToCenterAtPixel = highLevelTestUtils.placeCloseToCenterAtPixel;
             global.placeCloseToCenterAtGrid = highLevelTestUtils.placeCloseToCenterAtGrid;

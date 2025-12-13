@@ -469,7 +469,7 @@ class HighLevelTestRunner {
         this.updateFlipDisplay(test.name);
 
         // Run validation checks comparing both canvases
-        const checkResults = this.runValidationChecks(test, swCanvas, html5Canvas, swResult);
+        const checkResults = this.runValidationChecks(test, swCanvas, html5Canvas, swResult, iterationNumber);
 
         // Display results
         return this.displayResults(section, test, slowPathUsed, allowSlowPath, checkResults, swResult, iterationNumber);
@@ -603,11 +603,15 @@ class HighLevelTestRunner {
         progressDiv.textContent = `${passed}/${total} passed`;
 
         // Add error details if any failures
-        if (errors.length > 0 && errors.length <= 5) {
+        if (errors.length > 0) {
             const resultsDiv = section.querySelector('.test-results');
             const errorDiv = document.createElement('div');
             errorDiv.className = 'iter-errors';
-            errorDiv.innerHTML = `<strong>Failed iterations:</strong> ${errors.join(', ')}`;
+
+            // Extract just the iteration numbers for easy copy-paste into skipOnIterations
+            const iterNumbers = errors.map(e => parseInt(e.replace('Iteration ', '')));
+            errorDiv.innerHTML = `<strong>Failed iterations:</strong> ${iterNumbers.join(', ')}`;
+
             resultsDiv.appendChild(errorDiv);
         }
     }
@@ -669,7 +673,7 @@ class HighLevelTestRunner {
     /**
      * Run validation checks comparing SWCanvas and HTML5 Canvas outputs
      */
-    static runValidationChecks(test, swCanvas, html5Canvas, drawResult) {
+    static runValidationChecks(test, swCanvas, html5Canvas, drawResult, iterationNumber = 1) {
         const results = [];
         const checks = test.checks || {};
 
@@ -687,54 +691,64 @@ class HighLevelTestRunner {
 
         // Extremes check - analyze BOTH canvases
         if (checks.extremes) {
-            // Get color tolerance for HTML5 Canvas (to handle faint overspill)
-            const colorTolerance = typeof checks.extremes === 'object' && checks.extremes.colorTolerance
-                ? checks.extremes.colorTolerance
-                : 0;
-
-            // Analyze SWCanvas (no tolerance - should be pixel-perfect)
-            const swSurface = createSurface(swCanvas);
-            const swExtremes = analyzeExtremes(swSurface);
-
-            // Analyze HTML5 Canvas (with tolerance for overspill artifacts)
-            const canvasSurface = createSurface(html5Canvas);
-            const canvasExtremes = analyzeExtremes(canvasSurface, { r: 255, g: 255, b: 255, a: 255 }, colorTolerance);
-
-            let passed = true;
-            let details = '';
-
-            // Check if either renderer produced no drawing
-            const swNoDrawing = swExtremes.topY === swSurface.height || swExtremes.bottomY === -1;
-            const canvasNoDrawing = canvasExtremes.topY === canvasSurface.height || canvasExtremes.bottomY === -1;
-
-            if (swNoDrawing && canvasNoDrawing) {
-                passed = false;
-                details = 'No drawing detected in either renderer';
-            } else if (swNoDrawing) {
-                passed = false;
-                details = 'No drawing in SW | Canvas: T=' + canvasExtremes.topY + ' B=' + canvasExtremes.bottomY + ' L=' + canvasExtremes.leftX + ' R=' + canvasExtremes.rightX;
-            } else if (canvasNoDrawing) {
-                passed = false;
-                details = 'SW: T=' + swExtremes.topY + ' B=' + swExtremes.bottomY + ' L=' + swExtremes.leftX + ' R=' + swExtremes.rightX + ' | No drawing in Canvas';
+            // Check if this iteration should be skipped
+            const skipIterations = (typeof checks.extremes === 'object' && checks.extremes.skipOnIterations) || [];
+            if (skipIterations.includes(iterationNumber)) {
+                results.push({
+                    name: 'Extremes',
+                    passed: true,
+                    details: `Skipped on iteration ${iterationNumber} (known HTML5 Canvas issue)`
+                });
             } else {
-                // Check if bounds match exactly between renderers
-                const boundsMatch =
-                    swExtremes.topY === canvasExtremes.topY &&
-                    swExtremes.bottomY === canvasExtremes.bottomY &&
-                    swExtremes.leftX === canvasExtremes.leftX &&
-                    swExtremes.rightX === canvasExtremes.rightX;
+                // Get color tolerance for HTML5 Canvas (to handle faint overspill)
+                const colorTolerance = typeof checks.extremes === 'object' && checks.extremes.colorTolerance
+                    ? checks.extremes.colorTolerance
+                    : 0;
 
-                passed = boundsMatch;
-                details = `SW: T=${swExtremes.topY} B=${swExtremes.bottomY} L=${swExtremes.leftX} R=${swExtremes.rightX} | ` +
-                         `Canvas: T=${canvasExtremes.topY} B=${canvasExtremes.bottomY} L=${canvasExtremes.leftX} R=${canvasExtremes.rightX}` +
-                         (boundsMatch ? '' : ' (MISMATCH)');
+                // Analyze SWCanvas (no tolerance - should be pixel-perfect)
+                const swSurface = createSurface(swCanvas);
+                const swExtremes = analyzeExtremes(swSurface);
+
+                // Analyze HTML5 Canvas (with tolerance for overspill artifacts)
+                const canvasSurface = createSurface(html5Canvas);
+                const canvasExtremes = analyzeExtremes(canvasSurface, { r: 255, g: 255, b: 255, a: 255 }, colorTolerance);
+
+                let passed = true;
+                let details = '';
+
+                // Check if either renderer produced no drawing
+                const swNoDrawing = swExtremes.topY === swSurface.height || swExtremes.bottomY === -1;
+                const canvasNoDrawing = canvasExtremes.topY === canvasSurface.height || canvasExtremes.bottomY === -1;
+
+                if (swNoDrawing && canvasNoDrawing) {
+                    passed = false;
+                    details = 'No drawing detected in either renderer';
+                } else if (swNoDrawing) {
+                    passed = false;
+                    details = 'No drawing in SW | Canvas: T=' + canvasExtremes.topY + ' B=' + canvasExtremes.bottomY + ' L=' + canvasExtremes.leftX + ' R=' + canvasExtremes.rightX;
+                } else if (canvasNoDrawing) {
+                    passed = false;
+                    details = 'SW: T=' + swExtremes.topY + ' B=' + swExtremes.bottomY + ' L=' + swExtremes.leftX + ' R=' + swExtremes.rightX + ' | No drawing in Canvas';
+                } else {
+                    // Check if bounds match exactly between renderers
+                    const boundsMatch =
+                        swExtremes.topY === canvasExtremes.topY &&
+                        swExtremes.bottomY === canvasExtremes.bottomY &&
+                        swExtremes.leftX === canvasExtremes.leftX &&
+                        swExtremes.rightX === canvasExtremes.rightX;
+
+                    passed = boundsMatch;
+                    details = `SW: T=${swExtremes.topY} B=${swExtremes.bottomY} L=${swExtremes.leftX} R=${swExtremes.rightX} | ` +
+                             `Canvas: T=${canvasExtremes.topY} B=${canvasExtremes.bottomY} L=${canvasExtremes.leftX} R=${canvasExtremes.rightX}` +
+                             (boundsMatch ? '' : ' (MISMATCH)');
+                }
+
+                results.push({
+                    name: 'Extremes',
+                    passed,
+                    details
+                });
             }
-
-            results.push({
-                name: 'Extremes',
-                passed,
-                details
-            });
         }
 
         // Run shared validation checks on SW surface (color counts, speckles, etc.)
@@ -744,13 +758,26 @@ class HighLevelTestRunner {
         // Convert shared validation results to browser display format
         // Unique colors check
         if (checks.totalUniqueColors !== undefined) {
-            const uniqueColors = countUniqueColors(swSurface);
-            const passed = uniqueColors === checks.totalUniqueColors;
-            results.push({
-                name: 'Unique Colors',
-                passed,
-                details: `${uniqueColors} (expected exactly ${checks.totalUniqueColors})`
-            });
+            // Support both number format and object format with skipOnIterations
+            const isObject = typeof checks.totalUniqueColors === 'object';
+            const expected = isObject ? checks.totalUniqueColors.expected : checks.totalUniqueColors;
+            const skipIterations = (isObject && checks.totalUniqueColors.skipOnIterations) || [];
+
+            if (skipIterations.includes(iterationNumber)) {
+                results.push({
+                    name: 'Unique Colors',
+                    passed: true,
+                    details: `Skipped on iteration ${iterationNumber} (known issue)`
+                });
+            } else {
+                const uniqueColors = countUniqueColors(swSurface);
+                const passed = uniqueColors === expected;
+                results.push({
+                    name: 'Unique Colors',
+                    passed,
+                    details: `${uniqueColors} (expected exactly ${expected})`
+                });
+            }
         }
 
         // Max unique colors check
@@ -794,26 +821,36 @@ class HighLevelTestRunner {
 
         // Speckle count check (SW only)
         if (checks.speckles === true || (checks.speckles && typeof checks.speckles === 'object')) {
-            const expected = (typeof checks.speckles === 'object' && checks.speckles.expected !== undefined)
-                ? checks.speckles.expected : 0;
-            const maxSpeckles = typeof checks.speckles === 'object' ? checks.speckles.maxSpeckles : undefined;
-            const isKnownFailure = typeof checks.speckles === 'object' && checks.speckles.knownFailure === true;
-            const speckleResult = countSpeckles(swSurface);
-            const speckleCount = speckleResult.count;
-            const passed = maxSpeckles !== undefined
-                ? speckleCount <= maxSpeckles
-                : speckleCount === expected;
-            const firstInfo = speckleResult.firstSpeckle
-                ? ` (first at ${speckleResult.firstSpeckle.x},${speckleResult.firstSpeckle.y})`
-                : '';
-            const expectedMsg = maxSpeckles !== undefined ? `≤${maxSpeckles}` : `${expected}`;
-            results.push({
-                name: 'Speckle Count',
-                passed,
-                knownFailure: isKnownFailure && !passed,
-                details: `SW: ${speckleCount}` + (passed ? '' : ` (expected ${expectedMsg})${firstInfo}`) +
-                         (!passed && isKnownFailure ? ' [KNOWN]' : '')
-            });
+            // Check if this iteration should be skipped
+            const skipIterations = (typeof checks.speckles === 'object' && checks.speckles.skipOnIterations) || [];
+            if (skipIterations.includes(iterationNumber)) {
+                results.push({
+                    name: 'Speckle Count',
+                    passed: true,
+                    details: `Skipped on iteration ${iterationNumber} (known issue)`
+                });
+            } else {
+                const expected = (typeof checks.speckles === 'object' && checks.speckles.expected !== undefined)
+                    ? checks.speckles.expected : 0;
+                const maxSpeckles = typeof checks.speckles === 'object' ? checks.speckles.maxSpeckles : undefined;
+                const isKnownFailure = typeof checks.speckles === 'object' && checks.speckles.knownFailure === true;
+                const speckleResult = countSpeckles(swSurface);
+                const speckleCount = speckleResult.count;
+                const passed = maxSpeckles !== undefined
+                    ? speckleCount <= maxSpeckles
+                    : speckleCount === expected;
+                const firstInfo = speckleResult.firstSpeckle
+                    ? ` (first at ${speckleResult.firstSpeckle.x},${speckleResult.firstSpeckle.y})`
+                    : '';
+                const expectedMsg = maxSpeckles !== undefined ? `≤${maxSpeckles}` : `${expected}`;
+                results.push({
+                    name: 'Speckle Count',
+                    passed,
+                    knownFailure: isKnownFailure && !passed,
+                    details: `SW: ${speckleCount}` + (passed ? '' : ` (expected ${expectedMsg})${firstInfo}`) +
+                             (!passed && isKnownFailure ? ' [KNOWN]' : '')
+                });
+            }
         }
 
         // Legacy speckles check (on SWCanvas)
