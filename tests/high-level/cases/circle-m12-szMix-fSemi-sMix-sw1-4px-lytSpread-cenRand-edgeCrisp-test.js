@@ -70,7 +70,7 @@ registerHighLevelTest(
             const fillColor = getRandomColor('semitransparent');
 
             // Draw filled and stroked circle using Direct API
-            // Note: strokeCircle fast path only supports 1px strokes; variable widths use slow path
+            // Note: strokeCircle direct rendering supports all stroke widths
             ctx.fillStyle = fillColor;
             ctx.strokeStyle = strokeColor;
             ctx.lineWidth = strokeWidth;
@@ -83,7 +83,7 @@ registerHighLevelTest(
     },
     'circles',
     {
-        // Visual comparison only - all stroke widths use fast path
+        // Visual comparison only - all stroke widths use direct rendering
     },
     {
         title: 'Multiple Precise Random Circles (Stroked & Filled)',

@@ -61,7 +61,7 @@ registerHighLevelTest(
         // Get random fill color
         const fillColor = getRandomColor('semitransparent');
 
-        // Draw filled circle (no stroke) using Direct API for fast path
+        // Draw filled circle (no stroke) using Direct API for direct rendering
         ctx.fillStyle = fillColor;
         ctx.fillCircle(centerX, centerY, radius);
 

@@ -132,7 +132,7 @@ registerHighLevelTest(
     drawTest,
     'arcs',
     {
-        // Default visual comparison - no allowSlowPath means fast path required
+        // Default visual comparison - no allowPathBasedRendering means direct rendering required
     },
     {
         title: '90\u00B0 Arcs (Multiple, Fixed Params, Grid Layout)',

@@ -88,7 +88,7 @@ registerHighLevelTest(
         extremes: { colorTolerance: 65, tolerance: 0.03 },
         totalUniqueColors: 4,
         speckles: { maxSpeckles: 4 },
-        allowSlowPath: true  // Semi-transparent may use slow path
+        allowPathBasedRendering: true  // Semi-transparent may use path-based rendering
     },
     {
         title: 'Single Semi-transparent Arc (Random Position)',

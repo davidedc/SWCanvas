@@ -2,7 +2,7 @@
 /**
  * High-Level Test Runner for SWCanvas
  *
- * Runs direct shape API tests and verifies fast paths are used.
+ * Runs direct shape API tests and verifies direct rendering is used.
  * Tests port functionality from CrispSwCanvas high-level tests.
  */
 
@@ -106,8 +106,8 @@ function runTest(test, iterationNumber = 1) {
     // Seed random for reproducibility - different seed per iteration
     SeededRandom.seedWithInteger(12345 + iterationNumber - 1);
 
-    // Reset slow path flag
-    SWCanvas.Core.Context2D.resetSlowPathFlag();
+    // Reset path-based rendering flag
+    SWCanvas.Core.Context2D.resetPathBasedFlag();
 
     // Run the test's draw function
     let result;
@@ -123,8 +123,8 @@ function runTest(test, iterationNumber = 1) {
         return false;
     }
 
-    // Check if fast path was used (this is the critical check)
-    const slowPathUsed = SWCanvas.Core.Context2D.wasSlowPathUsed();
+    // Check if direct rendering was used (this is the critical check)
+    const pathBasedUsed = SWCanvas.Core.Context2D.wasPathBasedUsed();
 
     // Get surface for validation
     const surface = canvas._coreSurface;
@@ -134,10 +134,10 @@ function runTest(test, iterationNumber = 1) {
     const issues = [];
     const knownFailureIssues = [];
 
-    // Fast path check (unless explicitly allowed slow path)
-    if (!checks.allowSlowPath && slowPathUsed) {
+    // Direct rendering check (unless explicitly allowed path-based)
+    if (!checks.allowPathBasedRendering && pathBasedUsed) {
         testPassed = false;
-        issues.push('Slow path was used instead of fast path');
+        issues.push('Path-based rendering was used instead of direct rendering');
     }
 
     // Extremes check - SKIPPED in Node.js
@@ -198,7 +198,7 @@ function loadTestCases() {
  * Main entry point
  */
 function main() {
-    console.log('\n=== High-Level Tests (Fast Path Verification) ===\n');
+    console.log('\n=== High-Level Tests (Direct Rendering Verification) ===\n');
 
     // Load test case files
     loadTestCases();

@@ -1,7 +1,7 @@
 /**
- * Test: Multiple Filled Circles (Fast Path)
+ * Test: Multiple Filled Circles (Direct Rendering)
  *
- * Tests that multiple fillCircle calls with opaque colors all use the fast path.
+ * Tests that multiple fillCircle calls with opaque colors all use direct rendering.
  */
 
 registerHighLevelTest(
@@ -35,10 +35,10 @@ registerHighLevelTest(
     'circles',
     {
         // No totalUniqueColors check - random colors and overlaps make exact count unpredictable
-        // Fast path expected for all circles
+        // Direct rendering expected for all circles
     },
     {
-        title: 'Multiple Filled Circles - Opaque Colors (Fast Path)',
-        description: 'Tests multiple fillCircle calls use fast path'
+        title: 'Multiple Filled Circles - Opaque Colors (Direct Rendering)',
+        description: 'Tests multiple fillCircle calls use direct rendering'
     }
 );

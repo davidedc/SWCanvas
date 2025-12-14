@@ -273,7 +273,7 @@ button.secondary:hover {
     font-size: 13px;
 }
 
-/* Fast Path Status */
+/* Direct Rendering Status */
 .fast-path-pass {
     color: #388e3c;
     font-weight: 600;

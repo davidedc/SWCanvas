@@ -90,7 +90,7 @@ function drawTest(ctx, currentIterationNumber, instances = null) {
         ctx.fillStyle = fillColorStr;
         // No strokeStyle or lineWidth needed as strokeWidth is 0
 
-        // Use SWCanvas fast path methods if available, otherwise standard HTML5 Canvas path
+        // Use SWCanvas direct rendering methods if available, otherwise standard HTML5 Canvas path
         if (typeof ctx.fillRoundRect === 'function') {
             ctx.fillRoundRect(geomX, geomY, fixedWidth, fixedHeight, fixedRadius);
         } else {

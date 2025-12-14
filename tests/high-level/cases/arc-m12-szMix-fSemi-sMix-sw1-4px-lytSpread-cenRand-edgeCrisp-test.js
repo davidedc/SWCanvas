@@ -83,7 +83,7 @@ registerHighLevelTest(
     },
     'arcs',
     {
-        // Visual comparison only - all stroke widths use fast path
+        // Visual comparison only - all stroke widths use direct rendering
     },
     {
         title: 'Multiple Precise Random Arcs (Stroked & Filled)',

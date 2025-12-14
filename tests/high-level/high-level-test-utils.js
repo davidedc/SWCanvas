@@ -2,7 +2,7 @@
  * High-Level Test Utilities for SWCanvas
  *
  * Provides test registration, SeededRandom, and validation utilities
- * for testing direct shape APIs with fast path verification.
+ * for testing direct shape APIs with direct rendering verification.
  */
 
 // Test registry - stores all registered tests

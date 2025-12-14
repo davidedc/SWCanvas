@@ -2,7 +2,7 @@
  * TEST SUMMARY:
  * =================
  *
- * Description: Tests rendering of a single rotated rectangle with opaque stroke (exercises strokeRotated fast path).
+ * Description: Tests rendering of a single rotated rectangle with opaque stroke (exercises strokeRotated direct rendering).
  *
  *
  * ---
@@ -42,7 +42,7 @@
 /**
  * @fileoverview Test definition for a single rotated rectangle with opaque stroke.
  *
- * Exercises the RectOps.strokeRotated() fast path (opaque strokes).
+ * Exercises the RectOps.strokeRotated() direct rendering (opaque strokes).
  */
 
 /**
@@ -130,7 +130,7 @@ registerHighLevelTest(
     'rectangles',
     {
         // No extremes check - original test had none
-        // allowSlowPath: false is the default - test MUST use fast paths
+        // allowPathBasedRendering: false is the default - test MUST use direct rendering
         totalUniqueColors: 3  // background + fill + stroke (opaque stroke overwrites, no blend color)
     },
     {

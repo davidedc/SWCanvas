@@ -34,7 +34,7 @@
  *
  * UNCAPTURED ASPECTS IN FILENAME / FACETS ABOVE:
  * ----------------------------------------------
- * - Uses SWCanvas direct API method `ctx.fillCircle()` for fast path rendering.
+ * - Uses SWCanvas direct API method `ctx.fillCircle()` for direct rendering.
  * - Each circle is drawn with independently randomized parameters.
  * - 60px margin from canvas edges for circle positioning.
  *
@@ -66,7 +66,7 @@ registerHighLevelTest(
             // Get random fill color (mixed - opaque or semitransparent)
             const fillColor = getRandomColor('mixed');
 
-            // Draw filled circle (no stroke) using Direct API for fast path
+            // Draw filled circle (no stroke) using Direct API for direct rendering
             ctx.fillStyle = fillColor;
             ctx.fillCircle(centerX, centerY, radius);
 

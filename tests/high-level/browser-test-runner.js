@@ -2,7 +2,7 @@
  * Browser High-Level Test Runner
  *
  * Runs high-level tests comparing SWCanvas output with native HTML5 Canvas
- * and verifies that fast paths are used where expected.
+ * and verifies that direct rendering is used where expected.
  */
 
 // Polyfill direct shape APIs on native CanvasRenderingContext2D
@@ -458,9 +458,9 @@ class HighLevelTestRunner {
         // Run on SWCanvas
         const swResult = this.runOnSWCanvas(test, swCanvas, iterationNumber);
 
-        // Get fast path status AFTER running SWCanvas
-        const slowPathUsed = SWCanvas.Core.Context2D.wasSlowPathUsed();
-        const allowSlowPath = test.checks.allowSlowPath === true;
+        // Get direct rendering status AFTER running SWCanvas
+        const pathBasedUsed = SWCanvas.Core.Context2D.wasPathBasedUsed();
+        const allowPathBased = test.checks.allowPathBasedRendering === true;
 
         // Run on HTML5 Canvas
         const html5Result = this.runOnHTML5Canvas(test, html5Canvas, iterationNumber);
@@ -472,7 +472,7 @@ class HighLevelTestRunner {
         const checkResults = this.runValidationChecks(test, swCanvas, html5Canvas, swResult, iterationNumber);
 
         // Display results
-        return this.displayResults(section, test, slowPathUsed, allowSlowPath, checkResults, swResult, iterationNumber);
+        return this.displayResults(section, test, pathBasedUsed, allowPathBased, checkResults, swResult, iterationNumber);
     }
 
     /**
@@ -625,8 +625,8 @@ class HighLevelTestRunner {
         const ctx = swCanvas.getContext('2d');
         ctx.canvas = swCanvas;
 
-        // Reset slow path flag before drawing
-        SWCanvas.Core.Context2D.resetSlowPathFlag();
+        // Reset path-based rendering flag before drawing
+        SWCanvas.Core.Context2D.resetPathBasedFlag();
 
         // Seed random for reproducibility - different seed per iteration
         SeededRandom.seedWithInteger(12345 + iterationNumber - 1);
@@ -881,7 +881,7 @@ class HighLevelTestRunner {
     /**
      * Display test results
      */
-    static displayResults(section, test, slowPathUsed, allowSlowPath, checkResults, drawResult, iterationNumber = 1) {
+    static displayResults(section, test, pathBasedUsed, allowPathBased, checkResults, drawResult, iterationNumber = 1) {
         const resultsDiv = section.querySelector('.test-results');
         resultsDiv.innerHTML = '';
         resultsDiv.style.display = 'block';
@@ -894,31 +894,31 @@ class HighLevelTestRunner {
             resultsDiv.appendChild(iterRow);
         }
 
-        // Fast path status
-        const fastPathRow = document.createElement('div');
-        fastPathRow.className = 'result-row';
+        // Direct rendering status
+        const directRenderRow = document.createElement('div');
+        directRenderRow.className = 'result-row';
 
-        const fastPathLabel = document.createElement('span');
-        fastPathLabel.className = 'result-label';
-        fastPathLabel.textContent = 'Fast Path:';
-        fastPathRow.appendChild(fastPathLabel);
+        const directRenderLabel = document.createElement('span');
+        directRenderLabel.className = 'result-label';
+        directRenderLabel.textContent = 'Rendering:';
+        directRenderRow.appendChild(directRenderLabel);
 
-        const fastPathValue = document.createElement('span');
-        fastPathValue.className = 'result-value';
+        const directRenderValue = document.createElement('span');
+        directRenderValue.className = 'result-value';
 
-        let fastPathPassed;
-        if (!slowPathUsed) {
-            fastPathValue.innerHTML = '<span class="check-icon">&#x2705;</span><span class="fast-path-pass">Fast path used (PASS)</span>';
-            fastPathPassed = true;
-        } else if (allowSlowPath) {
-            fastPathValue.innerHTML = '<span class="check-icon">&#x26A0;</span><span class="fast-path-expected">Slow path used (Expected - alpha blending)</span>';
-            fastPathPassed = true;
+        let directRenderPassed;
+        if (!pathBasedUsed) {
+            directRenderValue.innerHTML = '<span class="check-icon">&#x2705;</span><span class="fast-path-pass">Direct rendering used (PASS)</span>';
+            directRenderPassed = true;
+        } else if (allowPathBased) {
+            directRenderValue.innerHTML = '<span class="check-icon">&#x26A0;</span><span class="fast-path-expected">Path-based rendering used (Expected - alpha blending)</span>';
+            directRenderPassed = true;
         } else {
-            fastPathValue.innerHTML = '<span class="check-icon">&#x274C;</span><span class="fast-path-fail">Slow path used (FAIL - fast path expected)</span>';
-            fastPathPassed = false;
+            directRenderValue.innerHTML = '<span class="check-icon">&#x274C;</span><span class="fast-path-fail">Path-based rendering used (FAIL - direct rendering expected)</span>';
+            directRenderPassed = false;
         }
-        fastPathRow.appendChild(fastPathValue);
-        resultsDiv.appendChild(fastPathRow);
+        directRenderRow.appendChild(directRenderValue);
+        resultsDiv.appendChild(directRenderRow);
 
         // Validation checks
         let allChecksPassed = true;
@@ -957,7 +957,7 @@ class HighLevelTestRunner {
         });
 
         // Overall result banner
-        const overallPassed = fastPathPassed && allChecksPassed;
+        const overallPassed = directRenderPassed && allChecksPassed;
         const banner = document.createElement('div');
         banner.className = 'test-result-banner ' + (overallPassed ? 'test-pass' : 'test-fail');
         banner.textContent = overallPassed ? 'PASS' : 'FAIL';

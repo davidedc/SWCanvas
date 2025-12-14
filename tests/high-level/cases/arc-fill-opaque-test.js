@@ -1,7 +1,7 @@
 /**
- * Test: Filled Arc with Opaque Color (Fast Path)
+ * Test: Filled Arc with Opaque Color (Direct Rendering)
  *
- * Tests that fillArc with an opaque color uses the fast path
+ * Tests that fillArc with an opaque color uses direct rendering
  * (32-bit packed writes, no path system).
  * Arc extends > 270 degrees with gap < 90 degrees within a single quadrant.
  */
@@ -12,7 +12,7 @@ registerHighLevelTest(
         const canvasWidth = ctx.canvas.width;
         const canvasHeight = ctx.canvas.height;
 
-        // Use opaque fill color (required for fast path)
+        // Use opaque fill color (required for direct rendering)
         const fillColor = getRandomOpaqueVisibleColor();
 
         // Calculate arc parameters
@@ -46,10 +46,10 @@ registerHighLevelTest(
     {
         extremes: { colorTolerance: 36, tolerance: 0.03, skipOnIterations: [228, 488] },
         totalUniqueColors: 2, // background + fill
-        // Fast path is expected - no allowSlowPath flag
+        // Direct rendering is expected - no allowPathBasedRendering flag
     },
     {
-        title: 'Filled Arc - Opaque Color (Fast Path)',
-        description: 'Tests fillArc with opaque color uses fast 32-bit writes'
+        title: 'Filled Arc - Opaque Color (Direct Rendering)',
+        description: 'Tests fillArc with opaque color uses direct 32-bit writes'
     }
 );

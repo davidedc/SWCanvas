@@ -79,13 +79,13 @@ try {
     
     console.log(`\nGenerated PNGs for ${visualTestNames.length} visual tests`);
 
-    // Run high-level tests (fast path verification)
+    // Run high-level tests (direct rendering verification)
     let highLevelPassed = 0;
     let highLevelFailed = 0;
 
     if (highLevelTestUtils) {
         console.log(`\n${'='.repeat(50)}`);
-        console.log(`Running High-Level Tests (Fast Path Verification)...\n`);
+        console.log(`Running High-Level Tests (Direct Rendering Verification)...\n`);
 
         // Load test cases
         const casesDir = path.join(highLevelTestsDir, 'cases');
@@ -166,8 +166,8 @@ function runHighLevelTest(test) {
     // Seed random for reproducibility
     highLevelTestUtils.SeededRandom.seedWithInteger(12345);
 
-    // Reset slow path flag
-    SWCanvas.Core.Context2D.resetSlowPathFlag();
+    // Reset path-based rendering flag
+    SWCanvas.Core.Context2D.resetPathBasedFlag();
 
     // Run test
     let result;
@@ -178,16 +178,16 @@ function runHighLevelTest(test) {
         return false;
     }
 
-    // Check fast path
-    const slowPathUsed = SWCanvas.Core.Context2D.wasSlowPathUsed();
+    // Check direct rendering vs path-based
+    const pathBasedUsed = SWCanvas.Core.Context2D.wasPathBasedUsed();
 
     let testPassed = true;
     const issues = [];
 
-    // Fast path check
-    if (!checks.allowSlowPath && slowPathUsed) {
+    // Direct rendering check
+    if (!checks.allowPathBasedRendering && pathBasedUsed) {
         testPassed = false;
-        issues.push('Slow path used');
+        issues.push('Path-based rendering used');
     }
 
     // Extremes check

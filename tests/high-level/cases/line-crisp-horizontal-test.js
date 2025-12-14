@@ -47,7 +47,7 @@ registerHighLevelTest(
     'lines',
     {
         extremes: true,  // Exact match required for crisp pixel-positioned test
-        // Fast path expected for 1px opaque line
+        // Direct rendering expected for 1px opaque line
     },
     {
         title: 'Lines: M-Size No-Fill 1px-Opaque-Stroke Crisp-Pixel-Pos Horizontal',

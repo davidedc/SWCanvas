@@ -129,7 +129,7 @@ registerHighLevelTest(
     'rectangles',
     {
         // No extremes check - original test had none
-        // allowSlowPath: false is the default - test MUST use fast paths
+        // allowPathBasedRendering: false is the default - test MUST use direct rendering
     },
     {
         title: 'Rectangles: Rotated, Multiple, Variable Size & Params, Random Position & Rotation',

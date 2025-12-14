@@ -108,7 +108,7 @@ registerHighLevelTest(
     drawTest,
     'arcs',
     {
-        // Default visual comparison - no allowSlowPath means fast path required
+        // Default visual comparison - no allowPathBasedRendering means direct rendering required
     },
     {
         title: 'Arcs: 5 fully random',

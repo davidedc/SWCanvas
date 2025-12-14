@@ -1,7 +1,7 @@
 /**
- * Test: Filled Circle with Opaque Color (Fast Path)
+ * Test: Filled Circle with Opaque Color (Direct Rendering)
  *
- * Tests that fillCircle with an opaque color uses the fast path
+ * Tests that fillCircle with an opaque color uses direct rendering
  * (32-bit packed writes, no path system).
  */
 
@@ -11,7 +11,7 @@ registerHighLevelTest(
         const canvasWidth = ctx.canvas.width;
         const canvasHeight = ctx.canvas.height;
 
-        // Use opaque fill color (required for fast path)
+        // Use opaque fill color (required for direct rendering)
         const fillColor = getRandomOpaqueColor();
 
         // Calculate circle parameters
@@ -45,10 +45,10 @@ registerHighLevelTest(
     {
         extremes: { colorTolerance: 8, tolerance: 0.05 },
         totalUniqueColors: 2, // background + fill
-        // Fast path is expected - no allowSlowPath flag
+        // Direct rendering is expected - no allowPathBasedRendering flag
     },
     {
-        title: 'Filled Circle - Opaque Color (Fast Path)',
-        description: 'Tests fillCircle with opaque color uses fast 32-bit writes'
+        title: 'Filled Circle - Opaque Color (Direct Rendering)',
+        description: 'Tests fillCircle with opaque color uses direct 32-bit writes'
     }
 );

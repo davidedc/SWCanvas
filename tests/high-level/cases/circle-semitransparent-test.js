@@ -34,10 +34,10 @@ registerHighLevelTest(
     {
         extremes: { tolerance: 0.05 },
         totalUniqueColors: 2,  // Exactly 2 colors: white background + one blended red (no overdraw)
-        // Semi-transparent colors now use fast path with Bresenham + alpha blending
+        // Semi-transparent colors now use direct rendering with Bresenham + alpha blending
     },
     {
-        title: 'Filled Circle - Semi-Transparent (Fast Path)',
-        description: 'Tests fillCircle with alpha uses fast Bresenham + alpha blending'
+        title: 'Filled Circle - Semi-Transparent (Direct Rendering)',
+        description: 'Tests fillCircle with alpha uses direct Bresenham + alpha blending'
     }
 );

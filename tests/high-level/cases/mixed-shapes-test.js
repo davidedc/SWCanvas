@@ -1,8 +1,8 @@
 /**
- * Test: Mixed Shapes Scene (Fast Path)
+ * Test: Mixed Shapes Scene (Direct Rendering)
  *
  * Tests a scene with multiple shapes using opaque colors.
- * All fillCircle calls should use the fast path.
+ * All fillCircle calls should use direct rendering.
  */
 
 registerHighLevelTest(
@@ -64,10 +64,10 @@ registerHighLevelTest(
     'scene',
     {
         extremes: { tolerance: 0.05 },
-        // All shapes use opaque colors - fast path expected
+        // All shapes use opaque colors - direct rendering expected
     },
     {
-        title: 'Mixed Shapes Scene - Opaque Colors (Fast Path)',
-        description: 'Tests scene with multiple shapes uses fast paths'
+        title: 'Mixed Shapes Scene - Opaque Colors (Direct Rendering)',
+        description: 'Tests scene with multiple shapes uses direct rendering'
     }
 );

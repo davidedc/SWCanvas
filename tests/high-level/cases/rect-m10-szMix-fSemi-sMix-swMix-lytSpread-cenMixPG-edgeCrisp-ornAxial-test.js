@@ -177,7 +177,7 @@ registerHighLevelTest(
     'rectangles',
     {
         extremes: true,
-        allowSlowPath: true  // fillRect uses rasterizer path
+        allowPathBasedRendering: true  // fillRect uses path-based rendering
     },
     {
         title: 'Rectangles: Axis-aligned, Multiple, Variable Size, Random Fill & Stroke, Random Position, No Rotation',

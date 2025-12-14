@@ -61,7 +61,7 @@ registerHighLevelTest(
         const fillColor = getRandomColor('semitransparent');
 
         // Draw filled and stroked circle using Direct API
-        // Note: strokeCircle fast path only supports 1px strokes; variable widths use slow path
+        // Note: strokeCircle direct rendering supports all stroke widths
         ctx.fillStyle = fillColor;
         ctx.strokeStyle = strokeColor;
         ctx.lineWidth = strokeWidth;
