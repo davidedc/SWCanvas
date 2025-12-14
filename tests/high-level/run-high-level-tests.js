@@ -18,6 +18,7 @@ const {
     SeededRandom,
     getRandomColor,
     getRandomOpaqueColor,
+    getRandomOpaqueVisibleColor,
     getRandomPoint,
     placeCloseToCenterAtPixel,
     placeCloseToCenterAtGrid,
@@ -44,6 +45,7 @@ global.SWCanvas = SWCanvas;
 global.SeededRandom = SeededRandom;
 global.getRandomColor = getRandomColor;
 global.getRandomOpaqueColor = getRandomOpaqueColor;
+global.getRandomOpaqueVisibleColor = getRandomOpaqueVisibleColor;
 global.getRandomPoint = getRandomPoint;
 global.placeCloseToCenterAtPixel = placeCloseToCenterAtPixel;
 global.placeCloseToCenterAtGrid = placeCloseToCenterAtGrid;
