@@ -554,6 +554,44 @@ class RectOps {
     }
 
     /**
+     * Fill and stroke a rotated rectangle in a single operation.
+     *
+     * Note: There is no performance advantage to unifying fill and stroke into a single
+     * rendering routine because:
+     * - fillRotated() uses an efficient bounding-box scan with edge functions (O(area))
+     * - strokeRotated() uses a line-based algorithm that only touches perimeter pixels
+     *   (O(perimeter × strokeWidth)), which is more efficient than scanning the entire
+     *   bounding box for stroke regions
+     * - A unified approach would require scanning the larger bounding box and testing
+     *   each pixel against 8 edge functions, which would be slower than the current
+     *   line-based stroke algorithm for typical rectangles
+     *
+     * @param {Surface} surface - Target surface
+     * @param {number} centerX - Center X coordinate
+     * @param {number} centerY - Center Y coordinate
+     * @param {number} width - Rectangle width
+     * @param {number} height - Rectangle height
+     * @param {number} rotation - Rotation angle in radians
+     * @param {number} lineWidth - Stroke width in pixels
+     * @param {Color} fillColor - Fill color (may be null)
+     * @param {Color} strokeColor - Stroke color (may be null)
+     * @param {number} globalAlpha - Context global alpha (0-1)
+     * @param {Uint8Array|null} clipBuffer - Clip mask buffer
+     */
+    static fillAndStrokeRotated(surface, centerX, centerY, width, height, rotation,
+                                lineWidth, fillColor, strokeColor, globalAlpha, clipBuffer) {
+        // Fill first, then stroke on top
+        if (fillColor && fillColor.a > 0) {
+            RectOps.fillRotated(surface, centerX, centerY, width, height,
+                               rotation, fillColor, globalAlpha, clipBuffer);
+        }
+        if (strokeColor && strokeColor.a > 0 && lineWidth > 0) {
+            RectOps.strokeRotated(surface, centerX, centerY, width, height,
+                                 rotation, lineWidth, strokeColor, globalAlpha, clipBuffer);
+        }
+    }
+
+    /**
      * Rotated rectangle fill using edge-function algorithm
      * Ported from CrispSWCanvas's SWRendererRect.fillRotatedRect()
      * @param {Surface} surface - Target surface

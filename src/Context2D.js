@@ -458,6 +458,101 @@ class Context2D {
         this.rasterizer.endOp();
     }
 
+    /**
+     * Fill and stroke a rectangle in a single operation
+     * Uses unified rendering when possible to prevent fill/stroke gaps.
+     * @param {number} x - Rectangle x coordinate
+     * @param {number} y - Rectangle y coordinate
+     * @param {number} width - Rectangle width
+     * @param {number} height - Rectangle height
+     */
+    fillAndStrokeRect(x, y, width, height) {
+        // Validate parameters
+        if (typeof x !== 'number' || typeof y !== 'number' ||
+            typeof width !== 'number' || typeof height !== 'number') {
+            throw new Error('Rectangle coordinates must be numbers');
+        }
+
+        if (width < 0 || height < 0) {
+            return; // Nothing to draw for negative dimensions
+        }
+
+        if (width === 0 || height === 0) {
+            return; // Nothing to draw for zero dimensions
+        }
+
+        // Check for fast path conditions
+        const fillPaint = this._fillStyle;
+        const strokePaint = this._strokeStyle;
+        const fillIsColor = fillPaint instanceof Color;
+        const strokeIsColor = strokePaint instanceof Color;
+        const isSourceOver = this.globalCompositeOperation === 'source-over';
+        const noShadow = !this.shadowColor || this.shadowColor === 'transparent' ||
+                        (this.shadowBlur === 0 && this.shadowOffsetX === 0 && this.shadowOffsetY === 0);
+        const clipBuffer = this._clipMask ? this._clipMask.buffer : null;
+
+        // Fast path: both fill and stroke are solid colors, source-over, no shadows
+        if (fillIsColor && strokeIsColor && isSourceOver && noShadow) {
+            const hasFill = fillPaint.a > 0;
+            const hasStroke = strokePaint.a > 0 && this._lineWidth > 0;
+
+            if (hasFill || hasStroke) {
+                const transform = this._transform;
+
+                // Decompose transform
+                const center = transform.transformPoint({x: x + width / 2, y: y + height / 2});
+                const rotation = transform.rotationAngle;
+                const scaleX = transform.scaleX;
+                const scaleY = transform.scaleY;
+                const scaledWidth = width * scaleX;
+                const scaledHeight = height * scaleY;
+                const scaledLineWidth = transform.getScaledLineWidth(this._lineWidth);
+
+                const isAxisAligned = RectOps.isNearAxisAligned(rotation);
+                // Non-uniform scale + rotation produces a parallelogram, not a rotated rectangle
+                // Check matrix structure: for uniform scale+rotation, a=d and b=-c
+                const isUniformScale = Math.abs(transform.a - transform.d) < 0.001 &&
+                                       Math.abs(transform.b + transform.c) < 0.001;
+
+                if (isAxisAligned) {
+                    // Axis-aligned: use unified fill+stroke (works with non-uniform scale)
+                    const { adjustedWidth, adjustedHeight } = RectOps.getRotatedDimensions(scaledWidth, scaledHeight, rotation);
+                    const topLeftX = center.x - adjustedWidth / 2;
+                    const topLeftY = center.y - adjustedHeight / 2;
+
+                    RectOps.fillAndStroke(
+                        this.surface,
+                        topLeftX, topLeftY, adjustedWidth, adjustedHeight,
+                        scaledLineWidth,
+                        hasFill ? fillPaint : null,
+                        hasStroke ? strokePaint : null,
+                        this.globalAlpha,
+                        clipBuffer
+                    );
+                    return;
+                } else if (isUniformScale) {
+                    // Rotated with uniform scale: use rotated fill+stroke wrapper
+                    RectOps.fillAndStrokeRotated(
+                        this.surface,
+                        center.x, center.y, scaledWidth, scaledHeight, rotation,
+                        scaledLineWidth,
+                        hasFill ? fillPaint : null,
+                        hasStroke ? strokePaint : null,
+                        this.globalAlpha,
+                        clipBuffer
+                    );
+                    return;
+                }
+                // Non-uniform scale + rotation: fall through to slow path (produces parallelogram)
+            }
+        }
+
+        // Slow path: gradients, patterns, non-source-over, shadows, or parallelograms
+        Context2D._markSlowPath();
+        this.fillRect(x, y, width, height);
+        this.strokeRect(x, y, width, height);
+    }
+
     clearRect(x, y, width, height) {
         // clearRect should only affect the specified rectangle, not use canvas-wide compositing
         // We'll handle this as a special case by directly clearing the surface pixels

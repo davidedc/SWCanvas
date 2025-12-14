@@ -294,7 +294,11 @@ class CanvasCompatibleContext2D {
     strokeRect(x, y, width, height) {
         this._core.strokeRect(x, y, width, height);
     }
-    
+
+    fillAndStrokeRect(x, y, width, height) {
+        this._core.fillAndStrokeRect(x, y, width, height);
+    }
+
     clearRect(x, y, width, height) {
         this._core.clearRect(x, y, width, height);
     }
