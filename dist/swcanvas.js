@@ -2847,7 +2847,7 @@ class RectOps {
  * CircleOps - Static methods for optimized circle rendering
  * Follows PolygonFiller pattern with static methods.
  *
- * Fast paths are available exclusively via dedicated Context2D methods:
+ * Direct rendering is available exclusively via dedicated Context2D methods:
  * fillCircle(), strokeCircle(), fillAndStrokeCircle()
  *
  * Path-based circles (beginPath() + arc() + fill()/stroke()) use the
@@ -3682,7 +3682,7 @@ class ArcOps {
     }
 
     /**
-     * Fill an arc (pie slice) with opaque color - fast path
+     * Fill an arc (pie slice) with opaque color - direct rendering
      * Uses CircleOps.generateExtents() for correct pixel coverage with angle filtering
      * @param {Surface} surface - Target surface
      * @param {number} cx - Center X
@@ -4485,14 +4485,14 @@ class LineOps {
      * @param {Uint8Array|null} clipBuffer - Clip mask buffer
      * @param {boolean} isOpaqueColor - True if color is opaque with full alpha
      * @param {boolean} isSemiTransparentColor - True if color needs alpha blending
-     * @returns {boolean} True if fast path was used, false if slow path needed
+     * @returns {boolean} True if direct rendering was used, false if path-based rendering needed
      */
     static strokeDirect(surface, x1, y1, x2, y2, lineWidth, paintSource, globalAlpha, clipBuffer, isOpaqueColor, isSemiTransparentColor) {
         const width = surface.width;
         const height = surface.height;
 
         if (isOpaqueColor && lineWidth <= 1.5) {
-            // Fast path for thin lines: Bresenham algorithm
+            // Direct rendering for thin lines: Bresenham algorithm
             const packedColor = Surface.packColor(paintSource.r, paintSource.g, paintSource.b, 255);
             const data32 = surface.data32;
 
@@ -4665,7 +4665,7 @@ class LineOps {
             return true;
         }
 
-        // No fast path available
+        // No direct rendering available
         return false;
     }
 
@@ -4836,11 +4836,11 @@ class LineOps {
  * RoundedRectOps - Static methods for optimized rounded rectangle rendering
  * Follows the PolygonFiller/RectOps/CircleOps/LineOps pattern.
  *
- * Fast path for 1px opaque strokes ported from CrispSWCanvas's SWRendererRoundedRect.
+ * Direct rendering for 1px opaque strokes ported from CrispSWCanvas's SWRendererRoundedRect.
  */
 class RoundedRectOps {
     /**
-     * Fast path for 1px opaque stroke on axis-aligned rounded rectangle.
+     * Direct rendering for 1px opaque stroke on axis-aligned rounded rectangle.
      * Uses direct pixel setting for corners via angle iteration and
      * horizontal/vertical line drawing for straight edges.
      *
@@ -4940,7 +4940,7 @@ class RoundedRectOps {
     }
 
     /**
-     * Fast path for 1px semi-transparent stroke on axis-aligned rounded rectangle.
+     * Direct rendering for 1px semi-transparent stroke on axis-aligned rounded rectangle.
      * Uses alpha blending for each pixel.
      *
      * @param {Surface} surface - Target surface
@@ -5057,7 +5057,7 @@ class RoundedRectOps {
     }
 
     /**
-     * Fast path for opaque fill on axis-aligned rounded rectangle.
+     * Direct rendering for opaque fill on axis-aligned rounded rectangle.
      * Uses scanline algorithm with 32-bit packed writes.
      *
      * @param {Surface} surface - Target surface
@@ -5142,7 +5142,7 @@ class RoundedRectOps {
     }
 
     /**
-     * Fast path for semi-transparent fill on axis-aligned rounded rectangle.
+     * Direct rendering for semi-transparent fill on axis-aligned rounded rectangle.
      * Uses scanline algorithm with alpha blending.
      *
      * @param {Surface} surface - Target surface
@@ -5230,7 +5230,7 @@ class RoundedRectOps {
     }
 
     /**
-     * Fast path for thick opaque stroke on axis-aligned rounded rectangle.
+     * Direct rendering for thick opaque stroke on axis-aligned rounded rectangle.
      * Uses scanline algorithm to fill the stroke region between inner and outer bounds.
      *
      * @param {Surface} surface - Target surface
@@ -5362,7 +5362,7 @@ class RoundedRectOps {
     }
 
     /**
-     * Fast path for thick semi-transparent stroke on axis-aligned rounded rectangle.
+     * Direct rendering for thick semi-transparent stroke on axis-aligned rounded rectangle.
      * Uses scanline algorithm with alpha blending.
      *
      * @param {Surface} surface - Target surface
@@ -7700,8 +7700,8 @@ PathFlattener.TOLERANCE = 0.25; // Fixed tolerance for deterministic behavior
  * Implements scanline polygon filling with nonzero and evenodd winding rules.
  * Handles stencil-based clipping integration and premultiplied alpha blending.
  *
- * Provides dual rendering paths:
- * - Fast path: 32-bit packed writes for opaque solid colors (CrispSwCanvas-style)
+ * Provides dual rendering approaches:
+ * - Optimized path: 32-bit packed writes for opaque solid colors (CrispSwCanvas-style)
  * - Standard path: Full paint source support with gradients, patterns, compositing
  *
  * Converted from functional to class-based approach following OO best practices:
@@ -7712,7 +7712,7 @@ PathFlattener.TOLERANCE = 0.25; // Fixed tolerance for deterministic behavior
 class PolygonFiller {
     /**
      * Fill polygons using scanline algorithm with stencil-based clipping
-     * Routes to fast path when possible for optimal performance
+     * Routes to optimized rendering when possible for optimal performance
      *
      * @param {Surface} surface - Target surface to render to
      * @param {Array} polygons - Array of polygons (each polygon is array of {x,y} points)
@@ -7731,7 +7731,7 @@ class PolygonFiller {
             throw new Error('Paint source must be a Color, Gradient, or Pattern instance');
         }
 
-        // Check if we can use the fast path (opaque solid color with source-over)
+        // Check if we can use optimized rendering (opaque solid color with source-over)
         const canUseFastPath =
             paintSource instanceof Color &&
             paintSource.a === 255 &&
@@ -7748,7 +7748,7 @@ class PolygonFiller {
     }
 
     /**
-     * Fast path for opaque solid color fills with source-over compositing
+     * Optimized rendering for opaque solid color fills with source-over compositing
      * Uses 32-bit packed writes and inline clip buffer access for maximum performance
      * @private
      */
@@ -7778,7 +7778,7 @@ class PolygonFiller {
             // Sort intersections by x coordinate
             intersections.sort((a, b) => a.x - b.x);
 
-            // Fill spans using fast path
+            // Fill spans using optimized rendering
             let windingNumber = 0;
             let inside = false;
 
@@ -7839,9 +7839,9 @@ class PolygonFiller {
      * @private
      */
     static _fillPolygonsStandard(surface, polygons, paintSource, fillRule, transform, clipMask, globalAlpha, subPixelOpacity, composite, sourceMask) {
-        // Mark slow path for testing (helps verify fast path is used when expected)
-        if (typeof Context2D !== 'undefined' && Context2D._markSlowPath) {
-            Context2D._markSlowPath();
+        // Mark path-based rendering for testing (helps verify direct rendering is used when expected)
+        if (typeof Context2D !== 'undefined' && Context2D._markPathBasedRendering) {
+            Context2D._markPathBasedRendering();
         }
 
         // Transform all polygon vertices
@@ -12425,32 +12425,32 @@ class Rasterizer {
 
 
 class Context2D {
-    // Static flag to track slow path usage (for testing)
-    // Reset before each test, check after to verify fast paths were used
-    static _slowPathUsed = false;
+    // Static flag to track path-based rendering usage (for testing)
+    // Reset before each test, check after to verify direct rendering was used
+    static _pathBasedRenderingUsed = false;
 
     /**
-     * Reset the slow path tracking flag
-     * Call before running tests that should use fast paths
+     * Reset the path-based rendering tracking flag
+     * Call before running tests that should use direct rendering
      */
-    static resetSlowPathFlag() {
-        Context2D._slowPathUsed = false;
+    static resetPathBasedFlag() {
+        Context2D._pathBasedRenderingUsed = false;
     }
 
     /**
-     * Check if slow path was used since last reset
-     * @returns {boolean} True if slow path was used
+     * Check if path-based rendering was used since last reset
+     * @returns {boolean} True if path-based rendering was used
      */
-    static wasSlowPathUsed() {
-        return Context2D._slowPathUsed;
+    static wasPathBasedUsed() {
+        return Context2D._pathBasedRenderingUsed;
     }
 
     /**
-     * Mark that slow path was used (called internally)
+     * Mark that path-based rendering was used (called internally)
      * @private
      */
-    static _markSlowPath() {
-        Context2D._slowPathUsed = true;
+    static _markPathBasedRendering() {
+        Context2D._pathBasedRenderingUsed = true;
     }
 
     constructor(surface) {
@@ -12704,7 +12704,7 @@ class Context2D {
         const noShadow = !this.shadowColor || this.shadowColor === 'transparent' ||
                         (this.shadowBlur === 0 && this.shadowOffsetX === 0 && this.shadowOffsetY === 0);
 
-        // Fast path: Color fill with source-over, no shadows (clipping supported)
+        // Direct rendering: Color fill with source-over, no shadows (clipping supported)
         if (isColor && isSourceOver && noShadow) {
             const transform = this._transform;
             const clipBuffer = this._clipMask ? this._clipMask.buffer : null;
@@ -12747,11 +12747,11 @@ class Context2D {
                     return;
                 }
             }
-            // Non-uniform scale + rotation: fall through to slow path (produces parallelogram)
+            // Non-uniform scale + rotation: fall through to path-based rendering (produces parallelogram)
         }
 
-        // Slow path: gradients, patterns, non-source-over, shadows, clipping
-        Context2D._markSlowPath();
+        // Path-based rendering: gradients, patterns, non-source-over, shadows, clipping
+        Context2D._markPathBasedRendering();
         this.rasterizer.beginOp({
             composite: this.globalCompositeOperation,
             globalAlpha: this.globalAlpha,
@@ -12777,7 +12777,7 @@ class Context2D {
         const noShadow = !this.shadowColor || this.shadowColor === 'transparent' ||
                         (this.shadowBlur === 0 && this.shadowOffsetX === 0 && this.shadowOffsetY === 0);
 
-        // Fast path: Color stroke with source-over, no shadows (clipping supported)
+        // Direct rendering: Color stroke with source-over, no shadows (clipping supported)
         if (isColor && isSourceOver && noShadow) {
             const transform = this._transform;
             const clipBuffer = this._clipMask ? this._clipMask.buffer : null;
@@ -12799,7 +12799,7 @@ class Context2D {
                                    Math.abs(transform.b + transform.c) < 0.001;
 
             if (isAxisAligned) {
-                // Axis-aligned: use existing fast paths with adjusted coordinates (works with non-uniform scale)
+                // Axis-aligned: use direct rendering with adjusted coordinates (works with non-uniform scale)
                 const { adjustedWidth, adjustedHeight } = RectOps.getRotatedDimensions(scaledWidth, scaledHeight, rotation);
                 const topLeftX = center.x - adjustedWidth / 2;
                 const topLeftY = center.y - adjustedHeight / 2;
@@ -12831,11 +12831,11 @@ class Context2D {
                     return;
                 }
             }
-            // Non-uniform scale + rotation: fall through to slow path (produces parallelogram)
+            // Non-uniform scale + rotation: fall through to path-based rendering (produces parallelogram)
         }
 
-        // Slow path: Create a rectangular path
-        Context2D._markSlowPath();
+        // Path-based rendering: Create a rectangular path
+        Context2D._markPathBasedRendering();
         const rectPath = new SWPath2D();
         rectPath.rect(x, y, width, height);
         rectPath.closePath();
@@ -12887,7 +12887,7 @@ class Context2D {
             return; // Nothing to draw for zero dimensions
         }
 
-        // Check for fast path conditions
+        // Check for direct rendering conditions
         const fillPaint = this._fillStyle;
         const strokePaint = this._strokeStyle;
         const fillIsColor = fillPaint instanceof Color;
@@ -12897,7 +12897,7 @@ class Context2D {
                         (this.shadowBlur === 0 && this.shadowOffsetX === 0 && this.shadowOffsetY === 0);
         const clipBuffer = this._clipMask ? this._clipMask.buffer : null;
 
-        // Fast path: both fill and stroke are solid colors, source-over, no shadows
+        // Direct rendering: both fill and stroke are solid colors, source-over, no shadows
         if (fillIsColor && strokeIsColor && isSourceOver && noShadow) {
             const hasFill = fillPaint.a > 0;
             const hasStroke = strokePaint.a > 0 && this._lineWidth > 0;
@@ -12949,12 +12949,12 @@ class Context2D {
                     );
                     return;
                 }
-                // Non-uniform scale + rotation: fall through to slow path (produces parallelogram)
+                // Non-uniform scale + rotation: fall through to path-based rendering (produces parallelogram)
             }
         }
 
-        // Slow path: gradients, patterns, non-source-over, shadows, or parallelograms
-        Context2D._markSlowPath();
+        // Path-based rendering: gradients, patterns, non-source-over, shadows, or parallelograms
+        Context2D._markPathBasedRendering();
         this.fillRect(x, y, width, height);
         this.strokeRect(x, y, width, height);
     }
@@ -13062,7 +13062,7 @@ class Context2D {
 
     /**
      * Stroke a rounded rectangle.
-     * Uses fast path for strokes with no transforms/clipping/shadows.
+     * Uses direct rendering for strokes with no transforms/clipping/shadows.
      * @param {number} x - Rectangle x coordinate
      * @param {number} y - Rectangle y coordinate
      * @param {number} width - Rectangle width
@@ -13095,7 +13095,7 @@ class Context2D {
 
         const paintSource = this._strokeStyle;
 
-        // Fast path conditions
+        // Direct rendering conditions
         const isColor = paintSource instanceof Color;
         const isSourceOver = this.globalCompositeOperation === 'source-over';
         const noClip = !this._clipMask;
@@ -13109,7 +13109,7 @@ class Context2D {
             const isOpaque = paintSource.a === 255 && this.globalAlpha >= 1.0;
 
             if (is1pxStroke) {
-                // 1px stroke fast paths
+                // 1px stroke direct rendering
                 if (isOpaque) {
                     RoundedRectOps.stroke1pxOpaque(this.surface, x, y, width, height, radii, paintSource, clipBuffer);
                     return;
@@ -13118,7 +13118,7 @@ class Context2D {
                     return;
                 }
             } else {
-                // Thick stroke fast paths
+                // Thick stroke direct rendering
                 if (isOpaque) {
                     RoundedRectOps.strokeThickOpaque(this.surface, x, y, width, height, radii, this._lineWidth, paintSource, clipBuffer);
                     return;
@@ -13129,8 +13129,8 @@ class Context2D {
             }
         }
 
-        // Slow path: use general path system
-        Context2D._markSlowPath();
+        // Path-based rendering: use general path system
+        Context2D._markPathBasedRendering();
         this.beginPath();
         this._currentPath.roundRect(x, y, width, height, radii);
         this.stroke();
@@ -13138,7 +13138,7 @@ class Context2D {
 
     /**
      * Fill a rounded rectangle.
-     * Uses fast path when possible (solid color, source-over, no clip/transform/shadow).
+     * Uses direct rendering when possible (solid color, source-over, no clip/transform/shadow).
      * @param {number} x - Rectangle x coordinate
      * @param {number} y - Rectangle y coordinate
      * @param {number} width - Rectangle width
@@ -13169,7 +13169,7 @@ class Context2D {
             return;
         }
 
-        // Check for fast path conditions
+        // Check for direct rendering conditions
         const paintSource = this._fillStyle;
         const isColor = paintSource instanceof Color;
         const isSourceOver = this.globalCompositeOperation === 'source-over';
@@ -13191,8 +13191,8 @@ class Context2D {
             }
         }
 
-        // Slow path: use general path system
-        Context2D._markSlowPath();
+        // Path-based rendering: use general path system
+        Context2D._markPathBasedRendering();
         this.beginPath();
         this._currentPath.roundRect(x, y, width, height, radii);
         this.fill();
@@ -13200,7 +13200,7 @@ class Context2D {
 
     /**
      * Fill and stroke a rounded rectangle in a single unified operation.
-     * Uses unified fast path to prevent fill/stroke boundary speckles.
+     * Uses unified direct rendering to prevent fill/stroke boundary speckles.
      * @param {number} x - Rectangle x coordinate
      * @param {number} y - Rectangle y coordinate
      * @param {number} width - Rectangle width
@@ -13232,7 +13232,7 @@ class Context2D {
             return;
         }
 
-        // Check for fast path conditions
+        // Check for direct rendering conditions
         const fillPaint = this._fillStyle;
         const strokePaint = this._strokeStyle;
         const fillIsColor = fillPaint instanceof Color;
@@ -13244,7 +13244,7 @@ class Context2D {
                         (this.shadowBlur === 0 && this.shadowOffsetX === 0 && this.shadowOffsetY === 0);
         const clipBuffer = this._clipMask ? this._clipMask.buffer : null;
 
-        // Unified fast path: both fill and stroke are solid colors, source-over, no transforms/clips/shadows
+        // Unified direct rendering: both fill and stroke are solid colors, source-over, no transforms/clips/shadows
         if (fillIsColor && strokeIsColor && isSourceOver && noClip && noTransform && noShadow) {
             const hasFill = fillPaint.a > 0;
             const hasStroke = strokePaint.a > 0 && this._lineWidth > 0;
@@ -13264,8 +13264,8 @@ class Context2D {
             }
         }
 
-        // Slow path: use sequential fill + stroke
-        Context2D._markSlowPath();
+        // Path-based rendering: use sequential fill + stroke
+        Context2D._markPathBasedRendering();
         this.fillRoundRect(x, y, width, height, radii);
         this.strokeRoundRect(x, y, width, height, radii);
     }
@@ -13302,8 +13302,8 @@ class Context2D {
 
         fillRule = fillRule || 'nonzero';
 
-        // Mark slow path for testing (fill() has no fast path currently)
-        Context2D._markSlowPath();
+        // Mark path-based rendering for testing (fill() has no direct rendering currently)
+        Context2D._markPathBasedRendering();
 
         this.rasterizer.beginOp({
             composite: this.globalCompositeOperation,
@@ -13327,8 +13327,8 @@ class Context2D {
         const pathToStroke = path || this._currentPath;
 
         // All path-based strokes use generic pipeline
-        // Fast paths available via dedicated methods: strokeCircle(), strokeRect(), etc.
-        Context2D._markSlowPath();
+        // Direct rendering available via dedicated methods: strokeCircle(), strokeRect(), etc.
+        Context2D._markPathBasedRendering();
 
         this.rasterizer.beginOp({
             composite: this.globalCompositeOperation,
@@ -13736,8 +13736,8 @@ class Context2D {
             throw new Error('ImageLike data must be a Uint8ClampedArray');
         }
 
-        // Mark slow path for testing (drawImage() has no fast path currently)
-        Context2D._markSlowPath();
+        // Mark path-based rendering for testing (drawImage() has no direct rendering currently)
+        Context2D._markPathBasedRendering();
 
         // Set up rasterizer operation
         this.rasterizer.beginOp({
@@ -13952,7 +13952,7 @@ class Context2D {
         const fillPaintSource = this._fillStyle;
         const strokePaintSource = this._strokeStyle;
 
-        // Check if we can use the unified fast path:
+        // Check if we can use unified direct rendering:
         // - Both fill and stroke are solid Colors
         // - Composite operation is source-over
         const fillIsColor = fillPaintSource instanceof Color;
@@ -14013,7 +14013,7 @@ class Context2D {
         const paintSource = this._fillStyle;
         const clipBuffer = this._clipMask ? this._clipMask.buffer : null;
 
-        // Check for fast path conditions
+        // Check for direct rendering conditions
         const isColor = paintSource instanceof Color;
         const isSourceOver = this.globalCompositeOperation === 'source-over';
 
@@ -14029,8 +14029,8 @@ class Context2D {
             return;
         }
 
-        // Slow path: use path system
-        Context2D._markSlowPath();
+        // Path-based rendering: use path system
+        Context2D._markPathBasedRendering();
         this.beginPath();
         this.moveTo(center.x, center.y);
         this.arc(center.x, center.y, scaledRadius, startAngle, endAngle, anticlockwise);
@@ -14067,10 +14067,10 @@ class Context2D {
         const paintSource = this._strokeStyle;
         const clipBuffer = this._clipMask ? this._clipMask.buffer : null;
 
-        // Check for fast path conditions
+        // Check for direct rendering conditions
         const isColor = paintSource instanceof Color;
         const isSourceOver = this.globalCompositeOperation === 'source-over';
-        // Fast paths only support butt line caps (open arc shapes need cap handling)
+        // Direct rendering only supports butt line caps (open arc shapes need cap handling)
         const isButtCap = this.lineCap === 'butt';
 
         if (isColor && isSourceOver && isButtCap) {
@@ -14099,8 +14099,8 @@ class Context2D {
             return;
         }
 
-        // Slow path: use path system (arc only, not pie slice)
-        Context2D._markSlowPath();
+        // Path-based rendering: use path system (arc only, not pie slice)
+        Context2D._markPathBasedRendering();
         this.beginPath();
         this.arc(center.x, center.y, scaledRadius, startAngle, endAngle, anticlockwise);
         this.stroke();
@@ -14136,17 +14136,17 @@ class Context2D {
         const strokePaintSource = this._strokeStyle;
         const clipBuffer = this._clipMask ? this._clipMask.buffer : null;
 
-        // Check for unified fast path
+        // Check for unified direct rendering
         const fillIsColor = fillPaintSource instanceof Color;
         const strokeIsColor = strokePaintSource instanceof Color;
         const isSourceOver = this.globalCompositeOperation === 'source-over';
         const hasFill = fillIsColor && fillPaintSource.a > 0;
         const hasStroke = strokeIsColor && strokePaintSource.a > 0;
-        // Fast paths only support butt line caps (open arc shapes need cap handling)
+        // Direct rendering only supports butt line caps (open arc shapes need cap handling)
         const isButtCap = this.lineCap === 'butt';
 
         if (fillIsColor && strokeIsColor && isSourceOver && isButtCap && (hasFill || hasStroke)) {
-            // Use unified fast path
+            // Use unified direct rendering
             ArcOps.fillAndStrokeOuter(
                 this.surface,
                 center.x, center.y,
@@ -14161,8 +14161,8 @@ class Context2D {
             return;
         }
 
-        // Slow path: sequential rendering
-        Context2D._markSlowPath();
+        // Path-based rendering: sequential rendering
+        Context2D._markPathBasedRendering();
 
         // Fill pie slice
         if (hasFill) {
@@ -14218,7 +14218,7 @@ class Context2D {
         const surface = this.surface;
         const clipBuffer = this._clipMask ? this._clipMask.buffer : null;
 
-        // Check for solid color fast paths
+        // Check for solid color direct rendering
         const isColor = paintSource instanceof Color;
         const isSourceOver = this.globalCompositeOperation === 'source-over';
 
@@ -14232,14 +14232,14 @@ class Context2D {
             isSourceOver;
 
         if (isOpaqueColor) {
-            // Fast path 1: 32-bit packed writes for opaque colors
+            // Direct rendering 1: 32-bit packed writes for opaque colors
             CircleOps.fillOpaque(surface, cx, cy, radius, paintSource, clipBuffer);
         } else if (isSemiTransparentColor) {
-            // Fast path 2: Bresenham scanlines with per-pixel alpha blending
+            // Direct rendering 2: Bresenham scanlines with per-pixel alpha blending
             CircleOps.fillAlpha(this.surface, cx, cy, radius, paintSource, this.globalAlpha, clipBuffer);
         } else {
-            // Standard path: use path system for gradients/patterns/non-source-over compositing
-            Context2D._markSlowPath(); // Mark slow path for testing
+            // Path-based rendering: use path system for gradients/patterns/non-source-over compositing
+            Context2D._markPathBasedRendering(); // Mark path-based rendering for testing
             this.beginPath();
             this.arc(cx, cy, radius, 0, Math.PI * 2);
             // Temporarily set identity transform since we already transformed
@@ -14251,7 +14251,7 @@ class Context2D {
     }
 
     /**
-     * Optimized circle stroke - dispatches to fast paths when possible
+     * Optimized circle stroke - dispatches to direct rendering when possible
      * @private
      */
     _strokeCircleDirect(cx, cy, radius, lineWidth, paintSource) {
@@ -14260,7 +14260,7 @@ class Context2D {
         const isSourceOver = this.globalCompositeOperation === 'source-over';
         const clipBuffer = this._clipMask ? this._clipMask.buffer : null;
 
-        // Fast path 1: 1px strokes using Bresenham algorithm
+        // Direct rendering 1: 1px strokes using Bresenham algorithm
         if (isColor && is1pxStroke && isSourceOver) {
             const isOpaque = paintSource.a === 255 && this.globalAlpha >= 1.0;
             if (isOpaque) {
@@ -14272,14 +14272,14 @@ class Context2D {
             }
         }
 
-        // Fast path 2: Thick strokes using scanline annulus algorithm
+        // Direct rendering 2: Thick strokes using scanline annulus algorithm
         if (isColor && isSourceOver && lineWidth > 1 && paintSource.a > 0) {
             CircleOps.strokeThick(this.surface, cx, cy, radius, lineWidth, paintSource, this.globalAlpha, clipBuffer);
             return;
         }
 
         // Fallback to path system for gradients, patterns, or non-source-over compositing
-        Context2D._markSlowPath();
+        Context2D._markPathBasedRendering();
         this.beginPath();
         this.arc(cx, cy, radius, 0, Math.PI * 2);
         const savedTransform = this._transform;
@@ -14298,31 +14298,31 @@ class Context2D {
     _strokeLineDirect(x1, y1, x2, y2, lineWidth, paintSource) {
         const clipBuffer = this._clipMask ? this._clipMask.buffer : null;
 
-        // Fast paths only support butt line caps (open shapes need cap handling)
+        // Direct rendering only supports butt line caps (open shapes need cap handling)
         const isButtCap = this.lineCap === 'butt';
 
-        // Get color for solid color fast path
+        // Get color for solid color direct rendering
         const isOpaqueColor = paintSource instanceof Color &&
             paintSource.a === 255 &&
             this.globalAlpha >= 1.0 &&
             this.globalCompositeOperation === 'source-over' &&
             isButtCap;
 
-        // Check for semitransparent color fast path (Color with alpha blending)
+        // Check for semitransparent color direct rendering (Color with alpha blending)
         const isSemiTransparentColor = paintSource instanceof Color &&
             !isOpaqueColor &&
             this.globalCompositeOperation === 'source-over' &&
             isButtCap;
 
-        // Try fast path via LineOps
-        const fastPathUsed = LineOps.strokeDirect(
+        // Try direct rendering via LineOps
+        const directRenderingUsed = LineOps.strokeDirect(
             this.surface, x1, y1, x2, y2, lineWidth, paintSource,
             this.globalAlpha, clipBuffer, isOpaqueColor, isSemiTransparentColor
         );
 
-        if (!fastPathUsed) {
-            // Standard path for non-Color paint sources (gradients, patterns)
-            Context2D._markSlowPath();
+        if (!directRenderingUsed) {
+            // Path-based rendering for non-Color paint sources (gradients, patterns)
+            Context2D._markPathBasedRendering();
             this.beginPath();
             this.moveTo(x1, y1);
             this.lineTo(x2, y2);
@@ -14344,22 +14344,22 @@ class Context2D {
  * CSS color support while delegating actual rendering to the Core implementation.
  */
 class CanvasCompatibleContext2D {
-    // ===== STATIC SLOW-PATH TRACKING (for testing) =====
+    // ===== STATIC PATH-BASED RENDERING TRACKING (for testing) =====
 
     /**
-     * Reset the slow path tracking flag
-     * Call before running tests that should use fast paths
+     * Reset the path-based rendering tracking flag
+     * Call before running tests that should use direct rendering
      */
-    static resetSlowPathFlag() {
-        Context2D.resetSlowPathFlag();
+    static resetPathBasedFlag() {
+        Context2D.resetPathBasedFlag();
     }
 
     /**
-     * Check if slow path was used since last reset
-     * @returns {boolean} True if slow path was used
+     * Check if path-based rendering was used since last reset
+     * @returns {boolean} True if path-based rendering was used
      */
-    static wasSlowPathUsed() {
-        return Context2D.wasSlowPathUsed();
+    static wasPathBasedUsed() {
+        return Context2D.wasPathBasedUsed();
     }
 
     constructor(surface) {
@@ -14957,7 +14957,7 @@ class CanvasCompatibleContext2D {
         this._core.strokeLine(x1, y1, x2, y2);
     }
 
-    // ===== ARC DIRECT APIs (fast path) =====
+    // ===== ARC DIRECT APIs (direct rendering) =====
 
     /**
      * Fill an arc (pie slice) directly without using the path system
