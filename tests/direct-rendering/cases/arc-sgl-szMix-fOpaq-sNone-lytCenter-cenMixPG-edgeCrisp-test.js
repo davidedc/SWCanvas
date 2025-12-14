@@ -1,0 +1,90 @@
+/**
+ * TEST SUMMARY:
+ * =================
+ *
+ * Description: Tests a single filled arc (no stroke) with random parameters and crisp center alignment.
+ *
+ *
+ * ---
+ *
+ * | Facet                  | Value              | Reason
+ * |------------------------|--------------------|-----------------------------------------------------------------------------------------------------
+ * | Shape category         | arcs               | The test focuses on rendering an arc.
+ * | Count                  | single             | The test draws a single arc instance in its visual verification mode.
+ * | SizeCategory           | mixed              | The radius is randomized in a range of [10, 225), which spans multiple T-shirt size categories.
+ * | FillStyle              | opaque             | `getRandomOpaqueColor()` is called for the fill.
+ * | StrokeStyle            | none               | No stroke is applied.
+ * | StrokeThickness        | N/A                | Not applicable as there is no stroke.
+ * | Layout                 | centered           | The arc's center coordinates are explicitly calculated to be at the canvas center.
+ * | CenteredAt             | mixed-pixel-grid   | A random flag determines if the center is on a pixel or grid line.
+ * | EdgeAlignment          | crisp              | Crisp edge alignment is used.
+ * | Orientation            | N/A                | Arc orientation determined by angle parameters.
+ * | ArcAngleExtent         | >270°              | Gap < 90° ensures all cardinal points included for extremes check.
+ * | RoundRectRadius        | N/A                | Not applicable to arcs.
+ * | ContextTranslation     | none               | `ctx.translate()` is not used in this test.
+ * | ContextRotation        | none               | `ctx.rotate()` is not used in this test.
+ * | ContextScaling         | none               | `ctx.scale()` is not used in this test.
+ * | Clipped on shape       | none               | No clipping path is defined or applied in this test.
+ * | Clipped on shape count | n/a                | Not applicable as there is no clipping.
+ * | Clipped on shape arrangement | n/a          | Not applicable as there is no clipping.
+ * | Clipped on shape size  | n/a                | Not applicable as there is no clipping.
+ * | Clipped on shape edge alignment | n/a       | Not applicable as there is no clipping.
+ *
+ * ---
+ *
+ * UNCAPTURED ASPECTS IN FILENAME / FACETS ABOVE:
+ * ----------------------------------------------
+ * - The fill color is a randomized opaque color.
+ * - Uses SWCanvas direct API method `ctx.fillArc()` for fill-only rendering.
+ * - Gap positioned randomly within a single quadrant.
+ *
+ */
+
+registerDirectRenderingTest(
+    'arc-sgl-szMix-fOpaq-sNone-lytCenter-cenMixPG-edgeCrisp-test',
+    function drawTest(ctx, iterationNumber, instances) {
+        const canvasWidth = ctx.canvas.width;
+        const canvasHeight = ctx.canvas.height;
+
+        // Use calculateArcTestParameters for proper setup
+        const params = calculateArcTestParameters({
+            canvasWidth,
+            canvasHeight,
+            minRadius: 10,
+            maxRadius: 225,
+            hasStroke: false,
+            randomPosition: false,  // Centered, not randomly positioned
+            marginX: 10,
+            marginY: 10
+        });
+
+        const { centerX, centerY, radius, atPixel, startAngle, endAngle, gapSizeDeg } = params;
+
+        // Get random opaque color
+        const fillColor = 'rgba(255, 0, 0)';
+
+        // Draw filled arc (no stroke)
+        ctx.fillStyle = fillColor;
+        ctx.fillArc(centerX, centerY, radius, startAngle, endAngle);
+
+        return {
+            logs: [`Arc: center=(${centerX.toFixed(1)},${centerY.toFixed(1)}), r=${radius.toFixed(1)}, gap=${gapSizeDeg.toFixed(1)}°, centerType=${atPixel ? 'pixel' : 'grid'}`],
+            checkData: {
+                leftX: Math.floor(centerX - radius),
+                rightX: Math.floor(centerX + radius - 1),
+                topY: Math.floor(centerY - radius),
+                bottomY: Math.floor(centerY + radius - 1)
+            }
+        };
+    },
+    'arcs',
+    {
+        extremes: { colorTolerance: 63, tolerance: 0.03 },
+        totalUniqueColors: 2
+    },
+    {
+        title: 'Single Filled Arc (No Stroke, Crisp, Mixed Center)',
+        description: 'Tests a single filled arc (no stroke) with random parameters and crisp center alignment.',
+        displayName: 'Perf: Arc Fill Only Crisp MixedCenter'
+    }
+);

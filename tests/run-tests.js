@@ -11,11 +11,11 @@ const CoreFunctionalityTests = require('./dist/core-functionality-tests.js');
 const SWCanvas = require('../dist/swcanvas.js');
 const VisualRenderingTests = require('./dist/visual-rendering-tests.js');
 
-// Load high-level test utilities
-const highLevelTestsDir = path.join(__dirname, 'high-level');
-let highLevelTestUtils = null;
-if (fs.existsSync(path.join(highLevelTestsDir, 'high-level-test-utils.js'))) {
-    highLevelTestUtils = require('./high-level/high-level-test-utils.js');
+// Load direct rendering test utilities
+const directRenderingTestsDir = path.join(__dirname, 'direct-rendering');
+let directRenderingTestUtils = null;
+if (fs.existsSync(path.join(directRenderingTestsDir, 'direct-rendering-test-utils.js'))) {
+    directRenderingTestUtils = require('./direct-rendering/direct-rendering-test-utils.js');
 }
 
 console.log('Running SWCanvas Tests in Node.js...\n');
@@ -79,37 +79,37 @@ try {
     
     console.log(`\nGenerated PNGs for ${visualTestNames.length} visual tests`);
 
-    // Run high-level tests (direct rendering verification)
-    let highLevelPassed = 0;
-    let highLevelFailed = 0;
+    // Run direct rendering tests
+    let directRenderingPassed = 0;
+    let directRenderingFailed = 0;
 
-    if (highLevelTestUtils) {
+    if (directRenderingTestUtils) {
         console.log(`\n${'='.repeat(50)}`);
-        console.log(`Running High-Level Tests (Direct Rendering Verification)...\n`);
+        console.log(`Running Direct Rendering Tests...\n`);
 
         // Load test cases
-        const casesDir = path.join(highLevelTestsDir, 'cases');
+        const casesDir = path.join(directRenderingTestsDir, 'cases');
         if (fs.existsSync(casesDir)) {
             const caseFiles = fs.readdirSync(casesDir).filter(f => f.endsWith('.js'));
 
             // Make utilities globally available
             global.SWCanvas = SWCanvas;
-            global.SeededRandom = highLevelTestUtils.SeededRandom;
-            global.getRandomColor = highLevelTestUtils.getRandomColor;
-            global.getRandomOpaqueColor = highLevelTestUtils.getRandomOpaqueColor;
-            global.getRandomOpaqueVisibleColor = highLevelTestUtils.getRandomOpaqueVisibleColor;
-            global.getRandomPoint = highLevelTestUtils.getRandomPoint;
-            global.placeCloseToCenterAtPixel = highLevelTestUtils.placeCloseToCenterAtPixel;
-            global.placeCloseToCenterAtGrid = highLevelTestUtils.placeCloseToCenterAtGrid;
-            global.adjustDimensionsForCrispStrokeRendering = highLevelTestUtils.adjustDimensionsForCrispStrokeRendering;
-            global.calculateCircleTestParameters = highLevelTestUtils.calculateCircleTestParameters;
-            global.calculateArcTestParameters = highLevelTestUtils.calculateArcTestParameters;
-            global.calculate90DegQuadrantArcParams = highLevelTestUtils.calculate90DegQuadrantArcParams;
-            global.generateConstrainedArcAngles = highLevelTestUtils.generateConstrainedArcAngles;
-            global.registerHighLevelTest = highLevelTestUtils.registerHighLevelTest;
-            global.roundPoint = highLevelTestUtils.roundPoint;
-            global.adjustCenterForCrispStrokeRendering = highLevelTestUtils.adjustCenterForCrispStrokeRendering;
-            global.calculateCrispFillAndStrokeRectParams = highLevelTestUtils.calculateCrispFillAndStrokeRectParams;
+            global.SeededRandom = directRenderingTestUtils.SeededRandom;
+            global.getRandomColor = directRenderingTestUtils.getRandomColor;
+            global.getRandomOpaqueColor = directRenderingTestUtils.getRandomOpaqueColor;
+            global.getRandomOpaqueVisibleColor = directRenderingTestUtils.getRandomOpaqueVisibleColor;
+            global.getRandomPoint = directRenderingTestUtils.getRandomPoint;
+            global.placeCloseToCenterAtPixel = directRenderingTestUtils.placeCloseToCenterAtPixel;
+            global.placeCloseToCenterAtGrid = directRenderingTestUtils.placeCloseToCenterAtGrid;
+            global.adjustDimensionsForCrispStrokeRendering = directRenderingTestUtils.adjustDimensionsForCrispStrokeRendering;
+            global.calculateCircleTestParameters = directRenderingTestUtils.calculateCircleTestParameters;
+            global.calculateArcTestParameters = directRenderingTestUtils.calculateArcTestParameters;
+            global.calculate90DegQuadrantArcParams = directRenderingTestUtils.calculate90DegQuadrantArcParams;
+            global.generateConstrainedArcAngles = directRenderingTestUtils.generateConstrainedArcAngles;
+            global.registerDirectRenderingTest = directRenderingTestUtils.registerDirectRenderingTest;
+            global.roundPoint = directRenderingTestUtils.roundPoint;
+            global.adjustCenterForCrispStrokeRendering = directRenderingTestUtils.adjustCenterForCrispStrokeRendering;
+            global.calculateCrispFillAndStrokeRectParams = directRenderingTestUtils.calculateCrispFillAndStrokeRectParams;
 
             for (const file of caseFiles) {
                 try {
@@ -120,25 +120,25 @@ try {
             }
 
             // Run each test
-            for (const test of highLevelTestUtils.HIGH_LEVEL_TESTS) {
-                const testPassed = runHighLevelTest(test);
-                if (testPassed) highLevelPassed++;
-                else highLevelFailed++;
+            for (const test of directRenderingTestUtils.DIRECT_RENDERING_TESTS) {
+                const testPassed = runDirectRenderingTest(test);
+                if (testPassed) directRenderingPassed++;
+                else directRenderingFailed++;
             }
 
-            console.log(`\nHigh-Level Tests: ${highLevelPassed} passed, ${highLevelFailed} failed`);
+            console.log(`\nDirect Rendering Tests: ${directRenderingPassed} passed, ${directRenderingFailed} failed`);
         } else {
-            console.log('No high-level test cases found.');
+            console.log('No direct rendering test cases found.');
         }
     }
 
     // Final summary
-    const totalPassed = results.passed + highLevelPassed;
-    const totalFailed = results.failed + highLevelFailed;
+    const totalPassed = results.passed + directRenderingPassed;
+    const totalFailed = results.failed + directRenderingFailed;
 
     console.log(`\n${'='.repeat(50)}`);
     if (totalFailed > 0) {
-        console.log(`\n❌ ${totalFailed} tests failed (Core: ${results.failed}, High-Level: ${highLevelFailed})`);
+        console.log(`\n❌ ${totalFailed} tests failed (Core: ${results.failed}, Direct Rendering: ${directRenderingFailed})`);
         process.exit(1);
     } else {
         console.log(`\n✅ All ${totalPassed} tests passed!`);
@@ -149,9 +149,9 @@ try {
 }
 
 /**
- * Run a single high-level test
+ * Run a single direct rendering test
  */
-function runHighLevelTest(test) {
+function runDirectRenderingTest(test) {
     const { name, drawFunction, category, checks, metadata } = test;
 
     // Create canvas
@@ -164,7 +164,7 @@ function runHighLevelTest(test) {
     ctx.fillRect(0, 0, 400, 300);
 
     // Seed random for reproducibility
-    highLevelTestUtils.SeededRandom.seedWithInteger(12345);
+    directRenderingTestUtils.SeededRandom.seedWithInteger(12345);
 
     // Reset path-based rendering flag
     SWCanvas.Core.Context2D.resetPathBasedFlag();
@@ -193,7 +193,7 @@ function runHighLevelTest(test) {
     // Extremes check
     if (checks.extremes && result && result.checkData) {
         const surface = canvas._coreSurface;
-        const actual = highLevelTestUtils.analyzeExtremes(surface);
+        const actual = directRenderingTestUtils.analyzeExtremes(surface);
         const expected = result.checkData;
         const tolerance = typeof checks.extremes === 'object' ? checks.extremes.tolerance || 0 : 0;
         const tolerancePixels = Math.ceil(Math.max(surface.width, surface.height) * tolerance);

@@ -244,6 +244,12 @@ if (fs.existsSync('./tests/dist/core-functionality-tests.js')) {
 │   ├── index.html                      # Main browser test page (moved from examples/)
 │   ├── minimal-example.html            # Minimal usage example
 │   └── browser-test-helpers.js         # Interactive test utilities
+├── direct-rendering/                   # Direct rendering verification tests
+│   ├── run-direct-rendering-tests.js   # Node.js test runner
+│   ├── direct-rendering-test-utils.js  # Test utilities and registration
+│   ├── browser-test-runner.js          # Browser test framework
+│   ├── index.html                      # Browser test page
+│   └── cases/                          # 62 test case files
 ├── dist/                               # Built test files (auto-generated, .gitignored)
 │   ├── core-functionality-tests.js     # Auto-generated from /core/
 │   └── visual-rendering-tests.js       # Auto-generated from /visual/
