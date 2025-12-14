@@ -8,21 +8,26 @@ SWCanvas implements fast paths for 5 shape types: Rectangle, RoundedRect, Circle
 
 ## 1. Fast Path Entry Points (Calling Functions)
 
-| Shape                 | Entry Point                           | Location               | Fallback Slow Path          |
-|-----------------------|---------------------------------------|------------------------|-----------------------------|
-| Rectangle Fill        | Context2D.fillRect()                  | Context2D.js:293-364   | rasterizer.fillRect()       |
-| Rectangle Stroke      | Context2D.strokeRect()                | Context2D.js:366-459   | rasterizer.stroke(path)     |
-| RoundedRect Fill      | Context2D.fillRoundRect()             | Context2D.js:647-698   | path.roundRect() + fill()   |
-| RoundedRect Stroke    | Context2D.strokeRoundRect()           | Context2D.js:571-636   | path.roundRect() + stroke() |
-| RoundedRect Fill+Stroke | Context2D.fillAndStrokeRoundRect()  | Context2D.js:709-770   | Separate fill + stroke      |
-| Circle Fill           | Context2D._fillCircleDirect()         | Context2D.js:1739-1773 | path.arc() + fill()         |
-| Circle Stroke         | Context2D._strokeCircleDirect()       | Context2D.js:1779-1814 | path.arc() + stroke()       |
-| Circle (via stroke()) | Context2D.stroke()                    | Context2D.js:820-846   | Standard path stroke        |
-| Circle Fill+Stroke    | Context2D.fillAndStrokeCircle()       | Context2D.js:1460-1504 | Separate fill + stroke      |
-| Line                  | Context2D._strokeLineDirect()         | Context2D.js:1820-1859 | Standard path stroke        |
-| Arc Fill              | Context2D.fillArc()                   | Context2D.js:1519-1561 | path.arc() + fill()         |
-| Arc Stroke            | Context2D.outerStrokeArc()            | Context2D.js:1572-1629 | path.arc() + stroke()       |
-| Arc Fill+Stroke       | Context2D.fillAndOuterStrokeArc()     | Context2D.js:1640-1704 | Separate fill + stroke      |
+| Shape                   | Entry Point                           | Location                 | Fallback Slow Path          |
+|-------------------------|---------------------------------------|--------------------------|-----------------------------|
+| Rectangle Fill          | Context2D.fillRect()                  | Context2D.js:293-364     | rasterizer.fillRect()       |
+| Rectangle Stroke        | Context2D.strokeRect()                | Context2D.js:366-459     | rasterizer.stroke(path)     |
+| Rectangle Fill+Stroke   | Context2D.fillAndStrokeRect()         | Context2D.js:469-525     | Separate fill + stroke      |
+| RoundedRect Fill        | Context2D.fillRoundRect()             | Context2D.js:713-764     | path.roundRect() + fill()   |
+| RoundedRect Stroke      | Context2D.strokeRoundRect()           | Context2D.js:637-702     | path.roundRect() + stroke() |
+| RoundedRect Fill+Stroke | Context2D.fillAndStrokeRoundRect()    | Context2D.js:775-836     | Separate fill + stroke      |
+| Circle Fill             | Context2D.fillCircle()                | Context2D.js:1474-1496   | path.arc() + fill()         |
+| Circle Stroke           | Context2D.strokeCircle()              | Context2D.js:1499-1523   | path.arc() + stroke()       |
+| Circle Fill+Stroke      | Context2D.fillAndStrokeCircle()       | Context2D.js:1526-1570   | Separate fill + stroke      |
+| Circle (path detection) | Context2D.stroke() [full circle opt]  | Context2D.js:890-915     | Standard path stroke        |
+| Line Stroke             | Context2D.strokeLine()                | Context2D.js:1779-1802   | path moveTo/lineTo + stroke |
+| Arc Fill                | Context2D.fillArc()                   | Context2D.js:1585-1627   | path.arc() + fill()         |
+| Arc Stroke              | Context2D.outerStrokeArc()            | Context2D.js:1638-1695   | path.arc() + stroke()       |
+| Arc Fill+Stroke         | Context2D.fillAndOuterStrokeArc()     | Context2D.js:1706-1770   | Separate fill + stroke      |
+
+**Notes:**
+- "Circle (path detection)" is an optimization inside `stroke()` that detects when the current path is a full circle via `CircleOps.isFullCirclePath()` and uses CircleOps fast paths. This is different from calling `strokeCircle()` directly.
+- Private methods (`_fillCircleDirect`, `_strokeCircleDirect`, `_strokeLineDirect`) are internal helpers called by the public convenience methods.
 
 ---
 
