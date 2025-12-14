@@ -19,14 +19,13 @@ SWCanvas implements fast paths for 5 shape types: Rectangle, RoundedRect, Circle
 | Circle Fill             | Context2D.fillCircle()                | Context2D.js:1474-1496   | path.arc() + fill()         |
 | Circle Stroke           | Context2D.strokeCircle()              | Context2D.js:1499-1523   | path.arc() + stroke()       |
 | Circle Fill+Stroke      | Context2D.fillAndStrokeCircle()       | Context2D.js:1526-1570   | Separate fill + stroke      |
-| Circle (path detection) | Context2D.stroke() [full circle opt]  | Context2D.js:890-915     | Standard path stroke        |
 | Line Stroke             | Context2D.strokeLine()                | Context2D.js:1779-1802   | path moveTo/lineTo + stroke |
 | Arc Fill                | Context2D.fillArc()                   | Context2D.js:1585-1627   | path.arc() + fill()         |
 | Arc Stroke              | Context2D.outerStrokeArc()            | Context2D.js:1638-1695   | path.arc() + stroke()       |
 | Arc Fill+Stroke         | Context2D.fillAndOuterStrokeArc()     | Context2D.js:1706-1770   | Separate fill + stroke      |
 
 **Notes:**
-- "Circle (path detection)" is an optimization inside `stroke()` that detects when the current path is a full circle via `CircleOps.isFullCirclePath()` and uses CircleOps fast paths. This is different from calling `strokeCircle()` directly.
+- Fast paths are available **exclusively** via dedicated methods (e.g., `fillCircle()`, `strokeRect()`). Path-based rendering (`beginPath()` + `arc()/rect()` + `fill()/stroke()`) always uses the generic polygon pipeline for consistent, predictable behavior.
 - Private methods (`_fillCircleDirect`, `_strokeCircleDirect`, `_strokeLineDirect`) are internal helpers called by the public convenience methods.
 
 ---

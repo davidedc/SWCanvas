@@ -1,40 +1,14 @@
 /**
  * CircleOps - Static methods for optimized circle rendering
  * Follows PolygonFiller pattern with static methods.
+ *
+ * Fast paths are available exclusively via dedicated Context2D methods:
+ * fillCircle(), strokeCircle(), fillAndStrokeCircle()
+ *
+ * Path-based circles (beginPath() + arc() + fill()/stroke()) use the
+ * generic polygon pipeline for consistent, predictable behavior.
  */
 class CircleOps {
-    /**
-     * Check if path is a single full circle (0 to 2π arc)
-     * Used for fast path detection in stroke()
-     * @param {SWPath2D} pathToCheck - The path to analyze
-     * @returns {object|null} Circle info {cx, cy, radius} or null if not a full circle
-     */
-    static isFullCirclePath(pathToCheck) {
-        const commands = pathToCheck.commands;
-
-        // Must be exactly 1 command (arc only, no moveTo after beginPath())
-        if (commands.length !== 1) return null;
-
-        // Must be an arc command
-        if (commands[0].type !== 'arc') return null;
-
-        const arc = commands[0];
-        const startAngle = arc.startAngle;
-        const endAngle = arc.endAngle;
-
-        // Check if it's a full circle (2π difference)
-        const angleDiff = Math.abs(endAngle - startAngle);
-        const isFullCircle = Math.abs(angleDiff - 2 * Math.PI) < 1e-9;
-
-        if (!isFullCircle) return null;
-
-        return {
-            cx: arc.x,
-            cy: arc.y,
-            radius: arc.radius
-        };
-    }
-
     /**
      * Generate horizontal extents for each scanline of a circle using Bresenham
      * Uses CrispSWCanvas algorithm for correct extreme pixel rendering

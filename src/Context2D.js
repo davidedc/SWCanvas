@@ -920,31 +920,8 @@ class Context2D {
         // Use specified path or current internal path
         const pathToStroke = path || this._currentPath;
 
-        // Fast path: detect single full circle and use Bresenham
-        const circleInfo = CircleOps.isFullCirclePath(pathToStroke);
-        if (circleInfo) {
-            const paintSource = this._strokeStyle;
-            const isColor = paintSource instanceof Color;
-            const is1pxStroke = Math.abs(this._lineWidth - 1) < 0.001;
-            const isSourceOver = this.globalCompositeOperation === 'source-over';
-            const noTransform = this._transform.isIdentity;
-            const noClip = !this._clipMask;
-            const noShadow = !this.shadowColor || this.shadowColor === 'transparent' ||
-                            (this.shadowBlur === 0 && this.shadowOffsetX === 0 && this.shadowOffsetY === 0);
-
-            if (isColor && is1pxStroke && isSourceOver && noTransform && noClip && noShadow) {
-                const isOpaque = paintSource.a === 255 && this.globalAlpha >= 1.0;
-                if (isOpaque) {
-                    CircleOps.stroke1pxOpaque(this.surface, circleInfo.cx, circleInfo.cy, circleInfo.radius, paintSource, null);
-                    return;
-                } else if (paintSource.a > 0) {
-                    CircleOps.stroke1pxAlpha(this.surface, circleInfo.cx, circleInfo.cy, circleInfo.radius, paintSource, this.globalAlpha, null);
-                    return;
-                }
-            }
-        }
-
-        // Mark slow path for testing (non-circle strokes use rasterizer)
+        // All path-based strokes use generic pipeline
+        // Fast paths available via dedicated methods: strokeCircle(), strokeRect(), etc.
         Context2D._markSlowPath();
 
         this.rasterizer.beginOp({
