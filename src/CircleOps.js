@@ -2,7 +2,7 @@
  * CircleOps - Static methods for optimized circle rendering
  * Follows PolygonFiller pattern with static methods.
  *
- * Fast paths are available exclusively via dedicated Context2D methods:
+ * Direct rendering is available exclusively via dedicated Context2D methods:
  * fillCircle(), strokeCircle(), fillAndStrokeCircle()
  *
  * Path-based circles (beginPath() + arc() + fill()/stroke()) use the

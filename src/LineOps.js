@@ -16,14 +16,14 @@ class LineOps {
      * @param {Uint8Array|null} clipBuffer - Clip mask buffer
      * @param {boolean} isOpaqueColor - True if color is opaque with full alpha
      * @param {boolean} isSemiTransparentColor - True if color needs alpha blending
-     * @returns {boolean} True if fast path was used, false if slow path needed
+     * @returns {boolean} True if direct rendering was used, false if path-based rendering needed
      */
     static strokeDirect(surface, x1, y1, x2, y2, lineWidth, paintSource, globalAlpha, clipBuffer, isOpaqueColor, isSemiTransparentColor) {
         const width = surface.width;
         const height = surface.height;
 
         if (isOpaqueColor && lineWidth <= 1.5) {
-            // Fast path for thin lines: Bresenham algorithm
+            // Direct rendering for thin lines: Bresenham algorithm
             const packedColor = Surface.packColor(paintSource.r, paintSource.g, paintSource.b, 255);
             const data32 = surface.data32;
 
@@ -196,7 +196,7 @@ class LineOps {
             return true;
         }
 
-        // No fast path available
+        // No direct rendering available
         return false;
     }
 

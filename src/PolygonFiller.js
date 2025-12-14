@@ -4,8 +4,8 @@
  * Implements scanline polygon filling with nonzero and evenodd winding rules.
  * Handles stencil-based clipping integration and premultiplied alpha blending.
  *
- * Provides dual rendering paths:
- * - Fast path: 32-bit packed writes for opaque solid colors (CrispSwCanvas-style)
+ * Provides dual rendering approaches:
+ * - Optimized path: 32-bit packed writes for opaque solid colors (CrispSwCanvas-style)
  * - Standard path: Full paint source support with gradients, patterns, compositing
  *
  * Converted from functional to class-based approach following OO best practices:
@@ -16,7 +16,7 @@
 class PolygonFiller {
     /**
      * Fill polygons using scanline algorithm with stencil-based clipping
-     * Routes to fast path when possible for optimal performance
+     * Routes to optimized rendering when possible for optimal performance
      *
      * @param {Surface} surface - Target surface to render to
      * @param {Array} polygons - Array of polygons (each polygon is array of {x,y} points)
@@ -35,7 +35,7 @@ class PolygonFiller {
             throw new Error('Paint source must be a Color, Gradient, or Pattern instance');
         }
 
-        // Check if we can use the fast path (opaque solid color with source-over)
+        // Check if we can use optimized rendering (opaque solid color with source-over)
         const canUseFastPath =
             paintSource instanceof Color &&
             paintSource.a === 255 &&
@@ -52,7 +52,7 @@ class PolygonFiller {
     }
 
     /**
-     * Fast path for opaque solid color fills with source-over compositing
+     * Optimized rendering for opaque solid color fills with source-over compositing
      * Uses 32-bit packed writes and inline clip buffer access for maximum performance
      * @private
      */
@@ -82,7 +82,7 @@ class PolygonFiller {
             // Sort intersections by x coordinate
             intersections.sort((a, b) => a.x - b.x);
 
-            // Fill spans using fast path
+            // Fill spans using optimized rendering
             let windingNumber = 0;
             let inside = false;
 
@@ -143,9 +143,9 @@ class PolygonFiller {
      * @private
      */
     static _fillPolygonsStandard(surface, polygons, paintSource, fillRule, transform, clipMask, globalAlpha, subPixelOpacity, composite, sourceMask) {
-        // Mark slow path for testing (helps verify fast path is used when expected)
-        if (typeof Context2D !== 'undefined' && Context2D._markSlowPath) {
-            Context2D._markSlowPath();
+        // Mark path-based rendering for testing (helps verify direct rendering is used when expected)
+        if (typeof Context2D !== 'undefined' && Context2D._markPathBasedRendering) {
+            Context2D._markPathBasedRendering();
         }
 
         // Transform all polygon vertices

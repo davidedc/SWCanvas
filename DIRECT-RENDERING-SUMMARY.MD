@@ -1,12 +1,12 @@
-# SWCanvas Fast Paths - Comprehensive Analysis & Summary
+# SWCanvas Direct Renderings - Comprehensive Analysis & Summary
 
 ## Executive Summary
 
-SWCanvas implements fast paths for 5 shape types: Rectangle, RoundedRect, Circle, Line, and Arc. Each has specialized rendering paths that bypass the general polygon filler when specific conditions are met.
+SWCanvas implements direct renderings for 5 shape types: Rectangle, RoundedRect, Circle, Line, and Arc. Each has specialized rendering paths that bypass the general polygon filler when specific conditions are met.
 
 ---
 
-## 1. Fast Path Entry Points (Calling Functions)
+## 1. Direct Rendering Entry Points (Calling Functions)
 
 | Shape                   | Entry Point                           | Location                 | Fallback Slow Path          |
 |-------------------------|---------------------------------------|--------------------------|-----------------------------|
@@ -25,12 +25,12 @@ SWCanvas implements fast paths for 5 shape types: Rectangle, RoundedRect, Circle
 | Arc Fill+Stroke         | Context2D.fillAndOuterStrokeArc()     | Context2D.js:1706-1770   | Separate fill + stroke      |
 
 **Notes:**
-- Fast paths are available **exclusively** via dedicated methods (e.g., `fillCircle()`, `strokeRect()`). Path-based rendering (`beginPath()` + `arc()/rect()` + `fill()/stroke()`) always uses the generic polygon pipeline for consistent, predictable behavior.
+- Direct rendering is available **exclusively** via dedicated methods (e.g., `fillCircle()`, `strokeRect()`). Path-based rendering (`beginPath()` + `arc()/rect()` + `fill()/stroke()`) always uses the generic polygon pipeline for consistent, predictable behavior.
 - Private methods (`_fillCircleDirect`, `_strokeCircleDirect`, `_strokeLineDirect`) are internal helpers called by the public convenience methods.
 
 ---
 
-## 2. Fast Path Functions by Shape and Case
+## 2. Direct Rendering Functions by Shape and Case
 
 ### 2.1 RECTANGLES (RectOps.js)
 
@@ -60,7 +60,7 @@ SWCanvas implements fast paths for 5 shape types: Rectangle, RoundedRect, Circle
 | Any          | Axis-aligned | Both             | RoundedRectOps.fillAndStroke()     | YES      |
 | 0px          | Any          | Any              | IGNORED                            | -        |
 
-Note: Rotated rounded rectangles use slow path (no fast path)
+Note: Rotated rounded rectangles use path-based rendering (no direct rendering)
 
 ### 2.3 CIRCLES (CircleOps.js)
 
@@ -90,7 +90,7 @@ Note: Circles are inherently rotation-invariant (no tilted variant needed)
 | 0px          | Any             | Any              | IGNORED                           | -        |
 
 Note: Lines already handle all orientations - no separate "rotated" variant needed.
-**Requires lineCap === 'butt' for fast path (non-butt caps fall to slow path).**
+**Requires lineCap === 'butt' for direct rendering (non-butt caps fall to path-based rendering).**
 
 ### 2.5 ARCS (ArcOps.js)
 
@@ -105,11 +105,11 @@ Note: Lines already handle all orientations - no separate "rotated" variant need
 | Any          | Both             | ArcOps.fillAndStrokeOuter() | YES      |
 
 Note: Arc uses Bresenham + angle filtering. 1px paths skip Set overhead for opaque.
-**Requires lineCap === 'butt' for fast path (non-butt caps fall to slow path).**
+**Requires lineCap === 'butt' for direct rendering (non-butt caps fall to path-based rendering).**
 
 ---
 
-## 3. Condition Checks for Fast Path Eligibility
+## 3. Condition Checks for Direct Rendering Eligibility
 
 ### Universal Conditions (all shapes):
 
@@ -125,16 +125,16 @@ Note: Arc uses Bresenham + angle filtering. 1px paths skip Set overhead for opaq
 | Shape       | Additional Checks                                                         |
 |-------------|---------------------------------------------------------------------------|
 | Rectangle   | Transform: isAxisAligned OR isUniformScale                                |
-|             | Non-uniform scale + rotation → slow path (produces parallelogram)         |
+|             | Non-uniform scale + rotation → path-based rendering (produces parallelogram)         |
 | RoundedRect | Transform: noTransform = this._transform.isIdentity (stricter than Rect!) |
 | Circle      | Transform: noTransform = this._transform.isIdentity                       |
-| Line        | lineCap === 'butt' (required for fast path)                               |
-| Arc         | lineCap === 'butt' (required for fast path)                               |
+| Line        | lineCap === 'butt' (required for direct rendering)                               |
+| Arc         | lineCap === 'butt' (required for direct rendering)                               |
 |             | Angle normalization for clockwise/anticlockwise                           |
 
 ---
 
-## 4. Interdependencies Between Fast Paths
+## 4. Interdependencies Between Direct Renderings
 
 ```
 RectOps.strokeRotated() ──────────► LineOps.strokeDirect()
@@ -175,9 +175,9 @@ All *Ops.fill*() ──────────────────► SpanO
 
 ---
 
-## 5. Clipping Handling by Fast Path
+## 5. Clipping Handling by Direct Rendering
 
-| Shape                   | Clipping Support in Fast Path | Method                    |
+| Shape                   | Clipping Support in Direct Rendering | Method                    |
 |-------------------------|-------------------------------|---------------------------|
 | Rectangle (fill/stroke) | YES                           | clipBuffer per pixel      |
 | RoundedRect (all)       | YES                           | clipBuffer per pixel      |
@@ -185,11 +185,11 @@ All *Ops.fill*() ──────────────────► SpanO
 | Line (all)              | YES                           | clipBuffer per pixel/span |
 | Arc (all)               | YES                           | clipBuffer per pixel      |
 
-**All shapes now support clipping in their fast paths.**
+**All shapes now support clipping in their direct renderings.**
 
 ### Bit Ordering Convention
 
-All fast paths use the standard bit ordering convention that matches BitBuffer:
+All direct renderings use the standard bit ordering convention that matches BitBuffer:
 ```javascript
 const bitIndex = pixelIndex & 7;
 const bitMask = (1 << bitIndex);  // CORRECT
@@ -197,11 +197,11 @@ const bitMask = (1 << bitIndex);  // CORRECT
 
 ---
 
-## 6. Optimizations Used per Fast Path
+## 6. Optimizations Used per Direct Rendering
 
 ### 6.1 32-Bit Packed Pixel Writes
 
-All opaque fast paths use 32-bit writes for efficiency:
+All opaque direct renderings use 32-bit writes for efficiency:
 ```javascript
 const packedColor = Surface.packColor(r, g, b, 255);
 data32[pixelIndex] = packedColor;
@@ -255,7 +255,7 @@ if (clipBuffer[byteIndex] === 0) {
 | Stroke thick alpha    | ✓    | ✓         | ✓      | ✓    | ✓   |
 | fillAndStroke()       | ✓    | ✓         | ✓      | N/A  | ✓   |
 | Rotation support      | ✓    | ✗         | N/A    | ✓    | ✗   |
-| Clipping in fast path | ✓    | ✓         | ✓      | ✓    | ✓   |
+| Clipping in direct rendering | ✓    | ✓         | ✓      | ✓    | ✓   |
 | 32-bit writes         | ✓    | ✓         | ✓      | ✓    | ✓   |
 | Uses SpanOps          | ✗    | ✓         | ✓      | ✓    | ✗   |
 | Bresenham algorithm   | ✗    | ✗         | ✓      | ✓    | ✓   |
@@ -297,7 +297,7 @@ if (clipBuffer[byteIndex] === 0) {
 
 ### Low Priority Enhancements:
 
-1. **Rotated RoundedRect fast path** - Currently requires identity transform
+1. **Rotated RoundedRect direct rendering** - Currently requires identity transform
 2. **clipRect/clipCircle convenience methods** - Optional non-standard API additions
 
 ---
@@ -307,10 +307,10 @@ if (clipBuffer[byteIndex] === 0) {
 | File                  | Purpose                              |
 |-----------------------|--------------------------------------|
 | src/SpanOps.js        | Shared horizontal span utilities     |
-| src/RectOps.js        | Rectangle fast paths                 |
-| src/CircleOps.js      | Circle fast paths                    |
-| src/LineOps.js        | Line fast paths                      |
-| src/RoundedRectOps.js | Rounded rectangle fast paths         |
-| src/ArcOps.js         | Partial arc fast paths               |
+| src/RectOps.js        | Rectangle direct renderings                 |
+| src/CircleOps.js      | Circle direct renderings                    |
+| src/LineOps.js        | Line direct renderings                      |
+| src/RoundedRectOps.js | Rounded rectangle direct renderings         |
+| src/ArcOps.js         | Partial arc direct renderings               |
 | src/FastPixelOps.js   | Low-level pixel ops and clipping     |
 | src/Context2D.js      | Entry points and dispatch logic      |

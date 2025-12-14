@@ -6,22 +6,22 @@
  * CSS color support while delegating actual rendering to the Core implementation.
  */
 class CanvasCompatibleContext2D {
-    // ===== STATIC SLOW-PATH TRACKING (for testing) =====
+    // ===== STATIC PATH-BASED RENDERING TRACKING (for testing) =====
 
     /**
-     * Reset the slow path tracking flag
-     * Call before running tests that should use fast paths
+     * Reset the path-based rendering tracking flag
+     * Call before running tests that should use direct rendering
      */
-    static resetSlowPathFlag() {
-        Context2D.resetSlowPathFlag();
+    static resetPathBasedFlag() {
+        Context2D.resetPathBasedFlag();
     }
 
     /**
-     * Check if slow path was used since last reset
-     * @returns {boolean} True if slow path was used
+     * Check if path-based rendering was used since last reset
+     * @returns {boolean} True if path-based rendering was used
      */
-    static wasSlowPathUsed() {
-        return Context2D.wasSlowPathUsed();
+    static wasPathBasedUsed() {
+        return Context2D.wasPathBasedUsed();
     }
 
     constructor(surface) {
@@ -619,7 +619,7 @@ class CanvasCompatibleContext2D {
         this._core.strokeLine(x1, y1, x2, y2);
     }
 
-    // ===== ARC DIRECT APIs (fast path) =====
+    // ===== ARC DIRECT APIs (direct rendering) =====
 
     /**
      * Fill an arc (pie slice) directly without using the path system

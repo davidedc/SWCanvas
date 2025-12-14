@@ -45,11 +45,11 @@ SWPath2D.js         → Path definition and command recording
 ShadowBuffer.js     → Sparse shadow alpha storage with extended bounds and BoundsTracker composition
 BoxBlur.js          → Multi-pass box blur algorithm approximating Gaussian blur
 
-# Shape-Specific Fast Path Renderers (static utility classes)
+# Shape-Specific Direct Renderers (static utility classes)
 SpanOps.js          → Horizontal span fill utilities (shared by shape renderers)
-RectOps.js          → Rectangle stroke fast paths (1px opaque/alpha, thick strokes)
-CircleOps.js        → Circle fill/stroke fast paths (Bresenham, annulus rendering)
-LineOps.js          → Line stroke fast paths (Bresenham, polygon scan algorithm)
+RectOps.js          → Rectangle stroke direct rendering (1px opaque/alpha, thick strokes)
+CircleOps.js        → Circle fill/stroke direct rendering (Bresenham, annulus rendering)
+LineOps.js          → Line stroke direct rendering (Bresenham, polygon scan algorithm)
 ```
 
 **Purpose**: Maximum performance graphics operations with zero overhead.
@@ -572,14 +572,14 @@ Forcing composition would violate Item 51: "Make interfaces easy to use correctl
 
 These composition patterns demonstrate how to systematically eliminate code duplication through clean object-oriented design while respecting fundamental differences between abstractions.
 
-## Shape-Specific Fast Path Renderers
+## Shape-Specific Direct Renderers
 
 SWCanvas implements a **static utility class pattern** (following the existing `PolygonFiller` approach) to organize shape-specific rendering optimizations into maintainable, testable modules.
 
 ### The Problem: Growing Context2D Complexity
 
-As fast paths for different shapes were added to `Context2D.js`, the file grew large with shape-specific methods scattered throughout:
-- Rectangle fast paths 400+ lines from `strokeRect()`
+As direct rendering methods for different shapes were added to `Context2D.js`, the file grew large with shape-specific methods scattered throughout:
+- Rectangle direct rendering 400+ lines from `strokeRect()`
 - Circle methods spanning 900+ lines
 - Line methods spanning 400+ lines
 - Shared span utilities duplicated across methods
@@ -631,7 +631,7 @@ RectOps.strokeThickAlpha(surface, x, y, width, height, lineWidth, color, globalA
 
 **CircleOps** - Circle fill and stroke rendering:
 ```javascript
-CircleOps.isFullCirclePath(path)           // Detection for fast path eligibility
+CircleOps.isFullCirclePath(path)           // Detection for direct rendering eligibility
 CircleOps.generateExtents(radius)          // Bresenham scanline extents
 CircleOps.fillAlphaBlend(surface, cx, cy, radius, color, globalAlpha, clipBuffer)
 CircleOps.stroke1pxOpaque(surface, cx, cy, radius, color, clipBuffer)

@@ -55,7 +55,7 @@ class ArcOps {
     }
 
     /**
-     * Fill an arc (pie slice) with opaque color - fast path
+     * Fill an arc (pie slice) with opaque color - direct rendering
      * Uses CircleOps.generateExtents() for correct pixel coverage with angle filtering
      * @param {Surface} surface - Target surface
      * @param {number} cx - Center X

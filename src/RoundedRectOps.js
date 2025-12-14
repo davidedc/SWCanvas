@@ -2,11 +2,11 @@
  * RoundedRectOps - Static methods for optimized rounded rectangle rendering
  * Follows the PolygonFiller/RectOps/CircleOps/LineOps pattern.
  *
- * Fast path for 1px opaque strokes ported from CrispSWCanvas's SWRendererRoundedRect.
+ * Direct rendering for 1px opaque strokes ported from CrispSWCanvas's SWRendererRoundedRect.
  */
 class RoundedRectOps {
     /**
-     * Fast path for 1px opaque stroke on axis-aligned rounded rectangle.
+     * Direct rendering for 1px opaque stroke on axis-aligned rounded rectangle.
      * Uses direct pixel setting for corners via angle iteration and
      * horizontal/vertical line drawing for straight edges.
      *
@@ -106,7 +106,7 @@ class RoundedRectOps {
     }
 
     /**
-     * Fast path for 1px semi-transparent stroke on axis-aligned rounded rectangle.
+     * Direct rendering for 1px semi-transparent stroke on axis-aligned rounded rectangle.
      * Uses alpha blending for each pixel.
      *
      * @param {Surface} surface - Target surface
@@ -223,7 +223,7 @@ class RoundedRectOps {
     }
 
     /**
-     * Fast path for opaque fill on axis-aligned rounded rectangle.
+     * Direct rendering for opaque fill on axis-aligned rounded rectangle.
      * Uses scanline algorithm with 32-bit packed writes.
      *
      * @param {Surface} surface - Target surface
@@ -308,7 +308,7 @@ class RoundedRectOps {
     }
 
     /**
-     * Fast path for semi-transparent fill on axis-aligned rounded rectangle.
+     * Direct rendering for semi-transparent fill on axis-aligned rounded rectangle.
      * Uses scanline algorithm with alpha blending.
      *
      * @param {Surface} surface - Target surface
@@ -396,7 +396,7 @@ class RoundedRectOps {
     }
 
     /**
-     * Fast path for thick opaque stroke on axis-aligned rounded rectangle.
+     * Direct rendering for thick opaque stroke on axis-aligned rounded rectangle.
      * Uses scanline algorithm to fill the stroke region between inner and outer bounds.
      *
      * @param {Surface} surface - Target surface
@@ -528,7 +528,7 @@ class RoundedRectOps {
     }
 
     /**
-     * Fast path for thick semi-transparent stroke on axis-aligned rounded rectangle.
+     * Direct rendering for thick semi-transparent stroke on axis-aligned rounded rectangle.
      * Uses scanline algorithm with alpha blending.
      *
      * @param {Surface} surface - Target surface
