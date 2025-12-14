@@ -2846,40 +2846,14 @@ class RectOps {
 /**
  * CircleOps - Static methods for optimized circle rendering
  * Follows PolygonFiller pattern with static methods.
+ *
+ * Fast paths are available exclusively via dedicated Context2D methods:
+ * fillCircle(), strokeCircle(), fillAndStrokeCircle()
+ *
+ * Path-based circles (beginPath() + arc() + fill()/stroke()) use the
+ * generic polygon pipeline for consistent, predictable behavior.
  */
 class CircleOps {
-    /**
-     * Check if path is a single full circle (0 to 2π arc)
-     * Used for fast path detection in stroke()
-     * @param {SWPath2D} pathToCheck - The path to analyze
-     * @returns {object|null} Circle info {cx, cy, radius} or null if not a full circle
-     */
-    static isFullCirclePath(pathToCheck) {
-        const commands = pathToCheck.commands;
-
-        // Must be exactly 1 command (arc only, no moveTo after beginPath())
-        if (commands.length !== 1) return null;
-
-        // Must be an arc command
-        if (commands[0].type !== 'arc') return null;
-
-        const arc = commands[0];
-        const startAngle = arc.startAngle;
-        const endAngle = arc.endAngle;
-
-        // Check if it's a full circle (2π difference)
-        const angleDiff = Math.abs(endAngle - startAngle);
-        const isFullCircle = Math.abs(angleDiff - 2 * Math.PI) < 1e-9;
-
-        if (!isFullCircle) return null;
-
-        return {
-            cx: arc.x,
-            cy: arc.y,
-            radius: arc.radius
-        };
-    }
-
     /**
      * Generate horizontal extents for each scanline of a circle using Bresenham
      * Uses CrispSWCanvas algorithm for correct extreme pixel rendering
@@ -13352,31 +13326,8 @@ class Context2D {
         // Use specified path or current internal path
         const pathToStroke = path || this._currentPath;
 
-        // Fast path: detect single full circle and use Bresenham
-        const circleInfo = CircleOps.isFullCirclePath(pathToStroke);
-        if (circleInfo) {
-            const paintSource = this._strokeStyle;
-            const isColor = paintSource instanceof Color;
-            const is1pxStroke = Math.abs(this._lineWidth - 1) < 0.001;
-            const isSourceOver = this.globalCompositeOperation === 'source-over';
-            const noTransform = this._transform.isIdentity;
-            const noClip = !this._clipMask;
-            const noShadow = !this.shadowColor || this.shadowColor === 'transparent' ||
-                            (this.shadowBlur === 0 && this.shadowOffsetX === 0 && this.shadowOffsetY === 0);
-
-            if (isColor && is1pxStroke && isSourceOver && noTransform && noClip && noShadow) {
-                const isOpaque = paintSource.a === 255 && this.globalAlpha >= 1.0;
-                if (isOpaque) {
-                    CircleOps.stroke1pxOpaque(this.surface, circleInfo.cx, circleInfo.cy, circleInfo.radius, paintSource, null);
-                    return;
-                } else if (paintSource.a > 0) {
-                    CircleOps.stroke1pxAlpha(this.surface, circleInfo.cx, circleInfo.cy, circleInfo.radius, paintSource, this.globalAlpha, null);
-                    return;
-                }
-            }
-        }
-
-        // Mark slow path for testing (non-circle strokes use rasterizer)
+        // All path-based strokes use generic pipeline
+        // Fast paths available via dedicated methods: strokeCircle(), strokeRect(), etc.
         Context2D._markSlowPath();
 
         this.rasterizer.beginOp({
