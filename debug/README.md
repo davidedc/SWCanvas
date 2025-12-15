@@ -298,7 +298,10 @@ function rectOverlap(rect1, rect2) {
 
 ### PNG File Management
 
-- **Keep outputs for comparison** - Use git to track before/after changes
+PNG files are gitignored by default to avoid repository bloat. For debugging sessions:
+
+- **Keep outputs for comparison** - Save timestamped copies (e.g., `debug-xor-before.png`, `debug-xor-after.png`) locally
+- **Force-track if needed** - Use `git add --force debug/specific-file.png` to temporarily track specific files
 - **Clear naming** - Include feature and test case in filename
 - **Visual inspection** - Open PNGs in image viewer for verification
 - **Pixel-level analysis** - Use image editor for precise pixel inspection

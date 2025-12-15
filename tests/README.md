@@ -43,12 +43,14 @@ tests/
 ### Node.js Tests
 ```bash
 # Build modular tests + run complete test suite
-npm run build  # Concatenates individual test files 
-npm test       # Uses built modular tests automatically
+npm run build  # Concatenates individual test files
+npm test       # Runs 36 core + 140 visual tests
 
-# Or directly:
-node tests/run-tests.js  # Smart runner uses built tests when available
+# Direct rendering tests (run separately)
+npm run test:direct-rendering  # Runs 62 direct rendering path verification tests
 ```
+
+**Note**: Direct rendering tests verify optimized code paths are invoked and run separately from the main test suite. See the [Direct Rendering Tests](#direct-rendering-tests---62-tests) section for details.
 
 ### Browser Tests
 1. Open `tests/browser/index.html` in a web browser (automatically runs all tests on page load)
@@ -258,19 +260,19 @@ For detailed documentation on the direct rendering system and APIs, see [DIRECT-
 **For advanced test organization and renumbering utilities, see [tests/build/README.md](build/README.md).**
 
 ### For Core Functionality Tests
-Create a new individual file in `/tests/core/` with the naming pattern `{3-digit-number}-{descriptive-name}.js`:
+Create a new individual file in `/tests/core/` following the [naming convention](build/README.md#file-naming-convention):
 
 ```bash
-# Create new core test 
-echo "// Test: New feature test" > tests/core/032-new-feature-test.js
-echo "test('New feature test', () => { /* test code */ });" >> tests/core/032-new-feature-test.js
+# Create new core test
+echo "// Test: New feature test" > tests/core/037-new-feature-test.js
+echo "test('New feature test', () => { /* test code */ });" >> tests/core/037-new-feature-test.js
 
 # Build automatically includes it
 npm run build && npm test
 ```
 
-### For Visual Rendering Tests  
-Create a new individual file in `/tests/visual/` with the naming pattern `{3-digit-number}-{descriptive-name}.js`:
+### For Visual Rendering Tests
+Create a new individual file in `/tests/visual/` following the same [naming convention](build/README.md#file-naming-convention):
 
 ```bash
 # Create new visual test

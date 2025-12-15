@@ -16,9 +16,8 @@ A comprehensive feature showcase demonstrating:
 - Sub-pixel rendering
 
 **Usage:**
-1. First, build the project: `npm run build`
-2. Optionally, create minified version: `npm run minify`
-3. Open `showcase.html` in a web browser
+1. Build the project (see README.md for build commands)
+2. Open `showcase.html` in a web browser
 
 The example automatically uses the minified version (`swcanvas.min.js`) if available, falling back to the regular build (`swcanvas.js`).
 
@@ -43,5 +42,4 @@ When adding new examples:
 ## Requirements
 
 - Modern web browser with Canvas support
-- Built SWCanvas library (`npm run build`)
-- Optional: Terser for minified builds (`npm install -g terser`)
+- Built SWCanvas library (see README.md for build instructions)

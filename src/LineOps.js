@@ -1,6 +1,12 @@
 /**
  * LineOps - Static methods for optimized line rendering
  * Follows PolygonFiller pattern with static methods.
+ *
+ * Direct rendering is available exclusively via dedicated Context2D methods:
+ * strokeLine()
+ *
+ * Path-based lines (beginPath() + moveTo() + lineTo() + stroke()) use the
+ * generic polygon pipeline for consistent, predictable behavior.
  */
 class LineOps {
     /**
@@ -78,7 +84,7 @@ class LineOps {
             }
             return true;
         } else if (isOpaqueColor) {
-            // Fast path for thick axis-aligned lines: render as rectangle
+            // Direct rendering for thick axis-aligned lines: render as rectangle
             const x1i = Math.floor(x1);
             const y1i = Math.floor(y1);
             const x2i = Math.floor(x2);
@@ -117,7 +123,7 @@ class LineOps {
                 return true;
             }
         } else if (isSemiTransparentColor && lineWidth <= 1.5) {
-            // Fast path for thin semitransparent lines: Bresenham with alpha blending
+            // Direct rendering for thin semitransparent lines: Bresenham with alpha blending
             const data = surface.data;
             const r = paintSource.r;
             const g = paintSource.g;
@@ -191,7 +197,7 @@ class LineOps {
             }
             return true;
         } else if (isSemiTransparentColor) {
-            // Fast path for thick semitransparent lines: polygon scan with alpha blending
+            // Direct rendering for thick semitransparent lines: polygon scan with alpha blending
             LineOps.strokeThickPolygonScan(surface, x1, y1, x2, y2, lineWidth, paintSource, globalAlpha, clipBuffer, true);
             return true;
         }
