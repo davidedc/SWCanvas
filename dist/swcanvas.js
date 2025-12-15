@@ -1723,6 +1723,12 @@ class SpanOps {
 /**
  * RectOps - Static methods for optimized rectangle rendering
  * Follows PolygonFiller pattern with static methods.
+ *
+ * Direct rendering is available exclusively via dedicated Context2D methods:
+ * fillRect(), strokeRect()
+ *
+ * Path-based rectangles (beginPath() + rect() + fill()/stroke()) use the
+ * generic polygon pipeline for consistent, predictable behavior.
  */
 class RectOps {
     /**
@@ -3635,6 +3641,12 @@ class CircleOps {
  * ArcOps - Static methods for optimized partial arc rendering
  * Follows CircleOps/PolygonFiller pattern with static methods.
  *
+ * Direct rendering is available exclusively via dedicated Context2D methods:
+ * fillArc(), outerStrokeArc(), fillAndOuterStrokeArc()
+ *
+ * Path-based arcs (beginPath() + arc() + fill()/stroke()) use the
+ * generic polygon pipeline for consistent, predictable behavior.
+ *
  * Unlike CircleOps (which handles full circles), ArcOps handles partial arcs
  * by filtering pixels based on angle range using isAngleInRange().
  */
@@ -4848,7 +4860,11 @@ class LineOps {
  * RoundedRectOps - Static methods for optimized rounded rectangle rendering
  * Follows the PolygonFiller/RectOps/CircleOps/LineOps pattern.
  *
- * Direct rendering for 1px opaque strokes using Bresenham circle algorithm.
+ * Direct rendering is available exclusively via dedicated Context2D methods:
+ * fillRoundRect(), strokeRoundRect(), fillAndStrokeRoundRect()
+ *
+ * Path-based rounded rectangles (beginPath() + roundRect() + fill()/stroke()) use the
+ * generic polygon pipeline for consistent, predictable behavior.
  */
 class RoundedRectOps {
     /**
@@ -12707,7 +12723,7 @@ class Context2D {
         this._currentPath.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, x, y);
     }
 
-    // Drawing methods - simplified for M1 (only rectangles)
+    // Drawing methods - rectangle operations
     fillRect(x, y, width, height) {
         const paintSource = this._fillStyle;
         const isColor = paintSource instanceof Color;
