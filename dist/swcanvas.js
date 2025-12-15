@@ -1320,7 +1320,7 @@ class FastPixelOps {
             if ((clipBuffer[byteIndex] & (1 << bitIndex)) === 0) return;
         }
 
-        // Fast path for fully opaque pixels
+        // Optimized path for fully opaque pixels
         if (a === 255 && globalAlpha >= 1.0) {
             this.data32[pixelIndex] = 0xFF000000 | (b << 16) | (g << 8) | r;
             return;
@@ -1343,7 +1343,7 @@ class FastPixelOps {
     }
 
     /**
-     * Set pixel using pre-packed color (fastest single-pixel write)
+     * Set pixel using pre-packed color (optimized single-pixel write)
      * No bounds checking - caller must ensure validity
      * @param {number} pixelIndex - Linear pixel index
      * @param {number} packedColor - Pre-packed 32-bit ABGR color
@@ -1422,7 +1422,7 @@ class FastPixelOps {
                     pixelIndex++;
                 }
             } else {
-                // Opaque without clipping - fastest path
+                // Opaque without clipping - optimized path
                 for (; pixelIndex < endIndex; pixelIndex++) {
                     data32[pixelIndex] = packedColor;
                 }
@@ -1482,7 +1482,7 @@ class FastPixelOps {
     }
 
     /**
-     * Fill horizontal run with pre-packed opaque color (fastest run fill)
+     * Fill horizontal run with pre-packed opaque color (optimized run fill)
      * No bounds checking - caller must ensure validity
      * @param {number} startIndex - Starting linear pixel index
      * @param {number} length - Number of pixels to fill
@@ -1565,7 +1565,7 @@ class FastPixelOps {
  */
 class SpanOps {
     /**
-     * Fast horizontal span fill with 32-bit writes (opaque colors only)
+     * Optimized horizontal span fill with 32-bit writes (opaque colors only)
      * @param {Uint32Array} data32 - 32-bit view of surface pixel data
      * @param {number} surfaceWidth - Surface width in pixels
      * @param {number} surfaceHeight - Surface height in pixels
@@ -1614,7 +1614,7 @@ class SpanOps {
                 pixelIndex++;
             }
         } else {
-            // No clipping - fastest path
+            // No clipping - optimized path
             for (; pixelIndex < endIndex; pixelIndex++) {
                 data32[pixelIndex] = packedColor;
             }
@@ -2278,7 +2278,7 @@ class RectOps {
      *   (O(perimeter × strokeWidth)), which is more efficient than scanning the entire
      *   bounding box for stroke regions
      * - A unified approach would require scanning the larger bounding box and testing
-     *   each pixel against 8 edge functions, which would be slower than the current
+     *   each pixel against 8 edge functions, which has higher complexity than the current
      *   line-based stroke algorithm for typical rectangles
      *
      * @param {Surface} surface - Target surface
@@ -5823,7 +5823,7 @@ class CompositeOperations {
      * @returns {Object} Result with {r, g, b, a} properties (0-255)
      */
     static blendPixel(operation, srcR, srcG, srcB, srcA, dstR, dstG, dstB, dstA) {
-        // Fast path for transparent source
+        // Early exit for transparent source
         if (srcA === 0) {
             switch (operation) {
                 case 'destination-out':
@@ -5850,7 +5850,7 @@ class CompositeOperations {
             }
         }
         
-        // Fast path for transparent destination
+        // Early exit for transparent destination
         if (dstA === 0) {
             switch (operation) {
                 case 'source-over':
@@ -6009,7 +6009,7 @@ class CompositeOperations {
      * @private
      */
     static _sourceOver(srcR, srcG, srcB, srcA, dstR, dstG, dstB, dstA) {
-        // Fast path for opaque source
+        // Optimization for opaque source
         if (srcA === 255) {
             return { r: srcR, g: srcG, b: srcB, a: srcA };
         }
@@ -7731,8 +7731,8 @@ class PolygonFiller {
             throw new Error('Paint source must be a Color, Gradient, or Pattern instance');
         }
 
-        // Check if we can use optimized rendering (opaque solid color with source-over)
-        const canUseFastPath =
+        // Check if we can use direct rendering (opaque solid color with source-over)
+        const canUseDirectRendering =
             paintSource instanceof Color &&
             paintSource.a === 255 &&
             globalAlpha >= 1.0 &&
@@ -7740,19 +7740,19 @@ class PolygonFiller {
             composite === 'source-over' &&
             sourceMask === null;
 
-        if (canUseFastPath) {
-            PolygonFiller._fillPolygonsFast(surface, polygons, paintSource, fillRule, transform, clipMask);
+        if (canUseDirectRendering) {
+            PolygonFiller._fillPolygonsDirect(surface, polygons, paintSource, fillRule, transform, clipMask);
         } else {
             PolygonFiller._fillPolygonsStandard(surface, polygons, paintSource, fillRule, transform, clipMask, globalAlpha, subPixelOpacity, composite, sourceMask);
         }
     }
 
     /**
-     * Optimized rendering for opaque solid color fills with source-over compositing
+     * Direct rendering for opaque solid color fills with source-over compositing
      * Uses 32-bit packed writes and inline clip buffer access for maximum performance
      * @private
      */
-    static _fillPolygonsFast(surface, polygons, color, fillRule, transform, clipMask) {
+    static _fillPolygonsDirect(surface, polygons, color, fillRule, transform, clipMask) {
         // Pre-compute packed color outside hot loop
         const packedColor = Surface.packColor(color.r, color.g, color.b, 255);
         const data32 = surface.data32;
@@ -7799,7 +7799,7 @@ class PolygonFiller {
                     const endX = Math.min(width - 1, Math.floor(nextIntersection.x));
 
                     if (startX <= endX) {
-                        // Fast span fill with 32-bit writes
+                        // Direct span fill with 32-bit writes
                         let pixelIndex = y * width + startX;
                         const endIndex = y * width + endX + 1;
 
@@ -7823,7 +7823,7 @@ class PolygonFiller {
                                 pixelIndex++;
                             }
                         } else {
-                            // No clipping - fastest path with direct 32-bit writes
+                            // No clipping - optimized path with direct 32-bit writes
                             for (; pixelIndex < endIndex; pixelIndex++) {
                                 data32[pixelIndex] = packedColor;
                             }
