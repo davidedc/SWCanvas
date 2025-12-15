@@ -927,6 +927,13 @@ class Transform2D {
 }
 
 
+/**
+ * SWPath2D - Path command recorder for 2D drawing operations
+ *
+ * Records path commands (moveTo, lineTo, arc, bezierCurveTo, etc.) for later
+ * execution. Used for defining shapes that can be filled, stroked, or used as
+ * clip regions. Compatible with HTML5 Canvas Path2D API.
+ */
 class SWPath2D {
     constructor() {
         this.commands = [];
@@ -2856,7 +2863,7 @@ class RectOps {
 class CircleOps {
     /**
      * Generate horizontal extents for each scanline of a circle using Bresenham
-     * Uses CrispSWCanvas algorithm for correct extreme pixel rendering
+     * Uses Bresenham circle algorithm variant optimized for correct extreme pixel rendering
      * @param {number} radius - Circle radius (can be float)
      * @returns {object|null} { extents, intRadius, xOffset, yOffset } or null for invalid radius
      */
@@ -2876,7 +2883,7 @@ class CircleOps {
             return { extents: [0], intRadius: 0, xOffset, yOffset };
         }
 
-        // Bresenham initialization (CrispSWCanvas variant)
+        // Bresenham initialization (midpoint circle algorithm variant)
         const extents = new Array(intRadius + 1).fill(0);
         let x = 0;
         let y = intRadius;
