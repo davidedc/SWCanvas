@@ -608,8 +608,8 @@ Context2D                     # Orchestration and state management
 │                            → RectOps.strokeThickOpaque()
 │                            → RectOps.strokeThickAlpha()
 │
-├── _fillCircleDirect() ─────→ SpanOps.fillOpaque()
-│                            → CircleOps.fillAlphaBlend()
+├── _fillCircleDirect() ─────→ CircleOps.fillOpaque()
+│                            → CircleOps.fillAlpha()
 │
 ├── _strokeCircleDirect() ───→ CircleOps.stroke1pxOpaque()
 │                            → CircleOps.stroke1pxAlpha()

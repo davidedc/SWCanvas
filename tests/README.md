@@ -62,7 +62,7 @@ npm run test:direct-rendering  # Runs 62 direct rendering path verification test
 4. Use interactive visual comparison tools for real-time testing
 5. Minimal example: Open `tests/browser/minimal-example.html` to see a minimal usage example
 
-**Technical Note**: Browser visual comparisons use `renderSWCanvasToHTML5()` helper function in `build/concat-tests.js` which correctly transfers SWCanvas Surface data (non-premultiplied RGBA) to HTML5 Canvas ImageData without unpremultiplication, ensuring accurate semi-transparent color display.
+**Technical Note**: Browser visual comparisons use `renderSWCanvasToHTML5()` helper function in `tests/build/concat-tests.js` which correctly transfers SWCanvas Surface data (non-premultiplied RGBA) to HTML5 Canvas ImageData without unpremultiplication, ensuring accurate semi-transparent color display.
 
 ## Modular Dual Test Architecture
 

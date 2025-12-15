@@ -188,7 +188,7 @@ SWCanvas uses a comprehensive test system with modular architecture. See `tests/
 - Build utilities and renumbering tools
 - Cross-platform validation approach
 
-Quick reference: `npm run build` then `npm test` to run all 36 core + 140 visual + 62 direct rendering tests.
+Quick reference: `npm run build` then `npm test` to run all 36 core + 140 visual tests. Direct rendering tests (62 tests) run separately via `npm run test:direct-rendering`.
 
 ## Common Tasks
 

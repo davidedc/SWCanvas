@@ -908,13 +908,13 @@ class DirectRenderingTestRunner {
 
         let directRenderPassed;
         if (!pathBasedUsed) {
-            directRenderValue.innerHTML = '<span class="check-icon">&#x2705;</span><span class="fast-path-pass">Direct rendering used (PASS)</span>';
+            directRenderValue.innerHTML = '<span class="check-icon">&#x2705;</span><span class="direct-render-pass">Direct rendering used (PASS)</span>';
             directRenderPassed = true;
         } else if (allowPathBased) {
-            directRenderValue.innerHTML = '<span class="check-icon">&#x26A0;</span><span class="fast-path-expected">Path-based rendering used (Expected - alpha blending)</span>';
+            directRenderValue.innerHTML = '<span class="check-icon">&#x26A0;</span><span class="direct-render-expected">Path-based rendering used (Expected - alpha blending)</span>';
             directRenderPassed = true;
         } else {
-            directRenderValue.innerHTML = '<span class="check-icon">&#x274C;</span><span class="fast-path-fail">Path-based rendering used (FAIL - direct rendering expected)</span>';
+            directRenderValue.innerHTML = '<span class="check-icon">&#x274C;</span><span class="direct-render-fail">Path-based rendering used (FAIL - direct rendering expected)</span>';
             directRenderPassed = false;
         }
         directRenderRow.appendChild(directRenderValue);

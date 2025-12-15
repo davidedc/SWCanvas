@@ -274,17 +274,17 @@ button.secondary:hover {
 }
 
 /* Direct Rendering Status */
-.fast-path-pass {
+.direct-render-pass {
     color: #388e3c;
     font-weight: 600;
 }
 
-.fast-path-fail {
+.direct-render-fail {
     color: #d32f2f;
     font-weight: 600;
 }
 
-.fast-path-expected {
+.direct-render-expected {
     color: #ff9800;
     font-weight: 600;
 }
