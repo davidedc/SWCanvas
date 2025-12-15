@@ -70,7 +70,7 @@ class FastPixelOps {
             if ((clipBuffer[byteIndex] & (1 << bitIndex)) === 0) return;
         }
 
-        // Fast path for fully opaque pixels
+        // Optimized path for fully opaque pixels
         if (a === 255 && globalAlpha >= 1.0) {
             this.data32[pixelIndex] = 0xFF000000 | (b << 16) | (g << 8) | r;
             return;
@@ -93,7 +93,7 @@ class FastPixelOps {
     }
 
     /**
-     * Set pixel using pre-packed color (fastest single-pixel write)
+     * Set pixel using pre-packed color (optimized single-pixel write)
      * No bounds checking - caller must ensure validity
      * @param {number} pixelIndex - Linear pixel index
      * @param {number} packedColor - Pre-packed 32-bit ABGR color
@@ -172,7 +172,7 @@ class FastPixelOps {
                     pixelIndex++;
                 }
             } else {
-                // Opaque without clipping - fastest path
+                // Opaque without clipping - optimized path
                 for (; pixelIndex < endIndex; pixelIndex++) {
                     data32[pixelIndex] = packedColor;
                 }
@@ -232,7 +232,7 @@ class FastPixelOps {
     }
 
     /**
-     * Fill horizontal run with pre-packed opaque color (fastest run fill)
+     * Fill horizontal run with pre-packed opaque color (optimized run fill)
      * No bounds checking - caller must ensure validity
      * @param {number} startIndex - Starting linear pixel index
      * @param {number} length - Number of pixels to fill

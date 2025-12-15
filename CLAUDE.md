@@ -144,33 +144,10 @@ src/CanvasCompatibleContext2D.js  # HTML5 Canvas 2D Context API wrapper
 - **Implementation location**: `PolygonFiller.js` evaluates paint sources via `_evaluatePaintSource()` method
 
 #### Shadow Rendering System
-- **HTML5 Canvas-compatible shadow properties**: `shadowColor`, `shadowBlur`, `shadowOffsetX`, `shadowOffsetY` with full API compatibility
-- **Dual-buffer shadow pipeline**: Shape→ShadowBuffer→BoxBlur→Composite→OriginalShape for shadow rendering
-- **ShadowBuffer class**: Sparse alpha storage using "x,y" string keys with extended bounds to handle blur overflow beyond canvas edges
-- **BoxBlur class**: Multi-pass box blur algorithm approximating Gaussian blur via Central Limit Theorem (3-pass default)
-- **Memory efficient**: Only non-zero alpha pixels stored, automatic bounds tracking minimizes processing area
-- **Performance optimized**: O(1) per-pixel blur operations using running sums, separable horizontal/vertical filtering
-- **Universal paint source support**: Shadows work with solid colors, gradients (linear/radial/conic), and patterns seamlessly
-- **Opacity calibration**: 8x multiplier ensures shadow intensity matches HTML5 Canvas behavior across all platforms
-- **State management**: Shadow properties fully integrated into save()/restore() context state stack
-- **All drawing operations**: Shadow support in fillRect(), fill(), stroke(), drawImage() with proper alpha blending
-- **Implementation locations**: `Rasterizer.js` shadow pipeline, `ShadowBuffer.js` sparse storage, `BoxBlur.js` blur algorithms
+See ARCHITECTURE.md for complete shadow rendering system design (ShadowBuffer, BoxBlur, dual-buffer pipeline).
 
 #### Composite Operations System
-- **Porter-Duff compositing**: Implements 10 composite operations beyond basic source-over blending
-- **HTML5 Canvas compatibility**: `globalCompositeOperation` property matches HTML5 Canvas 2D API
-- **Centralized blending**: `CompositeOperations.js` utility class with mathematically correct Porter-Duff formulas
-- **Full Porter-Duff compliance**: All 10 composite operations now working correctly
-- **Source-bounded operations** (source-over, destination-over, destination-out, xor): Process only source-covered pixels
-- **Canvas-wide operations** (destination-atop, source-atop, source-in, destination-in, source-out, copy): Use source coverage masks and full-region compositing to correctly handle pixels outside the source area
-- **Implementation**: Dual rendering approach using `SourceMask` class for canvas-wide operations
-- **Usage**: `ctx.globalCompositeOperation = 'destination-atop'` (both Core API and HTML5 Canvas-compatible API)
-- **Testing**: Comprehensive visual test coverage across 5 test suites:
-  - **Basic tests** (079-088): Original comprehensive composite operation tests
-  - **Minimal tests** (091-100): Clean minimal tests with blue square + red circle 
-  - **Clipped tests** (101-110): Tests composite operations with clipping mask interaction
-  - **Stroked tests** (111-120): Tests composite operations with stroke rendering
-  - **Clipped+Stroked tests** (121-130): Tests composite operations with both clipping and strokes
+See ARCHITECTURE.md for complete Porter-Duff composite operations design (10 operations, source masks, visual test coverage).
 
 ## Build & Test Commands
 
@@ -208,7 +185,7 @@ SWCanvas uses a comprehensive test system with modular architecture. See `tests/
 - Build utilities and renumbering tools
 - Cross-platform validation approach
 
-Quick reference: `npm run build` then `npm test` to run all 36 core + 138 visual tests.
+Quick reference: `npm run build` then `npm test` to run all 36 core + 140 visual tests.
 
 #### Smart Test Runner Architecture
 ```javascript

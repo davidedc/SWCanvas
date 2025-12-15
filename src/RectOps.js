@@ -563,7 +563,7 @@ class RectOps {
      *   (O(perimeter × strokeWidth)), which is more efficient than scanning the entire
      *   bounding box for stroke regions
      * - A unified approach would require scanning the larger bounding box and testing
-     *   each pixel against 8 edge functions, which would be slower than the current
+     *   each pixel against 8 edge functions, which has higher complexity than the current
      *   line-based stroke algorithm for typical rectangles
      *
      * @param {Surface} surface - Target surface

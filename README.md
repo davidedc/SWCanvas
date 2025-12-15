@@ -74,8 +74,8 @@ const transform = new SWCanvas.Core.Transform2D()
     .translate(100, 100)
     .rotate(Math.PI / 4);
 
-const point = new SWCanvas.Point(50, 75);
-const rect = new SWCanvas.Rectangle(0, 0, 200, 150);
+const point = new SWCanvas.Core.Point(50, 75);
+const rect = new SWCanvas.Core.Rectangle(0, 0, 200, 150);
 const color = new SWCanvas.Core.Color(255, 128, 0, 200);
 
 // Export as PNG (recommended - preserves transparency)
@@ -103,9 +103,11 @@ ctx.ellipse(400, 200, 80, 40, Math.PI / 4, 0, 2 * Math.PI);
 ctx.fill();
 
 // Use immutable geometry classes
-const center = new SWCanvas.Point(400, 300);
-const bounds = new SWCanvas.Rectangle(100, 100, 600, 400);
-if (bounds.contains(center)) {
+const center = new SWCanvas.Core.Point(400, 300);
+const bounds = new SWCanvas.Core.Rectangle(100, 100, 600, 400);
+// Check if point is within bounds
+if (center.x >= bounds.left && center.x <= bounds.right &&
+    center.y >= bounds.top && center.y <= bounds.bottom) {
     console.log('Center is within bounds');
 }
 
@@ -166,7 +168,7 @@ Open `tests/browser/index.html` in a web browser for:
 ### Test Architecture
 
 - **Core Functionality Tests** (36): Individual test files in `/tests/core/` - API correctness, edge cases, mathematical accuracy
-- **Visual Rendering Tests** (138): Individual test files in `/tests/visual/` - Rendering verification with PNG generation  
+- **Visual Rendering Tests** (140): Individual test files in `/tests/visual/` - Rendering verification with PNG generation  
 - **Browser Tests**: Interactive visual comparison tools using built test suites with HTML5 Canvas vs SWCanvas side-by-side
 
 The modular architecture allows individual test development while maintaining build-time concatenation for performance.
@@ -523,9 +525,6 @@ const isSupported = SWCanvas.Core.CompositeOperations.isSupported('xor');
 const polygons = SWCanvas.Core.PathFlattener.flattenPath(path2d);
 const strokePolys = SWCanvas.Core.StrokeGenerator.generateStrokePolygons(path2d, strokeProps);
 
-// Color parsing utilities (for CSS color strings)
-const color = SWCanvas.Core.ColorParser.parse('#FF0000');
-
 // BMP encoding configuration
 const encodingOptions = SWCanvas.Core.BitmapEncodingOptions.withGrayBackground(128);
 ```
@@ -633,6 +632,16 @@ const blackBmp = SWCanvas.Core.BitmapEncoder.encode(surface,
 - Matches HTML5 Canvas color handling
 - Proper transparency composition
 
+#### Direct Rendering System
+Shape-specific optimized rendering paths bypass the general path→polygon→rasterizer pipeline:
+- **Circle operations**: `fillCircle()`, `strokeCircle()`, `fillAndStrokeCircle()`
+- **Rectangle operations**: `fillRect()`, `strokeRect()` (optimized for axis-aligned)
+- **Line operations**: `strokeLine()` (Bresenham-based)
+- **Arc operations**: `fillArc()`, `outerStrokeArc()`, `fillAndOuterStrokeArc()`
+- **Rounded rectangle operations**: `fillRoundRect()`, `strokeRoundRect()`, `fillAndStrokeRoundRect()`
+
+See [DIRECT-RENDERING-SUMMARY.MD](DIRECT-RENDERING-SUMMARY.MD) for complete API documentation and implementation details.
+
 ## Development
 
 **Debug Utilities**: See `debug/README.md` for debugging scripts, templates, and investigation workflows.
@@ -646,21 +655,44 @@ const blackBmp = SWCanvas.Core.BitmapEncoder.encode(surface,
 └── ColorParser.js   # CSS color string parsing (static methods)
 
 src/              # Source files (ES6 Classes)
-├── Context2D.js     # Main drawing API (class)
+├── Context2D.js     # Core drawing API (class)
 ├── Surface.js       # Memory management (ES6 class)
 ├── Rasterizer.js    # Low-level rendering (ES6 class)
 ├── Point.js         # Immutable 2D point operations (class)
 ├── Rectangle.js     # Immutable rectangle operations (class)
 ├── Gradient.js      # Gradient paint sources (linear, radial, conic)
 ├── Pattern.js       # Pattern paint sources with repetition modes
-├── ClipMask.js      # 1-bit clipping buffer (class)
-├── ImageProcessor.js # ImageLike validation and conversion (static methods)
-├── PolygonFiller.js # Scanline polygon filling with paint sources (static methods)
-├── StrokeGenerator.js # Stroke generation (static methods)
-├── PathFlattener.js # Path to polygon conversion (static methods)
-├── BitmapEncoder.js # BMP file encoding (static methods)
-├── BitmapEncodingOptions.js # BMP encoding configuration (immutable options)
-└── SWPath2D.js      # Path definition (class)
+├── SWPath2D.js      # Path definition and command recording (class)
+├── # Clipping & Masking
+├── BitBuffer.js     # 1-bit per pixel utility (composition component)
+├── BoundsTracker.js # Bounds tracking utility (composition component)
+├── ClipMask.js      # 1-bit clipping buffer using BitBuffer (class)
+├── SourceMask.js    # Source coverage tracking for composites (class)
+├── # Polygon Filling & Stroke Generation
+├── PolygonFiller.js # Scanline polygon filling with paint sources (static)
+├── StrokeGenerator.js # Stroke generation with dashing (static)
+├── PathFlattener.js # Path to polygon conversion (static)
+├── # Direct Rendering (shape-specific optimized paths)
+├── SpanOps.js       # Horizontal span fill utilities (static)
+├── RectOps.js       # Rectangle fill/stroke direct rendering (static)
+├── CircleOps.js     # Circle fill/stroke direct rendering (static)
+├── LineOps.js       # Line stroke direct rendering (static)
+├── ArcOps.js        # Arc fill/stroke direct rendering (static)
+├── RoundedRectOps.js # Rounded rectangle direct rendering (static)
+├── FastPixelOps.js  # Optimized pixel operations (static)
+├── # Compositing & Effects
+├── CompositeOperations.js # Porter-Duff composite operations (static)
+├── ShadowBuffer.js  # Sparse shadow alpha storage (class)
+├── BoxBlur.js       # Multi-pass box blur for shadows (static)
+├── # Image Processing & Encoding
+├── ImageProcessor.js # ImageLike validation and conversion (static)
+├── PngEncoder.js    # PNG file encoding with transparency (static)
+├── PngEncodingOptions.js # PNG encoding configuration (immutable)
+├── BitmapEncoder.js # BMP file encoding (static)
+├── BitmapEncodingOptions.js # BMP encoding configuration (immutable)
+├── # HTML5 Canvas Compatibility Layer
+├── SWCanvasElement.js # Canvas-like element (width/height, getContext)
+└── CanvasCompatibleContext2D.js # HTML5 Canvas 2D Context wrapper
 
 tests/            # Test suite
 ├── core-functionality-tests.js # Core functionality tests
@@ -678,9 +710,10 @@ dist/             # Built library
 
 ## Test Architecture
 
-SWCanvas uses a comprehensive dual test system:
+SWCanvas uses a comprehensive test system:
 - **36 core functionality tests**: Programmatic API verification with assertions
 - **140 visual rendering tests**: PNG (lossless) generation and comparison
+- **62 direct rendering tests**: Verify optimized rendering paths are invoked
 - **Modular architecture**: Individual test files auto-concatenated at build time
 
 See [tests/README.md](tests/README.md) for complete test documentation, adding tests, and build utilities.

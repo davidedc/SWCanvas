@@ -35,8 +35,8 @@ class PolygonFiller {
             throw new Error('Paint source must be a Color, Gradient, or Pattern instance');
         }
 
-        // Check if we can use optimized rendering (opaque solid color with source-over)
-        const canUseFastPath =
+        // Check if we can use direct rendering (opaque solid color with source-over)
+        const canUseDirectRendering =
             paintSource instanceof Color &&
             paintSource.a === 255 &&
             globalAlpha >= 1.0 &&
@@ -44,19 +44,19 @@ class PolygonFiller {
             composite === 'source-over' &&
             sourceMask === null;
 
-        if (canUseFastPath) {
-            PolygonFiller._fillPolygonsFast(surface, polygons, paintSource, fillRule, transform, clipMask);
+        if (canUseDirectRendering) {
+            PolygonFiller._fillPolygonsDirect(surface, polygons, paintSource, fillRule, transform, clipMask);
         } else {
             PolygonFiller._fillPolygonsStandard(surface, polygons, paintSource, fillRule, transform, clipMask, globalAlpha, subPixelOpacity, composite, sourceMask);
         }
     }
 
     /**
-     * Optimized rendering for opaque solid color fills with source-over compositing
+     * Direct rendering for opaque solid color fills with source-over compositing
      * Uses 32-bit packed writes and inline clip buffer access for maximum performance
      * @private
      */
-    static _fillPolygonsFast(surface, polygons, color, fillRule, transform, clipMask) {
+    static _fillPolygonsDirect(surface, polygons, color, fillRule, transform, clipMask) {
         // Pre-compute packed color outside hot loop
         const packedColor = Surface.packColor(color.r, color.g, color.b, 255);
         const data32 = surface.data32;
@@ -103,7 +103,7 @@ class PolygonFiller {
                     const endX = Math.min(width - 1, Math.floor(nextIntersection.x));
 
                     if (startX <= endX) {
-                        // Fast span fill with 32-bit writes
+                        // Direct span fill with 32-bit writes
                         let pixelIndex = y * width + startX;
                         const endIndex = y * width + endX + 1;
 
@@ -127,7 +127,7 @@ class PolygonFiller {
                                 pixelIndex++;
                             }
                         } else {
-                            // No clipping - fastest path with direct 32-bit writes
+                            // No clipping - optimized path with direct 32-bit writes
                             for (; pixelIndex < endIndex; pixelIndex++) {
                                 data32[pixelIndex] = packedColor;
                             }

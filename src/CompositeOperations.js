@@ -40,7 +40,7 @@ class CompositeOperations {
      * @returns {Object} Result with {r, g, b, a} properties (0-255)
      */
     static blendPixel(operation, srcR, srcG, srcB, srcA, dstR, dstG, dstB, dstA) {
-        // Fast path for transparent source
+        // Early exit for transparent source
         if (srcA === 0) {
             switch (operation) {
                 case 'destination-out':
@@ -67,7 +67,7 @@ class CompositeOperations {
             }
         }
         
-        // Fast path for transparent destination
+        // Early exit for transparent destination
         if (dstA === 0) {
             switch (operation) {
                 case 'source-over':
@@ -226,7 +226,7 @@ class CompositeOperations {
      * @private
      */
     static _sourceOver(srcR, srcG, srcB, srcA, dstR, dstG, dstB, dstA) {
-        // Fast path for opaque source
+        // Optimization for opaque source
         if (srcA === 255) {
             return { r: srcR, g: srcG, b: srcB, a: srcA };
         }

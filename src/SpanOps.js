@@ -5,7 +5,7 @@
  */
 class SpanOps {
     /**
-     * Fast horizontal span fill with 32-bit writes (opaque colors only)
+     * Optimized horizontal span fill with 32-bit writes (opaque colors only)
      * @param {Uint32Array} data32 - 32-bit view of surface pixel data
      * @param {number} surfaceWidth - Surface width in pixels
      * @param {number} surfaceHeight - Surface height in pixels
@@ -54,7 +54,7 @@ class SpanOps {
                 pixelIndex++;
             }
         } else {
-            // No clipping - fastest path
+            // No clipping - optimized path
             for (; pixelIndex < endIndex; pixelIndex++) {
                 data32[pixelIndex] = packedColor;
             }
