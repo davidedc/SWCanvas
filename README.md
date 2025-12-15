@@ -13,7 +13,7 @@ A deterministic 2D Javascript raster engine with Canvas-like API, cross-browser 
 - **Memory Efficient Clipping**: Stencil-based clipping system with proper intersection support
 - **Sub-pixel Stroke Rendering**: Thin strokes render with proportional opacity, works with all paint sources
 - **Full Porter-Duff Compositing**: Complete `globalCompositeOperation` support with all 10 standard operations working correctly
-- **Comprehensive Test Coverage**: 36 core tests + 140 visual tests
+- **Comprehensive Test Coverage**: 36 core tests + 140 visual tests + 62 direct rendering tests
 - **Immutable Value Objects**: Point, Rectangle, Transform2D, Color prevent mutation bugs
 - **Cross-Platform**: Works in Node.js and browsers
 - **No Dependencies**: Pure JavaScript implementation

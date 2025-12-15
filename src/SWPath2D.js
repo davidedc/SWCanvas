@@ -1,3 +1,10 @@
+/**
+ * SWPath2D - Path command recorder for 2D drawing operations
+ *
+ * Records path commands (moveTo, lineTo, arc, bezierCurveTo, etc.) for later
+ * execution. Used for defining shapes that can be filled, stroked, or used as
+ * clip regions. Compatible with HTML5 Canvas Path2D API.
+ */
 class SWPath2D {
     constructor() {
         this.commands = [];
