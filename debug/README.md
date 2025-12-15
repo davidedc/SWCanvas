@@ -2,7 +2,7 @@
 
 This directory contains **debugging scripts and utilities** for analyzing SWCanvas rendering behavior, investigating issues, and validating implementations against HTML5 Canvas.
 
-**All debugging scripts (.js files) are tracked in git for collaborative debugging, while generated PNG output files (.png) are gitignored to avoid repository bloat.**
+**All debugging scripts (.js files) are tracked in git for collaborative debugging, while generated output image files (.png, .bmp) are gitignored to avoid repository bloat.**
 
 ## Overview
 
@@ -57,16 +57,18 @@ Debug utilities help developers:
 - `debug-reference-xor.js` - Reference implementation analysis
 - `debug-complex-xor.js` - Complex test case debugging
 
-### PNG Output Files
+### Output Files
 
-**Purpose**: Visual verification of rendering output with transparency support.
+**Purpose**: Visual verification of rendering output.
 
-All `.png` files are generated outputs from debug scripts for visual inspection:
-- `debug-copy-color.png` - Copy operation color output
-- `debug-minimal-xor.png` - Minimal XOR test result
-- `debug-html5-xor.png` - HTML5 API XOR result
-- `debug-simple-xor-analysis.png` - Simple XOR analysis
-- `debug-complex-xor-fixed.png` - Complex XOR after fixes
+Generated output files from debug scripts for visual inspection:
+- `debug-copy-color.bmp` - Copy operation color output
+- `debug-minimal-xor.bmp` - Minimal XOR test result
+- `debug-html5-xor.bmp` - HTML5 API XOR result
+- `debug-simple-xor-analysis.basic.png` - Simple XOR analysis (PNG with transparency)
+- `debug-complex-xor-fixed.bmp` - Complex XOR after fixes
+
+**Note**: Older scripts used BitmapEncoder (.bmp), newer scripts use PngEncoder (.png) for transparency support.
 
 ## Usage Patterns
 

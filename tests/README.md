@@ -30,7 +30,10 @@ tests/
 │   ├── core-functionality-tests.js    # Auto-generated from /core/
 │   └── visual-rendering-tests.js      # Auto-generated from /visual/
 ├── build/
-│   └── concat-tests.js            # Build-time concatenation script
+│   ├── concat-tests.js            # Build-time concatenation script
+│   ├── renumber-tests.js          # Test renumbering utility
+│   ├── update-test-counts.js      # Test count synchronization
+│   └── README.md                  # Build utilities documentation
 ├── core-functionality-tests.js          # Original (fallback/reference)
 ├── visual-rendering-tests.js            # Original (fallback/reference)
 ├── run-tests.js                         # Smart test runner with auto-detection

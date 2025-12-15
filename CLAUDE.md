@@ -143,6 +143,9 @@ src/CanvasCompatibleContext2D.js  # HTML5 Canvas 2D Context API wrapper
 - **Sub-pixel stroke integration**: Sub-pixel opacity applied to all paint source types during evaluation
 - **Implementation location**: `PolygonFiller.js` evaluates paint sources via `_evaluatePaintSource()` method
 
+#### Direct Rendering System
+See DIRECT-RENDERING-SUMMARY.MD for complete direct rendering system design (RectOps, CircleOps, LineOps, ArcOps, RoundedRectOps - method signatures, usage patterns, and performance characteristics).
+
 #### Shadow Rendering System
 See ARCHITECTURE.md for complete shadow rendering system design (ShadowBuffer, BoxBlur, dual-buffer pipeline).
 

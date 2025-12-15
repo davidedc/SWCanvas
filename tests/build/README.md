@@ -20,7 +20,7 @@ This directory contains utility scripts for managing the SWCanvas test system.
 **Purpose**: Automatically updates test count references throughout all documentation files to match actual filesystem counts.
 
 **What it does**:
-- Counts actual test files in `/tests/core/` and `/tests/visual/` directories
+- Counts actual test files in `/tests/core/`, `/tests/visual/`, and `/tests/direct-rendering/cases/` directories
 - Updates all documentation files (README.md, CLAUDE.md, tests/README.md) with correct counts
 - Maintains consistency across all test count references using regex patterns
 - Validates counts for reasonableness before applying updates

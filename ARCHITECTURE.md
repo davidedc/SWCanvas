@@ -175,6 +175,8 @@ SWCanvas.Core.* → Direct access to all engine classes
 - `BoxBlur` - Multi-pass box blur algorithms (static methods)
 - `BitmapEncoder` - File format export utilities
 - `BitmapEncodingOptions()` - Immutable encoding configuration (Joshua Bloch patterns)
+- `PngEncoder` - PNG file format encoding with transparency support
+- `PngEncodingOptions()` - PNG encoding configuration (immutable options)
 - `CompositeOperations` - Porter-Duff blending operations
 
 ## Path Hit Testing System
@@ -626,29 +628,72 @@ SpanOps.fillAlpha(data, width, height, x, y, length, r, g, b, alpha, invAlpha, c
 SpanOps.blendPixelAlpha(data, offset, r, g, b, alpha, invAlpha)
 ```
 
-**RectOps** - Rectangle stroke rendering:
+**RectOps** - Rectangle fill and stroke rendering:
 ```javascript
-RectOps.stroke1pxOpaque(surface, x, y, width, height, color)
-RectOps.stroke1pxAlpha(surface, x, y, width, height, color, globalAlpha)
-RectOps.strokeThickOpaque(surface, x, y, width, height, lineWidth, color)
-RectOps.strokeThickAlpha(surface, x, y, width, height, lineWidth, color, globalAlpha)
+// Fill methods
+RectOps.fillOpaque(surface, x, y, width, height, color, clipBuffer)
+RectOps.fillAlpha(surface, x, y, width, height, color, globalAlpha, clipBuffer)
+RectOps.fillRotated(surface, centerX, centerY, width, height, rotation, color, globalAlpha, clipBuffer)
+RectOps.fillAndStroke(surface, x, y, width, height, lineWidth, fillColor, strokeColor, globalAlpha, clipBuffer)
+RectOps.fillAndStrokeRotated(surface, centerX, centerY, width, height, rotation, ...)
+
+// Stroke methods
+RectOps.stroke1pxOpaque(surface, x, y, width, height, color, clipBuffer)
+RectOps.stroke1pxAlpha(surface, x, y, width, height, color, globalAlpha, clipBuffer)
+RectOps.strokeThickOpaque(surface, x, y, width, height, lineWidth, color, clipBuffer)
+RectOps.strokeThickAlpha(surface, x, y, width, height, lineWidth, color, globalAlpha, clipBuffer)
+RectOps.strokeRotated(surface, centerX, centerY, width, height, rotation, lineWidth, color, globalAlpha, clipBuffer)
 ```
 
 **CircleOps** - Circle fill and stroke rendering:
 ```javascript
-CircleOps.isFullCirclePath(path)           // Detection for direct rendering eligibility
-CircleOps.generateExtents(radius)          // Bresenham scanline extents
-CircleOps.fillAlphaBlend(surface, cx, cy, radius, color, globalAlpha, clipBuffer)
+// Fill methods
+CircleOps.fillOpaque(surface, cx, cy, radius, color, clipBuffer)
+CircleOps.fillAlpha(surface, cx, cy, radius, color, globalAlpha, clipBuffer)
+CircleOps.fillAndStroke(surface, cx, cy, radius, lineWidth, fillColor, strokeColor, globalAlpha, clipBuffer)
+
+// Stroke methods
 CircleOps.stroke1pxOpaque(surface, cx, cy, radius, color, clipBuffer)
 CircleOps.stroke1pxAlpha(surface, cx, cy, radius, color, globalAlpha, clipBuffer)
 CircleOps.strokeThick(surface, cx, cy, radius, lineWidth, color, globalAlpha, clipBuffer)
 CircleOps.strokeThickAlpha(surface, cx, cy, radius, lineWidth, color, globalAlpha, clipBuffer)
+
+// Utility methods
+CircleOps.generateExtents(radius)          // Bresenham scanline extents
 ```
 
 **LineOps** - Line stroke rendering:
 ```javascript
-LineOps.strokeDirect(surface, x1, y1, x2, y2, lineWidth, color, globalAlpha, clipBuffer, isOpaque, isSemiTransparent)
-LineOps.strokeThickPolygonScan(surface, x1, y1, x2, y2, lineWidth, color, globalAlpha, clipBuffer, useSemiTransparent)
+LineOps.strokeDirect(surface, x1, y1, x2, y2, lineWidth, paintSource, globalAlpha, clipBuffer, isOpaqueColor, isSemiTransparentColor)
+LineOps.strokeThickPolygonScan(surface, x1, y1, x2, y2, lineWidth, paintSource, globalAlpha, clipBuffer, useSemiTransparent)
+```
+
+**ArcOps** - Arc fill and stroke rendering:
+```javascript
+// Fill methods (pie slices)
+ArcOps.fillOpaque(surface, cx, cy, radius, startAngle, endAngle, color, clipBuffer)
+ArcOps.fillAlpha(surface, cx, cy, radius, startAngle, endAngle, color, globalAlpha, clipBuffer)
+ArcOps.fillAndStrokeOuter(surface, cx, cy, radius, startAngle, endAngle, lineWidth, fillColor, strokeColor, globalAlpha, clipBuffer)
+
+// Stroke methods (arc curves)
+ArcOps.stroke1pxOpaque(surface, cx, cy, radius, startAngle, endAngle, color, clipBuffer)
+ArcOps.stroke1pxAlpha(surface, cx, cy, radius, startAngle, endAngle, color, globalAlpha, clipBuffer)
+ArcOps.strokeOuterOpaque(surface, cx, cy, radius, startAngle, endAngle, lineWidth, color, clipBuffer)
+ArcOps.strokeOuterAlpha(surface, cx, cy, radius, startAngle, endAngle, lineWidth, color, globalAlpha, clipBuffer)
+```
+
+**RoundedRectOps** - Rounded rectangle fill and stroke rendering:
+```javascript
+// Fill methods
+RoundedRectOps.fillOpaque(surface, x, y, width, height, radii, color, clipBuffer)
+RoundedRectOps.fillAlpha(surface, x, y, width, height, radii, color, globalAlpha, clipBuffer)
+RoundedRectOps.fillAndStroke(surface, x, y, width, height, radii, lineWidth, fillColor, strokeColor, globalAlpha, clipBuffer)
+
+// Stroke methods
+RoundedRectOps.stroke1pxOpaque(surface, x, y, width, height, radii, color, clipBuffer)
+RoundedRectOps.stroke1pxAlpha(surface, x, y, width, height, radii, color, globalAlpha, clipBuffer)
+RoundedRectOps.strokeThickOpaque(surface, x, y, width, height, radii, lineWidth, color, clipBuffer)
+RoundedRectOps.strokeThickAlpha(surface, x, y, width, height, radii, lineWidth, color, globalAlpha, clipBuffer)
 ```
 
 ### Benefits
