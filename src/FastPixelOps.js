@@ -1,7 +1,7 @@
 /**
  * FastPixelOps - High-performance pixel operations for SWCanvas
  *
- * Provides CrispSwCanvas-style optimizations:
+ * Performance optimizations:
  * - 32-bit packed writes for opaque pixels (4x fewer memory operations)
  * - Inline clip buffer access with bitwise operations
  * - Pre-computed values outside hot loops

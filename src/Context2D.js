@@ -1467,7 +1467,7 @@ class Context2D {
     }
 
     // ========================================================================
-    // DIRECT SHAPE APIs (CrispSwCanvas compatibility)
+    // DIRECT SHAPE APIs
     // These methods bypass the path system for maximum performance
     // ========================================================================
 

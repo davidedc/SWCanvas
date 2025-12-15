@@ -2,7 +2,7 @@
  * RoundedRectOps - Static methods for optimized rounded rectangle rendering
  * Follows the PolygonFiller/RectOps/CircleOps/LineOps pattern.
  *
- * Direct rendering for 1px opaque strokes ported from CrispSWCanvas's SWRendererRoundedRect.
+ * Direct rendering for 1px opaque strokes using Bresenham circle algorithm.
  */
 class RoundedRectOps {
     /**

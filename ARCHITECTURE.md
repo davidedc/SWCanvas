@@ -46,10 +46,13 @@ ShadowBuffer.js     → Sparse shadow alpha storage with extended bounds and Bou
 BoxBlur.js          → Multi-pass box blur algorithm approximating Gaussian blur
 
 # Shape-Specific Direct Renderers (static utility classes)
+FastPixelOps.js     → Fast pixel operation utilities (optimized pixel writes)
 SpanOps.js          → Horizontal span fill utilities (shared by shape renderers)
 RectOps.js          → Rectangle stroke direct rendering (1px opaque/alpha, thick strokes)
 CircleOps.js        → Circle fill/stroke direct rendering (Bresenham, annulus rendering)
+ArcOps.js           → Arc fill/stroke direct rendering (partial arcs, pie slices)
 LineOps.js          → Line stroke direct rendering (Bresenham, polygon scan algorithm)
+RoundedRectOps.js   → Rounded rectangle direct rendering (fill, stroke, combined)
 ```
 
 **Purpose**: Maximum performance graphics operations with zero overhead.
@@ -576,6 +579,8 @@ These composition patterns demonstrate how to systematically eliminate code dupl
 
 SWCanvas implements a **static utility class pattern** (following the existing `PolygonFiller` approach) to organize shape-specific rendering optimizations into maintainable, testable modules.
 
+See `DIRECT-RENDERING-SUMMARY.MD` for complete direct rendering implementation details, API reference, and performance characteristics.
+
 ### The Problem: Growing Context2D Complexity
 
 As direct rendering methods for different shapes were added to `Context2D.js`, the file grew large with shape-specific methods scattered throughout:
@@ -663,7 +668,11 @@ The shape ops classes depend on `Surface` and are loaded in Phase 1.5 of the bui
 cat src/SpanOps.js >> dist/swcanvas.js
 cat src/RectOps.js >> dist/swcanvas.js
 cat src/CircleOps.js >> dist/swcanvas.js
+cat src/ArcOps.js >> dist/swcanvas.js
 cat src/LineOps.js >> dist/swcanvas.js
+cat src/RoundedRectOps.js >> dist/swcanvas.js
 ```
+
+Note: `FastPixelOps.js` is loaded earlier (before Phase 1.5) as it provides foundational pixel utilities.
 
 This architecture represents a **paradigm bridge** that successfully unifies web standards compliance, performance optimization, and clean API design in a single coherent system.

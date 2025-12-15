@@ -144,7 +144,6 @@ class RectOps {
 
     /**
      * Optimized thick stroke rectangle using direct pixel drawing
-     * Ported from CrispSwCanvas's SWRendererRect.drawAxisAlignedRect() method
      * @param {Surface} surface - Target surface
      * @param {number} x - Rectangle X coordinate
      * @param {number} y - Rectangle Y coordinate
@@ -163,7 +162,7 @@ class RectOps {
         const halfStroke = lineWidth / 2;
 
         // Calculate stroke geometry (edge centers)
-        // Keep as floats - don't floor early! CrispSWCanvas keeps strokePos.x/y as floats
+        // Keep as floats - don't floor early for sub-pixel accuracy
         // and only floors when calculating actual pixel positions
         const left = x;
         const top = y;
@@ -207,7 +206,6 @@ class RectOps {
 
     /**
      * Optimized thick stroke rectangle with alpha blending
-     * Ported from CrispSwCanvas's SWRendererRect.drawAxisAlignedRect() method
      * @param {Surface} surface - Target surface
      * @param {number} x - Rectangle X coordinate
      * @param {number} y - Rectangle Y coordinate
@@ -232,7 +230,7 @@ class RectOps {
         const halfStroke = lineWidth / 2;
 
         // Calculate stroke geometry (edge centers)
-        // Keep as floats - don't floor early! CrispSWCanvas keeps strokePos.x/y as floats
+        // Keep as floats - don't floor early for sub-pixel accuracy
         // and only floors when calculating actual pixel positions
         const left = x;
         const top = y;
@@ -593,7 +591,6 @@ class RectOps {
 
     /**
      * Rotated rectangle fill using edge-function algorithm
-     * Ported from CrispSWCanvas's SWRendererRect.fillRotatedRect()
      * @param {Surface} surface - Target surface
      * @param {number} centerX - Center X coordinate
      * @param {number} centerY - Center Y coordinate
@@ -1027,7 +1024,6 @@ class RectOps {
     /**
      * Rotated rectangle stroke using LineOps for edges.
      * Uses extend/shorten strategy for proper miter joins at corners.
-     * Ported from CrispSWCanvas's SWRendererRect.drawRotatedRect()
      * @param {Surface} surface - Target surface
      * @param {number} centerX - Center X coordinate
      * @param {number} centerY - Center Y coordinate

@@ -1,8 +1,8 @@
 /**
- * Test: Filled Circle with Semi-Transparent Color (Slow Path Expected)
+ * Test: Filled Circle with Semi-Transparent Color
  *
- * Tests that fillCircle with semi-transparent color correctly falls back
- * to the path system for proper alpha blending.
+ * Tests that fillCircle with semi-transparent color uses direct rendering
+ * with Bresenham + alpha blending (not path-based rendering).
  */
 
 registerDirectRenderingTest(
@@ -11,7 +11,7 @@ registerDirectRenderingTest(
         const canvasWidth = ctx.canvas.width;
         const canvasHeight = ctx.canvas.height;
 
-        // Use SEMI-TRANSPARENT fill color (requires slow path for alpha blending)
+        // Use SEMI-TRANSPARENT fill color (uses direct rendering with alpha blending)
         ctx.fillStyle = 'rgba(255, 0, 0, 0.5)';
 
         const centerX = canvasWidth / 2;

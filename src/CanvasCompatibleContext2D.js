@@ -576,7 +576,7 @@ class CanvasCompatibleContext2D {
         return this._core;
     }
 
-    // ===== DIRECT SHAPE APIs (CrispSwCanvas compatibility) =====
+    // ===== DIRECT SHAPE APIs =====
 
     /**
      * Fill a circle directly without using the path system

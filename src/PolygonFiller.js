@@ -5,7 +5,7 @@
  * Handles stencil-based clipping integration and premultiplied alpha blending.
  *
  * Provides dual rendering approaches:
- * - Optimized path: 32-bit packed writes for opaque solid colors (CrispSwCanvas-style)
+ * - Optimized path: 32-bit packed writes for opaque solid colors
  * - Standard path: Full paint source support with gradients, patterns, compositing
  *
  * Converted from functional to class-based approach following OO best practices:

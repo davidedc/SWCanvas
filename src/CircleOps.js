@@ -7,6 +7,9 @@
  *
  * Path-based circles (beginPath() + arc() + fill()/stroke()) use the
  * generic polygon pipeline for consistent, predictable behavior.
+ *
+ * Algorithm notes: Uses a Bresenham circle variant with specific adjustments
+ * (center offset, +1 boundary corrections) for correct extreme pixel rendering.
  */
 class CircleOps {
     /**
@@ -56,7 +59,7 @@ class CircleOps {
 
     /**
      * Optimized opaque circle fill using Bresenham scanlines with 32-bit packed writes
-     * Uses CrispSWCanvas algorithm for correct extreme pixel rendering
+     * Uses Bresenham variant with pixel corrections for accurate rendering
      * @param {Surface} surface - Target surface
      * @param {number} cx - Center X
      * @param {number} cy - Center Y
@@ -71,12 +74,12 @@ class CircleOps {
 
         const packedColor = Surface.packColor(color.r, color.g, color.b, 255);
 
-        // Generate extents with CrispSWCanvas algorithm
+        // Generate extents with Bresenham algorithm
         const extentData = CircleOps.generateExtents(radius);
         if (!extentData) return;
         const { extents, intRadius, xOffset, yOffset } = extentData;
 
-        // CrispSWCanvas center adjustment
+        // Center adjustment for pixel-perfect rendering
         const adjCenterX = Math.floor(cx - 0.5);
         const adjCenterY = Math.floor(cy - 0.5);
 
@@ -84,7 +87,7 @@ class CircleOps {
         for (let rel_y = 0; rel_y <= intRadius; rel_y++) {
             const max_rel_x = extents[rel_y];
 
-            // +1 corrections on min boundaries (CrispSWCanvas technique)
+            // +1 corrections on min boundaries for pixel accuracy
             const abs_x_min = adjCenterX - max_rel_x - xOffset + 1;
             const abs_x_max = adjCenterX + max_rel_x;
             const abs_y_bottom = adjCenterY + rel_y;
@@ -107,7 +110,7 @@ class CircleOps {
 
     /**
      * Optimized circle fill with alpha blending using Bresenham scanlines
-     * Uses CrispSWCanvas algorithm for correct extreme pixel rendering
+     * Uses Bresenham variant with pixel corrections for accurate rendering
      * @param {Surface} surface - Target surface
      * @param {number} cx - Center X
      * @param {number} cy - Center Y
@@ -130,12 +133,12 @@ class CircleOps {
         const g = color.g;
         const b = color.b;
 
-        // Generate extents with CrispSWCanvas algorithm
+        // Generate extents with Bresenham algorithm
         const extentData = CircleOps.generateExtents(radius);
         if (!extentData) return;
         const { extents, intRadius, xOffset, yOffset } = extentData;
 
-        // CrispSWCanvas center adjustment
+        // Center adjustment for pixel-perfect rendering
         const adjCenterX = Math.floor(cx - 0.5);
         const adjCenterY = Math.floor(cy - 0.5);
 
@@ -143,7 +146,7 @@ class CircleOps {
         for (let rel_y = 0; rel_y <= intRadius; rel_y++) {
             const max_rel_x = extents[rel_y];
 
-            // +1 corrections on min boundaries (CrispSWCanvas technique)
+            // +1 corrections on min boundaries for pixel accuracy
             const abs_x_min = adjCenterX - max_rel_x - xOffset + 1;
             const abs_x_max = adjCenterX + max_rel_x;
             const abs_y_bottom = adjCenterY + rel_y;
@@ -182,7 +185,7 @@ class CircleOps {
 
         const packedColor = Surface.packColor(color.r, color.g, color.b, 255);
 
-        // Original CrispSWCanvas center calculation for stroke
+        // Center calculation for stroke (standard Bresenham approach)
         const cX = Math.floor(cx);
         const cY = Math.floor(cy);
         const intRadius = Math.floor(radius);
@@ -310,7 +313,7 @@ class CircleOps {
         const invAlpha = 1 - effectiveAlpha;
         const r = color.r, g = color.g, b = color.b;
 
-        // Original CrispSWCanvas center calculation for stroke
+        // Center calculation for stroke (standard Bresenham approach)
         const cX = Math.floor(cx);
         const cY = Math.floor(cy);
         const intRadius = Math.floor(radius);
@@ -409,7 +412,7 @@ class CircleOps {
      * This method draws both fill and stroke in a single coordinated pass,
      * ensuring no gaps between fill and stroke boundaries.
      *
-     * Ported from CrispSWCanvas's drawFullCircleFast approach:
+     * Optimized circle fill+stroke approach using:
      * - Uses single floating-point center (cx - 0.5) for both operations
      * - Uses analytical boundary detection (sqrt-based) instead of Bresenham extents
      * - Uses epsilon contraction (0.0001) on fill boundaries to prevent speckles
@@ -437,7 +440,7 @@ class CircleOps {
 
         if (!hasFill && !hasStroke) return;
 
-        // Single floating-point center for both fill and stroke (CrispSWCanvas approach)
+        // Single floating-point center for both fill and stroke
         const cX = cx - 0.5;
         const cY = cy - 0.5;
 
@@ -604,7 +607,7 @@ class CircleOps {
         const innerRadius = radius - lineWidth / 2;
         const outerRadius = radius + lineWidth / 2;
 
-        // Use exact centers for Canvas coordinate alignment (same as CrispSwCanvas)
+        // Use exact centers for Canvas coordinate alignment
         const cX = cx - 0.5;
         const cY = cy - 0.5;
 

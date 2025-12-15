@@ -15,7 +15,7 @@ tests/
 │   ├── 001-simple-rectangle-test.js
 │   ├── 027-fill-rule-complex-test.js
 │   ├── 056-stroke-pixel-analysis-test.js
-│   └── ... (136 more files)
+│   └── ... (137 more files)
 ├── browser/                       # Browser-specific test files
 │   ├── index.html                 # Main browser test page (interactive + comparisons)
 │   ├── minimal-example.html       # Minimal usage example
@@ -196,7 +196,7 @@ test('Alpha blending test - semi-transparent rectangles', () => {
 - **Regression Prevention**: Any change must pass both programmatic AND visual validation
 - **Development Confidence**: Developers can trust that changes maintain both correctness AND visual fidelity
 
-### Browser-Only Tests (`browser-visual-tests.js`)
+### Browser-Only Tests (`tests/browser/`)
 Interactive tests requiring DOM and visual comparison:
 - ✅ Side-by-side HTML5 Canvas vs SWCanvas rendering
 - ✅ Interactive drawing tools
@@ -295,7 +295,7 @@ npm run build && npm test
 ```
 
 ### For Browser-Specific Features
-Add interactive tests to `browser-visual-tests.js` for features requiring DOM interaction or real-time visual comparison.
+Add interactive tests to `tests/browser/index.html` for features requiring DOM interaction or real-time visual comparison.
 
 **Key Benefits of Modular Approach**:
 - **No merge conflicts**: Each test is in its own file

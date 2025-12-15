@@ -8,21 +8,23 @@ SWCanvas implements direct renderings for 5 shape types: Rectangle, RoundedRect,
 
 ## 1. Direct Rendering Entry Points (Calling Functions)
 
-| Shape                   | Entry Point                           | Location                 | Path-Based Fallback         |
-|-------------------------|---------------------------------------|--------------------------|-----------------------------|
-| Rectangle Fill          | Context2D.fillRect()                  | Context2D.js:293-364     | rasterizer.fillRect()       |
-| Rectangle Stroke        | Context2D.strokeRect()                | Context2D.js:366-459     | rasterizer.stroke(path)     |
-| Rectangle Fill+Stroke   | Context2D.fillAndStrokeRect()         | Context2D.js:469-525     | Separate fill + stroke      |
-| RoundedRect Fill        | Context2D.fillRoundRect()             | Context2D.js:713-764     | path.roundRect() + fill()   |
-| RoundedRect Stroke      | Context2D.strokeRoundRect()           | Context2D.js:637-702     | path.roundRect() + stroke() |
-| RoundedRect Fill+Stroke | Context2D.fillAndStrokeRoundRect()    | Context2D.js:775-836     | Separate fill + stroke      |
-| Circle Fill             | Context2D.fillCircle()                | Context2D.js:1474-1496   | path.arc() + fill()         |
-| Circle Stroke           | Context2D.strokeCircle()              | Context2D.js:1499-1523   | path.arc() + stroke()       |
-| Circle Fill+Stroke      | Context2D.fillAndStrokeCircle()       | Context2D.js:1526-1570   | Separate fill + stroke      |
-| Line Stroke             | Context2D.strokeLine()                | Context2D.js:1779-1802   | path moveTo/lineTo + stroke |
-| Arc Fill                | Context2D.fillArc()                   | Context2D.js:1585-1627   | path.arc() + fill()         |
-| Arc Stroke              | Context2D.outerStrokeArc()            | Context2D.js:1638-1695   | path.arc() + stroke()       |
-| Arc Fill+Stroke         | Context2D.fillAndOuterStrokeArc()     | Context2D.js:1706-1770   | Separate fill + stroke      |
+| Shape                   | Entry Point                           | Path-Based Fallback         |
+|-------------------------|---------------------------------------|-----------------------------|
+| Rectangle Fill          | Context2D.fillRect()                  | rasterizer.fillRect()       |
+| Rectangle Stroke        | Context2D.strokeRect()                | rasterizer.stroke(path)     |
+| Rectangle Fill+Stroke   | Context2D.fillAndStrokeRect()         | Separate fill + stroke      |
+| RoundedRect Fill        | Context2D.fillRoundRect()             | path.roundRect() + fill()   |
+| RoundedRect Stroke      | Context2D.strokeRoundRect()           | path.roundRect() + stroke() |
+| RoundedRect Fill+Stroke | Context2D.fillAndStrokeRoundRect()    | Separate fill + stroke      |
+| Circle Fill             | Context2D.fillCircle()                | path.arc() + fill()         |
+| Circle Stroke           | Context2D.strokeCircle()              | path.arc() + stroke()       |
+| Circle Fill+Stroke      | Context2D.fillAndStrokeCircle()       | Separate fill + stroke      |
+| Line Stroke             | Context2D.strokeLine()                | path moveTo/lineTo + stroke |
+| Arc Fill                | Context2D.fillArc()                   | path.arc() + fill()         |
+| Arc Stroke              | Context2D.outerStrokeArc()            | path.arc() + stroke()       |
+| Arc Fill+Stroke         | Context2D.fillAndOuterStrokeArc()     | Separate fill + stroke      |
+
+All entry points are in `Context2D.js`. Use grep to find exact locations: `grep -n "methodName(" src/Context2D.js`
 
 **Notes:**
 - Direct rendering is available **exclusively** via dedicated methods (e.g., `fillCircle()`, `strokeRect()`). Path-based rendering (`beginPath()` + `arc()/rect()` + `fill()/stroke()`) always uses the generic polygon pipeline for consistent, predictable behavior.

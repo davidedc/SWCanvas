@@ -13,7 +13,7 @@ This file provides Claude with essential context about the SWCanvas project for 
 - **Drop-in replacement**: True HTML5 Canvas 2D Context compatibility
 - **Memory efficient**: 1-bit stencil clipping, optimized algorithms
 - **Sub-pixel accurate**: Thin strokes render with proportional opacity (no anti-aliasing)
-- **Well-tested**: 36 core tests + 140 visual tests with pixel-level validation
+- **Well-tested**: 36 core tests + 140 visual tests + 62 direct rendering tests with pixel-level validation
 - **Paint Sources**: Full HTML5-compatible gradients (linear, radial, conic) and patterns
 
 ## API Usage
@@ -110,7 +110,7 @@ src/CanvasCompatibleContext2D.js  # HTML5 Canvas 2D Context API wrapper
 - **HTML5Canvas compliance**: `lineWidth = 0` values are ignored per HTML5 Canvas specification
 - **Opacity-based thinning**: 0.5px stroke = 1px stroke at 50% opacity (no anti-aliasing)
 - **Universal paint source support**: Works with Colors, Gradients, and Patterns seamlessly
-- **Implementation location**: `Rasterizer.js:270-277` calculates opacity, `PolygonFiller.js` applies during paint evaluation
+- **Implementation location**: `Rasterizer.js` stroke() method calculates subPixelOpacity, `PolygonFiller.js` applies during paint evaluation
 - **Formula**: `subPixelOpacity = lineWidth` (for strokes < 1px)
 - **Visual consistency**: Maintains deterministic output across platforms
 - **Browser compatibility**: Matches modern HTML5Canvas behavior for edge cases
@@ -185,7 +185,7 @@ SWCanvas uses a comprehensive test system with modular architecture. See `tests/
 - Build utilities and renumbering tools
 - Cross-platform validation approach
 
-Quick reference: `npm run build` then `npm test` to run all 36 core + 140 visual tests.
+Quick reference: `npm run build` then `npm test` to run all 36 core + 140 visual + 62 direct rendering tests.
 
 ## Common Tasks
 
