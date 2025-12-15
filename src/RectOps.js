@@ -1,6 +1,12 @@
 /**
  * RectOps - Static methods for optimized rectangle rendering
  * Follows PolygonFiller pattern with static methods.
+ *
+ * Direct rendering is available exclusively via dedicated Context2D methods:
+ * fillRect(), strokeRect()
+ *
+ * Path-based rectangles (beginPath() + rect() + fill()/stroke()) use the
+ * generic polygon pipeline for consistent, predictable behavior.
  */
 class RectOps {
     /**

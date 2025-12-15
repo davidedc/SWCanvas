@@ -2,7 +2,11 @@
  * RoundedRectOps - Static methods for optimized rounded rectangle rendering
  * Follows the PolygonFiller/RectOps/CircleOps/LineOps pattern.
  *
- * Direct rendering for 1px opaque strokes using Bresenham circle algorithm.
+ * Direct rendering is available exclusively via dedicated Context2D methods:
+ * fillRoundRect(), strokeRoundRect(), fillAndStrokeRoundRect()
+ *
+ * Path-based rounded rectangles (beginPath() + roundRect() + fill()/stroke()) use the
+ * generic polygon pipeline for consistent, predictable behavior.
  */
 class RoundedRectOps {
     /**

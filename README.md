@@ -715,18 +715,6 @@ dist/             # Built library
 └── swcanvas.js      # Concatenated distribution file
 ```
 
-## Test Architecture
-
-SWCanvas uses a comprehensive test system:
-- **36 core functionality tests**: Programmatic API verification with assertions
-- **140 visual rendering tests**: PNG (lossless) generation and comparison
-- **62 direct rendering tests**: Verify optimized rendering paths are invoked
-- **Modular architecture**: Individual test files auto-concatenated at build time
-
-See [tests/README.md](tests/README.md) for complete test documentation, adding tests, and build utilities.
-
-**Test Count Maintenance**: The `npm run update-test-counts` command automatically updates test count references across all documentation files to match the actual filesystem. This ensures documentation accuracy as tests are added or removed.
-
 ### Build Process
 
 The build script (`build.sh`) concatenates source files in dependency order, following OO architecture:
@@ -770,7 +758,7 @@ MIT License - see LICENSE file for details.
 1. **Build**: `npm run build`
 2. **Test**: `npm test` 
 3. **Visual Test**: Open `tests/browser/index.html` in browser
-4. **Add Tests**: Create individual test files in `/tests/core/` or `/tests/visual/` (see renumbering utility for advanced organization)
+4. **Add Tests**: Create individual test files in `/tests/core/` or `/tests/visual/` (see [tests/build/README.md](tests/build/README.md) for advanced organization)
 5. **Verify**: Ensure identical results in both Node.js and browser
 
 The comprehensive test suite ensures any changes maintain compatibility/similarity with HTML5 Canvas.

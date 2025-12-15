@@ -606,7 +606,7 @@ Context2D                     # Orchestration and state management
 │                            → RectOps.strokeThickOpaque()
 │                            → RectOps.strokeThickAlpha()
 │
-├── _fillCircleDirect() ─────→ SpanOps.fillFast()
+├── _fillCircleDirect() ─────→ SpanOps.fillOpaque()
 │                            → CircleOps.fillAlphaBlend()
 │
 ├── _strokeCircleDirect() ───→ CircleOps.stroke1pxOpaque()
@@ -621,7 +621,7 @@ Context2D                     # Orchestration and state management
 
 **SpanOps** - Shared horizontal span filling:
 ```javascript
-SpanOps.fillFast(data32, width, height, x, y, length, packedColor, clipBuffer)
+SpanOps.fillOpaque(data32, width, height, x, y, length, packedColor, clipBuffer)
 SpanOps.fillAlpha(data, width, height, x, y, length, r, g, b, alpha, invAlpha, clipBuffer)
 SpanOps.blendPixelAlpha(data, offset, r, g, b, alpha, invAlpha)
 ```

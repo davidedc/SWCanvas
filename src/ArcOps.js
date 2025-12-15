@@ -2,6 +2,12 @@
  * ArcOps - Static methods for optimized partial arc rendering
  * Follows CircleOps/PolygonFiller pattern with static methods.
  *
+ * Direct rendering is available exclusively via dedicated Context2D methods:
+ * fillArc(), outerStrokeArc(), fillAndOuterStrokeArc()
+ *
+ * Path-based arcs (beginPath() + arc() + fill()/stroke()) use the
+ * generic polygon pipeline for consistent, predictable behavior.
+ *
  * Unlike CircleOps (which handles full circles), ArcOps handles partial arcs
  * by filtering pixels based on angle range using isAngleInRange().
  */

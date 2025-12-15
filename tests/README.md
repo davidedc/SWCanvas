@@ -10,7 +10,7 @@ tests/
 │   ├── 001-surface-creation-valid.js
 │   ├── 015-alpha-blending-test.js  
 │   ├── 031-transform-matrix-order-dependency.js
-│   └── ... (32 more files)
+│   └── ... (33 more files)
 ├── visual/                        # 140 individual visual test files (001-140)
 │   ├── 001-simple-rectangle-test.js
 │   ├── 027-fill-rule-complex-test.js

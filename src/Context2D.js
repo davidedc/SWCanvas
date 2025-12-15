@@ -289,7 +289,7 @@ class Context2D {
         this._currentPath.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, x, y);
     }
 
-    // Drawing methods - simplified for M1 (only rectangles)
+    // Drawing methods - rectangle operations
     fillRect(x, y, width, height) {
         const paintSource = this._fillStyle;
         const isColor = paintSource instanceof Color;
