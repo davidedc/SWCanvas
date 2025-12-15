@@ -51,7 +51,7 @@ npm run build:prod # Build + minify in one command
 
 This generates:
 - `dist/swcanvas.js` - Complete library for development
-- `dist/swcanvas.min.js` - Minified library for production (71% smaller)
+- `dist/swcanvas.min.js` - Minified library for production (84% smaller)
 - `dist/swcanvas.min.js.map` - Source map for debugging
 - `tests/dist/core-functionality-tests.js` from 36 individual test files in `/tests/core/`
 - `tests/dist/visual-rendering-tests.js` from 140 individual test files in `/tests/visual/`
