@@ -704,6 +704,13 @@ tests/browser/    # Browser tests
 ├── minimal-example.html # Minimal usage example
 └── browser-test-helpers.js # Interactive test utilities
 
+tests/direct-rendering/  # Direct rendering verification tests
+├── run-direct-rendering-tests.js   # Node.js test runner
+├── direct-rendering-test-utils.js  # Test utilities and registration
+├── browser-test-runner.js          # Browser test framework
+├── index.html                      # Browser test page
+└── cases/                          # 62 test case files
+
 dist/             # Built library
 └── swcanvas.js      # Concatenated distribution file
 ```

@@ -124,7 +124,9 @@ test('Surface creation with valid dimensions', () => {
 - ✅ **Line Dashing**: Dash patterns, offsets, complex paths - 3 tests
 - ✅ **Gradient & Pattern Strokes**: All paint sources with sub-pixel strokes - 15 tests
 - ✅ **Thick Polyline Joins**: Systematic testing of bevel, miter, round joins with dash patterns - 3 tests
-- ✅ **Composite Operations - Minimal**: All 10 Porter-Duff operations with basic shapes - 10 tests (091-100)
+- ✅ **Composite Operations - Basic**: All 10 Porter-Duff operations - 10 tests (079-088)
+- ✅ **Debug & Analysis**: Specific rendering issue investigation - 2 tests (089-090)
+- ✅ **Composite Operations - Minimal**: Clean minimal tests with basic shapes - 10 tests (091-100)
 - ✅ **Composite Operations - Clipped**: All 10 operations with clipping mask interaction - 10 tests (101-110)
 - ✅ **Composite Operations - Stroked**: All 10 operations with stroke rendering - 10 tests (111-120)
 - ✅ **Composite Operations - Clipped+Stroked**: All 10 operations with clipping + strokes - 10 tests (121-130)
@@ -132,7 +134,6 @@ test('Surface creation with valid dimensions', () => {
 - ✅ **ArcTo**: arcTo() path construction with edge cases - 2 tests (132-133)
 - ✅ **Hit Testing**: isPointInPath/isPointInStroke with fill rules and Path2D - 5 tests (134-138)
 - ✅ **Shadows**: Shadow rendering for fills and strokes with blur and offset - 2 tests (139-140)
-- ✅ **Debug & Analysis**: Specific rendering issue investigation - 12 tests (079-090)
 
 **Example Modular Test File** (`/tests/visual/002-alpha-blending-test.js`):
 ```javascript

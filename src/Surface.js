@@ -62,7 +62,7 @@ class Surface {
     }
 
     /**
-     * Set pixel using pre-packed 32-bit color (fastest path)
+     * Set pixel using pre-packed 32-bit color (optimized path)
      * No bounds checking - caller must ensure validity for performance
      * @param {number} pixelIndex - Linear pixel index (y * width + x)
      * @param {number} packedColor - Pre-packed 32-bit ABGR color from packColor()
