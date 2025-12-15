@@ -366,7 +366,6 @@ function calculateCrispFillAndStrokeRectParams(options) {
 
 /**
  * Calculates circle parameters with proper positioning and dimensions.
- * Adapted from CrispSwCanvas test-helper-functions.js for SWCanvas.
  *
  * @param {Object} options - Configuration options for circle creation
  * @param {number} options.canvasWidth - Canvas width
@@ -449,7 +448,7 @@ function calculateCircleTestParameters(options) {
         }
     }
 
-    // Adjust diameter for crisp circle rendering (uses same logic as CrispSwCanvas)
+    // Adjust diameter for crisp circle rendering
     const adjustedDimensions = adjustDimensionsForCrispStrokeRendering(
         diameter, diameter, strokeWidth, { x: centerX, y: centerY }
     );
@@ -904,7 +903,7 @@ function countUniqueColorsInMiddleColumn(surface) {
 }
 
 /**
- * Count speckles in the surface (matching CrispSWCanvas algorithm)
+ * Count speckles in the surface
  * A speckle is a pixel that differs from its neighbors when those neighbors match each other
  * @param {Object} surface - Surface with data, width, height, stride
  * @returns {{count: number, firstSpeckle: {x: number, y: number}|null}} Speckle count and first location

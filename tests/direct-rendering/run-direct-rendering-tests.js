@@ -3,7 +3,6 @@
  * Direct Rendering Test Runner for SWCanvas
  *
  * Runs direct shape API tests and verifies direct rendering is used.
- * Ported from CrispSwCanvas.
  */
 
 const fs = require('fs');
