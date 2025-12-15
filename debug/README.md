@@ -2,7 +2,7 @@
 
 This directory contains **debugging scripts and utilities** for analyzing SWCanvas rendering behavior, investigating issues, and validating implementations against HTML5 Canvas.
 
-**All debugging scripts (.js files) are tracked in git for collaborative debugging, while generated BMP output files (.bmp) are gitignored to avoid repository bloat.**
+**All debugging scripts (.js files) are tracked in git for collaborative debugging, while generated PNG output files (.png) are gitignored to avoid repository bloat.**
 
 ## Overview
 
@@ -10,7 +10,7 @@ Debug utilities help developers:
 - **Pixel-level analysis** of rendering output
 - **Behavior comparison** between SWCanvas and HTML5 Canvas
 - **Issue reproduction** with minimal test cases
-- **Visual validation** through BMP output files
+- **Visual validation** through PNG output files
 - **Development workflow** for investigating rendering problems
 
 ## Debug Script Categories
@@ -57,16 +57,16 @@ Debug utilities help developers:
 - `debug-reference-xor.js` - Reference implementation analysis
 - `debug-complex-xor.js` - Complex test case debugging
 
-### BMP Output Files
+### PNG Output Files
 
-**Purpose**: Visual verification of rendering output.
+**Purpose**: Visual verification of rendering output with transparency support.
 
-All `.bmp` files are generated outputs from debug scripts for visual inspection:
-- `debug-copy-color.bmp` - Copy operation color output
-- `debug-minimal-xor.bmp` - Minimal XOR test result
-- `debug-html5-xor.bmp` - HTML5 API XOR result
-- `debug-simple-xor-analysis.bmp` - Simple XOR analysis
-- `debug-complex-xor-fixed.bmp` - Complex XOR after fixes
+All `.png` files are generated outputs from debug scripts for visual inspection:
+- `debug-copy-color.png` - Copy operation color output
+- `debug-minimal-xor.png` - Minimal XOR test result
+- `debug-html5-xor.png` - HTML5 API XOR result
+- `debug-simple-xor-analysis.png` - Simple XOR analysis
+- `debug-complex-xor-fixed.png` - Complex XOR after fixes
 
 ## Usage Patterns
 
@@ -113,11 +113,11 @@ testPoints.forEach(([x, y, desc]) => {
     console.log(`${desc} (${x},${y}): RGBA(${r},${g},${b},${a})`);
 });
 
-// Save for visual inspection
+// Save for visual inspection (PNG preserves transparency)
 const surface = canvas._coreSurface;
-const bmpData = SWCanvas.Core.BitmapEncoder.encode(surface);
-fs.writeFileSync('debug/debug-my-analysis.bmp', Buffer.from(bmpData));
-console.log('Analysis saved: debug/debug-my-analysis.bmp');
+const pngData = SWCanvas.Core.PngEncoder.encode(surface);
+fs.writeFileSync('debug/debug-my-analysis.png', Buffer.from(pngData));
+console.log('Analysis saved: debug/debug-my-analysis.png');
 ```
 
 ### 3. Composite Operation Testing
@@ -250,8 +250,8 @@ const outsideCleared = ctx.getImageData(25, 25, 1, 1).data; // Should be gray
 Every debug script should include:
 
 1. **Clear console output** with section headers
-2. **Pixel analysis** of key test points  
-3. **BMP file output** for visual verification
+2. **Pixel analysis** of key test points
+3. **PNG file output** for visual verification (preserves transparency)
 4. **Expected vs actual** result documentation
 5. **Coordinate verification** for geometric operations
 
@@ -287,7 +287,7 @@ function rectOverlap(rect1, rect2) {
 - **Bug investigation** - Isolate minimal reproduction case
 - **HTML5 Canvas compatibility** - Compare behavior pixel-by-pixel
 - **Performance analysis** - Measure rendering time for operations
-- **Visual regression** - Compare before/after BMP outputs
+- **Visual regression** - Compare before/after PNG outputs
 
 ### Script Naming Convention
 
@@ -296,12 +296,13 @@ function rectOverlap(rect1, rect2) {
 - `debug-minimal-case.js` - Minimal reproduction case
 - `debug-analysis-feature.js` - Detailed analysis with multiple test points
 
-### BMP File Management
+### PNG File Management
 
 - **Keep outputs for comparison** - Use git to track before/after changes
 - **Clear naming** - Include feature and test case in filename
-- **Visual inspection** - Open BMPs in image viewer for verification
+- **Visual inspection** - Open PNGs in image viewer for verification
 - **Pixel-level analysis** - Use image editor for precise pixel inspection
+- **Transparency support** - PNG format preserves alpha channel for accurate analysis
 
 ## Integration with Main Test Suite
 
@@ -320,7 +321,7 @@ When adding new debug utilities:
 
 1. **Follow naming convention**: `debug-feature-description.js`
 2. **Include comprehensive comments** explaining what's being tested
-3. **Generate BMP output** for visual verification
+3. **Generate PNG output** for visual verification (use PngEncoder)
 4. **Document expected vs actual results** in the script
 5. **Add usage instructions** in comments at top of file
 

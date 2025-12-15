@@ -25,7 +25,7 @@ The example automatically uses the minified version (`swcanvas.min.js`) if avail
 **Features:**
 - Interactive redraw button
 - Animation demo
-- BMP download functionality (where supported)
+- PNG download functionality with transparency support
 - Performance timing display
 - Comprehensive feature descriptions
 

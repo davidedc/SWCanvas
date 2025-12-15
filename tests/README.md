@@ -1,6 +1,6 @@
 # SWCanvas Test Suite
 
-This directory contains the comprehensive **modular test infrastructure** for SWCanvas, with 36 core tests + 138 visual tests and cross-platform compatibility.
+This directory contains the comprehensive **modular test infrastructure** for SWCanvas, with 36 core tests + 140 visual tests + 62 direct rendering tests and cross-platform compatibility.
 
 ## Modular Test Architecture
 
@@ -11,15 +11,21 @@ tests/
 │   ├── 015-alpha-blending-test.js  
 │   ├── 031-transform-matrix-order-dependency.js
 │   └── ... (32 more files)
-├── visual/                        # 138 individual visual test files (001-138)
+├── visual/                        # 140 individual visual test files (001-140)
 │   ├── 001-simple-rectangle-test.js
 │   ├── 027-fill-rule-complex-test.js
 │   ├── 056-stroke-pixel-analysis-test.js
-│   └── ... (134 more files)
+│   └── ... (136 more files)
 ├── browser/                       # Browser-specific test files
 │   ├── index.html                 # Main browser test page (interactive + comparisons)
 │   ├── minimal-example.html       # Minimal usage example
 │   └── browser-test-helpers.js    # Browser-specific interactive testing tools
+├── direct-rendering/              # Direct rendering path verification tests (62 tests)
+│   ├── cases/                     # 62 individual parametrized test case files
+│   ├── run-direct-rendering-tests.js    # Test runner with path verification
+│   ├── direct-rendering-test-utils.js   # Test utilities and registration
+│   ├── browser-test-runner.js     # Browser-based test execution
+│   └── index.html                 # Browser test interface
 ├── dist/                          # Built test files (auto-generated, .gitignored)
 │   ├── core-functionality-tests.js    # Auto-generated from /core/
 │   └── visual-rendering-tests.js      # Auto-generated from /visual/
@@ -28,7 +34,7 @@ tests/
 ├── core-functionality-tests.js          # Original (fallback/reference)
 ├── visual-rendering-tests.js            # Original (fallback/reference)
 ├── run-tests.js                         # Smart test runner with auto-detection
-├── output/                              # Generated PNG test images (138+ files)
+├── output/                              # Generated PNG test images (140+ files)
 └── README.md                            # This file
 ```
 
@@ -47,7 +53,7 @@ node tests/run-tests.js  # Smart runner uses built tests when available
 ### Browser Tests
 1. Open `tests/browser/index.html` in a web browser (automatically runs all tests on page load)
 2. Automatically runs 36 modular core functionality tests from `/tests/core/` 
-3. Automatically runs all 138 visual rendering tests with side-by-side HTML5 Canvas vs SWCanvas comparison
+3. Automatically runs all 140 visual rendering tests with side-by-side HTML5 Canvas vs SWCanvas comparison
 4. Use interactive visual comparison tools for real-time testing
 5. Minimal example: Open `tests/browser/minimal-example.html` to see a minimal usage example
 
@@ -93,24 +99,24 @@ test('Surface creation with valid dimensions', () => {
 });
 ```
 
-### Visual Rendering Tests - 138 Individual Files
+### Visual Rendering Tests - 140 Individual Files
 **Location**: `/tests/visual/` (individual files) → `/tests/dist/visual-rendering-tests.js` (concatenated)
 
 **Modular Structure**:
-- **138 individual test files** numbered 001-138 with descriptive names
+- **140 individual test files** numbered 001-140 with descriptive names
 - **Build-time concatenation** preserves registerVisualTest pattern
 - **Smart test runner** with automatic fallback to original
 - **Development benefit**: Isolated test development, clear organization
 
 **Characteristics**:
-- **138 visual tests** that generate actual rendered images
+- **140 visual tests** that generate actual rendered images
 - **Output**: PNG files (Node.js) + side-by-side comparison (browser)
 - **Environment**: PNG generation in Node.js, visual comparison in browser
 - **Focus**: Rendering accuracy, visual consistency
 
 **Test Categories**:
 - ✅ **Phase 1**: Basic transformations (translate, scale, rotate) - 8 tests
-- ✅ **Phase 2**: Advanced path filling (curves, self-intersecting, fill rules) - 9 tests  
+- ✅ **Phase 2**: Advanced path filling (curves, self-intersecting, fill rules) - 9 tests
 - ✅ **Phase 3**: Stencil-based clipping system (intersection, nesting) - 8 tests
 - ✅ **Phase 4**: Combined features (transform+clip+fill+stroke integration) - 7 tests
 - ✅ **Phase 5**: Image operations (drawImage with transforms and alpha) - 6 tests
@@ -119,10 +125,14 @@ test('Surface creation with valid dimensions', () => {
 - ✅ **Gradient & Pattern Strokes**: All paint sources with sub-pixel strokes - 15 tests
 - ✅ **Thick Polyline Joins**: Systematic testing of bevel, miter, round joins with dash patterns - 3 tests
 - ✅ **Composite Operations - Minimal**: All 10 Porter-Duff operations with basic shapes - 10 tests (091-100)
-- ✅ **Composite Operations - Clipped**: All 10 operations with clipping mask interaction - 10 tests (101-110) 
+- ✅ **Composite Operations - Clipped**: All 10 operations with clipping mask interaction - 10 tests (101-110)
 - ✅ **Composite Operations - Stroked**: All 10 operations with stroke rendering - 10 tests (111-120)
 - ✅ **Composite Operations - Clipped+Stroked**: All 10 operations with clipping + strokes - 10 tests (121-130)
-- ✅ **Debug & Analysis**: Specific rendering issue investigation - 12 tests
+- ✅ **Ellipse**: Ellipse drawing with various orientations and partial arcs - 1 test (131)
+- ✅ **ArcTo**: arcTo() path construction with edge cases - 2 tests (132-133)
+- ✅ **Hit Testing**: isPointInPath/isPointInStroke with fill rules and Path2D - 5 tests (134-138)
+- ✅ **Shadows**: Shadow rendering for fills and strokes with blur and offset - 2 tests (139-140)
+- ✅ **Debug & Analysis**: Specific rendering issue investigation - 12 tests (079-090)
 
 **Example Modular Test File** (`/tests/visual/002-alpha-blending-test.js`):
 ```javascript
@@ -157,7 +167,7 @@ test('Alpha blending test - semi-transparent rectangles', () => {
         const visualTest = VisualRenderingTests.getTest('alpha-test');
         if (visualTest) {
             const surface = visualTest.drawSWCanvas(SWCanvas);
-            saveBMP(surface, 'alpha-test.bmp', 'alpha test', SWCanvas);
+            savePNG(surface, 'alpha-test.png', 'alpha test', SWCanvas);
             
             // 2. Add programmatic validation on top of visual test
             const pixel = getPixelAt(surface, 60, 50); // Green over red area
@@ -190,7 +200,49 @@ Interactive tests requiring DOM and visual comparison:
 - ✅ Side-by-side HTML5 Canvas vs SWCanvas rendering
 - ✅ Interactive drawing tools
 - ✅ Real-time pixel value debugging
-- ✅ BMP file download functionality
+- ✅ PNG file download functionality
+
+### Direct Rendering Tests - 62 Tests
+**Location**: `/tests/direct-rendering/cases/` (individual files)
+
+**Purpose**: Verify that optimized direct rendering code paths are invoked instead of path-based fallback rendering. These tests use dedicated shape APIs (`fillCircle`, `strokeRect`, etc.) that bypass the path-based rendering pipeline for performance.
+
+**Key Characteristics**:
+- **62 parametrized test cases** with combinatorial coverage
+- **Path verification**: Critical `wasPathBasedUsed()` check - tests FAIL if path-based rendering was used
+- **Seeded random**: Deterministic reproducibility across runs
+- **Dual-environment**: Runs in both Node.js and browser
+
+**What Makes These Different from Visual Tests**:
+
+| Aspect | Direct Rendering Tests | Visual Tests |
+|--------|------------------------|--------------|
+| **Primary Focus** | Rendering path verification | Pixel output correctness |
+| **Critical Check** | `wasPathBasedUsed()` detection | PNG comparison |
+| **API Used** | Dedicated shape APIs (`fillCircle`, `strokeRect`) | HTML5 Canvas 2D Context |
+
+**Running Direct Rendering Tests**:
+```bash
+# Run all direct rendering tests
+npm run test:direct-rendering
+
+# Run specific test range
+node tests/direct-rendering/run-direct-rendering-tests.js -i 10
+
+# Browser testing
+open tests/direct-rendering/index.html
+```
+
+**Test Coverage**:
+- Circle fill and stroke operations
+- Rectangle fill and stroke operations
+- Line stroke operations
+- Arc fill and stroke operations
+- Rounded rectangle operations
+- Various positioning (centered, edge-aligned, off-canvas)
+- Multiple sizes (small, medium, large)
+
+For detailed documentation on the direct rendering system and APIs, see [DIRECT-RENDERING-SUMMARY.MD](../DIRECT-RENDERING-SUMMARY.MD).
 
 ## Benefits
 
@@ -267,7 +319,8 @@ Standard HTML5 Canvas API ensures consistent colors:
 
 ### Comprehensive Modular Test Coverage
 - **36 modular core tests** covering all API functionality with individual files
-- **138 modular visual tests** covering all major Canvas2D features
+- **140 modular visual tests** covering all major Canvas2D features
+- **62 direct rendering tests** verifying optimized rendering path invocation
 - **Build-time concatenation** for optimal performance
 - **Smart test runner** with automatic fallback system
 - **Cross-platform validation** (Node.js + browsers)

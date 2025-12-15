@@ -8,7 +8,7 @@ SWCanvas implements direct renderings for 5 shape types: Rectangle, RoundedRect,
 
 ## 1. Direct Rendering Entry Points (Calling Functions)
 
-| Shape                   | Entry Point                           | Location                 | Fallback Slow Path          |
+| Shape                   | Entry Point                           | Location                 | Path-Based Fallback         |
 |-------------------------|---------------------------------------|--------------------------|-----------------------------|
 | Rectangle Fill          | Context2D.fillRect()                  | Context2D.js:293-364     | rasterizer.fillRect()       |
 | Rectangle Stroke        | Context2D.strokeRect()                | Context2D.js:366-459     | rasterizer.stroke(path)     |

@@ -13,7 +13,7 @@ A deterministic 2D Javascript raster engine with Canvas-like API, cross-browser 
 - **Memory Efficient Clipping**: Stencil-based clipping system with proper intersection support
 - **Sub-pixel Stroke Rendering**: Thin strokes render with proportional opacity, works with all paint sources
 - **Full Porter-Duff Compositing**: Complete `globalCompositeOperation` support with all 10 standard operations working correctly
-- **Comprehensive Test Coverage**: 36 core tests + 138 visual tests
+- **Comprehensive Test Coverage**: 36 core tests + 140 visual tests
 - **Immutable Value Objects**: Point, Rectangle, Transform2D, Color prevent mutation bugs
 - **Cross-Platform**: Works in Node.js and browsers
 - **No Dependencies**: Pure JavaScript implementation
@@ -54,7 +54,7 @@ This generates:
 - `dist/swcanvas.min.js` - Minified library for production (71% smaller)
 - `dist/swcanvas.min.js.map` - Source map for debugging
 - `tests/dist/core-functionality-tests.js` from 36 individual test files in `/tests/core/`
-- `tests/dist/visual-rendering-tests.js` from 138 individual test files in `/tests/visual/`
+- `tests/dist/visual-rendering-tests.js` from 140 individual test files in `/tests/visual/`
 
 ### Node.js Usage
 
@@ -153,14 +153,14 @@ npm test
 
 This runs:
 - 36 modular core functionality tests (automatically uses built tests from `/tests/core/`)
-- 138 visual rendering tests generating PNG files in `tests/output/`
+- 140 visual rendering tests generating PNG files in `tests/output/`
 
 ### Browser Tests
 
 Open `tests/browser/index.html` in a web browser for:
 - Side-by-side HTML5 Canvas vs SWCanvas comparisons  
 - Interactive visual tests
-- All 138 visual rendering tests comparisons (automatically uses built modular tests)
+- All 140 visual rendering tests comparisons (automatically uses built modular tests)
 - PNG/BMP download functionality
 
 ### Test Architecture
@@ -664,7 +664,7 @@ src/              # Source files (ES6 Classes)
 
 tests/            # Test suite
 ├── core-functionality-tests.js # Core functionality tests
-├── visual-rendering-tests.js    # 138+ visual tests
+├── visual-rendering-tests.js    # 140+ visual tests
 └── run-tests.js            # Node.js test runner
 
 tests/browser/    # Browser tests
@@ -680,7 +680,7 @@ dist/             # Built library
 
 SWCanvas uses a comprehensive dual test system:
 - **36 core functionality tests**: Programmatic API verification with assertions
-- **138 visual rendering tests**: PNG (lossless) generation and comparison
+- **140 visual rendering tests**: PNG (lossless) generation and comparison
 - **Modular architecture**: Individual test files auto-concatenated at build time
 
 See [tests/README.md](tests/README.md) for complete test documentation, adding tests, and build utilities.

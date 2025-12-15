@@ -13,7 +13,7 @@ This file provides Claude with essential context about the SWCanvas project for 
 - **Drop-in replacement**: True HTML5 Canvas 2D Context compatibility
 - **Memory efficient**: 1-bit stencil clipping, optimized algorithms
 - **Sub-pixel accurate**: Thin strokes render with proportional opacity (no anti-aliasing)
-- **Well-tested**: 36 core tests + 138 visual tests with pixel-level validation
+- **Well-tested**: 36 core tests + 140 visual tests with pixel-level validation
 - **Paint Sources**: Full HTML5-compatible gradients (linear, radial, conic) and patterns
 
 ## API Usage
@@ -59,6 +59,10 @@ src/SpanOps.js                # Horizontal span filling utilities (shared by sha
 src/RectOps.js                # Rectangle stroke direct rendering (1px opaque/alpha, thick)
 src/CircleOps.js              # Circle fill/stroke direct rendering (Bresenham, annulus)
 src/LineOps.js                # Line stroke direct rendering (Bresenham, polygon scan)
+src/ArcOps.js                 # Arc fill/stroke direct rendering (partial arcs, pie slices)
+src/RoundedRectOps.js         # Rounded rectangle direct rendering (fill, stroke, combined)
+src/FastPixelOps.js           # Fast pixel operation utilities
+src/CompositeOperations.js    # Porter-Duff composite operation utilities
 src/PngEncoder.js             # PNG file format encoding with transparency support
 src/PngEncodingOptions.js     # PNG encoding configuration (immutable options, Joshua Bloch patterns)
 src/BitmapEncoder.js          # BMP file format encoding (legacy - composites with background)
@@ -225,7 +229,7 @@ if (fs.existsSync('./tests/dist/core-functionality-tests.js')) {
 │   ├── 015-alpha-blending-test.js
 │   ├── 032-line-dash-api-test.js
 │   └── ... (32 more files)
-├── visual/                             # 138 individual visual test files
+├── visual/                             # 140 individual visual test files
 │   ├── 001-simple-rectangle-test.js
 │   ├── 058-line-dash-basic-patterns-test.js
 │   ├── 060-line-dash-complex-paths-test.js
@@ -262,7 +266,7 @@ if (fs.existsSync('./tests/dist/core-functionality-tests.js')) {
     ├── 001-simple-rectangle-test.basic.png
     ├── 058-line-dash-basic-patterns.basic.png
     ├── 060-line-dash-complex-paths.basic.png
-    └── ... (138+ PNG files)
+    └── ... (140+ PNG files)
 ```
 
 ## Common Tasks
