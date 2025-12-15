@@ -13126,14 +13126,13 @@ class Context2D {
         // Direct rendering conditions
         const isColor = paintSource instanceof Color;
         const isSourceOver = this.globalCompositeOperation === 'source-over';
-        const noClip = !this._clipMask;
         const noTransform = this._transform.isIdentity;
         const noShadow = !this.shadowColor || this.shadowColor === 'transparent' ||
                         (this.shadowBlur === 0 && this.shadowOffsetX === 0 && this.shadowOffsetY === 0);
         const is1pxStroke = Math.abs(this._lineWidth - 1) < 0.001;
         const clipBuffer = this._clipMask ? this._clipMask.buffer : null;
 
-        if (isColor && isSourceOver && noClip && noTransform && noShadow) {
+        if (isColor && isSourceOver && noTransform && noShadow) {
             const isOpaque = paintSource.a === 255 && this.globalAlpha >= 1.0;
 
             if (is1pxStroke) {
@@ -13201,14 +13200,13 @@ class Context2D {
         const paintSource = this._fillStyle;
         const isColor = paintSource instanceof Color;
         const isSourceOver = this.globalCompositeOperation === 'source-over';
-        const noClip = !this._clipMask;
         const noTransform = this._transform.isIdentity;
         const noShadow = !this.shadowColor || this.shadowColor === 'transparent' ||
                         (this.shadowBlur === 0 && this.shadowOffsetX === 0 && this.shadowOffsetY === 0);
+        const clipBuffer = this._clipMask ? this._clipMask.buffer : null;
 
-        if (isColor && isSourceOver && noClip && noTransform && noShadow) {
+        if (isColor && isSourceOver && noTransform && noShadow) {
             const isOpaque = paintSource.a === 255 && this.globalAlpha >= 1.0;
-            const clipBuffer = this._clipMask ? this._clipMask.buffer : null;
 
             if (isOpaque) {
                 RoundedRectOps.fillOpaque(this.surface, x, y, width, height, radii, paintSource, clipBuffer);
@@ -13266,14 +13264,13 @@ class Context2D {
         const fillIsColor = fillPaint instanceof Color;
         const strokeIsColor = strokePaint instanceof Color;
         const isSourceOver = this.globalCompositeOperation === 'source-over';
-        const noClip = !this._clipMask;
         const noTransform = this._transform.isIdentity;
         const noShadow = !this.shadowColor || this.shadowColor === 'transparent' ||
                         (this.shadowBlur === 0 && this.shadowOffsetX === 0 && this.shadowOffsetY === 0);
         const clipBuffer = this._clipMask ? this._clipMask.buffer : null;
 
-        // Unified direct rendering: both fill and stroke are solid colors, source-over, no transforms/clips/shadows
-        if (fillIsColor && strokeIsColor && isSourceOver && noClip && noTransform && noShadow) {
+        // Unified direct rendering: both fill and stroke are solid colors, source-over, no transforms/shadows
+        if (fillIsColor && strokeIsColor && isSourceOver && noTransform && noShadow) {
             const hasFill = fillPaint.a > 0;
             const hasStroke = strokePaint.a > 0 && this._lineWidth > 0;
 
