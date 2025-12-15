@@ -53,16 +53,14 @@ All entry points are in `Context2D.js`. Use grep to find exact locations: `grep 
 
 | Stroke Width | Orientation  | Opacity          | Function                           | Clipping TO |
 |--------------|--------------|------------------|------------------------------------|-------------|
-| N/A (fill)   | Axis-aligned | Opaque           | RoundedRectOps.fillOpaque()        | NO*      |
-| N/A (fill)   | Axis-aligned | Semi-transparent | RoundedRectOps.fillAlpha()         | NO*      |
-| 1px          | Axis-aligned | Opaque           | RoundedRectOps.stroke1pxOpaque()   | NO*      |
-| 1px          | Axis-aligned | Semi-transparent | RoundedRectOps.stroke1pxAlpha()    | NO*      |
-| >1px         | Axis-aligned | Opaque           | RoundedRectOps.strokeThickOpaque() | NO*      |
-| >1px         | Axis-aligned | Semi-transparent | RoundedRectOps.strokeThickAlpha()  | NO*      |
-| Any          | Axis-aligned | Both             | RoundedRectOps.fillAndStroke()     | NO*      |
+| N/A (fill)   | Axis-aligned | Opaque           | RoundedRectOps.fillOpaque()        | YES      |
+| N/A (fill)   | Axis-aligned | Semi-transparent | RoundedRectOps.fillAlpha()         | YES      |
+| 1px          | Axis-aligned | Opaque           | RoundedRectOps.stroke1pxOpaque()   | YES      |
+| 1px          | Axis-aligned | Semi-transparent | RoundedRectOps.stroke1pxAlpha()    | YES      |
+| >1px         | Axis-aligned | Opaque           | RoundedRectOps.strokeThickOpaque() | YES      |
+| >1px         | Axis-aligned | Semi-transparent | RoundedRectOps.strokeThickAlpha()  | YES      |
+| Any          | Axis-aligned | Both             | RoundedRectOps.fillAndStroke()     | YES      |
 | 0px          | Any          | Any              | IGNORED                            | -        |
-
-*Note: RoundedRect direct rendering requires `noClip` - if a clip mask is active, falls back to path-based rendering. The clipBuffer parameter exists in method signatures but Context2D only calls these methods when no clip mask is present.
 
 Note: Rotated rounded rectangles use path-based rendering (no direct rendering)
 
@@ -184,12 +182,12 @@ All *Ops.fill*() ──────────────────► SpanO
 | Shape                   | Clipping TO Support | Method                    |
 |-------------------------|---------------------|---------------------------|
 | Rectangle (fill/stroke) | YES                 | clipBuffer per pixel      |
-| RoundedRect (all)       | NO*                 | (not invoked with clip)   |
+| RoundedRect (all)       | YES                 | clipBuffer per pixel      |
 | Circle (all)            | YES                 | clipBuffer per pixel      |
 | Line (all)              | YES                 | clipBuffer per pixel/span |
 | Arc (all)               | YES                 | clipBuffer per pixel      |
 
-*RoundedRect direct rendering requires `noClip` - Context2D only calls these methods when no clip mask is present, falling back to path-based rendering otherwise.
+All shapes use clipBuffer parameter passed from Context2D to their respective *Ops methods.
 
 ---
 
@@ -292,14 +290,13 @@ if (clipBuffer[byteIndex] === 0) {
 | Stroke thick alpha    | ✓    | ✓         | ✓      | ✓    | ✓   |
 | fillAndStroke()       | ✓    | ✓         | ✓      | N/A  | ✓   |
 | Rotation support      | ✓    | ✗         | N/A    | ✓    | ✗   |
-| Clipping TO (respects clip) | ✓    | ✗*        | ✓      | ✓    | ✓   |
+| Clipping TO (respects clip) | ✓    | ✓         | ✓      | ✓    | ✓   |
 | Clipping AT (defines clip)  | ✗    | ✗         | ✗      | N/A  | ✗   |
 | 32-bit writes         | ✓    | ✓         | ✓      | ✓    | ✓   |
 | Uses SpanOps          | ✗    | ✓         | ✓      | ✓    | ✗   |
 | Bresenham algorithm   | ✗    | ✗         | ✓      | ✓    | ✓   |
 | Set deduplication     | ✗    | ✗         | ✓      | ✗    | ✓   |
 
-*RoundRect direct rendering is only invoked when no clip mask is present (requires `noClip`).
 †Clipping AT (defining clip regions) uses path-based approach for all shapes - see Section 5.1.
 
 ---
