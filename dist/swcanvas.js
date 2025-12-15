@@ -1258,7 +1258,7 @@ class Surface {
 /**
  * FastPixelOps - High-performance pixel operations for SWCanvas
  *
- * Provides CrispSwCanvas-style optimizations:
+ * Performance optimizations:
  * - 32-bit packed writes for opaque pixels (4x fewer memory operations)
  * - Inline clip buffer access with bitwise operations
  * - Pre-computed values outside hot loops
@@ -1866,7 +1866,6 @@ class RectOps {
 
     /**
      * Optimized thick stroke rectangle using direct pixel drawing
-     * Ported from CrispSwCanvas's SWRendererRect.drawAxisAlignedRect() method
      * @param {Surface} surface - Target surface
      * @param {number} x - Rectangle X coordinate
      * @param {number} y - Rectangle Y coordinate
@@ -1885,7 +1884,7 @@ class RectOps {
         const halfStroke = lineWidth / 2;
 
         // Calculate stroke geometry (edge centers)
-        // Keep as floats - don't floor early! CrispSWCanvas keeps strokePos.x/y as floats
+        // Keep as floats - don't floor early for sub-pixel accuracy
         // and only floors when calculating actual pixel positions
         const left = x;
         const top = y;
@@ -1929,7 +1928,6 @@ class RectOps {
 
     /**
      * Optimized thick stroke rectangle with alpha blending
-     * Ported from CrispSwCanvas's SWRendererRect.drawAxisAlignedRect() method
      * @param {Surface} surface - Target surface
      * @param {number} x - Rectangle X coordinate
      * @param {number} y - Rectangle Y coordinate
@@ -1954,7 +1952,7 @@ class RectOps {
         const halfStroke = lineWidth / 2;
 
         // Calculate stroke geometry (edge centers)
-        // Keep as floats - don't floor early! CrispSWCanvas keeps strokePos.x/y as floats
+        // Keep as floats - don't floor early for sub-pixel accuracy
         // and only floors when calculating actual pixel positions
         const left = x;
         const top = y;
@@ -2315,7 +2313,6 @@ class RectOps {
 
     /**
      * Rotated rectangle fill using edge-function algorithm
-     * Ported from CrispSWCanvas's SWRendererRect.fillRotatedRect()
      * @param {Surface} surface - Target surface
      * @param {number} centerX - Center X coordinate
      * @param {number} centerY - Center Y coordinate
@@ -2749,7 +2746,6 @@ class RectOps {
     /**
      * Rotated rectangle stroke using LineOps for edges.
      * Uses extend/shorten strategy for proper miter joins at corners.
-     * Ported from CrispSWCanvas's SWRendererRect.drawRotatedRect()
      * @param {Surface} surface - Target surface
      * @param {number} centerX - Center X coordinate
      * @param {number} centerY - Center Y coordinate
@@ -2859,6 +2855,9 @@ class RectOps {
  *
  * Path-based circles (beginPath() + arc() + fill()/stroke()) use the
  * generic polygon pipeline for consistent, predictable behavior.
+ *
+ * Algorithm notes: Uses a Bresenham circle variant with specific adjustments
+ * (center offset, +1 boundary corrections) for correct extreme pixel rendering.
  */
 class CircleOps {
     /**
@@ -2908,7 +2907,7 @@ class CircleOps {
 
     /**
      * Optimized opaque circle fill using Bresenham scanlines with 32-bit packed writes
-     * Uses CrispSWCanvas algorithm for correct extreme pixel rendering
+     * Uses Bresenham variant with pixel corrections for accurate rendering
      * @param {Surface} surface - Target surface
      * @param {number} cx - Center X
      * @param {number} cy - Center Y
@@ -2923,12 +2922,12 @@ class CircleOps {
 
         const packedColor = Surface.packColor(color.r, color.g, color.b, 255);
 
-        // Generate extents with CrispSWCanvas algorithm
+        // Generate extents with Bresenham algorithm
         const extentData = CircleOps.generateExtents(radius);
         if (!extentData) return;
         const { extents, intRadius, xOffset, yOffset } = extentData;
 
-        // CrispSWCanvas center adjustment
+        // Center adjustment for pixel-perfect rendering
         const adjCenterX = Math.floor(cx - 0.5);
         const adjCenterY = Math.floor(cy - 0.5);
 
@@ -2936,7 +2935,7 @@ class CircleOps {
         for (let rel_y = 0; rel_y <= intRadius; rel_y++) {
             const max_rel_x = extents[rel_y];
 
-            // +1 corrections on min boundaries (CrispSWCanvas technique)
+            // +1 corrections on min boundaries for pixel accuracy
             const abs_x_min = adjCenterX - max_rel_x - xOffset + 1;
             const abs_x_max = adjCenterX + max_rel_x;
             const abs_y_bottom = adjCenterY + rel_y;
@@ -2959,7 +2958,7 @@ class CircleOps {
 
     /**
      * Optimized circle fill with alpha blending using Bresenham scanlines
-     * Uses CrispSWCanvas algorithm for correct extreme pixel rendering
+     * Uses Bresenham variant with pixel corrections for accurate rendering
      * @param {Surface} surface - Target surface
      * @param {number} cx - Center X
      * @param {number} cy - Center Y
@@ -2982,12 +2981,12 @@ class CircleOps {
         const g = color.g;
         const b = color.b;
 
-        // Generate extents with CrispSWCanvas algorithm
+        // Generate extents with Bresenham algorithm
         const extentData = CircleOps.generateExtents(radius);
         if (!extentData) return;
         const { extents, intRadius, xOffset, yOffset } = extentData;
 
-        // CrispSWCanvas center adjustment
+        // Center adjustment for pixel-perfect rendering
         const adjCenterX = Math.floor(cx - 0.5);
         const adjCenterY = Math.floor(cy - 0.5);
 
@@ -2995,7 +2994,7 @@ class CircleOps {
         for (let rel_y = 0; rel_y <= intRadius; rel_y++) {
             const max_rel_x = extents[rel_y];
 
-            // +1 corrections on min boundaries (CrispSWCanvas technique)
+            // +1 corrections on min boundaries for pixel accuracy
             const abs_x_min = adjCenterX - max_rel_x - xOffset + 1;
             const abs_x_max = adjCenterX + max_rel_x;
             const abs_y_bottom = adjCenterY + rel_y;
@@ -3034,7 +3033,7 @@ class CircleOps {
 
         const packedColor = Surface.packColor(color.r, color.g, color.b, 255);
 
-        // Original CrispSWCanvas center calculation for stroke
+        // Center calculation for stroke (standard Bresenham approach)
         const cX = Math.floor(cx);
         const cY = Math.floor(cy);
         const intRadius = Math.floor(radius);
@@ -3162,7 +3161,7 @@ class CircleOps {
         const invAlpha = 1 - effectiveAlpha;
         const r = color.r, g = color.g, b = color.b;
 
-        // Original CrispSWCanvas center calculation for stroke
+        // Center calculation for stroke (standard Bresenham approach)
         const cX = Math.floor(cx);
         const cY = Math.floor(cy);
         const intRadius = Math.floor(radius);
@@ -3261,7 +3260,7 @@ class CircleOps {
      * This method draws both fill and stroke in a single coordinated pass,
      * ensuring no gaps between fill and stroke boundaries.
      *
-     * Ported from CrispSWCanvas's drawFullCircleFast approach:
+     * Optimized circle fill+stroke approach using:
      * - Uses single floating-point center (cx - 0.5) for both operations
      * - Uses analytical boundary detection (sqrt-based) instead of Bresenham extents
      * - Uses epsilon contraction (0.0001) on fill boundaries to prevent speckles
@@ -3289,7 +3288,7 @@ class CircleOps {
 
         if (!hasFill && !hasStroke) return;
 
-        // Single floating-point center for both fill and stroke (CrispSWCanvas approach)
+        // Single floating-point center for both fill and stroke
         const cX = cx - 0.5;
         const cY = cy - 0.5;
 
@@ -3456,7 +3455,7 @@ class CircleOps {
         const innerRadius = radius - lineWidth / 2;
         const outerRadius = radius + lineWidth / 2;
 
-        // Use exact centers for Canvas coordinate alignment (same as CrispSwCanvas)
+        // Use exact centers for Canvas coordinate alignment
         const cX = cx - 0.5;
         const cY = cy - 0.5;
 
@@ -4477,6 +4476,12 @@ class ArcOps {
 /**
  * LineOps - Static methods for optimized line rendering
  * Follows PolygonFiller pattern with static methods.
+ *
+ * Direct rendering is available exclusively via dedicated Context2D methods:
+ * strokeLine()
+ *
+ * Path-based lines (beginPath() + moveTo() + lineTo() + stroke()) use the
+ * generic polygon pipeline for consistent, predictable behavior.
  */
 class LineOps {
     /**
@@ -4554,7 +4559,7 @@ class LineOps {
             }
             return true;
         } else if (isOpaqueColor) {
-            // Fast path for thick axis-aligned lines: render as rectangle
+            // Direct rendering for thick axis-aligned lines: render as rectangle
             const x1i = Math.floor(x1);
             const y1i = Math.floor(y1);
             const x2i = Math.floor(x2);
@@ -4593,7 +4598,7 @@ class LineOps {
                 return true;
             }
         } else if (isSemiTransparentColor && lineWidth <= 1.5) {
-            // Fast path for thin semitransparent lines: Bresenham with alpha blending
+            // Direct rendering for thin semitransparent lines: Bresenham with alpha blending
             const data = surface.data;
             const r = paintSource.r;
             const g = paintSource.g;
@@ -4667,7 +4672,7 @@ class LineOps {
             }
             return true;
         } else if (isSemiTransparentColor) {
-            // Fast path for thick semitransparent lines: polygon scan with alpha blending
+            // Direct rendering for thick semitransparent lines: polygon scan with alpha blending
             LineOps.strokeThickPolygonScan(surface, x1, y1, x2, y2, lineWidth, paintSource, globalAlpha, clipBuffer, true);
             return true;
         }
@@ -4843,7 +4848,7 @@ class LineOps {
  * RoundedRectOps - Static methods for optimized rounded rectangle rendering
  * Follows the PolygonFiller/RectOps/CircleOps/LineOps pattern.
  *
- * Direct rendering for 1px opaque strokes ported from CrispSWCanvas's SWRendererRoundedRect.
+ * Direct rendering for 1px opaque strokes using Bresenham circle algorithm.
  */
 class RoundedRectOps {
     /**
@@ -7708,7 +7713,7 @@ PathFlattener.TOLERANCE = 0.25; // Fixed tolerance for deterministic behavior
  * Handles stencil-based clipping integration and premultiplied alpha blending.
  *
  * Provides dual rendering approaches:
- * - Optimized path: 32-bit packed writes for opaque solid colors (CrispSwCanvas-style)
+ * - Optimized path: 32-bit packed writes for opaque solid colors
  * - Standard path: Full paint source support with gradients, patterns, compositing
  *
  * Converted from functional to class-based approach following OO best practices:
@@ -13880,7 +13885,7 @@ class Context2D {
     }
 
     // ========================================================================
-    // DIRECT SHAPE APIs (CrispSwCanvas compatibility)
+    // DIRECT SHAPE APIs
     // These methods bypass the path system for maximum performance
     // ========================================================================
 
@@ -14921,7 +14926,7 @@ class CanvasCompatibleContext2D {
         return this._core;
     }
 
-    // ===== DIRECT SHAPE APIs (CrispSwCanvas compatibility) =====
+    // ===== DIRECT SHAPE APIs =====
 
     /**
      * Fill a circle directly without using the path system
