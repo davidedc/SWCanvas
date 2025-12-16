@@ -3952,6 +3952,61 @@ class ArcOps {
     }
 
     /**
+     * 1px opaque arc stroke using angle-based iteration for small radii.
+     * Unlike Bresenham, this method guarantees pixels at exact boundary angles,
+     * eliminating junction gaps with connected line segments.
+     *
+     * Use this for radius < 20 where Bresenham's angular coverage gaps
+     * become noticeable (especially at octant boundaries like 225°, 315°, etc.)
+     *
+     * @param {Surface} surface - Target surface
+     * @param {number} cx - Center X (floating-point)
+     * @param {number} cy - Center Y (floating-point)
+     * @param {number} radius - Arc radius
+     * @param {number} startAngle - Start angle in radians
+     * @param {number} endAngle - End angle in radians
+     * @param {Color} color - Stroke color (must be opaque)
+     * @param {Uint8Array|null} clipBuffer - Clip mask buffer
+     */
+    static stroke1pxOpaqueSmallRadius(surface, cx, cy, radius, startAngle, endAngle, color, clipBuffer) {
+        const width = surface.width;
+        const height = surface.height;
+        const data32 = surface.data32;
+        const packedColor = Surface.packColor(color.r, color.g, color.b, 255);
+
+        // Calculate number of steps needed for continuous coverage
+        // Use 2x the arc length in pixels to ensure no gaps between adjacent pixels
+        const arcLength = radius * Math.abs(endAngle - startAngle);
+        const numSteps = Math.max(Math.ceil(arcLength * 2), 8); // At least 8 steps for tiny arcs
+        const angleStep = (endAngle - startAngle) / numSteps;
+
+        // Track drawn pixels to avoid overdraw (use Set for simplicity)
+        const drawnPixels = new Set();
+
+        // Iterate through angles, always including exact start and end (i <= numSteps)
+        for (let i = 0; i <= numSteps; i++) {
+            const angle = startAngle + i * angleStep;
+
+            // Compute pixel position using same floor() as LineOps for junction alignment
+            const px = Math.floor(cx + radius * Math.cos(angle));
+            const py = Math.floor(cy + radius * Math.sin(angle));
+
+            // Skip if out of bounds
+            if (px < 0 || px >= width || py < 0 || py >= height) continue;
+
+            // Skip if already drawn
+            const pos = py * width + px;
+            if (drawnPixels.has(pos)) continue;
+            drawnPixels.add(pos);
+
+            // Draw pixel (respecting clip buffer)
+            if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (pos & 7)))) {
+                data32[pos] = packedColor;
+            }
+        }
+    }
+
+    /**
      * Optimized 1px semi-transparent arc stroke using Bresenham + Set
      * Uses Set to prevent overdraw for correct alpha blending
      * @param {Surface} surface - Target surface
@@ -5945,19 +6000,38 @@ class RoundedRectOps {
             { localCx: -hw + radius, localCy: hh - radius, startAngle: Math.PI * 0.5, endAngle: Math.PI }           // Bottom-left
         ];
 
-        // Draw 4 corner arcs via ArcOps.stroke1pxOpaque
+        // Draw 4 corner arcs
         // Arc angles shift by rotation when the shape is rotated
+        // Always use angle-based iteration for rotated rounded rects to ensure junction alignment with the sides (or other corner if the side ends up being zero-length).
+        // Bresenham has angular coverage gaps at any radius, which cause discontinuities.
+        const useSmallRadiusMethod = true;
+
         for (const corner of corners) {
             const screenCenter = transform(corner.localCx, corner.localCy);
-            ArcOps.stroke1pxOpaque(
-                surface,
-                screenCenter.x, screenCenter.y,
-                radius,
-                corner.startAngle + rotation,  // Shift start angle by rotation
-                corner.endAngle + rotation,    // Shift end angle by rotation
-                color,
-                clipBuffer
-            );
+
+            if (useSmallRadiusMethod) {
+                // Angle-based iteration for small radii (guaranteed junction alignment)
+                ArcOps.stroke1pxOpaqueSmallRadius(
+                    surface,
+                    screenCenter.x, screenCenter.y,
+                    radius,
+                    corner.startAngle + rotation,
+                    corner.endAngle + rotation,
+                    color,
+                    clipBuffer
+                );
+            } else {
+                // Bresenham for larger radii (more efficient)
+                ArcOps.stroke1pxOpaque(
+                    surface,
+                    screenCenter.x, screenCenter.y,
+                    radius,
+                    corner.startAngle + rotation,
+                    corner.endAngle + rotation,
+                    color,
+                    clipBuffer
+                );
+            }
         }
     }
 }
