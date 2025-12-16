@@ -1097,8 +1097,8 @@ class RoundedRectOps {
             const screenCenter = transform(corner.localCx, corner.localCy);
 
             if (useSmallRadiusMethod) {
-                // Angle-based iteration for small radii (guaranteed junction alignment)
-                ArcOps.stroke1pxOpaqueSmallRadius(
+                // Angle-based iteration with exact endpoints (guaranteed junction alignment)
+                ArcOps.stroke1pxOpaqueExactEndpoints(
                     surface,
                     screenCenter.x, screenCenter.y,
                     radius,
