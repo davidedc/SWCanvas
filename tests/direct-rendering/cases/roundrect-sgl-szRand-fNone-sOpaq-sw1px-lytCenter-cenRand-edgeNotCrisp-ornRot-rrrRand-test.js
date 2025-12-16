@@ -86,8 +86,8 @@ function drawTest(ctx, currentIterationNumber, instances = null) {
     }
 
     // Generate random parameters
-    const width = 40 + Math.floor(SeededRandom.getRandom() * 80);   // 40-120px
-    const height = 40 + Math.floor(SeededRandom.getRandom() * 60);  // 40-100px
+    const width = 40 + Math.floor(SeededRandom.getRandom() * 100);
+    const height = 40 + Math.floor(SeededRandom.getRandom() * 80);
     const maxRadius = Math.min(width, height) / 2;
     const radius = 5 + Math.floor(SeededRandom.getRandom() * (maxRadius - 5)); // 5 to maxRadius
     const rotation = SeededRandom.getRandom() * Math.PI * 2;  // 0 to 2π
