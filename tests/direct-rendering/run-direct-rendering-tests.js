@@ -23,6 +23,7 @@ const {
     placeCloseToCenterAtGrid,
     adjustDimensionsForCrispStrokeRendering,
     roundPoint,
+    ensureHalfPoint,
     adjustCenterForCrispStrokeRendering,
     calculateCrispFillAndStrokeRectParams,
     calculateCircleTestParameters,
@@ -50,6 +51,7 @@ global.placeCloseToCenterAtPixel = placeCloseToCenterAtPixel;
 global.placeCloseToCenterAtGrid = placeCloseToCenterAtGrid;
 global.adjustDimensionsForCrispStrokeRendering = adjustDimensionsForCrispStrokeRendering;
 global.roundPoint = roundPoint;
+global.ensureHalfPoint = ensureHalfPoint;
 global.adjustCenterForCrispStrokeRendering = adjustCenterForCrispStrokeRendering;
 global.calculateCrispFillAndStrokeRectParams = calculateCrispFillAndStrokeRectParams;
 global.calculateCircleTestParameters = calculateCircleTestParameters;

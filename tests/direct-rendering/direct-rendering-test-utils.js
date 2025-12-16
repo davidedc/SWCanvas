@@ -274,6 +274,16 @@ function roundPoint(point) {
 }
 
 /**
+ * Ensures a value is at a half-point (.5) for crisp 1px stroke rendering.
+ * For 1px strokes, the stroke center must be at .5 to render crisply.
+ * @param {number} value - Any numeric value
+ * @returns {number} Value adjusted to .5 (e.g., 165 → 165.5, 165.7 → 165.5)
+ */
+function ensureHalfPoint(value) {
+    return Math.floor(value) + 0.5;
+}
+
+/**
  * Adjusts center coordinates for crisp 1px stroke rendering
  * For even width+height with 1px stroke, center should be on pixel center (*.5)
  * @param {number} centerX - Center X coordinate
@@ -1074,6 +1084,7 @@ if (typeof module !== 'undefined' && module.exports) {
         placeCloseToCenterAtGrid,
         adjustDimensionsForCrispStrokeRendering,
         roundPoint,
+        ensureHalfPoint,
         adjustCenterForCrispStrokeRendering,
         calculateCrispFillAndStrokeRectParams,
         calculateCircleTestParameters,
@@ -1104,6 +1115,7 @@ if (typeof window !== 'undefined') {
     window.placeCloseToCenterAtGrid = placeCloseToCenterAtGrid;
     window.adjustDimensionsForCrispStrokeRendering = adjustDimensionsForCrispStrokeRendering;
     window.roundPoint = roundPoint;
+    window.ensureHalfPoint = ensureHalfPoint;
     window.adjustCenterForCrispStrokeRendering = adjustCenterForCrispStrokeRendering;
     window.calculateCrispFillAndStrokeRectParams = calculateCrispFillAndStrokeRectParams;
     window.calculateCircleTestParameters = calculateCircleTestParameters;
