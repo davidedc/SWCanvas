@@ -875,6 +875,29 @@ class DirectRenderingTestRunner {
             });
         }
 
+        // 1px stroke continuity check (SW only)
+        if (checks.strokeContinuity) {
+            const config = checks.strokeContinuity;
+            const [r, g, b] = config.color;
+            const tolerance = config.tolerance || 0;
+            const isKnownFailure = config.knownFailure === true;
+
+            const result = check1pxClosedStrokeContinuity(swSurface, r, g, b, tolerance);
+            const passed = result.continuous;
+            const firstInfo = result.gaps.length > 0
+                ? ` (first at ${result.gaps[0].x},${result.gaps[0].y} with ${result.gaps[0].neighbors} neighbor(s))`
+                : '';
+
+            results.push({
+                name: 'Stroke Continuity',
+                passed,
+                knownFailure: isKnownFailure && !passed,
+                details: passed
+                    ? `${result.totalPixels} pixels, all connected`
+                    : `${result.gaps.length} gap(s)${firstInfo}` + (isKnownFailure ? ' [KNOWN]' : '')
+            });
+        }
+
         return results;
     }
 

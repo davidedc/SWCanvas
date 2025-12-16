@@ -14,7 +14,7 @@
  * | Count                  | single         | Only 1 instance drawn for focused visual inspection.
  * | SizeCategory           | random         | Width/height randomly generated (40-120px range, constrained to canvas).
  * | FillStyle              | none           | Stroke-only test; no fill is applied.
- * | StrokeStyle            | opaque         | Stroke color is random opaque (via getRandomOpaqueVisibleColor).
+ * | StrokeStyle            | opaque         | Stroke color is fixed opaque red (255, 0, 0) for validation compatibility.
  * | StrokeThickness        | 1px            | Tests the 1px opaque stroke subcase of `strokeRotated()`.
  * | Layout                 | center         | Shape is roughly centered on canvas.
  * | CenteredAt             | random         | Center has small random offset from canvas center.
@@ -37,7 +37,7 @@
  * ----------------------------------------------
  * This test directly calls `RoundedRectOps.strokeRotated()` (static method) rather than going through
  * Context2D, since Context2D integration for rotated rounded rectangles is not yet implemented.
- * Stroke color is random opaque visible rather than fixed.
+ * Includes strokeContinuity validation check to verify no gaps in 1px stroke.
  */
 
 /**
@@ -96,8 +96,8 @@ function drawTest(ctx, currentIterationNumber, instances = null) {
     const cx = canvasWidth / 2 + (SeededRandom.getRandom() - 0.5) * 60;
     const cy = canvasHeight / 2 + (SeededRandom.getRandom() - 0.5) * 60;
 
-    // Random opaque visible color
-    const strokeColor = getRandomOpaqueVisibleColor();
+    // Fixed opaque red color (for validation check compatibility)
+    const strokeColor = { r: 255, g: 0, b: 0 };
 
     if (isPerformanceRun) {
         // For performance runs, draw many shapes with varying parameters
@@ -196,7 +196,8 @@ registerDirectRenderingTest(
     drawTest,
     'rounded-rects',
     {
-        extremes: false  // Rotated shapes have complex bounds, skip strict extremes check
+        extremes: false,  // Rotated shapes have complex bounds, skip strict extremes check
+        strokeContinuity: { color: [255, 0, 0] }  // Verify 1px stroke has no gaps (red stroke)
     },
     {
         title: 'Single Rotated Rounded Rectangle - 1px Opaque Stroke (Random)',
