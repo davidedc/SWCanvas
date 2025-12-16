@@ -1087,19 +1087,38 @@ class RoundedRectOps {
             { localCx: -hw + radius, localCy: hh - radius, startAngle: Math.PI * 0.5, endAngle: Math.PI }           // Bottom-left
         ];
 
-        // Draw 4 corner arcs via ArcOps.stroke1pxOpaque
+        // Draw 4 corner arcs
         // Arc angles shift by rotation when the shape is rotated
+        // Always use angle-based iteration for rotated rounded rects to ensure junction alignment with the sides (or other corner if the side ends up being zero-length).
+        // Bresenham has angular coverage gaps at any radius, which cause discontinuities.
+        const useSmallRadiusMethod = true;
+
         for (const corner of corners) {
             const screenCenter = transform(corner.localCx, corner.localCy);
-            ArcOps.stroke1pxOpaque(
-                surface,
-                screenCenter.x, screenCenter.y,
-                radius,
-                corner.startAngle + rotation,  // Shift start angle by rotation
-                corner.endAngle + rotation,    // Shift end angle by rotation
-                color,
-                clipBuffer
-            );
+
+            if (useSmallRadiusMethod) {
+                // Angle-based iteration for small radii (guaranteed junction alignment)
+                ArcOps.stroke1pxOpaqueSmallRadius(
+                    surface,
+                    screenCenter.x, screenCenter.y,
+                    radius,
+                    corner.startAngle + rotation,
+                    corner.endAngle + rotation,
+                    color,
+                    clipBuffer
+                );
+            } else {
+                // Bresenham for larger radii (more efficient)
+                ArcOps.stroke1pxOpaque(
+                    surface,
+                    screenCenter.x, screenCenter.y,
+                    radius,
+                    corner.startAngle + rotation,
+                    corner.endAngle + rotation,
+                    color,
+                    clipBuffer
+                );
+            }
         }
     }
 }

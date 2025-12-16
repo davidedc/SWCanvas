@@ -313,6 +313,61 @@ class ArcOps {
     }
 
     /**
+     * 1px opaque arc stroke using angle-based iteration for small radii.
+     * Unlike Bresenham, this method guarantees pixels at exact boundary angles,
+     * eliminating junction gaps with connected line segments.
+     *
+     * Use this for radius < 20 where Bresenham's angular coverage gaps
+     * become noticeable (especially at octant boundaries like 225°, 315°, etc.)
+     *
+     * @param {Surface} surface - Target surface
+     * @param {number} cx - Center X (floating-point)
+     * @param {number} cy - Center Y (floating-point)
+     * @param {number} radius - Arc radius
+     * @param {number} startAngle - Start angle in radians
+     * @param {number} endAngle - End angle in radians
+     * @param {Color} color - Stroke color (must be opaque)
+     * @param {Uint8Array|null} clipBuffer - Clip mask buffer
+     */
+    static stroke1pxOpaqueSmallRadius(surface, cx, cy, radius, startAngle, endAngle, color, clipBuffer) {
+        const width = surface.width;
+        const height = surface.height;
+        const data32 = surface.data32;
+        const packedColor = Surface.packColor(color.r, color.g, color.b, 255);
+
+        // Calculate number of steps needed for continuous coverage
+        // Use 2x the arc length in pixels to ensure no gaps between adjacent pixels
+        const arcLength = radius * Math.abs(endAngle - startAngle);
+        const numSteps = Math.max(Math.ceil(arcLength * 2), 8); // At least 8 steps for tiny arcs
+        const angleStep = (endAngle - startAngle) / numSteps;
+
+        // Track drawn pixels to avoid overdraw (use Set for simplicity)
+        const drawnPixels = new Set();
+
+        // Iterate through angles, always including exact start and end (i <= numSteps)
+        for (let i = 0; i <= numSteps; i++) {
+            const angle = startAngle + i * angleStep;
+
+            // Compute pixel position using same floor() as LineOps for junction alignment
+            const px = Math.floor(cx + radius * Math.cos(angle));
+            const py = Math.floor(cy + radius * Math.sin(angle));
+
+            // Skip if out of bounds
+            if (px < 0 || px >= width || py < 0 || py >= height) continue;
+
+            // Skip if already drawn
+            const pos = py * width + px;
+            if (drawnPixels.has(pos)) continue;
+            drawnPixels.add(pos);
+
+            // Draw pixel (respecting clip buffer)
+            if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (pos & 7)))) {
+                data32[pos] = packedColor;
+            }
+        }
+    }
+
+    /**
      * Optimized 1px semi-transparent arc stroke using Bresenham + Set
      * Uses Set to prevent overdraw for correct alpha blending
      * @param {Surface} surface - Target surface
