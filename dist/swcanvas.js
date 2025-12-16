@@ -3952,12 +3952,12 @@ class ArcOps {
     }
 
     /**
-     * 1px opaque arc stroke using angle-based iteration for small radii.
-     * Unlike Bresenham, this method guarantees pixels at exact boundary angles,
+     * 1px opaque arc stroke using angle-based iteration with exact endpoint pixels.
+     * Unlike Bresenham, this method guarantees pixels at exact start/end angles,
      * eliminating junction gaps with connected line segments.
      *
-     * Use this for radius < 20 where Bresenham's angular coverage gaps
-     * become noticeable (especially at octant boundaries like 225°, 315°, etc.)
+     * Use this when junction alignment is critical (e.g., rotated rounded rectangles)
+     * where Bresenham's angular coverage gaps would cause discontinuities.
      *
      * @param {Surface} surface - Target surface
      * @param {number} cx - Center X (floating-point)
@@ -3968,7 +3968,7 @@ class ArcOps {
      * @param {Color} color - Stroke color (must be opaque)
      * @param {Uint8Array|null} clipBuffer - Clip mask buffer
      */
-    static stroke1pxOpaqueSmallRadius(surface, cx, cy, radius, startAngle, endAngle, color, clipBuffer) {
+    static stroke1pxOpaqueExactEndpoints(surface, cx, cy, radius, startAngle, endAngle, color, clipBuffer) {
         const width = surface.width;
         const height = surface.height;
         const data32 = surface.data32;
@@ -6004,8 +6004,8 @@ class RoundedRectOps {
             const screenCenter = transform(corner.localCx, corner.localCy);
 
             if (useSmallRadiusMethod) {
-                // Angle-based iteration for small radii (guaranteed junction alignment)
-                ArcOps.stroke1pxOpaqueSmallRadius(
+                // Angle-based iteration with exact endpoints (guaranteed junction alignment)
+                ArcOps.stroke1pxOpaqueExactEndpoints(
                     surface,
                     screenCenter.x, screenCenter.y,
                     radius,
