@@ -3980,10 +3980,8 @@ class ArcOps {
         const numSteps = Math.max(Math.ceil(arcLength * 2), 8); // At least 8 steps for tiny arcs
         const angleStep = (endAngle - startAngle) / numSteps;
 
-        // Track drawn pixels to avoid overdraw (use Set for simplicity)
-        const drawnPixels = new Set();
-
         // Iterate through angles, always including exact start and end (i <= numSteps)
+        // Note: Adjacent angles may produce same pixel - harmless for opaque strokes
         for (let i = 0; i <= numSteps; i++) {
             const angle = startAngle + i * angleStep;
 
@@ -3994,12 +3992,8 @@ class ArcOps {
             // Skip if out of bounds
             if (px < 0 || px >= width || py < 0 || py >= height) continue;
 
-            // Skip if already drawn
-            const pos = py * width + px;
-            if (drawnPixels.has(pos)) continue;
-            drawnPixels.add(pos);
-
             // Draw pixel (respecting clip buffer)
+            const pos = py * width + px;
             if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (pos & 7)))) {
                 data32[pos] = packedColor;
             }
