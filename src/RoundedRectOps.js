@@ -949,4 +949,157 @@ class RoundedRectOps {
             }
         }
     }
+
+    /**
+     * Direct rendering for stroked rotated rounded rectangle.
+     * Dispatches to appropriate sub-method based on lineWidth and opacity.
+     *
+     * Uses center-based coordinates (like RectOps.strokeRotated) since rotation
+     * naturally occurs around the center point.
+     *
+     * @param {Surface} surface - Target surface
+     * @param {number} centerX - Center X coordinate
+     * @param {number} centerY - Center Y coordinate
+     * @param {number} width - Rectangle width
+     * @param {number} height - Rectangle height
+     * @param {number|number[]} radii - Corner radius (single value or array)
+     * @param {number} rotation - Rotation angle in radians
+     * @param {number} lineWidth - Stroke width
+     * @param {Color} color - Stroke color
+     * @param {number} globalAlpha - Global alpha value
+     * @param {Uint8Array|null} clipBuffer - Optional clip mask buffer
+     */
+    static strokeRotated(surface, centerX, centerY, width, height, radii, rotation, lineWidth, color, globalAlpha, clipBuffer = null) {
+        // Normalize radius
+        let radius = this._normalizeRadius(radii, width, height);
+
+        // Fallback to RectOps.strokeRotated for zero radius (rounded rect becomes regular rect)
+        if (radius <= 0) {
+            RectOps.strokeRotated(surface, centerX, centerY, width, height, rotation, lineWidth, color, globalAlpha, clipBuffer);
+            return;
+        }
+
+        const isOpaqueColor = color.a === 255 && globalAlpha >= 1.0;
+        const isSemiTransparentColor = !isOpaqueColor && color.a > 0;
+
+        // Handle 1px strokes
+        if (lineWidth <= 1) {
+            if (isOpaqueColor) {
+                RoundedRectOps._stroke1pxOpaqueRotated(surface, centerX, centerY, width, height, radius, rotation, color, clipBuffer);
+            } else if (isSemiTransparentColor) {
+                // TODO: Implement _stroke1pxAlphaRotated
+                // For now, this case is not supported - caller should fall back to path-based rendering
+            }
+            return;
+        }
+
+        // Handle thick strokes
+        if (isSemiTransparentColor) {
+            // TODO: Implement _strokeThickAlphaRotated
+            // For now, this case is not supported - caller should fall back to path-based rendering
+        } else if (isOpaqueColor) {
+            // TODO: Implement _strokeThickOpaqueRotated
+            // For now, this case is not supported - caller should fall back to path-based rendering
+        }
+    }
+
+    /**
+     * Internal: 1px opaque stroke for rotated rounded rectangle.
+     * Uses hybrid approach: 4 straight edges via LineOps + 4 corner arcs via ArcOps.
+     *
+     * Since the stroke is opaque, overdraw at edge-arc junctions doesn't affect the result.
+     *
+     * @param {Surface} surface - Target surface
+     * @param {number} centerX - Center X coordinate
+     * @param {number} centerY - Center Y coordinate
+     * @param {number} width - Rectangle width
+     * @param {number} height - Rectangle height
+     * @param {number} radius - Corner radius (already normalized)
+     * @param {number} rotation - Rotation angle in radians
+     * @param {Color} color - Stroke color (must be opaque)
+     * @param {Uint8Array|null} clipBuffer - Optional clip mask buffer
+     */
+    static _stroke1pxOpaqueRotated(surface, centerX, centerY, width, height, radius, rotation, color, clipBuffer) {
+        // Pre-compute rotation
+        const cos = Math.cos(rotation);
+        const sin = Math.sin(rotation);
+        const hw = width / 2;   // half-width
+        const hh = height / 2;  // half-height
+
+        // Helper to transform local coordinates to screen coordinates
+        // Local coords are centered at origin, screen coords are centered at (centerX, centerY)
+        const transform = (localX, localY) => ({
+            x: centerX + localX * cos - localY * sin,
+            y: centerY + localX * sin + localY * cos
+        });
+
+        // Calculate 8 edge endpoints in local space, then transform to screen space
+        // Local coordinates (centered at origin):
+        // - Top edge: (-hw+radius, -hh) to (hw-radius, -hh)
+        // - Right edge: (hw, -hh+radius) to (hw, hh-radius)
+        // - Bottom edge: (hw-radius, hh) to (-hw+radius, hh)
+        // - Left edge: (-hw, hh-radius) to (-hw, -hh+radius)
+
+        const edgeEndpoints = [
+            // Top edge
+            { start: transform(-hw + radius, -hh), end: transform(hw - radius, -hh) },
+            // Right edge
+            { start: transform(hw, -hh + radius), end: transform(hw, hh - radius) },
+            // Bottom edge
+            { start: transform(hw - radius, hh), end: transform(-hw + radius, hh) },
+            // Left edge
+            { start: transform(-hw, hh - radius), end: transform(-hw, -hh + radius) }
+        ];
+
+        // Draw 4 straight edges via LineOps.strokeDirect
+        for (const edge of edgeEndpoints) {
+            // Skip zero-length edges (occurs when radius = half width or half height)
+            // This prevents extra pixels at arc junction points
+            const dx = edge.end.x - edge.start.x;
+            const dy = edge.end.y - edge.start.y;
+            const edgeLength = Math.sqrt(dx * dx + dy * dy);
+            if (edgeLength < 0.5) continue;
+
+            LineOps.strokeDirect(
+                surface,
+                edge.start.x, edge.start.y,
+                edge.end.x, edge.end.y,
+                1,              // lineWidth
+                color,
+                1.0,            // globalAlpha (already opaque)
+                clipBuffer,
+                true,           // isOpaqueColor
+                false           // isSemiTransparentColor
+            );
+        }
+
+        // Calculate 4 corner arc centers in local space, then transform to screen space
+        // Local corner centers and their angle ranges:
+        // - Top-left: (-hw+radius, -hh+radius), angles: π to 3π/2
+        // - Top-right: (hw-radius, -hh+radius), angles: 3π/2 to 2π
+        // - Bottom-right: (hw-radius, hh-radius), angles: 0 to π/2
+        // - Bottom-left: (-hw+radius, hh-radius), angles: π/2 to π
+
+        const corners = [
+            { localCx: -hw + radius, localCy: -hh + radius, startAngle: Math.PI, endAngle: Math.PI * 1.5 },         // Top-left
+            { localCx: hw - radius, localCy: -hh + radius, startAngle: Math.PI * 1.5, endAngle: Math.PI * 2 },      // Top-right
+            { localCx: hw - radius, localCy: hh - radius, startAngle: 0, endAngle: Math.PI * 0.5 },                 // Bottom-right
+            { localCx: -hw + radius, localCy: hh - radius, startAngle: Math.PI * 0.5, endAngle: Math.PI }           // Bottom-left
+        ];
+
+        // Draw 4 corner arcs via ArcOps.stroke1pxOpaque
+        // Arc angles shift by rotation when the shape is rotated
+        for (const corner of corners) {
+            const screenCenter = transform(corner.localCx, corner.localCy);
+            ArcOps.stroke1pxOpaque(
+                surface,
+                screenCenter.x, screenCenter.y,
+                radius,
+                corner.startAngle + rotation,  // Shift start angle by rotation
+                corner.endAngle + rotation,    // Shift end angle by rotation
+                color,
+                clipBuffer
+            );
+        }
+    }
 }

@@ -183,7 +183,8 @@ if (typeof window !== 'undefined') {
             RadialGradient: RadialGradient,
             ConicGradient: ConicGradient,
             Pattern: Pattern,
-            FastPixelOps: FastPixelOps
+            FastPixelOps: FastPixelOps,
+            RoundedRectOps: RoundedRectOps
         }
     };
 } else if (typeof module !== 'undefined' && module.exports) {
@@ -223,7 +224,8 @@ if (typeof window !== 'undefined') {
             RadialGradient: RadialGradient,
             ConicGradient: ConicGradient,
             Pattern: Pattern,
-            FastPixelOps: FastPixelOps
+            FastPixelOps: FastPixelOps,
+            RoundedRectOps: RoundedRectOps
         }
     };
 }
