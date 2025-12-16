@@ -57,12 +57,13 @@ All entry points are in `Context2D.js`. Use grep to find exact locations: `grep 
 | N/A (fill)   | Axis-aligned | Semi-transparent | RoundedRectOps.fillAlpha()         | YES      |
 | 1px          | Axis-aligned | Opaque           | RoundedRectOps.stroke1pxOpaque()   | YES      |
 | 1px          | Axis-aligned | Semi-transparent | RoundedRectOps.stroke1pxAlpha()    | YES      |
+| 1px          | Rotated      | Opaque           | RoundedRectOps.strokeRotated()     | YES      |
 | >1px         | Axis-aligned | Opaque           | RoundedRectOps.strokeThickOpaque() | YES      |
 | >1px         | Axis-aligned | Semi-transparent | RoundedRectOps.strokeThickAlpha()  | YES      |
 | Any          | Axis-aligned | Both             | RoundedRectOps.fillAndStroke()     | YES      |
 | 0px          | Any          | Any              | IGNORED                            | -        |
 
-Note: Rotated rounded rectangles use path-based rendering (no direct rendering)
+Note: Rotated rounded rectangle **stroke** (1px opaque) uses hybrid algorithm: 4 edges via LineOps + 4 corner arcs via ArcOps.stroke1pxOpaqueExactEndpoints(). Fill and thick stroke for rotated rounded rects use path-based rendering.
 
 ### 2.3 CIRCLES (CircleOps.js)
 
@@ -96,17 +97,19 @@ Note: Lines already handle all orientations - no separate "rotated" variant need
 
 ### 2.5 ARCS (ArcOps.js)
 
-| Stroke Width | Opacity          | Function                    | Clipping TO |
-|--------------|------------------|-----------------------------|-------------|
-| N/A (fill)   | Opaque           | ArcOps.fillOpaque()         | YES      |
-| N/A (fill)   | Semi-transparent | ArcOps.fillAlpha()          | YES      |
-| 1px          | Opaque           | ArcOps.stroke1pxOpaque()    | YES      |
-| 1px          | Semi-transparent | ArcOps.stroke1pxAlpha()     | YES      |
-| >1px         | Opaque           | ArcOps.strokeOuterOpaque()  | YES      |
-| >1px         | Semi-transparent | ArcOps.strokeOuterAlpha()   | YES      |
-| Any          | Both             | ArcOps.fillAndStrokeOuter() | YES      |
+| Stroke Width | Opacity          | Function                            | Clipping TO |
+|--------------|------------------|-------------------------------------|-------------|
+| N/A (fill)   | Opaque           | ArcOps.fillOpaque()                 | YES      |
+| N/A (fill)   | Semi-transparent | ArcOps.fillAlpha()                  | YES      |
+| 1px          | Opaque           | ArcOps.stroke1pxOpaque()            | YES      |
+| 1px          | Opaque (junctions) | ArcOps.stroke1pxOpaqueExactEndpoints() | YES   |
+| 1px          | Semi-transparent | ArcOps.stroke1pxAlpha()             | YES      |
+| >1px         | Opaque           | ArcOps.strokeOuterOpaque()          | YES      |
+| >1px         | Semi-transparent | ArcOps.strokeOuterAlpha()           | YES      |
+| Any          | Both             | ArcOps.fillAndStrokeOuter()         | YES      |
 
 Note: Arc uses Bresenham + angle filtering. 1px paths skip Set overhead for opaque.
+**stroke1pxOpaqueExactEndpoints()** uses angle-based iteration (not Bresenham) guaranteeing pixels at exact start/end angles - used by RoundedRectOps.strokeRotated() for junction alignment.
 **Requires lineCap === 'butt' for direct rendering (non-butt caps fall to path-based rendering).**
 
 ---
@@ -141,6 +144,9 @@ Note: Arc uses Bresenham + angle filtering. 1px paths skip Set overhead for opaq
 ```
 RectOps.strokeRotated() ──────────► LineOps.strokeDirect()
    (draws each edge as thick line)
+
+RoundedRectOps.strokeRotated() ───► LineOps.strokeDirect() + ArcOps.stroke1pxOpaqueExactEndpoints()
+   (4 edges + 4 corner arcs, 1px opaque only)
 
 RoundedRectOps.stroke1pxOpaque() ──► RectOps.stroke1pxOpaque()
    (fallback when radius=0)
@@ -256,17 +262,19 @@ if (clipBuffer[byteIndex] === 0) {
 
 ### 6.3 Algorithm Choices
 
-| Algorithm         | Used By                               | Purpose                                |
-|-------------------|---------------------------------------|----------------------------------------|
-| Bresenham circle  | CircleOps.stroke1px*, generateExtents | Pixel-perfect circle outline           |
-| Bresenham line    | LineOps thin strokes                  | Pixel-perfect line rasterization       |
-| 8-way symmetry    | CircleOps.stroke1px*                  | Generate 8 points per Bresenham step   |
-| Edge function     | RectOps.fillRotated                   | Test if pixel inside rotated rect      |
-| Polygon scanline  | LineOps.strokeThickPolygonScan        | Fill thick diagonal lines              |
-| Sqrt-based extent | CircleOps.fillAndStroke, strokeThick  | Analytical circle intersection         |
-| Annulus (ring)    | CircleOps.strokeThick, fillAndStroke  | Inner/outer radius for thick strokes   |
-| Angle filtering   | ArcOps.*                              | Filter Bresenham points by angle range |
-| Set deduplication | CircleOps.stroke1pxAlpha, ArcOps      | Prevent overdraw for alpha blending    |
+| Algorithm           | Used By                                  | Purpose                                |
+|---------------------|------------------------------------------|----------------------------------------|
+| Bresenham circle    | CircleOps.stroke1px*, generateExtents    | Pixel-perfect circle outline           |
+| Bresenham line      | LineOps thin strokes                     | Pixel-perfect line rasterization       |
+| 8-way symmetry      | CircleOps.stroke1px*                     | Generate 8 points per Bresenham step   |
+| Edge function       | RectOps.fillRotated                      | Test if pixel inside rotated rect      |
+| Polygon scanline    | LineOps.strokeThickPolygonScan           | Fill thick diagonal lines              |
+| Sqrt-based extent   | CircleOps.fillAndStroke, strokeThick     | Analytical circle intersection         |
+| Annulus (ring)      | CircleOps.strokeThick, fillAndStroke     | Inner/outer radius for thick strokes   |
+| Angle filtering     | ArcOps.*                                 | Filter Bresenham points by angle range |
+| Angle-based iterate | ArcOps.stroke1pxOpaqueExactEndpoints     | Exact start/end pixels for junctions   |
+| Set deduplication   | CircleOps.stroke1pxAlpha, ArcOps         | Prevent overdraw for alpha blending    |
+| Hybrid edges+arcs   | RoundedRectOps.strokeRotated             | 4 lines + 4 arcs for rotated rrect     |
 
 ### 6.4 Special Optimizations
 
@@ -275,6 +283,7 @@ if (clipBuffer[byteIndex] === 0) {
 | Epsilon contraction  | CircleOps.fillAndStroke, RoundedRectOps.fillAndStroke          | FILL_EPSILON = 0.0001 prevents boundary speckles   |
 | Line extend/shorten  | RectOps.strokeRotated                                          | Proper miter corners for thick rotated rect stroke |
 | Crisp center adjust  | CircleOps, ArcOps                                              | floor(cx - 0.5) for consistent pixel placement     |
+| Exact endpoints      | ArcOps.stroke1pxOpaqueExactEndpoints                           | Angle-based iteration guarantees junction pixels   |
 
 ---
 
@@ -289,7 +298,7 @@ if (clipBuffer[byteIndex] === 0) {
 | Stroke thick opaque   | ✓    | ✓         | ✓      | ✓    | ✓   |
 | Stroke thick alpha    | ✓    | ✓         | ✓      | ✓    | ✓   |
 | fillAndStroke()       | ✓    | ✓         | ✓      | N/A  | ✓   |
-| Rotation support      | ✓    | ✗         | N/A    | ✓    | ✗   |
+| Rotation support      | ✓    | ⚬†        | N/A    | ✓    | ✗   |
 | Clipping TO (respects clip) | ✓    | ✓         | ✓      | ✓    | ✓   |
 | Clipping AT (defines clip)  | ✗    | ✗         | ✗      | N/A  | ✗   |
 | 32-bit writes         | ✓    | ✓         | ✓      | ✓    | ✓   |
@@ -297,7 +306,8 @@ if (clipBuffer[byteIndex] === 0) {
 | Bresenham algorithm   | ✗    | ✗         | ✓      | ✓    | ✓   |
 | Set deduplication     | ✗    | ✗         | ✓      | ✗    | ✓   |
 
-†Clipping AT (defining clip regions) uses path-based approach for all shapes - see Section 5.1.
+†RoundRect rotation support: 1px opaque stroke only via strokeRotated(). Fill/thick stroke use path-based.
+‡Clipping AT (defining clip regions) uses path-based approach for all shapes - see Section 5.1.
 
 ---
 
@@ -305,14 +315,14 @@ if (clipBuffer[byteIndex] === 0) {
 
 ### Public Methods (by Class)
 
-| Class          | Fill Methods                        | Stroke Methods                                                                |
-|----------------|-------------------------------------|-------------------------------------------------------------------------------|
-| RectOps        | fillOpaque, fillAlpha, fillRotated  | stroke1pxOpaque, stroke1pxAlpha, strokeThickOpaque, strokeThickAlpha          |
-| RoundedRectOps | fillOpaque, fillAlpha               | stroke1pxOpaque, stroke1pxAlpha, strokeThickOpaque, strokeThickAlpha          |
-| CircleOps      | fillOpaque, fillAlpha               | stroke1pxOpaque, stroke1pxAlpha, strokeThick, strokeThickAlpha                |
-| LineOps        | N/A                                 | strokeDirect, strokeThickPolygonScan                                          |
-| ArcOps         | fillOpaque, fillAlpha               | stroke1pxOpaque, stroke1pxAlpha, strokeOuterOpaque, strokeOuterAlpha          |
-| SpanOps        | fillOpaque, fillAlpha               | N/A                                                                           |
+| Class          | Fill Methods                        | Stroke Methods                                                                              |
+|----------------|-------------------------------------|---------------------------------------------------------------------------------------------|
+| RectOps        | fillOpaque, fillAlpha, fillRotated  | stroke1pxOpaque, stroke1pxAlpha, strokeThickOpaque, strokeThickAlpha, strokeRotated         |
+| RoundedRectOps | fillOpaque, fillAlpha               | stroke1pxOpaque, stroke1pxAlpha, strokeThickOpaque, strokeThickAlpha, strokeRotated         |
+| CircleOps      | fillOpaque, fillAlpha               | stroke1pxOpaque, stroke1pxAlpha, strokeThick, strokeThickAlpha                              |
+| LineOps        | N/A                                 | strokeDirect, strokeThickPolygonScan                                                        |
+| ArcOps         | fillOpaque, fillAlpha               | stroke1pxOpaque, stroke1pxOpaqueExactEndpoints, stroke1pxAlpha, strokeOuterOpaque, strokeOuterAlpha |
+| SpanOps        | fillOpaque, fillAlpha               | N/A                                                                                         |
 
 ### Combined Methods
 
@@ -335,7 +345,7 @@ if (clipBuffer[byteIndex] === 0) {
 
 ### Low Priority Enhancements:
 
-1. **Rotated RoundedRect direct rendering** - Currently requires identity transform
+1. **Rotated RoundedRect fill/thick stroke** - Currently only 1px opaque stroke supported via strokeRotated()
 2. **clipRect/clipCircle convenience methods** - Optional non-standard API additions
 
 ---
@@ -375,7 +385,7 @@ All 35 documented direct rendering functions have **100% explicit test coverage*
 | `strokeRotated()` | `rect-sgl-szMix-fOpaq-sOpaq-*-ctxRotRand-test.js` |
 | `fillAndStroke()` | `rect-*-fSemi-sMix-*` tests |
 
-#### ROUNDED RECTANGLES (RoundedRectOps.js) - 7/7 Functions Covered
+#### ROUNDED RECTANGLES (RoundedRectOps.js) - 8/8 Functions Covered
 
 | Function | Test File(s) |
 |----------|--------------|
@@ -385,6 +395,7 @@ All 35 documented direct rendering functions have **100% explicit test coverage*
 | `stroke1pxAlpha()` | `roundrect-sgl-szMix-fNone-sSemi-sw1px-lytCenter-cenMixPG-edgeCrisp-ornAxial-rrrRand-test.js` |
 | `strokeThickOpaque()` | `roundrect-*-sw1-11px-*-sOpaq-*` tests |
 | `strokeThickAlpha()` | `roundrect-m6-*-sSemi-*`, `roundrect-m8-*` tests |
+| `strokeRotated()` | `roundrect-m12-*-ornRot-*`, `roundrect-sgl-szRand-*-ornRot-*` tests |
 | `fillAndStroke()` | Multiple fill+stroke tests |
 
 #### CIRCLES (CircleOps.js) - 7/7 Functions Covered
@@ -409,13 +420,14 @@ All 35 documented direct rendering functions have **100% explicit test coverage*
 | `strokeThickPolygonScan()` opaque | `line-m20-*-ornRand-*` tests |
 | `strokeThickPolygonScan()` alpha | `line-m15-*-sMix-*` tests |
 
-#### ARCS (ArcOps.js) - 7/7 Functions Covered + Edge Cases
+#### ARCS (ArcOps.js) - 8/8 Functions Covered + Edge Cases
 
 | Function | Test File(s) |
 |----------|--------------|
 | `fillOpaque()` | `arc-fill-opaque-test.js`, `arc-*-fOpaq-sNone-*` |
 | `fillAlpha()` | `arc-semitransparent-test.js` |
 | `stroke1pxOpaque()` | `arc-*-sw1px-*-sOpaq-*` tests |
+| `stroke1pxOpaqueExactEndpoints()` | Tested via `roundrect-*-ornRot-*` (used for junction alignment) |
 | `stroke1pxAlpha()` | `arc-*-sw1px-*-sSemi-*` tests |
 | `strokeOuterOpaque()` | `arc-*-sw2-6px-*-sOpaq-*`, `arc-*-sw1-30px-*` tests |
 | `strokeOuterAlpha()` | `arc-*-sw2-6px-*-sSemi-*` tests |
@@ -427,15 +439,15 @@ All 35 documented direct rendering functions have **100% explicit test coverage*
 | Shape | Functions | Covered |
 |-------|-----------|---------|
 | Rectangle | 9 | 9 ✓ |
-| RoundedRect | 7 | 7 ✓ |
+| RoundedRect | 8 | 8 ✓ |
 | Circle | 7 | 7 ✓ |
 | Line | 5 | 5 ✓ |
-| Arc | 7 | 7 ✓ |
-| **Total** | **35** | **35 ✓** |
+| Arc | 8 | 8 ✓ |
+| **Total** | **37** | **37 ✓** |
 
 **Test Suite Statistics:**
-- **69 test files** in `tests/direct-rendering/cases/`
-- **345 test runs passed** (69 tests × 5 iterations)
+- **71 test files** in `tests/direct-rendering/cases/`
+- **355 test runs passed** (71 tests × 5 iterations)
 - Run command: `node tests/direct-rendering/run-direct-rendering-tests.js -i 5`
 
 ### 11.3 Optional Future Edge Case Tests
