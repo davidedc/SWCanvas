@@ -2147,8 +2147,14 @@ class RectOps {
     }
 
     /**
-     * Combined fill and stroke for rectangles - avoids boundary artifacts
-     * Uses scanline approach for efficient single-pass rendering
+     * Combined fill and stroke for rectangles - single-scan span-based rendering.
+     * Uses fill-first ordering for correct semi-transparent stroke blending.
+     *
+     * For semi-transparent strokes: fill renders to PATH extent first, then stroke
+     * renders on top and blends correctly with the fill underneath.
+     *
+     * For opaque strokes: fill renders to INNER extent (stroke covers overlap anyway).
+     *
      * @param {Surface} surface - Target surface
      * @param {number} x - Rectangle X coordinate
      * @param {number} y - Rectangle Y coordinate
@@ -2168,11 +2174,11 @@ class RectOps {
 
         // Check what we need to draw
         const hasFill = fillColor && fillColor.a > 0;
-        const hasStroke = strokeColor && strokeColor.a > 0;
+        const hasStroke = strokeColor && strokeColor.a > 0 && lineWidth > 0;
 
         if (!hasFill && !hasStroke) return;
 
-        const halfStroke = lineWidth / 2;
+        const halfStroke = hasStroke ? lineWidth / 2 : 0;
 
         // Determine rendering modes
         const fillIsOpaque = hasFill && fillColor.a === 255 && globalAlpha >= 1.0;
@@ -2182,6 +2188,9 @@ class RectOps {
         const strokeIsOpaque = hasStroke && strokeColor.a === 255 && globalAlpha >= 1.0;
         const strokeEffectiveAlpha = hasStroke ? (strokeColor.a / 255) * globalAlpha : 0;
         const strokeInvAlpha = 1 - strokeEffectiveAlpha;
+
+        // Key check: is stroke semi-transparent? (needs fill-first blending)
+        const strokeIsSemiTransparent = hasStroke && !strokeIsOpaque;
 
         // Packed colors for opaque rendering
         const fillPacked = fillIsOpaque ? Surface.packColor(fillColor.r, fillColor.g, fillColor.b, 255) : 0;
@@ -2194,85 +2203,97 @@ class RectOps {
         const pathRight = Math.ceil(x + width);
         const pathBottom = Math.ceil(y + height);
 
-        // Stroke outer bounds
-        const strokeOuterLeft = Math.floor(x - halfStroke);
-        const strokeOuterTop = Math.floor(y - halfStroke);
-        const strokeOuterRight = Math.ceil(x + width + halfStroke);
-        const strokeOuterBottom = Math.ceil(y + height + halfStroke);
+        // Stroke outer bounds (scan region when stroke present)
+        const strokeOuterLeft = hasStroke ? Math.floor(x - halfStroke) : pathLeft;
+        const strokeOuterTop = hasStroke ? Math.floor(y - halfStroke) : pathTop;
+        const strokeOuterRight = hasStroke ? Math.ceil(x + width + halfStroke) : pathRight;
+        const strokeOuterBottom = hasStroke ? Math.ceil(y + height + halfStroke) : pathBottom;
 
-        // Stroke inner bounds (where fill starts if stroke present)
-        const strokeInnerLeft = Math.ceil(x + halfStroke);
-        const strokeInnerTop = Math.ceil(y + halfStroke);
-        const strokeInnerRight = Math.floor(x + width - halfStroke);
-        const strokeInnerBottom = Math.floor(y + height - halfStroke);
+        // Stroke inner bounds (interior where no stroke is drawn)
+        const strokeInnerLeft = hasStroke ? Math.ceil(x + halfStroke) : pathLeft;
+        const strokeInnerTop = hasStroke ? Math.ceil(y + halfStroke) : pathTop;
+        const strokeInnerRight = hasStroke ? Math.floor(x + width - halfStroke) : pathRight;
+        const strokeInnerBottom = hasStroke ? Math.floor(y + height - halfStroke) : pathBottom;
 
-        // Helper to set pixel with optional clipping
-        const setPixelOpaque = (px, py, packed) => {
-            if (px < 0 || px >= surfaceWidth || py < 0 || py >= surfaceHeight) return;
-            const pos = py * surfaceWidth + px;
-            if (clipBuffer) {
-                const byteIndex = pos >> 3;
-                const bitIndex = pos & 7;
-                if (!(clipBuffer[byteIndex] & (1 << bitIndex))) return;
-            }
-            data32[pos] = packed;
-        };
+        // Span rendering helpers
+        const renderFillSpan = (left, right, py) => {
+            const spanLeft = Math.max(0, left);
+            const spanRight = Math.min(surfaceWidth, right);
+            const length = spanRight - spanLeft;
+            if (length <= 0) return;
 
-        const blendPixelAlpha = (px, py, r, g, b, effectiveAlpha, invAlpha) => {
-            if (px < 0 || px >= surfaceWidth || py < 0 || py >= surfaceHeight) return;
-            const pos = py * surfaceWidth + px;
-            if (clipBuffer) {
-                const byteIndex = pos >> 3;
-                const bitIndex = pos & 7;
-                if (!(clipBuffer[byteIndex] & (1 << bitIndex))) return;
-            }
-            const idx = pos * 4;
-            const oldAlpha = data[idx + 3] / 255;
-            const oldAlphaScaled = oldAlpha * invAlpha;
-            const newAlpha = effectiveAlpha + oldAlphaScaled;
-            if (newAlpha > 0) {
-                const blendFactor = 1 / newAlpha;
-                data[idx] = (r * effectiveAlpha + data[idx] * oldAlphaScaled) * blendFactor;
-                data[idx + 1] = (g * effectiveAlpha + data[idx + 1] * oldAlphaScaled) * blendFactor;
-                data[idx + 2] = (b * effectiveAlpha + data[idx + 2] * oldAlphaScaled) * blendFactor;
-                data[idx + 3] = newAlpha * 255;
+            if (fillIsOpaque) {
+                SpanOps.fillOpaque(data32, surfaceWidth, surfaceHeight, spanLeft, py, length, fillPacked, clipBuffer);
+            } else {
+                SpanOps.fillAlpha(data, surfaceWidth, surfaceHeight, spanLeft, py, length,
+                    fillColor.r, fillColor.g, fillColor.b, fillEffectiveAlpha, fillInvAlpha, clipBuffer);
             }
         };
 
-        // Process each scanline
+        const renderStrokeSpan = (left, right, py) => {
+            const spanLeft = Math.max(0, left);
+            const spanRight = Math.min(surfaceWidth, right);
+            const length = spanRight - spanLeft;
+            if (length <= 0) return;
+
+            if (strokeIsOpaque) {
+                SpanOps.fillOpaque(data32, surfaceWidth, surfaceHeight, spanLeft, py, length, strokePacked, clipBuffer);
+            } else {
+                SpanOps.fillAlpha(data, surfaceWidth, surfaceHeight, spanLeft, py, length,
+                    strokeColor.r, strokeColor.g, strokeColor.b, strokeEffectiveAlpha, strokeInvAlpha, clipBuffer);
+            }
+        };
+
+        // Single-pass scanline rendering
         for (let py = strokeOuterTop; py < strokeOuterBottom; py++) {
             if (py < 0 || py >= surfaceHeight) continue;
 
-            const inTopStroke = py < strokeInnerTop;
-            const inBottomStroke = py >= strokeInnerBottom;
-            const inVerticalStrokeZone = inTopStroke || inBottomStroke;
+            const inVerticalStrokeZone = hasStroke && (py < strokeInnerTop || py >= strokeInnerBottom);
 
-            // Horizontal extent for this scanline
-            const leftBound = Math.max(0, strokeOuterLeft);
-            const rightBound = Math.min(surfaceWidth - 1, strokeOuterRight - 1);
+            // STEP 1: Render fill span FIRST
+            // For semi-transparent stroke: fill to PATH extent (stroke will blend on top)
+            // For opaque stroke: fill to INNER extent (stroke covers overlap, no point filling there)
+            // For no stroke: fill to PATH extent
+            // For semi-transparent strokes, also render fill in vertical stroke zones
+            // so the top/bottom stroke can blend with the fill underneath
+            const shouldRenderFill = hasFill && py >= pathTop && py < pathBottom &&
+                (!inVerticalStrokeZone || strokeIsSemiTransparent);
 
-            for (let px = leftBound; px <= rightBound; px++) {
-                const inLeftStroke = px < strokeInnerLeft;
-                const inRightStroke = px >= strokeInnerRight;
-                const inHorizontalStrokeZone = inLeftStroke || inRightStroke;
+            if (shouldRenderFill) {
+                let fillLeft, fillRight;
 
-                // Determine what to draw at this pixel
-                const inStrokeZone = hasStroke && (inVerticalStrokeZone || inHorizontalStrokeZone);
-                const inFillZone = hasFill && !inStrokeZone &&
-                    px >= pathLeft && px < pathRight &&
-                    py >= pathTop && py < pathBottom;
+                if (!hasStroke) {
+                    // No stroke: fill entire path width
+                    fillLeft = pathLeft;
+                    fillRight = pathRight;
+                } else if (strokeIsSemiTransparent) {
+                    // Semi-transparent stroke: fill to PATH extent
+                    // Stroke will blend with this fill for correct alpha blending
+                    fillLeft = pathLeft;
+                    fillRight = pathRight;
+                } else {
+                    // Opaque stroke: fill to INNER extent (stroke covers overlap anyway)
+                    fillLeft = strokeInnerLeft;
+                    fillRight = strokeInnerRight;
+                }
 
-                if (inStrokeZone) {
-                    if (strokeIsOpaque) {
-                        setPixelOpaque(px, py, strokePacked);
-                    } else {
-                        blendPixelAlpha(px, py, strokeColor.r, strokeColor.g, strokeColor.b, strokeEffectiveAlpha, strokeInvAlpha);
+                if (fillLeft < fillRight) {
+                    renderFillSpan(fillLeft, fillRight, py);
+                }
+            }
+
+            // STEP 2: Render stroke spans ON TOP
+            if (hasStroke) {
+                if (inVerticalStrokeZone) {
+                    // Full horizontal stroke span (top or bottom edge)
+                    renderStrokeSpan(strokeOuterLeft, strokeOuterRight, py);
+                } else {
+                    // Left and right stroke segments only
+                    if (strokeOuterLeft < strokeInnerLeft) {
+                        renderStrokeSpan(strokeOuterLeft, strokeInnerLeft, py);
                     }
-                } else if (inFillZone) {
-                    if (fillIsOpaque) {
-                        setPixelOpaque(px, py, fillPacked);
-                    } else {
-                        blendPixelAlpha(px, py, fillColor.r, fillColor.g, fillColor.b, fillEffectiveAlpha, fillInvAlpha);
+                    if (strokeInnerRight < strokeOuterRight) {
+                        renderStrokeSpan(strokeInnerRight, strokeOuterRight, py);
                     }
                 }
             }
