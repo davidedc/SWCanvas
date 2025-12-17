@@ -333,34 +333,71 @@ class ArcOps {
         const width = surface.width;
         const height = surface.height;
         const data32 = surface.data32;
+        // Hoist color packing
         const packedColor = Surface.packColor(color.r, color.g, color.b, 255);
 
-        // Calculate number of steps needed for continuous coverage
-        // Use 2x the arc length in pixels to ensure no gaps between adjacent pixels
+        // 1. Setup Arc Steps
+        // Keep the safety factor to ensure continuous lines, but we will deduplicate writes later.
         const arcLength = radius * Math.abs(endAngle - startAngle);
-        const numSteps = Math.max(Math.ceil(arcLength * 2), 8); // At least 8 steps for tiny arcs
+        const numSteps = Math.max(Math.ceil(arcLength * 2), 8);
         const angleStep = (endAngle - startAngle) / numSteps;
 
-        // Iterate through angles, always including exact start and end (i <= numSteps)
-        // Note: Adjacent angles may produce same pixel - harmless for opaque strokes
+        // 2. Optimization: Use Incremental Rotation (Rotation Matrix)
+        // This removes Math.cos/sin from the hot loop, replacing them with multiplication.
+        // x' = x*cos - y*sin
+        // y' = x*sin + y*cos
+        const cosStep = Math.cos(angleStep);
+        const sinStep = Math.sin(angleStep);
+
+        // Start position relative to center
+        let x = radius * Math.cos(startAngle);
+        let y = radius * Math.sin(startAngle);
+
+        // 3. Optimization: Bounds Check Hoisting
+        // If the entire circle is safely within the canvas, we can skip individual pixel bounds checks.
+        // We use a conservative estimate for safety.
+        const isSafe = (cx - radius >= 0) && (cx + radius < width) &&
+            (cy - radius >= 0) && (cy + radius < height);
+
+        // Track the last written pixel index to prevent overdraw (expensive memory writes)
+        let lastPos = -1;
+
         for (let i = 0; i <= numSteps; i++) {
-            const angle = startAngle + i * angleStep;
-
-            // Compute pixel position using same floor() as LineOps for junction alignment
-            const px = Math.floor(cx + radius * Math.cos(angle));
-            const py = Math.floor(cy + radius * Math.sin(angle));
-
-            // Skip if out of bounds
-            if (px < 0 || px >= width || py < 0 || py >= height) continue;
-
-            // Draw pixel (respecting clip buffer)
-            const pos = py * width + px;
-            if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (pos & 7)))) {
-                data32[pos] = packedColor;
+            // Force exact precision for the final point to satisfy "ExactEndpoints" requirement
+            // (prevents floating point drift from the rotation matrix)
+            if (i === numSteps) {
+                x = radius * Math.cos(endAngle);
+                y = radius * Math.sin(endAngle);
             }
+
+            // Fast floor (Bitwise OR 0) matches Math.floor for positive numbers.
+            // If your inputs can be negative (off-canvas), stick to Math.floor. 
+            // We use Math.floor here to match the original LineOps consistency requirement.
+            const px = Math.floor(cx + x);
+            const py = Math.floor(cy + y);
+
+            // 4. Optimization: Deduplication
+            // Because numSteps is high (2x arcLength), we often hit the same pixel twice.
+            // We calculate the linear position once and check if we just wrote to it.
+            const pos = py * width + px;
+
+            if (pos !== lastPos) {
+                // Apply bounds check only if the circle isn't fully contained
+                if (isSafe || (px >= 0 && px < width && py >= 0 && py < height)) {
+                    // Clipping check
+                    if (!clipBuffer || (clipBuffer[pos >> 3] & (1 << (pos & 7)))) {
+                        data32[pos] = packedColor;
+                        lastPos = pos;
+                    }
+                }
+            }
+
+            // Apply rotation for next iteration (Incremental Trigonometry)
+            const nextX = x * cosStep - y * sinStep;
+            y = x * sinStep + y * cosStep;
+            x = nextX;
         }
     }
-
     /**
      * Optimized 1px semi-transparent arc stroke using Bresenham + Set
      * Uses Set to prevent overdraw for correct alpha blending
@@ -726,7 +763,7 @@ class ArcOps {
      * @param {Uint8Array|null} clipBuffer - Clip mask buffer
      */
     static fillAndStrokeOuter(surface, cx, cy, radius, startAngle, endAngle, lineWidth,
-                               fillColor, strokeColor, globalAlpha, clipBuffer) {
+        fillColor, strokeColor, globalAlpha, clipBuffer) {
         const width = surface.width;
         const height = surface.height;
         const data = surface.data;
