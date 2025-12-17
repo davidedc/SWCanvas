@@ -108,6 +108,7 @@ try {
             global.generateConstrainedArcAngles = directRenderingTestUtils.generateConstrainedArcAngles;
             global.registerDirectRenderingTest = directRenderingTestUtils.registerDirectRenderingTest;
             global.roundPoint = directRenderingTestUtils.roundPoint;
+            global.ensureHalfPoint = directRenderingTestUtils.ensureHalfPoint;
             global.adjustCenterForCrispStrokeRendering = directRenderingTestUtils.adjustCenterForCrispStrokeRendering;
             global.calculateCrispFillAndStrokeRectParams = directRenderingTestUtils.calculateCrispFillAndStrokeRectParams;
 

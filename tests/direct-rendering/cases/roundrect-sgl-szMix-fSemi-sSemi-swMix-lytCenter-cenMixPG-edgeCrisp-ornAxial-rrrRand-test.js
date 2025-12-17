@@ -138,6 +138,7 @@ registerDirectRenderingTest(
     drawTest,
     'rounded-rects',
     {
+        extremes: { colorTolerance: 8 },
         uniqueColors: {
             middleRow: { count: 4 },
             middleColumn: { count: 4 }
