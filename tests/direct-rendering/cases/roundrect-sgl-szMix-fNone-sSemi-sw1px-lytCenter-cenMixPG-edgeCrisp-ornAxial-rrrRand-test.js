@@ -87,8 +87,8 @@ registerDirectRenderingTest(
     },
     'rounded-rects',
     {
-        extremes: true
-        // No totalUniqueColors check - corners produce varying blended colors
+        extremes: true,
+        totalUniqueColors: 2
     },
     {
         title: 'Single 1px Semi-Transparent Stroked Rounded Rectangle (Crisp, Mixed P/G Centering)',
