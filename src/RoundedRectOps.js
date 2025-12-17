@@ -111,7 +111,7 @@ class RoundedRectOps {
 
     /**
      * Direct rendering for 1px semi-transparent stroke on axis-aligned rounded rectangle.
-     * Uses alpha blending for each pixel.
+     * Uses Set-based deduplication to prevent overdraw at edge-arc junctions.
      *
      * @param {Surface} surface - Target surface
      * @param {number} x - Top-left X coordinate
@@ -151,16 +151,55 @@ class RoundedRectOps {
         const posW = width;
         const posH = height;
 
-        // Helper to blend pixel with optional clipping
-        const blendPixel = (px, py) => {
+        // Use Set to collect unique pixel positions (prevents overdraw at edge-arc junctions)
+        const strokePixels = new Set();
+
+        // Helper to collect pixel into Set
+        const collectPixel = (px, py) => {
             if (px < 0 || px >= surfaceWidth || py < 0 || py >= surfaceHeight) return;
+            strokePixels.add(py * surfaceWidth + px);
+        };
 
-            const pixelIndex = py * surfaceWidth + px;
+        // Collect horizontal edge pixels
+        const topY = Math.floor(posY);
+        const bottomY = Math.floor(posY + posH - 0.5);
 
+        for (let xx = Math.floor(posX + radius); xx < posX + posW - radius; xx++) {
+            collectPixel(xx, topY);
+            collectPixel(xx, bottomY);
+        }
+
+        // Collect vertical edge pixels
+        const leftX = Math.floor(posX);
+        const rightX = Math.floor(posX + posW - 0.5);
+
+        for (let yy = Math.floor(posY + radius); yy < posY + posH - radius; yy++) {
+            collectPixel(leftX, yy);
+            collectPixel(rightX, yy);
+        }
+
+        // Collect corner arc pixels
+        const collectCorner = (cx, cy, startAngle, endAngle) => {
+            const sr = radius - 0.5;
+            const angleStep = Math.PI / 180;
+            for (let angle = startAngle; angle <= endAngle; angle += angleStep) {
+                const px = Math.floor(cx + sr * Math.cos(angle));
+                const py = Math.floor(cy + sr * Math.sin(angle));
+                collectPixel(px, py);
+            }
+        };
+
+        collectCorner(posX + radius, posY + radius, Math.PI, Math.PI * 3 / 2);
+        collectCorner(posX + posW - radius, posY + radius, Math.PI * 3 / 2, Math.PI * 2);
+        collectCorner(posX + posW - radius, posY + posH - radius, 0, Math.PI / 2);
+        collectCorner(posX + radius, posY + posH - radius, Math.PI / 2, Math.PI);
+
+        // Render all unique pixels once with alpha blending
+        for (const pixelIndex of strokePixels) {
             if (clipBuffer) {
                 const byteIndex = pixelIndex >> 3;
                 const bitIndex = pixelIndex & 7;
-                if (!(clipBuffer[byteIndex] & (1 << bitIndex))) return;
+                if (!(clipBuffer[byteIndex] & (1 << bitIndex))) continue;
             }
 
             const index = pixelIndex * 4;
@@ -175,41 +214,7 @@ class RoundedRectOps {
                 data[index + 2] = (b * incomingAlpha + data[index + 2] * oldAlphaScaled) * blendFactor;
                 data[index + 3] = newAlpha * 255;
             }
-        };
-
-        // Draw horizontal edges
-        const topY = Math.floor(posY);
-        const bottomY = Math.floor(posY + posH - 0.5);
-
-        for (let xx = Math.floor(posX + radius); xx < posX + posW - radius; xx++) {
-            blendPixel(xx, topY);
-            blendPixel(xx, bottomY);
         }
-
-        // Draw vertical edges
-        const leftX = Math.floor(posX);
-        const rightX = Math.floor(posX + posW - 0.5);
-
-        for (let yy = Math.floor(posY + radius); yy < posY + posH - radius; yy++) {
-            blendPixel(leftX, yy);
-            blendPixel(rightX, yy);
-        }
-
-        // Draw corner arcs
-        const drawCorner = (cx, cy, startAngle, endAngle) => {
-            const sr = radius - 0.5;
-            const angleStep = Math.PI / 180;
-            for (let angle = startAngle; angle <= endAngle; angle += angleStep) {
-                const px = Math.floor(cx + sr * Math.cos(angle));
-                const py = Math.floor(cy + sr * Math.sin(angle));
-                blendPixel(px, py);
-            }
-        };
-
-        drawCorner(posX + radius, posY + radius, Math.PI, Math.PI * 3 / 2);
-        drawCorner(posX + posW - radius, posY + radius, Math.PI * 3 / 2, Math.PI * 2);
-        drawCorner(posX + posW - radius, posY + posH - radius, 0, Math.PI / 2);
-        drawCorner(posX + radius, posY + posH - radius, Math.PI / 2, Math.PI);
     }
 
     /**
