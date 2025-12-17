@@ -49,6 +49,9 @@ All entry points are in `Context2D.js`. Use grep to find exact locations: `grep 
 | Any          | Axis-aligned            | Both             | RectOps.fillAndStroke()     | YES      |
 | 0px          | Any                     | Any              | IGNORED (per HTML5 spec)    | -        |
 
+Notes:
+- `RectOps.fillAndStroke()` uses single-scan span-based rendering with fill-first ordering for correct semi-transparent stroke blending. Fill extent is conditional: PATH extent for semi-transparent strokes (so stroke blends with fill), INNER extent for opaque strokes (optimization).
+
 ### 2.2 ROUNDED RECTANGLES (RoundedRectOps.js)
 
 | Stroke Width | Orientation  | Opacity          | Function                           | Clipping TO |
@@ -291,6 +294,7 @@ if (clipBuffer[byteIndex] === 0) {
 | Hybrid edges+arcs   | RoundedRectOps.strokeRotated (1px)       | 4 lines + 4 arcs for rotated rrect     |
 | Edge Buffer Raster  | RoundedRectOps.fillRotated               | O(H+P+A) optimal rotated fill          |
 | Dual Edge Buffer    | RoundedRectOps.strokeRotated (thick)     | Outer+inner perimeters, fill annulus   |
+| Span-based fill-first | RectOps.fillAndStroke                  | Correct semi-transparent stroke blending |
 
 ### 6.4 Special Optimizations
 
@@ -300,6 +304,7 @@ if (clipBuffer[byteIndex] === 0) {
 | Line extend/shorten  | RectOps.strokeRotated                                          | Proper miter corners for thick rotated rect stroke |
 | Crisp center adjust  | CircleOps, ArcOps                                              | floor(cx - 0.5) for consistent pixel placement     |
 | Exact endpoints      | ArcOps.stroke1pxOpaqueExactEndpoints                           | Angle-based iteration guarantees junction pixels   |
+| Conditional fill extent | RectOps.fillAndStroke                                          | Semi-transparent stroke → PATH extent; opaque → INNER extent |
 
 ---
 
@@ -318,7 +323,7 @@ if (clipBuffer[byteIndex] === 0) {
 | Clipping TO (respects clip) | ✓    | ✓         | ✓      | ✓    | ✓   |
 | Clipping AT (defines clip)  | ✗    | ✗         | ✗      | N/A  | ✗   |
 | 32-bit writes         | ✓    | ✓         | ✓      | ✓    | ✓   |
-| Uses SpanOps          | ✗    | ✓         | ✓      | ✓    | ✗   |
+| Uses SpanOps          | ✓    | ✓         | ✓      | ✓    | ✗   |
 | Bresenham algorithm   | ✗    | ✗         | ✓      | ✓    | ✓   |
 | Set deduplication     | ✗    | ✗         | ✓      | ✗    | ✓   |
 
