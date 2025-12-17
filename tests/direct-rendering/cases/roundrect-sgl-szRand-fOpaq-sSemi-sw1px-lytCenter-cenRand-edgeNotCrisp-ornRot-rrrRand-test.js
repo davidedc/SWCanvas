@@ -140,7 +140,7 @@ registerDirectRenderingTest(
     'rounded-rects',
     {
         extremes: false,
-        totalUniqueColors: 4  // Background + fill + stroke-on-fill + stroke-on-background (no overdraw)
+        maxUniqueColors: 4 // some very rare test iterations have exactly 3 colors i.e. all the pixels of the stroke overlap the fill
     },
     {
         title: 'Single Rotated Rounded Rectangle - Fill + 1px Semi-Transparent Stroke (Random)',
