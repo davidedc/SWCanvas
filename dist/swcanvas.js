@@ -5076,7 +5076,7 @@ class RoundedRectOps {
 
     /**
      * Direct rendering for 1px semi-transparent stroke on axis-aligned rounded rectangle.
-     * Uses alpha blending for each pixel.
+     * Uses Set-based deduplication to prevent overdraw at edge-arc junctions.
      *
      * @param {Surface} surface - Target surface
      * @param {number} x - Top-left X coordinate
@@ -5116,16 +5116,55 @@ class RoundedRectOps {
         const posW = width;
         const posH = height;
 
-        // Helper to blend pixel with optional clipping
-        const blendPixel = (px, py) => {
+        // Use Set to collect unique pixel positions (prevents overdraw at edge-arc junctions)
+        const strokePixels = new Set();
+
+        // Helper to collect pixel into Set
+        const collectPixel = (px, py) => {
             if (px < 0 || px >= surfaceWidth || py < 0 || py >= surfaceHeight) return;
+            strokePixels.add(py * surfaceWidth + px);
+        };
 
-            const pixelIndex = py * surfaceWidth + px;
+        // Collect horizontal edge pixels
+        const topY = Math.floor(posY);
+        const bottomY = Math.floor(posY + posH - 0.5);
 
+        for (let xx = Math.floor(posX + radius); xx < posX + posW - radius; xx++) {
+            collectPixel(xx, topY);
+            collectPixel(xx, bottomY);
+        }
+
+        // Collect vertical edge pixels
+        const leftX = Math.floor(posX);
+        const rightX = Math.floor(posX + posW - 0.5);
+
+        for (let yy = Math.floor(posY + radius); yy < posY + posH - radius; yy++) {
+            collectPixel(leftX, yy);
+            collectPixel(rightX, yy);
+        }
+
+        // Collect corner arc pixels
+        const collectCorner = (cx, cy, startAngle, endAngle) => {
+            const sr = radius - 0.5;
+            const angleStep = Math.PI / 180;
+            for (let angle = startAngle; angle <= endAngle; angle += angleStep) {
+                const px = Math.floor(cx + sr * Math.cos(angle));
+                const py = Math.floor(cy + sr * Math.sin(angle));
+                collectPixel(px, py);
+            }
+        };
+
+        collectCorner(posX + radius, posY + radius, Math.PI, Math.PI * 3 / 2);
+        collectCorner(posX + posW - radius, posY + radius, Math.PI * 3 / 2, Math.PI * 2);
+        collectCorner(posX + posW - radius, posY + posH - radius, 0, Math.PI / 2);
+        collectCorner(posX + radius, posY + posH - radius, Math.PI / 2, Math.PI);
+
+        // Render all unique pixels once with alpha blending
+        for (const pixelIndex of strokePixels) {
             if (clipBuffer) {
                 const byteIndex = pixelIndex >> 3;
                 const bitIndex = pixelIndex & 7;
-                if (!(clipBuffer[byteIndex] & (1 << bitIndex))) return;
+                if (!(clipBuffer[byteIndex] & (1 << bitIndex))) continue;
             }
 
             const index = pixelIndex * 4;
@@ -5140,41 +5179,7 @@ class RoundedRectOps {
                 data[index + 2] = (b * incomingAlpha + data[index + 2] * oldAlphaScaled) * blendFactor;
                 data[index + 3] = newAlpha * 255;
             }
-        };
-
-        // Draw horizontal edges
-        const topY = Math.floor(posY);
-        const bottomY = Math.floor(posY + posH - 0.5);
-
-        for (let xx = Math.floor(posX + radius); xx < posX + posW - radius; xx++) {
-            blendPixel(xx, topY);
-            blendPixel(xx, bottomY);
         }
-
-        // Draw vertical edges
-        const leftX = Math.floor(posX);
-        const rightX = Math.floor(posX + posW - 0.5);
-
-        for (let yy = Math.floor(posY + radius); yy < posY + posH - radius; yy++) {
-            blendPixel(leftX, yy);
-            blendPixel(rightX, yy);
-        }
-
-        // Draw corner arcs
-        const drawCorner = (cx, cy, startAngle, endAngle) => {
-            const sr = radius - 0.5;
-            const angleStep = Math.PI / 180;
-            for (let angle = startAngle; angle <= endAngle; angle += angleStep) {
-                const px = Math.floor(cx + sr * Math.cos(angle));
-                const py = Math.floor(cy + sr * Math.sin(angle));
-                blendPixel(px, py);
-            }
-        };
-
-        drawCorner(posX + radius, posY + radius, Math.PI, Math.PI * 3 / 2);
-        drawCorner(posX + posW - radius, posY + radius, Math.PI * 3 / 2, Math.PI * 2);
-        drawCorner(posX + posW - radius, posY + posH - radius, 0, Math.PI / 2);
-        drawCorner(posX + radius, posY + posH - radius, Math.PI / 2, Math.PI);
     }
 
     /**
@@ -14486,34 +14491,93 @@ class Context2D {
         // Direct rendering conditions
         const isColor = paintSource instanceof Color;
         const isSourceOver = this.globalCompositeOperation === 'source-over';
-        const noTransform = this._transform.isIdentity;
         const noShadow = !this.shadowColor || this.shadowColor === 'transparent' ||
                         (this.shadowBlur === 0 && this.shadowOffsetX === 0 && this.shadowOffsetY === 0);
-        const is1pxStroke = Math.abs(this._lineWidth - 1) < 0.001;
         const clipBuffer = this._clipMask ? this._clipMask.buffer : null;
 
-        if (isColor && isSourceOver && noTransform && noShadow) {
-            const isOpaque = paintSource.a === 255 && this.globalAlpha >= 1.0;
+        if (isColor && isSourceOver && noShadow && paintSource.a > 0) {
+            const transform = this._transform;
 
-            if (is1pxStroke) {
-                // 1px stroke direct rendering
-                if (isOpaque) {
-                    RoundedRectOps.stroke1pxOpaque(this.surface, x, y, width, height, radii, paintSource, clipBuffer);
-                    return;
-                } else if (paintSource.a > 0) {
-                    RoundedRectOps.stroke1pxAlpha(this.surface, x, y, width, height, radii, paintSource, this.globalAlpha, clipBuffer);
-                    return;
+            // Decompose transform
+            const center = transform.transformPoint({x: x + width / 2, y: y + height / 2});
+            const rotation = transform.rotationAngle;
+            const scaleX = transform.scaleX;
+            const scaleY = transform.scaleY;
+            const scaledWidth = width * scaleX;
+            const scaledHeight = height * scaleY;
+            const scaledLineWidth = transform.getScaledLineWidth(this._lineWidth);
+            const is1pxStroke = Math.abs(scaledLineWidth - 1) < 0.001;
+
+            // Check matrix structure for uniform scale: a=d and b=-c
+            const isUniformScale = Math.abs(transform.a - transform.d) < 0.001 &&
+                                   Math.abs(transform.b + transform.c) < 0.001;
+
+            if (isUniformScale) {
+                const scaledRadius = radius * scaleX;
+                const isOpaque = paintSource.a === 255 && this.globalAlpha >= 1.0;
+
+                if (transform.isIdentity) {
+                    // No transform: use axis-aligned methods with original coordinates
+                    if (is1pxStroke) {
+                        if (isOpaque) {
+                            RoundedRectOps.stroke1pxOpaque(this.surface, x, y, width, height, radii, paintSource, clipBuffer);
+                            return;
+                        } else {
+                            RoundedRectOps.stroke1pxAlpha(this.surface, x, y, width, height, radii, paintSource, this.globalAlpha, clipBuffer);
+                            return;
+                        }
+                    } else {
+                        if (isOpaque) {
+                            RoundedRectOps.strokeThickOpaque(this.surface, x, y, width, height, radii, this._lineWidth, paintSource, clipBuffer);
+                            return;
+                        } else {
+                            RoundedRectOps.strokeThickAlpha(this.surface, x, y, width, height, radii, this._lineWidth, paintSource, this.globalAlpha, clipBuffer);
+                            return;
+                        }
+                    }
                 }
-            } else {
-                // Thick stroke direct rendering
-                if (isOpaque) {
-                    RoundedRectOps.strokeThickOpaque(this.surface, x, y, width, height, radii, this._lineWidth, paintSource, clipBuffer);
-                    return;
-                } else if (paintSource.a > 0) {
-                    RoundedRectOps.strokeThickAlpha(this.surface, x, y, width, height, radii, this._lineWidth, paintSource, this.globalAlpha, clipBuffer);
+
+                const isAxisAligned = RectOps.isNearAxisAligned(rotation);
+
+                if (isAxisAligned) {
+                    // Axis-aligned rotation (90/180/270): adjust dimensions
+                    const { adjustedWidth, adjustedHeight } = RectOps.getRotatedDimensions(scaledWidth, scaledHeight, rotation);
+                    const topLeftX = center.x - adjustedWidth / 2;
+                    const topLeftY = center.y - adjustedHeight / 2;
+
+                    if (is1pxStroke) {
+                        if (isOpaque) {
+                            RoundedRectOps.stroke1pxOpaque(this.surface, topLeftX, topLeftY, adjustedWidth, adjustedHeight, scaledRadius, paintSource, clipBuffer);
+                            return;
+                        } else {
+                            RoundedRectOps.stroke1pxAlpha(this.surface, topLeftX, topLeftY, adjustedWidth, adjustedHeight, scaledRadius, paintSource, this.globalAlpha, clipBuffer);
+                            return;
+                        }
+                    } else {
+                        if (isOpaque) {
+                            RoundedRectOps.strokeThickOpaque(this.surface, topLeftX, topLeftY, adjustedWidth, adjustedHeight, scaledRadius, scaledLineWidth, paintSource, clipBuffer);
+                            return;
+                        } else {
+                            RoundedRectOps.strokeThickAlpha(this.surface, topLeftX, topLeftY, adjustedWidth, adjustedHeight, scaledRadius, scaledLineWidth, paintSource, this.globalAlpha, clipBuffer);
+                            return;
+                        }
+                    }
+                } else {
+                    // Rotated with uniform scale: use strokeRotated
+                    RoundedRectOps.strokeRotated(
+                        this.surface,
+                        center.x, center.y, scaledWidth, scaledHeight,
+                        scaledRadius,
+                        rotation,
+                        scaledLineWidth,
+                        paintSource,
+                        this.globalAlpha,
+                        clipBuffer
+                    );
                     return;
                 }
             }
+            // Non-uniform scale: fall through to path-based rendering
         }
 
         // Path-based rendering: use general path system
@@ -14525,7 +14589,7 @@ class Context2D {
 
     /**
      * Fill a rounded rectangle.
-     * Uses direct rendering when possible (solid color, source-over, no clip/transform/shadow).
+     * Uses direct rendering when possible (solid color, source-over, no shadow, uniform scale).
      * @param {number} x - Rectangle x coordinate
      * @param {number} y - Rectangle y coordinate
      * @param {number} width - Rectangle width
@@ -14560,21 +14624,70 @@ class Context2D {
         const paintSource = this._fillStyle;
         const isColor = paintSource instanceof Color;
         const isSourceOver = this.globalCompositeOperation === 'source-over';
-        const noTransform = this._transform.isIdentity;
         const noShadow = !this.shadowColor || this.shadowColor === 'transparent' ||
                         (this.shadowBlur === 0 && this.shadowOffsetX === 0 && this.shadowOffsetY === 0);
         const clipBuffer = this._clipMask ? this._clipMask.buffer : null;
 
-        if (isColor && isSourceOver && noTransform && noShadow) {
-            const isOpaque = paintSource.a === 255 && this.globalAlpha >= 1.0;
+        if (isColor && isSourceOver && noShadow && paintSource.a > 0) {
+            const transform = this._transform;
 
-            if (isOpaque) {
-                RoundedRectOps.fillOpaque(this.surface, x, y, width, height, radii, paintSource, clipBuffer);
-                return;
-            } else if (paintSource.a > 0) {
-                RoundedRectOps.fillAlpha(this.surface, x, y, width, height, radii, paintSource, this.globalAlpha, clipBuffer);
-                return;
+            // Decompose transform
+            const center = transform.transformPoint({x: x + width / 2, y: y + height / 2});
+            const rotation = transform.rotationAngle;
+            const scaleX = transform.scaleX;
+            const scaleY = transform.scaleY;
+            const scaledWidth = width * scaleX;
+            const scaledHeight = height * scaleY;
+
+            // Check matrix structure for uniform scale: a=d and b=-c
+            const isUniformScale = Math.abs(transform.a - transform.d) < 0.001 &&
+                                   Math.abs(transform.b + transform.c) < 0.001;
+
+            if (isUniformScale) {
+                const scaledRadius = radius * scaleX;
+                const isOpaque = paintSource.a === 255 && this.globalAlpha >= 1.0;
+
+                if (transform.isIdentity) {
+                    // No transform: use axis-aligned methods with original coordinates
+                    if (isOpaque) {
+                        RoundedRectOps.fillOpaque(this.surface, x, y, width, height, radii, paintSource, clipBuffer);
+                        return;
+                    } else {
+                        RoundedRectOps.fillAlpha(this.surface, x, y, width, height, radii, paintSource, this.globalAlpha, clipBuffer);
+                        return;
+                    }
+                }
+
+                const isAxisAligned = RectOps.isNearAxisAligned(rotation);
+
+                if (isAxisAligned) {
+                    // Axis-aligned rotation (90/180/270): adjust dimensions
+                    const { adjustedWidth, adjustedHeight } = RectOps.getRotatedDimensions(scaledWidth, scaledHeight, rotation);
+                    const topLeftX = center.x - adjustedWidth / 2;
+                    const topLeftY = center.y - adjustedHeight / 2;
+
+                    if (isOpaque) {
+                        RoundedRectOps.fillOpaque(this.surface, topLeftX, topLeftY, adjustedWidth, adjustedHeight, scaledRadius, paintSource, clipBuffer);
+                        return;
+                    } else {
+                        RoundedRectOps.fillAlpha(this.surface, topLeftX, topLeftY, adjustedWidth, adjustedHeight, scaledRadius, paintSource, this.globalAlpha, clipBuffer);
+                        return;
+                    }
+                } else {
+                    // Rotated with uniform scale: use fillRotated
+                    RoundedRectOps.fillRotated(
+                        this.surface,
+                        center.x, center.y, scaledWidth, scaledHeight,
+                        scaledRadius,
+                        rotation,
+                        paintSource,
+                        this.globalAlpha,
+                        clipBuffer
+                    );
+                    return;
+                }
             }
+            // Non-uniform scale: fall through to path-based rendering
         }
 
         // Path-based rendering: use general path system
