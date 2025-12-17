@@ -140,7 +140,8 @@ registerDirectRenderingTest(
     drawTest,
     'rounded-rects',
     {
-        extremes: true
+        extremes: true,
+        strokeContinuity: { color: [255, 0, 0] }
     },
     {
         title: 'Single 1px Stroked Rounded Rectangle (Crisp, Centered at Grid)',

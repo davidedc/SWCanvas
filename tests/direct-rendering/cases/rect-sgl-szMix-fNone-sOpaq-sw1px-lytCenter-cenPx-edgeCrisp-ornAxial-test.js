@@ -142,6 +142,7 @@ registerDirectRenderingTest(
     'rectangles',
     {
         extremes: true,
+        strokeContinuity: { color: [255, 0, 0] }
     },
     {
         title: 'Rectangles: S-Size No-Fill 1px-Red-Opaque-Stroke Centered-At-Pixel No-Rotation',

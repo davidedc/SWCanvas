@@ -79,7 +79,8 @@ registerDirectRenderingTest(
     {
         extremes: { colorTolerance: 8, tolerance: 0.03 },
         totalUniqueColors: 2,
-        continuousStroke: true
+        continuousStroke: true,
+        strokeContinuity: { color: [255, 0, 0] }
     },
     {
         title: 'Single 1px Stroked Circle (Crisp, Centered at Pixel)',
