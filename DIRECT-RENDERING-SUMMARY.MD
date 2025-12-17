@@ -73,6 +73,7 @@ Notes:
 | 0px          | Any          | Any              | IGNORED                            | -        |
 
 Notes:
+- Axis-aligned rounded rectangle **stroke** (1px alpha) uses Set deduplication to prevent overdraw at edge-arc junctions.
 - Rotated rounded rectangle **stroke** (1px opaque) uses hybrid algorithm: 4 edges via LineOps + 4 corner arcs via ArcOps.stroke1pxOpaqueExactEndpoints().
 - Rotated rounded rectangle **stroke** (1px alpha) uses hybrid algorithm + Set deduplication to prevent overdraw at edge-arc junctions.
 - Rotated rounded rectangle **stroke** (thick) uses Dual Edge Buffer algorithm: generates outer and inner perimeters, fills annulus per scanline.
@@ -365,8 +366,7 @@ Note: Clipping AT (defining clip regions) uses path-based approach for all shape
 
 ### Low Priority Enhancements:
 
-1. **Rotated RoundedRect thick stroke** - Currently fill and 1px stroke supported; thick stroke uses path-based
-2. **clipRect/clipCircle convenience methods** - Optional non-standard API additions
+1. **clipRect/clipCircle convenience methods** - Optional non-standard API additions
 
 ---
 
@@ -387,7 +387,7 @@ Note: Clipping AT (defining clip regions) uses path-based approach for all shape
 
 ## 11. Test Coverage Analysis
 
-All 38 documented direct rendering functions have **100% explicit test coverage** via dedicated tests in `tests/direct-rendering/cases/`.
+All 39 documented direct rendering functions have **100% explicit test coverage** via dedicated tests in `tests/direct-rendering/cases/`.
 
 ### 11.1 Coverage Matrix
 
@@ -405,7 +405,7 @@ All 38 documented direct rendering functions have **100% explicit test coverage*
 | `strokeRotated()` | `rect-sgl-szMix-fOpaq-sOpaq-*-ctxRotRand-test.js` |
 | `fillAndStroke()` | `rect-*-fSemi-sMix-*` tests |
 
-#### ROUNDED RECTANGLES (RoundedRectOps.js) - 9/9 Functions Covered
+#### ROUNDED RECTANGLES (RoundedRectOps.js) - 10/10 Functions Covered
 
 | Function | Test File(s) |
 |----------|--------------|
@@ -418,6 +418,7 @@ All 38 documented direct rendering functions have **100% explicit test coverage*
 | `strokeThickAlpha()` | `roundrect-m6-*-sSemi-*`, `roundrect-m8-*` tests |
 | `strokeRotated()` | `roundrect-m12-*-ornRot-*`, `roundrect-sgl-szRand-*-ornRot-*` tests |
 | `fillAndStroke()` | Multiple fill+stroke tests |
+| `fillAndStrokeRotated()` | `roundrect-sgl-szRand-fOpaq-sSemi-sw{1px,2-40px}-*-ornRot-*` tests |
 
 #### CIRCLES (CircleOps.js) - 7/7 Functions Covered
 
