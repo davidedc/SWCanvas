@@ -34,9 +34,6 @@
  *
  * UNCAPTURED ASPECTS IN FILENAME / FACETS ABOVE:
  * ----------------------------------------------
- * This test directly calls `RoundedRectOps.strokeRotated()` (static method) rather than going through
- * Context2D, since Context2D integration for rotated rounded rectangles is not yet implemented.
- * The test includes one edge case with radius=0 which delegates to `RectOps.strokeRotated()`.
  * Stroke color is fixed opaque red (255, 0, 0) rather than randomized.
  */
 
