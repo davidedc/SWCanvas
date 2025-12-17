@@ -5895,6 +5895,404 @@ class RoundedRectOps {
     }
 
     /**
+     * Direct rendering for filled rotated rounded rectangle.
+     * Uses Edge Buffer Rasterization: generates perimeter into minX/maxX arrays,
+     * then fills scanlines efficiently with data32.fill().
+     *
+     * Algorithm complexity: O(H + P + A) where H=height, P=perimeter, A=fill area.
+     *
+     * @param {Surface} surface - Target surface
+     * @param {number} centerX - Center X coordinate
+     * @param {number} centerY - Center Y coordinate
+     * @param {number} width - Rectangle width
+     * @param {number} height - Rectangle height
+     * @param {number|number[]} radii - Corner radius (single value or array)
+     * @param {number} rotation - Rotation angle in radians
+     * @param {Color} color - Fill color
+     * @param {number} globalAlpha - Global alpha value
+     * @param {Uint8Array|null} clipBuffer - Optional clip mask buffer
+     */
+    static fillRotated(surface, centerX, centerY, width, height, radii, rotation, color, globalAlpha, clipBuffer = null) {
+        // Normalize radius
+        const radius = this._normalizeRadius(radii, width, height);
+
+        // Fallback to RectOps.fillRotated for zero radius
+        if (radius <= 0) {
+            RectOps.fillRotated(surface, centerX, centerY, width, height, rotation, color, globalAlpha, clipBuffer);
+            return;
+        }
+
+        const isOpaqueColor = color.a === 255 && globalAlpha >= 1.0;
+
+        if (isOpaqueColor) {
+            RoundedRectOps._fillOpaqueRotated(surface, centerX, centerY, width, height, radius, rotation, color, clipBuffer);
+        } else if (color.a > 0) {
+            RoundedRectOps._fillAlphaRotated(surface, centerX, centerY, width, height, radius, rotation, color, globalAlpha, clipBuffer);
+        }
+    }
+
+    /**
+     * Internal: Opaque fill for rotated rounded rectangle using Edge Buffer Rasterization.
+     *
+     * Algorithm:
+     * 1. Compute Y bounds from rotation angle (O(1))
+     * 2. Allocate minX/maxX Int16Arrays sized to shape height
+     * 3. Generate perimeter (edges + corner arcs), recording min/max X per row
+     * 4. Fill scanlines using data32.fill() for each row
+     *
+     * @param {Surface} surface - Target surface
+     * @param {number} centerX - Center X coordinate
+     * @param {number} centerY - Center Y coordinate
+     * @param {number} width - Rectangle width
+     * @param {number} height - Rectangle height
+     * @param {number} radius - Corner radius (already normalized)
+     * @param {number} rotation - Rotation angle in radians
+     * @param {Color} color - Fill color (must be opaque)
+     * @param {Uint8Array|null} clipBuffer - Optional clip mask buffer
+     */
+    static _fillOpaqueRotated(surface, centerX, centerY, width, height, radius, rotation, color, clipBuffer) {
+        const surfaceWidth = surface.width;
+        const surfaceHeight = surface.height;
+        const data32 = surface.data32;
+
+        // Pre-compute rotation
+        const cos = Math.cos(rotation);
+        const sin = Math.sin(rotation);
+        const hw = width / 2;
+        const hh = height / 2;
+
+        // Compute AABB height (exact formula for rotated rectangle)
+        const boundingHeight = Math.abs(width * sin) + Math.abs(height * cos);
+
+        // Clamp to canvas bounds BEFORE array allocation
+        const yMin = Math.max(0, Math.floor(centerY - boundingHeight / 2));
+        const yMax = Math.min(surfaceHeight - 1, Math.ceil(centerY + boundingHeight / 2));
+        const spanCount = yMax - yMin + 1;
+
+        if (spanCount <= 0) return;
+
+        // Allocate span arrays (Int16Array for memory efficiency)
+        const minX = new Int16Array(spanCount);
+        const maxX = new Int16Array(spanCount);
+        minX.fill(surfaceWidth);  // Sentinel: larger than any valid x
+        maxX.fill(-1);            // Sentinel: smaller than any valid x
+
+        // Record perimeter pixel into span arrays
+        const recordPixel = (x, y) => {
+            if (y < yMin || y > yMax) return;
+            const row = y - yMin;
+            if (x < minX[row]) minX[row] = x;
+            if (x > maxX[row]) maxX[row] = x;
+        };
+
+        // Helper to transform local coordinates to screen coordinates
+        const transform = (localX, localY) => ({
+            x: centerX + localX * cos - localY * sin,
+            y: centerY + localX * sin + localY * cos
+        });
+
+        // Generate edge pixels using Bresenham
+        const generateEdgePixels = (x0, y0, x1, y1) => {
+            const ix0 = Math.floor(x0);
+            const iy0 = Math.floor(y0);
+            const ix1 = Math.floor(x1);
+            const iy1 = Math.floor(y1);
+
+            const dx = Math.abs(ix1 - ix0);
+            const dy = Math.abs(iy1 - iy0);
+            const sx = ix0 < ix1 ? 1 : -1;
+            const sy = iy0 < iy1 ? 1 : -1;
+            let err = dx - dy;
+
+            let x = ix0, y = iy0;
+            while (true) {
+                recordPixel(x, y);
+                if (x === ix1 && y === iy1) break;
+
+                const e2 = 2 * err;
+                if (e2 > -dy) { err -= dy; x += sx; }
+                if (e2 < dx) { err += dx; y += sy; }
+            }
+        };
+
+        // Generate arc pixels using angle-based iteration
+        const generateArcPixels = (cx, cy, r, startAngle, endAngle) => {
+            // Step size: approximately 1 pixel per step
+            const arcLength = r * Math.abs(endAngle - startAngle);
+            const steps = Math.max(Math.ceil(arcLength), 8);
+            const angleStep = (endAngle - startAngle) / steps;
+
+            let lastPx = null, lastPy = null;
+
+            for (let i = 0; i <= steps; i++) {
+                const angle = startAngle + i * angleStep;
+                const px = Math.floor(cx + r * Math.cos(angle));
+                const py = Math.floor(cy + r * Math.sin(angle));
+
+                // Skip duplicate pixels
+                if (px !== lastPx || py !== lastPy) {
+                    recordPixel(px, py);
+                    lastPx = px;
+                    lastPy = py;
+                }
+            }
+        };
+
+        // Edge endpoints in local space (centered at origin)
+        const edges = [
+            { start: { x: -hw + radius, y: -hh }, end: { x: hw - radius, y: -hh } },      // Top
+            { start: { x: hw, y: -hh + radius }, end: { x: hw, y: hh - radius } },        // Right
+            { start: { x: hw - radius, y: hh }, end: { x: -hw + radius, y: hh } },        // Bottom
+            { start: { x: -hw, y: hh - radius }, end: { x: -hw, y: -hh + radius } }       // Left
+        ];
+
+        // Generate edge perimeter pixels
+        for (const edge of edges) {
+            const start = transform(edge.start.x, edge.start.y);
+            const end = transform(edge.end.x, edge.end.y);
+
+            // Skip zero-length edges (radius = half width or height)
+            const dx = end.x - start.x;
+            const dy = end.y - start.y;
+            if (dx * dx + dy * dy < 0.25) continue;
+
+            generateEdgePixels(start.x, start.y, end.x, end.y);
+        }
+
+        // Corner definitions (local center and angle range)
+        const corners = [
+            { cx: -hw + radius, cy: -hh + radius, startAngle: Math.PI, endAngle: Math.PI * 1.5 },         // Top-left
+            { cx: hw - radius, cy: -hh + radius, startAngle: Math.PI * 1.5, endAngle: Math.PI * 2 },      // Top-right
+            { cx: hw - radius, cy: hh - radius, startAngle: 0, endAngle: Math.PI * 0.5 },                 // Bottom-right
+            { cx: -hw + radius, cy: hh - radius, startAngle: Math.PI * 0.5, endAngle: Math.PI }           // Bottom-left
+        ];
+
+        // Generate corner arc perimeter pixels
+        for (const corner of corners) {
+            const screenCenter = transform(corner.cx, corner.cy);
+            generateArcPixels(
+                screenCenter.x, screenCenter.y,
+                radius,
+                corner.startAngle + rotation,
+                corner.endAngle + rotation
+            );
+        }
+
+        // Fill scanlines
+        const packedColor = Surface.packColor(color.r, color.g, color.b, 255);
+
+        if (!clipBuffer) {
+            // Fast path: no clipping
+            for (let row = 0; row < spanCount; row++) {
+                const left = minX[row];
+                const right = maxX[row];
+                if (left > right) continue;
+
+                const y = yMin + row;
+                const x0 = Math.max(0, left);
+                const x1 = Math.min(surfaceWidth - 1, right);
+
+                if (x0 <= x1) {
+                    const offset = y * surfaceWidth;
+                    data32.fill(packedColor, offset + x0, offset + x1 + 1);
+                }
+            }
+        } else {
+            // Slower path: per-pixel clipping
+            for (let row = 0; row < spanCount; row++) {
+                const left = minX[row];
+                const right = maxX[row];
+                if (left > right) continue;
+
+                const y = yMin + row;
+                const x0 = Math.max(0, left);
+                const x1 = Math.min(surfaceWidth - 1, right);
+
+                for (let x = x0; x <= x1; x++) {
+                    const pos = y * surfaceWidth + x;
+                    if (clipBuffer[pos >> 3] & (1 << (pos & 7))) {
+                        data32[pos] = packedColor;
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Internal: Alpha fill for rotated rounded rectangle using Edge Buffer Rasterization.
+     *
+     * Same algorithm as _fillOpaqueRotated but with alpha blending in the fill phase.
+     *
+     * @param {Surface} surface - Target surface
+     * @param {number} centerX - Center X coordinate
+     * @param {number} centerY - Center Y coordinate
+     * @param {number} width - Rectangle width
+     * @param {number} height - Rectangle height
+     * @param {number} radius - Corner radius (already normalized)
+     * @param {number} rotation - Rotation angle in radians
+     * @param {Color} color - Fill color
+     * @param {number} globalAlpha - Global alpha value
+     * @param {Uint8Array|null} clipBuffer - Optional clip mask buffer
+     */
+    static _fillAlphaRotated(surface, centerX, centerY, width, height, radius, rotation, color, globalAlpha, clipBuffer) {
+        const surfaceWidth = surface.width;
+        const surfaceHeight = surface.height;
+        const data = surface.data;
+
+        // Pre-compute rotation
+        const cos = Math.cos(rotation);
+        const sin = Math.sin(rotation);
+        const hw = width / 2;
+        const hh = height / 2;
+
+        // Compute AABB height
+        const boundingHeight = Math.abs(width * sin) + Math.abs(height * cos);
+
+        // Clamp to canvas bounds
+        const yMin = Math.max(0, Math.floor(centerY - boundingHeight / 2));
+        const yMax = Math.min(surfaceHeight - 1, Math.ceil(centerY + boundingHeight / 2));
+        const spanCount = yMax - yMin + 1;
+
+        if (spanCount <= 0) return;
+
+        // Allocate span arrays
+        const minX = new Int16Array(spanCount);
+        const maxX = new Int16Array(spanCount);
+        minX.fill(surfaceWidth);
+        maxX.fill(-1);
+
+        const recordPixel = (x, y) => {
+            if (y < yMin || y > yMax) return;
+            const row = y - yMin;
+            if (x < minX[row]) minX[row] = x;
+            if (x > maxX[row]) maxX[row] = x;
+        };
+
+        const transform = (localX, localY) => ({
+            x: centerX + localX * cos - localY * sin,
+            y: centerY + localX * sin + localY * cos
+        });
+
+        // Generate edge pixels using Bresenham
+        const generateEdgePixels = (x0, y0, x1, y1) => {
+            const ix0 = Math.floor(x0);
+            const iy0 = Math.floor(y0);
+            const ix1 = Math.floor(x1);
+            const iy1 = Math.floor(y1);
+
+            const dx = Math.abs(ix1 - ix0);
+            const dy = Math.abs(iy1 - iy0);
+            const sx = ix0 < ix1 ? 1 : -1;
+            const sy = iy0 < iy1 ? 1 : -1;
+            let err = dx - dy;
+
+            let x = ix0, y = iy0;
+            while (true) {
+                recordPixel(x, y);
+                if (x === ix1 && y === iy1) break;
+
+                const e2 = 2 * err;
+                if (e2 > -dy) { err -= dy; x += sx; }
+                if (e2 < dx) { err += dx; y += sy; }
+            }
+        };
+
+        // Generate arc pixels
+        const generateArcPixels = (cx, cy, r, startAngle, endAngle) => {
+            const arcLength = r * Math.abs(endAngle - startAngle);
+            const steps = Math.max(Math.ceil(arcLength), 8);
+            const angleStep = (endAngle - startAngle) / steps;
+
+            let lastPx = null, lastPy = null;
+
+            for (let i = 0; i <= steps; i++) {
+                const angle = startAngle + i * angleStep;
+                const px = Math.floor(cx + r * Math.cos(angle));
+                const py = Math.floor(cy + r * Math.sin(angle));
+
+                if (px !== lastPx || py !== lastPy) {
+                    recordPixel(px, py);
+                    lastPx = px;
+                    lastPy = py;
+                }
+            }
+        };
+
+        // Edge endpoints
+        const edges = [
+            { start: { x: -hw + radius, y: -hh }, end: { x: hw - radius, y: -hh } },
+            { start: { x: hw, y: -hh + radius }, end: { x: hw, y: hh - radius } },
+            { start: { x: hw - radius, y: hh }, end: { x: -hw + radius, y: hh } },
+            { start: { x: -hw, y: hh - radius }, end: { x: -hw, y: -hh + radius } }
+        ];
+
+        for (const edge of edges) {
+            const start = transform(edge.start.x, edge.start.y);
+            const end = transform(edge.end.x, edge.end.y);
+            const dx = end.x - start.x;
+            const dy = end.y - start.y;
+            if (dx * dx + dy * dy < 0.25) continue;
+            generateEdgePixels(start.x, start.y, end.x, end.y);
+        }
+
+        // Corner definitions
+        const corners = [
+            { cx: -hw + radius, cy: -hh + radius, startAngle: Math.PI, endAngle: Math.PI * 1.5 },
+            { cx: hw - radius, cy: -hh + radius, startAngle: Math.PI * 1.5, endAngle: Math.PI * 2 },
+            { cx: hw - radius, cy: hh - radius, startAngle: 0, endAngle: Math.PI * 0.5 },
+            { cx: -hw + radius, cy: hh - radius, startAngle: Math.PI * 0.5, endAngle: Math.PI }
+        ];
+
+        for (const corner of corners) {
+            const screenCenter = transform(corner.cx, corner.cy);
+            generateArcPixels(
+                screenCenter.x, screenCenter.y,
+                radius,
+                corner.startAngle + rotation,
+                corner.endAngle + rotation
+            );
+        }
+
+        // Fill with alpha blending
+        const r = color.r;
+        const g = color.g;
+        const b = color.b;
+        const incomingAlpha = (color.a / 255) * globalAlpha;
+        const inverseIncomingAlpha = 1 - incomingAlpha;
+
+        for (let row = 0; row < spanCount; row++) {
+            const left = minX[row];
+            const right = maxX[row];
+            if (left > right) continue;
+
+            const y = yMin + row;
+            const x0 = Math.max(0, left);
+            const x1 = Math.min(surfaceWidth - 1, right);
+
+            for (let x = x0; x <= x1; x++) {
+                const pos = y * surfaceWidth + x;
+
+                if (clipBuffer && !(clipBuffer[pos >> 3] & (1 << (pos & 7)))) {
+                    continue;
+                }
+
+                const idx = pos * 4;
+                const oldAlpha = data[idx + 3] / 255;
+                const oldAlphaScaled = oldAlpha * inverseIncomingAlpha;
+                const newAlpha = incomingAlpha + oldAlphaScaled;
+
+                if (newAlpha > 0) {
+                    const blendFactor = 1 / newAlpha;
+                    data[idx] = (r * incomingAlpha + data[idx] * oldAlphaScaled) * blendFactor;
+                    data[idx + 1] = (g * incomingAlpha + data[idx + 1] * oldAlphaScaled) * blendFactor;
+                    data[idx + 2] = (b * incomingAlpha + data[idx + 2] * oldAlphaScaled) * blendFactor;
+                    data[idx + 3] = newAlpha * 255;
+                }
+            }
+        }
+    }
+
+    /**
      * Direct rendering for stroked rotated rounded rectangle.
      * Dispatches to appropriate sub-method based on lineWidth and opacity.
      *
