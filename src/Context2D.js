@@ -817,10 +817,9 @@ class Context2D {
         // Normalize radius to check for zero
         let radius = Array.isArray(radii) ? radii[0] : (radii || 0);
 
-        // Fallback to separate fill + stroke for zero radius
+        // Fallback to fillAndStrokeRect for zero radius
         if (radius <= 0) {
-            this.fillRect(x, y, width, height);
-            this.strokeRect(x, y, width, height);
+            this.fillAndStrokeRect(x, y, width, height);
             return;
         }
 
@@ -830,28 +829,88 @@ class Context2D {
         const fillIsColor = fillPaint instanceof Color;
         const strokeIsColor = strokePaint instanceof Color;
         const isSourceOver = this.globalCompositeOperation === 'source-over';
-        const noTransform = this._transform.isIdentity;
         const noShadow = !this.shadowColor || this.shadowColor === 'transparent' ||
                         (this.shadowBlur === 0 && this.shadowOffsetX === 0 && this.shadowOffsetY === 0);
         const clipBuffer = this._clipMask ? this._clipMask.buffer : null;
 
-        // Unified direct rendering: both fill and stroke are solid colors, source-over, no transforms/shadows
-        if (fillIsColor && strokeIsColor && isSourceOver && noTransform && noShadow) {
+        // Direct rendering: both fill and stroke are solid colors, source-over, no shadows
+        if (fillIsColor && strokeIsColor && isSourceOver && noShadow) {
             const hasFill = fillPaint.a > 0;
             const hasStroke = strokePaint.a > 0 && this._lineWidth > 0;
 
             if (hasFill || hasStroke) {
-                RoundedRectOps.fillAndStroke(
-                    this.surface,
-                    x, y, width, height,
-                    radii,
-                    this._lineWidth,
-                    hasFill ? fillPaint : null,
-                    hasStroke ? strokePaint : null,
-                    this.globalAlpha,
-                    clipBuffer
-                );
-                return;
+                const transform = this._transform;
+
+                // Decompose transform
+                const center = transform.transformPoint({x: x + width / 2, y: y + height / 2});
+                const rotation = transform.rotationAngle;
+                const scaleX = transform.scaleX;
+                const scaleY = transform.scaleY;
+                const scaledWidth = width * scaleX;
+                const scaledHeight = height * scaleY;
+                const scaledLineWidth = transform.getScaledLineWidth(this._lineWidth);
+
+                // Check matrix structure for uniform scale: a=d and b=-c
+                const isUniformScale = Math.abs(transform.a - transform.d) < 0.001 &&
+                                       Math.abs(transform.b + transform.c) < 0.001;
+
+                // For rounded rects, non-uniform scale turns circles into ellipses
+                // Only use direct rendering for uniform scale or identity
+                if (isUniformScale) {
+                    // Scale radius uniformly
+                    const scaledRadius = radius * scaleX;
+
+                    if (transform.isIdentity) {
+                        // Axis-aligned, no transform: use top-left coordinates
+                        RoundedRectOps.fillAndStroke(
+                            this.surface,
+                            x, y, width, height,
+                            radii,
+                            this._lineWidth,
+                            hasFill ? fillPaint : null,
+                            hasStroke ? strokePaint : null,
+                            this.globalAlpha,
+                            clipBuffer
+                        );
+                        return;
+                    }
+
+                    const isAxisAligned = RectOps.isNearAxisAligned(rotation);
+
+                    if (isAxisAligned) {
+                        // Axis-aligned with uniform scale: adjust for potential 90/180/270 degree rotation
+                        const { adjustedWidth, adjustedHeight } = RectOps.getRotatedDimensions(scaledWidth, scaledHeight, rotation);
+                        const topLeftX = center.x - adjustedWidth / 2;
+                        const topLeftY = center.y - adjustedHeight / 2;
+
+                        RoundedRectOps.fillAndStroke(
+                            this.surface,
+                            topLeftX, topLeftY, adjustedWidth, adjustedHeight,
+                            scaledRadius,
+                            scaledLineWidth,
+                            hasFill ? fillPaint : null,
+                            hasStroke ? strokePaint : null,
+                            this.globalAlpha,
+                            clipBuffer
+                        );
+                        return;
+                    } else {
+                        // Rotated with uniform scale: use rotated fill+stroke
+                        RoundedRectOps.fillAndStrokeRotated(
+                            this.surface,
+                            center.x, center.y, scaledWidth, scaledHeight,
+                            scaledRadius,
+                            rotation,
+                            scaledLineWidth,
+                            hasFill ? fillPaint : null,
+                            hasStroke ? strokePaint : null,
+                            this.globalAlpha,
+                            clipBuffer
+                        );
+                        return;
+                    }
+                }
+                // Non-uniform scale: fall through to path-based rendering
             }
         }
 

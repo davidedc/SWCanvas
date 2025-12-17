@@ -60,15 +60,21 @@ All entry points are in `Context2D.js`. Use grep to find exact locations: `grep 
 | 1px          | Axis-aligned | Opaque           | RoundedRectOps.stroke1pxOpaque()   | YES      |
 | 1px          | Axis-aligned | Semi-transparent | RoundedRectOps.stroke1pxAlpha()    | YES      |
 | 1px          | Rotated      | Opaque           | RoundedRectOps.strokeRotated()     | YES      |
+| 1px          | Rotated      | Semi-transparent | RoundedRectOps.strokeRotated()     | YES      |
 | >1px         | Axis-aligned | Opaque           | RoundedRectOps.strokeThickOpaque() | YES      |
 | >1px         | Axis-aligned | Semi-transparent | RoundedRectOps.strokeThickAlpha()  | YES      |
+| >1px         | Rotated      | Opaque           | RoundedRectOps.strokeRotated()     | YES      |
+| >1px         | Rotated      | Semi-transparent | RoundedRectOps.strokeRotated()     | YES      |
 | Any          | Axis-aligned | Both             | RoundedRectOps.fillAndStroke()     | YES      |
+| Any          | Rotated      | Both             | RoundedRectOps.fillAndStrokeRotated() | YES   |
 | 0px          | Any          | Any              | IGNORED                            | -        |
 
 Notes:
 - Rotated rounded rectangle **stroke** (1px opaque) uses hybrid algorithm: 4 edges via LineOps + 4 corner arcs via ArcOps.stroke1pxOpaqueExactEndpoints().
+- Rotated rounded rectangle **stroke** (1px alpha) uses hybrid algorithm + Set deduplication to prevent overdraw at edge-arc junctions.
+- Rotated rounded rectangle **stroke** (thick) uses Dual Edge Buffer algorithm: generates outer and inner perimeters, fills annulus per scanline.
 - Rotated rounded rectangle **fill** uses Edge Buffer Rasterization: O(H + P + A) optimal complexity.
-- Thick stroke for rotated rounded rects uses path-based rendering.
+- **fillAndStrokeRotated()** combines fill with epsilon contraction + stroke on top.
 
 ### 2.3 CIRCLES (CircleOps.js)
 
@@ -282,8 +288,9 @@ if (clipBuffer[byteIndex] === 0) {
 | Angle filtering     | ArcOps.*                                 | Filter Bresenham points by angle range |
 | Angle-based iterate | ArcOps.stroke1pxOpaqueExactEndpoints     | Exact start/end pixels for junctions   |
 | Set deduplication   | CircleOps.stroke1pxAlpha, ArcOps         | Prevent overdraw for alpha blending    |
-| Hybrid edges+arcs   | RoundedRectOps.strokeRotated             | 4 lines + 4 arcs for rotated rrect     |
+| Hybrid edges+arcs   | RoundedRectOps.strokeRotated (1px)       | 4 lines + 4 arcs for rotated rrect     |
 | Edge Buffer Raster  | RoundedRectOps.fillRotated               | O(H+P+A) optimal rotated fill          |
+| Dual Edge Buffer    | RoundedRectOps.strokeRotated (thick)     | Outer+inner perimeters, fill annulus   |
 
 ### 6.4 Special Optimizations
 
@@ -307,7 +314,7 @@ if (clipBuffer[byteIndex] === 0) {
 | Stroke thick opaque   | ✓    | ✓         | ✓      | ✓    | ✓   |
 | Stroke thick alpha    | ✓    | ✓         | ✓      | ✓    | ✓   |
 | fillAndStroke()       | ✓    | ✓         | ✓      | N/A  | ✓   |
-| Rotation support      | ✓    | ⚬†        | N/A    | ✓    | ✗   |
+| Rotation support      | ✓    | ✓         | N/A    | ✓    | ✗   |
 | Clipping TO (respects clip) | ✓    | ✓         | ✓      | ✓    | ✓   |
 | Clipping AT (defines clip)  | ✗    | ✗         | ✗      | N/A  | ✗   |
 | 32-bit writes         | ✓    | ✓         | ✓      | ✓    | ✓   |
@@ -315,8 +322,7 @@ if (clipBuffer[byteIndex] === 0) {
 | Bresenham algorithm   | ✗    | ✗         | ✓      | ✓    | ✓   |
 | Set deduplication     | ✗    | ✗         | ✓      | ✗    | ✓   |
 
-†RoundRect rotation support: Fill (opaque/alpha) via fillRotated() + 1px opaque stroke via strokeRotated(). Thick stroke uses path-based.
-‡Clipping AT (defining clip regions) uses path-based approach for all shapes - see Section 5.1.
+Note: Clipping AT (defining clip regions) uses path-based approach for all shapes - see Section 5.1.
 
 ---
 
@@ -335,12 +341,12 @@ if (clipBuffer[byteIndex] === 0) {
 
 ### Combined Methods
 
-| Class          | fillAndStroke Methods     |
-|----------------|---------------------------|
-| RectOps        | fillAndStroke()           |
-| RoundedRectOps | fillAndStroke()           |
-| CircleOps      | fillAndStroke()           |
-| ArcOps         | fillAndStrokeOuter()      |
+| Class          | fillAndStroke Methods                    |
+|----------------|------------------------------------------|
+| RectOps        | fillAndStroke()                          |
+| RoundedRectOps | fillAndStroke(), fillAndStrokeRotated()  |
+| CircleOps      | fillAndStroke()                          |
+| ArcOps         | fillAndStrokeOuter()                     |
 
 ### Private Methods (underscore prefix)
 
@@ -449,15 +455,15 @@ All 38 documented direct rendering functions have **100% explicit test coverage*
 | Shape | Functions | Covered |
 |-------|-----------|---------|
 | Rectangle | 9 | 9 ✓ |
-| RoundedRect | 9 | 9 ✓ |
+| RoundedRect | 10 | 10 ✓ |
 | Circle | 7 | 7 ✓ |
 | Line | 5 | 5 ✓ |
 | Arc | 8 | 8 ✓ |
-| **Total** | **38** | **38 ✓** |
+| **Total** | **39** | **39 ✓** |
 
 **Test Suite Statistics:**
-- **73 test files** in `tests/direct-rendering/cases/`
-- **365 test runs passed** (73 tests × 5 iterations)
+- **79 test files** in `tests/direct-rendering/cases/`
+- **395 test runs passed** (79 tests × 5 iterations)
 - Run command: `node tests/direct-rendering/run-direct-rendering-tests.js -i 5`
 
 ### 11.3 Optional Future Edge Case Tests
