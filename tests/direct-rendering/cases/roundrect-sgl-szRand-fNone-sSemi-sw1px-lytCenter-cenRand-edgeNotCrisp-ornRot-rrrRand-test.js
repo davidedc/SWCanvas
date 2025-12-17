@@ -2,20 +2,20 @@
  * TEST SUMMARY:
  * =================
  *
- * Description: Tests semi-transparent fill on a single rotated rounded rectangle with random parameters.
- *              Uses SeededRandom for reproducibility. Directly calls RoundedRectOps.fillRotated
- *              to test the Edge Buffer Rasterization algorithm with alpha blending.
+ * Description: Tests 1px semi-transparent stroke on a single rotated rounded rectangle with random parameters.
+ *              Uses SeededRandom for reproducibility. Directly calls RoundedRectOps.strokeRotated
+ *              to test the hybrid algorithm (edges + arcs) with Set deduplication for alpha blending.
  *
  * ---
  *
  * | Facet                  | Value          | Reason
  * |------------------------|----------------|----------------------------------------------------------------------------------------------------------------------------------
- * | Shape category         | rounded-rects  | The test draws a rotated rounded rectangle via `RoundedRectOps.fillRotated()`.
+ * | Shape category         | rounded-rects  | The test draws a rotated rounded rectangle via `RoundedRectOps.strokeRotated()`.
  * | Count                  | single         | Only 1 instance drawn for focused visual inspection.
  * | SizeCategory           | random         | Width/height randomly generated (40-120px range, constrained to canvas).
- * | FillStyle              | semi           | Fill color is semi-transparent (alpha = 0.6) for testing alpha blending.
- * | StrokeStyle            | none           | Fill-only test; no stroke is applied.
- * | StrokeThickness        | 0              | No stroke.
+ * | FillStyle              | none           | Stroke-only test; no fill is applied.
+ * | StrokeStyle            | semi           | Stroke color is semi-transparent (alpha = 0.6) for testing alpha blending.
+ * | StrokeThickness        | 1px            | Tests 1px stroke with Set deduplication for overdraw prevention.
  * | Layout                 | center         | Shape is roughly centered on canvas.
  * | CenteredAt             | random         | Center has small random offset from canvas center.
  * | EdgeAlignment          | not-crisp      | Rotation makes pixel-aligned edges irrelevant; edges are inherently not crisp.
@@ -23,7 +23,7 @@
  * | ArcAngleExtent         | N/A            | Not an arc test.
  * | RoundRectRadius        | random         | Radius randomly generated (5 to min(w,h)/2).
  * | ContextTranslation     | none           | Direct static method call bypasses Context2D transforms.
- * | ContextRotation        | none           | Rotation is passed directly to `fillRotated()`, not via `ctx.rotate()`.
+ * | ContextRotation        | none           | Rotation is passed directly to `strokeRotated()`, not via `ctx.rotate()`.
  * | ContextScaling         | none           | No scaling applied.
  * | Clipped on shape       | none           | No clipping applied in this test.
  * | Clipped on shape count | n/a            | No clipping.
@@ -35,19 +35,18 @@
  *
  * UNCAPTURED ASPECTS IN FILENAME / FACETS ABOVE:
  * ----------------------------------------------
- * This test directly calls `RoundedRectOps.fillRotated()` (static method) rather than going through
+ * This test directly calls `RoundedRectOps.strokeRotated()` (static method) rather than going through
  * Context2D, since Context2D integration for rotated rounded rectangles is not yet implemented.
- * Uses Edge Buffer Rasterization algorithm for optimal O(H + P + A) complexity.
- * Tests alpha blending path (_fillAlphaRotated).
+ * Uses hybrid algorithm: 4 edges + 4 corner arcs with Set deduplication for correct alpha blending.
  */
 
 /**
- * @fileoverview Test definition for semi-transparent fill on a single rotated rounded rectangle with random parameters.
+ * @fileoverview Test definition for 1px semi-transparent stroke on a single rotated rounded rectangle with random parameters.
  */
 
 /**
- * Draws a single rotated rounded rectangle with semi-transparent fill and random parameters.
- * Tests the RoundedRectOps.fillRotated direct rendering method with alpha blending.
+ * Draws a single rotated rounded rectangle with 1px semi-transparent stroke and random parameters.
+ * Tests the RoundedRectOps.strokeRotated direct rendering method with alpha blending.
  *
  * @param {CanvasRenderingContext2D | SWCanvasContext} ctx The rendering context.
  * @param {number} currentIterationNumber The current test iteration (for seeding via RenderTest).
@@ -75,9 +74,9 @@ function drawTest(ctx, currentIterationNumber, instances = null) {
         Color = SWCanvas.Core.Color;
         RoundedRectOps = SWCanvas.Core.RoundedRectOps;
 
-        // Verify fillRotated method exists
-        if (typeof RoundedRectOps.fillRotated !== 'function') {
-            logs.push('ERROR: RoundedRectOps.fillRotated method not found');
+        // Verify strokeRotated method exists
+        if (typeof RoundedRectOps.strokeRotated !== 'function') {
+            logs.push('ERROR: RoundedRectOps.strokeRotated method not found');
             return { logs, checkData: { error: 'method not found' } };
         }
     } else if (typeof ctx.roundRect !== 'function') {
@@ -97,9 +96,9 @@ function drawTest(ctx, currentIterationNumber, instances = null) {
     const cx = canvasWidth / 2 + (SeededRandom.getRandom() - 0.5) * 60;
     const cy = canvasHeight / 2 + (SeededRandom.getRandom() - 0.5) * 60;
 
-    // Semi-transparent green color for visual clarity
-    const fillColor = { r: 0, g: 180, b: 0 };
-    const fillAlpha = 0.6;
+    // Semi-transparent orange color for visual clarity
+    const strokeColor = { r: 255, g: 128, b: 0 };
+    const strokeAlpha = 0.6;
 
     if (isPerformanceRun) {
         // For performance runs, draw many shapes with varying parameters
@@ -119,11 +118,12 @@ function drawTest(ctx, currentIterationNumber, instances = null) {
                     Math.floor(SeededRandom.getRandom() * 200) + 55,
                     255
                 );
-                RoundedRectOps.fillRotated(
+                RoundedRectOps.strokeRotated(
                     surface,
                     offsetX, offsetY,
                     w, h, r,
                     angle,
+                    1,              // lineWidth
                     color,
                     alpha,          // globalAlpha for semi-transparency
                     null            // clipBuffer
@@ -133,10 +133,11 @@ function drawTest(ctx, currentIterationNumber, instances = null) {
                 ctx.globalAlpha = alpha;
                 ctx.translate(offsetX, offsetY);
                 ctx.rotate(angle);
-                ctx.fillStyle = `rgb(${Math.floor(SeededRandom.getRandom() * 200) + 55}, ${Math.floor(SeededRandom.getRandom() * 200) + 55}, ${Math.floor(SeededRandom.getRandom() * 200) + 55})`;
+                ctx.strokeStyle = `rgb(${Math.floor(SeededRandom.getRandom() * 200) + 55}, ${Math.floor(SeededRandom.getRandom() * 200) + 55}, ${Math.floor(SeededRandom.getRandom() * 200) + 55})`;
+                ctx.lineWidth = 1;
                 ctx.beginPath();
                 ctx.roundRect(-w / 2, -h / 2, w, h, r);
-                ctx.fill();
+                ctx.stroke();
                 ctx.restore();
             }
         }
@@ -147,33 +148,35 @@ function drawTest(ctx, currentIterationNumber, instances = null) {
     const angleDeg = Math.round(rotation * 180 / Math.PI);
 
     if (isSWCanvas) {
-        // SWCanvas: Direct rendering via RoundedRectOps.fillRotated
-        const color = new Color(fillColor.r, fillColor.g, fillColor.b, 255);
-        RoundedRectOps.fillRotated(
+        // SWCanvas: Direct rendering via RoundedRectOps.strokeRotated
+        const color = new Color(strokeColor.r, strokeColor.g, strokeColor.b, 255);
+        RoundedRectOps.strokeRotated(
             surface,
             cx, cy,
             width, height, radius,
             rotation,
+            1,              // lineWidth
             color,
-            fillAlpha,      // globalAlpha for semi-transparency
+            strokeAlpha,    // globalAlpha for semi-transparency
             null            // clipBuffer
         );
     } else {
         // HTML5 Canvas: Path-based approach with transforms
         ctx.save();
-        ctx.globalAlpha = fillAlpha;
+        ctx.globalAlpha = strokeAlpha;
         ctx.translate(cx, cy);
         ctx.rotate(rotation);
-        ctx.fillStyle = `rgb(${fillColor.r}, ${fillColor.g}, ${fillColor.b})`;
+        ctx.strokeStyle = `rgb(${strokeColor.r}, ${strokeColor.g}, ${strokeColor.b})`;
+        ctx.lineWidth = 1;
         ctx.beginPath();
         // roundRect uses top-left corner, so offset by half width/height
         ctx.roundRect(-width / 2, -height / 2, width, height, radius);
-        ctx.fill();
+        ctx.stroke();
         ctx.restore();
     }
 
     logs.push(`Shape: center=(${cx.toFixed(1)},${cy.toFixed(1)}), size=${width}x${height}, r=${radius}, angle=${angleDeg}°`);
-    logs.push(`Color: rgba(${fillColor.r}, ${fillColor.g}, ${fillColor.b}, ${fillAlpha})`);
+    logs.push(`Stroke: rgba(${strokeColor.r}, ${strokeColor.g}, ${strokeColor.b}, ${strokeAlpha}), lineWidth=1`);
 
     // Calculate rough bounds for extremes check
     const hw = width / 2;
@@ -193,16 +196,16 @@ function drawTest(ctx, currentIterationNumber, instances = null) {
 
 // Register the test
 registerDirectRenderingTest(
-    'roundrect-sgl-szRand-fSemi-sNone-sw0-lytCenter-cenRand-edgeNotCrisp-ornRot-rrrRand',
+    'roundrect-sgl-szRand-fNone-sSemi-sw1px-lytCenter-cenRand-edgeNotCrisp-ornRot-rrrRand',
     drawTest,
     'rounded-rects',
     {
         extremes: false,  // Rotated shapes have complex bounds, skip strict extremes check
-        totalUniqueColors: 2  // Background + single semi-transparent fill color (no overdraw)
+        totalUniqueColors: 2  // Background + single semi-transparent stroke color (no overdraw)
     },
     {
-        title: 'Single Rotated Rounded Rectangle - Semi-Transparent Fill (Random)',
-        description: 'Tests direct rendering of semi-transparent fill on a single rotated rounded rectangle with random size, radius, and rotation using Edge Buffer Rasterization with alpha blending.',
-        displayName: 'Perf: Single Rotated RRect Alpha Fill (Random)'
+        title: 'Single Rotated Rounded Rectangle - 1px Semi-Transparent Stroke (Random)',
+        description: 'Tests direct rendering of 1px semi-transparent stroke on a single rotated rounded rectangle with random size, radius, and rotation using hybrid edges+arcs algorithm with Set deduplication.',
+        displayName: 'Perf: Single Rotated RRect 1px Alpha Stroke (Random)'
     }
 );
