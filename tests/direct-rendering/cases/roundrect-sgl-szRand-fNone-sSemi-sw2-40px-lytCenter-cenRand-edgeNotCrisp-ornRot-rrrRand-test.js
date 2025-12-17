@@ -3,12 +3,12 @@
  * =================
  *
  * Description: Tests 5px semi-transparent stroke on a single rotated rounded rectangle.
- *              Uses SeededRandom for reproducibility. Directly calls RoundedRectOps.strokeRotated
- *              to test the Dual Edge Buffer algorithm with alpha blending.
+ *              Uses SeededRandom for reproducibility. Uses Context2D methods with transforms to test
+ *              the dispatch to direct rendering (Dual Edge Buffer algorithm with alpha blending).
  *
  * | Facet                  | Value          | Reason
  * |------------------------|----------------|----------------------------------------------------------------------------------------------------------------------------------
- * | Shape category         | rounded-rects  | The test draws a rotated rounded rectangle via `RoundedRectOps.strokeRotated()`.
+ * | Shape category         | rounded-rects  | The test draws a rotated rounded rectangle via transforms + strokeRoundRect.
  * | Count                  | single         | Only 1 instance drawn for focused visual inspection.
  * | SizeCategory           | random         | Width/height randomly generated (60-140px range).
  * | FillStyle              | none           | Stroke-only test; no fill is applied.
@@ -30,21 +30,34 @@ function drawTest(ctx, currentIterationNumber, instances = null) {
     const canvasWidth = ctx.canvas.width;
     const canvasHeight = ctx.canvas.height;
 
-    const surface = ctx.surface || ctx.canvas?._coreSurface;
-    const isSWCanvas = surface && typeof SWCanvas !== 'undefined';
+    // Check for roundRect support (works for both SWCanvas and modern HTML5 Canvas)
+    const hasStrokeRoundRect = typeof ctx.strokeRoundRect === 'function';
+    const hasRoundRect = typeof ctx.roundRect === 'function';
 
-    let Color, RoundedRectOps;
-    if (isSWCanvas) {
-        Color = SWCanvas.Core.Color;
-        RoundedRectOps = SWCanvas.Core.RoundedRectOps;
-
-        if (typeof RoundedRectOps.strokeRotated !== 'function') {
-            logs.push('ERROR: RoundedRectOps.strokeRotated method not found');
-            return { logs, checkData: { error: 'method not found' } };
-        }
-    } else if (typeof ctx.roundRect !== 'function') {
-        logs.push('Skipping test: requires SWCanvas or HTML5 Canvas with roundRect support');
+    if (!hasStrokeRoundRect && !hasRoundRect) {
+        logs.push('Skipping test: requires roundRect support');
         return { logs, checkData: { skipped: true } };
+    }
+
+    // Helper function to draw a rotated rounded rect stroke with alpha
+    function drawRotatedRoundRectStroke(context, centerX, centerY, w, h, r, angle, strokeRgb, lineW, alpha) {
+        context.save();
+        context.globalAlpha = alpha;
+        context.translate(centerX, centerY);
+        context.rotate(angle);
+        context.strokeStyle = strokeRgb;
+        context.lineWidth = lineW;
+
+        if (typeof context.strokeRoundRect === 'function') {
+            // SWCanvas high-level API
+            context.strokeRoundRect(-w / 2, -h / 2, w, h, r);
+        } else {
+            // HTML5 Canvas fallback: roundRect + stroke
+            context.beginPath();
+            context.roundRect(-w / 2, -h / 2, w, h, r);
+            context.stroke();
+        }
+        context.restore();
     }
 
     // Generate random parameters
@@ -53,7 +66,7 @@ function drawTest(ctx, currentIterationNumber, instances = null) {
     const maxRadius = Math.min(width, height) / 2;
     const radius = 8 + Math.floor(SeededRandom.getRandom() * (maxRadius - 8));
     const rotation = SeededRandom.getRandom() * Math.PI * 2;
-    const lineWidth = 2 + Math.floor(SeededRandom.getRandom() * 39);  // Random 2-40px
+    const lineWidth = 2 + Math.floor(SeededRandom.getRandom() * 39);
 
     const cx = canvasWidth / 2 + (SeededRandom.getRandom() - 0.5) * 40;
     const cy = canvasHeight / 2 + (SeededRandom.getRandom() - 0.5) * 40;
@@ -72,47 +85,26 @@ function drawTest(ctx, currentIterationNumber, instances = null) {
             const lw = 3 + Math.floor(SeededRandom.getRandom() * 8);
             const alpha = 0.3 + SeededRandom.getRandom() * 0.5;
 
-            if (isSWCanvas) {
-                const color = new Color(
-                    Math.floor(SeededRandom.getRandom() * 200) + 55,
-                    Math.floor(SeededRandom.getRandom() * 200) + 55,
-                    Math.floor(SeededRandom.getRandom() * 200) + 55,
-                    255
-                );
-                RoundedRectOps.strokeRotated(surface, offsetX, offsetY, w, h, r, angle, lw, color, alpha, null);
-            } else {
-                ctx.save();
-                ctx.globalAlpha = alpha;
-                ctx.translate(offsetX, offsetY);
-                ctx.rotate(angle);
-                ctx.strokeStyle = `rgb(${Math.floor(SeededRandom.getRandom() * 200) + 55}, ${Math.floor(SeededRandom.getRandom() * 200) + 55}, ${Math.floor(SeededRandom.getRandom() * 200) + 55})`;
-                ctx.lineWidth = lw;
-                ctx.beginPath();
-                ctx.roundRect(-w / 2, -h / 2, w, h, r);
-                ctx.stroke();
-                ctx.restore();
-            }
+            const sc = {
+                r: Math.floor(SeededRandom.getRandom() * 200) + 55,
+                g: Math.floor(SeededRandom.getRandom() * 200) + 55,
+                b: Math.floor(SeededRandom.getRandom() * 200) + 55
+            };
+
+            drawRotatedRoundRectStroke(
+                ctx, offsetX, offsetY, w, h, r, angle,
+                `rgb(${sc.r}, ${sc.g}, ${sc.b})`, lw, alpha
+            );
         }
         return null;
     }
 
     const angleDeg = Math.round(rotation * 180 / Math.PI);
 
-    if (isSWCanvas) {
-        const color = new Color(strokeColor.r, strokeColor.g, strokeColor.b, 255);
-        RoundedRectOps.strokeRotated(surface, cx, cy, width, height, radius, rotation, lineWidth, color, strokeAlpha, null);
-    } else {
-        ctx.save();
-        ctx.globalAlpha = strokeAlpha;
-        ctx.translate(cx, cy);
-        ctx.rotate(rotation);
-        ctx.strokeStyle = `rgb(${strokeColor.r}, ${strokeColor.g}, ${strokeColor.b})`;
-        ctx.lineWidth = lineWidth;
-        ctx.beginPath();
-        ctx.roundRect(-width / 2, -height / 2, width, height, radius);
-        ctx.stroke();
-        ctx.restore();
-    }
+    drawRotatedRoundRectStroke(
+        ctx, cx, cy, width, height, radius, rotation,
+        `rgb(${strokeColor.r}, ${strokeColor.g}, ${strokeColor.b})`, lineWidth, strokeAlpha
+    );
 
     logs.push(`Shape: center=(${cx.toFixed(1)},${cy.toFixed(1)}), size=${width}x${height}, r=${radius}, angle=${angleDeg}°`);
     logs.push(`Stroke: rgba(${strokeColor.r}, ${strokeColor.g}, ${strokeColor.b}, ${strokeAlpha}), lineWidth=${lineWidth}`);
@@ -142,7 +134,7 @@ registerDirectRenderingTest(
     },
     {
         title: 'Single Rotated Rounded Rectangle - 2-40px Semi-Transparent Stroke (Random)',
-        description: 'Tests direct rendering of random 2-40px semi-transparent stroke on a single rotated rounded rectangle using Dual Edge Buffer with alpha blending.',
+        description: 'Tests high-level API rendering of random 2-40px semi-transparent stroke on a single rotated rounded rectangle using transforms and strokeRoundRect.',
         displayName: 'Perf: Single Rotated RRect 2-40px Alpha Stroke (Random)'
     }
 );
