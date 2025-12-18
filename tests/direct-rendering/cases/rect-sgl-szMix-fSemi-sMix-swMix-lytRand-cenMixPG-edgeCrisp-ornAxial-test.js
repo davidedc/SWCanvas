@@ -159,7 +159,8 @@ registerDirectRenderingTest(
     drawTest,
     'rectangles',
     {
-        extremes: true
+        extremes: true,
+        strokePatternContinuity: true
     },
     {
         title: 'Rectangles: M-Size Semi-Transparent Fill, Random Semi-Transparent Stroke, Random Position, No Rotation',

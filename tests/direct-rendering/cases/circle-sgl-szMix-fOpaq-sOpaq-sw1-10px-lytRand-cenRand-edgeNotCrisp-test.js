@@ -74,7 +74,8 @@ registerDirectRenderingTest(
     'circles',
     {
         totalUniqueColors: 4,
-        noGapsInStrokeEdges: true
+        noGapsInStrokeEdges: true,
+        strokePatternContinuity: true
     },
     {
         title: 'Circle: fully random',

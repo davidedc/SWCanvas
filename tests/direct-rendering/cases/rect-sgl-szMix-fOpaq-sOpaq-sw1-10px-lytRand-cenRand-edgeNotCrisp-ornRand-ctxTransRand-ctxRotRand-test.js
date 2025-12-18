@@ -129,7 +129,8 @@ registerDirectRenderingTest(
     'rectangles',
     {
         // No extremes check - rotated shapes have complex bounds
-        totalUniqueColors: 3  // background + opaque fill + opaque stroke (stroke overwrites fill at edges)
+        totalUniqueColors: 3,  // background + opaque fill + opaque stroke (stroke overwrites fill at edges)
+        strokePatternContinuity: true
     },
     {
         title: 'Rectangle: Rotated, Single, Opaque Fill + Opaque Stroke, Random Position & Rotation',

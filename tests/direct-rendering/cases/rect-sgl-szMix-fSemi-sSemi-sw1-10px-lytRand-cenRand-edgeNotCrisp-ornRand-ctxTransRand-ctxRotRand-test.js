@@ -131,7 +131,8 @@ registerDirectRenderingTest(
     {
         // No extremes check - original test had none
         // allowPathBasedRendering: false is the default - test MUST use direct rendering
-        totalUniqueColors: 4  // background + fill + stroke + blend (semitransparent stroke causes blending)
+        totalUniqueColors: 4,  // background + fill + stroke + blend (semitransparent stroke causes blending)
+        strokePatternContinuity: true
     },
     {
         title: 'Rectangle: Rotated, Single, Semitransparent Stroke, Random Position & Rotation',

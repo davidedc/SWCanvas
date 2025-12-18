@@ -77,7 +77,8 @@ registerDirectRenderingTest(
     'rectangles',
     {
         extremes: true,
-        totalUniqueColors: 2  // White background + one blended color (no overdraw at corners)
+        totalUniqueColors: 2,  // White background + one blended color (no overdraw at corners)
+        strokePatternContinuity: true
     },
     {
         title: 'Single 1px Semi-Transparent Stroked Rectangle (Crisp, Mixed P/G Centering)',

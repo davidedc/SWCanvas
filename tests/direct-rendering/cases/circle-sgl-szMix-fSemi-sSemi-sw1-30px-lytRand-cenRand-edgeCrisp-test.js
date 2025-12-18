@@ -89,7 +89,8 @@ registerDirectRenderingTest(
         extremes: { colorTolerance: 8, tolerance: 0.03 },
         noGapsInStrokeEdges: true,
         totalUniqueColors: 4,
-        speckles: true
+        speckles: true,
+        strokePatternContinuity: true
     },
     {
         title: 'Single Randomly Positioned Circle with Stroke (Crisp)',

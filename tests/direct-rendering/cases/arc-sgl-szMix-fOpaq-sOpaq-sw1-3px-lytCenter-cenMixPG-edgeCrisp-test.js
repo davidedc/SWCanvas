@@ -89,7 +89,8 @@ registerDirectRenderingTest(
         extremes: { colorTolerance: 65, tolerance: 0.03 }, // arcs drawing in HTML5 Canvas are a bit funny
         noGapsInStrokeEdges: true,
         totalUniqueColors: 4,
-        speckles: { maxSpeckles: 4 }
+        speckles: { maxSpeckles: 4 },
+        strokePatternContinuity: true
     },
     {
         title: 'Single Thin Stroked Arc (Crisp, Random Center Type)',

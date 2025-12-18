@@ -130,7 +130,8 @@ registerDirectRenderingTest(
     'rounded-rects',
     {
         extremes: false,
-        totalUniqueColors: 2  // Background + single semi-transparent stroke color (no overdraw)
+        totalUniqueColors: 2,  // Background + single semi-transparent stroke color (no overdraw)
+        strokePatternContinuity: true
     },
     {
         title: 'Single Rotated Rounded Rectangle - 2-40px Semi-Transparent Stroke (Random)',

@@ -168,7 +168,8 @@ registerDirectRenderingTest(
         // No extremes check - non-integer geometry causes rounding differences
         allowPathBasedRendering: true,  // fillRect uses path-based rendering
         totalUniqueColors: { expected: 4, skipOnIterations: [214, 395, 520] },  // background + fill + stroke + fill+stroke blend. The skips are because sometimes the external part of the stroke overpills into the internal ones. Given the effect and number of occurrences this is OK.
-        dimensionConsistency: true  // Verify width/height are consistent across all rows/columns
+        dimensionConsistency: true,  // Verify width/height are consistent across all rows/columns
+        strokePatternContinuity: true
     },
     {
         title: 'Rectangle: Axis-aligned, Single, Variable Size, Semi-Transparent Fill & Stroke, Non-Integer Geometry',

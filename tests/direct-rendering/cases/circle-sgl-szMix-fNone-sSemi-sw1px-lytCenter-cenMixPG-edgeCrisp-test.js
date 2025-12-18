@@ -78,7 +78,8 @@ registerDirectRenderingTest(
     'circles',
     {
         extremes: { colorTolerance: 8, tolerance: 0.03 },
-        totalUniqueColors: 2  // White background + one blended color
+        totalUniqueColors: 2,  // White background + one blended color
+        strokePatternContinuity: true
     },
     {
         title: 'Single 1px Semi-Transparent Stroked Circle (Crisp, Mixed P/G Centering)',

@@ -83,7 +83,8 @@ registerDirectRenderingTest(
     },
     'arcs',
     {
-        speckles: { maxSpeckles: 5 }
+        speckles: { maxSpeckles: 5 },
+        strokePatternContinuity: true
     },
     {
         title: 'Single Thin Arc (Not Crisp, Random Position)',
