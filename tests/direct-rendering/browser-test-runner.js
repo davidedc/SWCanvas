@@ -875,9 +875,10 @@ class DirectRenderingTestRunner {
             });
         }
 
-        // 1px stroke continuity check (SW only)
-        if (checks.strokeContinuity) {
-            const config = checks.strokeContinuity;
+        // 1px stroke 8-connectivity check (SW only)
+        // NOTE: This check only works for 1px strokes.
+        if (checks.stroke8Connectivity) {
+            const config = checks.stroke8Connectivity;
             const [r, g, b] = config.color;
             const tolerance = config.tolerance || 0;
             const isKnownFailure = config.knownFailure === true;
@@ -889,12 +890,36 @@ class DirectRenderingTestRunner {
                 : '';
 
             results.push({
-                name: 'Stroke Continuity',
+                name: 'Stroke 8-Connectivity',
                 passed,
                 knownFailure: isKnownFailure && !passed,
                 details: passed
                     ? `${result.totalPixels} pixels, all connected`
                     : `${result.gaps.length} gap(s)${firstInfo}` + (isKnownFailure ? ' [KNOWN]' : '')
+            });
+        }
+
+        // Stroke pattern continuity check (scanline-based, works for any stroke width)
+        // NOTE: Only works for closed convex shapes (circles, rectangles, rounded rects)
+        if (checks.strokePatternContinuity) {
+            const config = typeof checks.strokePatternContinuity === 'object'
+                ? checks.strokePatternContinuity
+                : {};
+            const isKnownFailure = config.knownFailure === true;
+
+            const result = checkStrokePatternContinuity(swSurface, {
+                verticalScan: config.verticalScan !== false,
+                horizontalScan: config.horizontalScan !== false
+            });
+            const passed = result.continuous;
+
+            results.push({
+                name: 'Stroke Pattern',
+                passed,
+                knownFailure: isKnownFailure && !passed,
+                details: passed
+                    ? 'No holes detected'
+                    : result.issues.join('; ') + (isKnownFailure ? ' [KNOWN]' : '')
             });
         }
 

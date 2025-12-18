@@ -1040,6 +1040,248 @@ function check1pxClosedStrokeContinuity(surface, r, g, b, tolerance = 0) {
 }
 
 /**
+ * Scans rows vertically and analyzes pixel patterns for stroke continuity.
+ * Used by checkStrokePatternContinuity.
+ * @private
+ */
+function scanVertically(surface, extremes, transitionPattern) {
+    const { leftX, rightX, topY, bottomY } = extremes;
+    const data = surface.data;
+    const stride = surface.stride || surface.width * 4;
+
+    // Scan each row from top to bottom
+    for (let y = topY; y <= bottomY; y++) {
+        // Track contiguous pixel groups in the current row
+        const contiguousGroups = [];
+        let currentGroup = null;
+
+        // Scan this row from left to right
+        for (let x = leftX; x <= rightX; x++) {
+            const idx = y * stride + x * 4;
+            const isPixelTransparent = data[idx + 3] === 0;
+
+            if (!isPixelTransparent) {
+                // Start a new group or extend current group
+                if (currentGroup === null) {
+                    currentGroup = { startX: x, endX: x };
+                } else {
+                    currentGroup.endX = x;
+                }
+            } else if (currentGroup !== null) {
+                // End of a group
+                contiguousGroups.push(currentGroup);
+                currentGroup = null;
+            }
+        }
+
+        // Add the last group if it exists
+        if (currentGroup !== null) {
+            contiguousGroups.push(currentGroup);
+        }
+
+        // Categorize the pattern for this row
+        let rowPattern = '';
+        if (contiguousGroups.length === 0) {
+            rowPattern = 'empty';
+        } else if (contiguousGroups.length === 1) {
+            rowPattern = 'solid';
+        } else if (contiguousGroups.length === 2) {
+            rowPattern = 'sides';
+        } else {
+            rowPattern = 'fragmented';
+        }
+
+        // Add the pattern to our transition sequence (only if different from previous)
+        if (transitionPattern.length === 0 || transitionPattern[transitionPattern.length - 1].pattern !== rowPattern) {
+            transitionPattern.push({ pos: y, pattern: rowPattern, groupCount: contiguousGroups.length });
+        }
+    }
+}
+
+/**
+ * Scans columns horizontally and analyzes pixel patterns for stroke continuity.
+ * Used by checkStrokePatternContinuity.
+ * @private
+ */
+function scanHorizontally(surface, extremes, transitionPattern) {
+    const { leftX, rightX, topY, bottomY } = extremes;
+    const data = surface.data;
+    const stride = surface.stride || surface.width * 4;
+
+    // Scan each column from left to right
+    for (let x = leftX; x <= rightX; x++) {
+        // Track contiguous pixel groups in the current column
+        const contiguousGroups = [];
+        let currentGroup = null;
+
+        // Scan this column from top to bottom
+        for (let y = topY; y <= bottomY; y++) {
+            const idx = y * stride + x * 4;
+            const isPixelTransparent = data[idx + 3] === 0;
+
+            if (!isPixelTransparent) {
+                // Start a new group or extend current group
+                if (currentGroup === null) {
+                    currentGroup = { startY: y, endY: y };
+                } else {
+                    currentGroup.endY = y;
+                }
+            } else if (currentGroup !== null) {
+                // End of a group
+                contiguousGroups.push(currentGroup);
+                currentGroup = null;
+            }
+        }
+
+        // Add the last group if it exists
+        if (currentGroup !== null) {
+            contiguousGroups.push(currentGroup);
+        }
+
+        // Categorize the pattern for this column
+        let colPattern = '';
+        if (contiguousGroups.length === 0) {
+            colPattern = 'empty';
+        } else if (contiguousGroups.length === 1) {
+            colPattern = 'solid';
+        } else if (contiguousGroups.length === 2) {
+            colPattern = 'sides';
+        } else {
+            colPattern = 'fragmented';
+        }
+
+        // Add the pattern to our transition sequence (only if different from previous)
+        if (transitionPattern.length === 0 || transitionPattern[transitionPattern.length - 1].pattern !== colPattern) {
+            transitionPattern.push({ pos: x, pattern: colPattern, groupCount: contiguousGroups.length });
+        }
+    }
+}
+
+/**
+ * Validates the transition pattern sequence for stroke continuity.
+ * Valid sequences are:
+ * - solid only (small shape)
+ * - solid → sides → solid (normal shape with caps and sides)
+ * @private
+ * @returns {{valid: boolean, issue: string|null}}
+ */
+function validateTransitionPattern(transitionPattern, isHorizontal) {
+    const directionLabel = isHorizontal ? 'column' : 'row';
+    let currentState = 'start';
+
+    for (let i = 0; i < transitionPattern.length; i++) {
+        const { pattern, pos, groupCount } = transitionPattern[i];
+
+        switch (currentState) {
+            case 'start':
+                if (pattern === 'solid') {
+                    currentState = 'firstCap';
+                } else if (pattern === 'sides') {
+                    return { valid: false, issue: `Missing first cap at ${directionLabel} ${pos}` };
+                } else if (pattern === 'fragmented') {
+                    return { valid: false, issue: `Fragmented pattern (${groupCount} groups) at ${directionLabel} ${pos}` };
+                }
+                break;
+
+            case 'firstCap':
+                if (pattern === 'sides') {
+                    currentState = 'sides';
+                } else if (pattern === 'fragmented') {
+                    return { valid: false, issue: `Fragmented pattern (${groupCount} groups) at ${directionLabel} ${pos}` };
+                } else if (pattern === 'empty') {
+                    return { valid: false, issue: `Unexpected empty ${directionLabel} at ${pos}` };
+                }
+                // solid continues in firstCap
+                break;
+
+            case 'sides':
+                if (pattern === 'solid') {
+                    currentState = 'secondCap';
+                } else if (pattern === 'fragmented') {
+                    return { valid: false, issue: `Fragmented pattern (${groupCount} groups) at ${directionLabel} ${pos}` };
+                } else if (pattern === 'empty') {
+                    return { valid: false, issue: `Unexpected empty ${directionLabel} at ${pos}` };
+                }
+                // sides continues in sides
+                break;
+
+            case 'secondCap':
+                if (pattern !== 'solid') {
+                    return { valid: false, issue: `Expected solid pattern for second cap, got ${pattern} at ${directionLabel} ${pos}` };
+                }
+                // solid continues in secondCap
+                break;
+        }
+    }
+
+    // Check final state - must end in firstCap (small shape) or secondCap (normal shape)
+    if (currentState !== 'firstCap' && currentState !== 'secondCap') {
+        return { valid: false, issue: 'Incomplete stroke pattern' };
+    }
+
+    return { valid: true, issue: null };
+}
+
+/**
+ * Checks if a stroke forms a continuous loop without holes using scanline pattern analysis.
+ * Works for any stroke width.
+ *
+ * Algorithm:
+ * 1. Scans each row/column within shape extremes
+ * 2. Categorizes each as: empty, solid (1 group), sides (2 groups), fragmented (3+ groups)
+ * 3. Validates sequence: start → firstCap (solid) → sides → secondCap (solid)
+ * 4. 'fragmented' pattern indicates gaps/holes
+ *
+ * LIMITATIONS: Only works for closed convex shapes (circles, rectangles,
+ * rounded rects) with no fill or same-color fill.
+ *
+ * @param {Object} surface - Surface with data, width, height, stride
+ * @param {Object} options - Configuration
+ * @param {boolean} options.verticalScan - Scan rows (default: true)
+ * @param {boolean} options.horizontalScan - Scan columns (default: true)
+ * @returns {{continuous: boolean, issues: string[]}}
+ */
+function checkStrokePatternContinuity(surface, options = {}) {
+    const { verticalScan = true, horizontalScan = true } = options;
+    const issues = [];
+
+    // Get shape bounds
+    const extremes = analyzeExtremes(surface);
+
+    // If no non-background pixels found
+    if (extremes.leftX >= surface.width || extremes.rightX < 0 ||
+        extremes.topY >= surface.height || extremes.bottomY < 0) {
+        issues.push('No non-background pixels found');
+        return { continuous: false, issues };
+    }
+
+    // Perform vertical scan (row by row)
+    if (verticalScan) {
+        const verticalPattern = [];
+        scanVertically(surface, extremes, verticalPattern);
+        const verticalResult = validateTransitionPattern(verticalPattern, false);
+        if (!verticalResult.valid) {
+            issues.push(`Vertical scan: ${verticalResult.issue}`);
+        }
+    }
+
+    // Perform horizontal scan (column by column)
+    if (horizontalScan) {
+        const horizontalPattern = [];
+        scanHorizontally(surface, extremes, horizontalPattern);
+        const horizontalResult = validateTransitionPattern(horizontalPattern, true);
+        if (!horizontalResult.valid) {
+            issues.push(`Horizontal scan: ${horizontalResult.issue}`);
+        }
+    }
+
+    return {
+        continuous: issues.length === 0,
+        issues
+    };
+}
+
+/**
  * Run all validation checks on a surface
  * Shared between Node.js and browser test runners for consistency.
  * @param {Object} surface - Surface with data, width, height, stride
@@ -1130,12 +1372,13 @@ function runValidationChecks(surface, checks) {
         }
     }
 
-    // 1px closed stroke continuity check
-    // Config: strokeContinuity: { color: [r, g, b], tolerance?: number }
+    // 1px closed stroke 8-connectivity check
+    // Config: stroke8Connectivity: { color: [r, g, b], tolerance?: number }
     // A continuous 1px stroke has every pixel with at least 2 neighbors (8-connectivity)
     // Pixels with 0 or 1 neighbors indicate gaps/discontinuities
-    if (checks.strokeContinuity) {
-        const config = checks.strokeContinuity;
+    // NOTE: This check only works for 1px strokes.
+    if (checks.stroke8Connectivity) {
+        const config = checks.stroke8Connectivity;
         const [r, g, b] = config.color;
         const tolerance = config.tolerance || 0;
         const isKnownFailure = config.knownFailure === true;
@@ -1147,11 +1390,38 @@ function runValidationChecks(surface, checks) {
             const firstInfo = firstGap
                 ? ` (first at ${firstGap.x},${firstGap.y} with ${firstGap.neighbors} neighbor(s))`
                 : '';
-            const message = `Stroke continuity: ${result.gaps.length} pixel(s) with <2 neighbors${firstInfo}`;
+            const message = `Stroke 8-connectivity: ${result.gaps.length} pixel(s) with <2 neighbors${firstInfo}`;
             if (isKnownFailure) {
                 knownFailureIssues.push(message + ' [KNOWN]');
             } else {
                 issues.push(message);
+            }
+        }
+    }
+
+    // Stroke pattern continuity check (scanline-based, works for any stroke width)
+    // Config: strokePatternContinuity: true | { verticalScan?: boolean, horizontalScan?: boolean, knownFailure?: boolean }
+    // Uses scanline pattern analysis to detect holes in closed shape strokes
+    // NOTE: Only works for closed convex shapes (circles, rectangles, rounded rects)
+    if (checks.strokePatternContinuity) {
+        const config = typeof checks.strokePatternContinuity === 'object'
+            ? checks.strokePatternContinuity
+            : {};
+        const isKnownFailure = config.knownFailure === true;
+
+        const result = checkStrokePatternContinuity(surface, {
+            verticalScan: config.verticalScan !== false,
+            horizontalScan: config.horizontalScan !== false
+        });
+
+        if (!result.continuous) {
+            for (const issue of result.issues) {
+                const message = `Stroke pattern: ${issue}`;
+                if (isKnownFailure) {
+                    knownFailureIssues.push(message + ' [KNOWN]');
+                } else {
+                    issues.push(message);
+                }
             }
         }
     }
@@ -1192,6 +1462,8 @@ if (typeof module !== 'undefined' && module.exports) {
         countSpeckles,
         hasSpeckles,
         check1pxClosedStrokeContinuity,
+        checkStroke8Connectivity: check1pxClosedStrokeContinuity, // Alias for renamed check
+        checkStrokePatternContinuity,
         runValidationChecks
     };
 }
@@ -1224,5 +1496,7 @@ if (typeof window !== 'undefined') {
     window.countSpeckles = countSpeckles;
     window.hasSpeckles = hasSpeckles;
     window.check1pxClosedStrokeContinuity = check1pxClosedStrokeContinuity;
+    window.checkStroke8Connectivity = check1pxClosedStrokeContinuity; // Alias for renamed check
+    window.checkStrokePatternContinuity = checkStrokePatternContinuity;
     window.runValidationChecks = runValidationChecks;
 }
