@@ -139,7 +139,7 @@ registerDirectRenderingTest(
     'rounded-rects',
     {
         extremes: true,
-        strokeContinuity: { color: [255, 0, 0] }
+        stroke8Connectivity: { color: [255, 0, 0] }
     },
     {
         title: 'Single 1px Stroked Rounded Rectangle (Crisp, Centered at Pixel)',
