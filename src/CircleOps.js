@@ -10,6 +10,23 @@
  *
  * Algorithm notes: Uses a Bresenham circle variant with specific adjustments
  * (center offset, +1 boundary corrections) for correct extreme pixel rendering.
+ *
+ * CALL HIERARCHY:
+ * ---------------
+ * Layer 0 (Foundation): SpanOps.fill_Opaq, SpanOps.fill_Alpha
+ *
+ * Layer 1 (Primitives - do atomic rendering):
+ *   fill_Opaq, fill_Alpha (call SpanOps)
+ *   stroke1px_Opaq, stroke1px_Alpha
+ *   strokeThick_Alpha
+ *
+ * Layer 2 (Composites/Dispatchers):
+ *   strokeThick_Any → strokeThick_Alpha (for semi-transparent)
+ *   fillStroke_Any  → inline rendering (single-pass)
+ *
+ * NAMING PATTERN: {operation}[Thickness]_{opacity}
+ *   - Opaq = Opaque only, Alpha = Semi-transparent, Any = Handles both
+ *   - (No orientation suffix - circles are rotation-invariant)
  */
 class CircleOps {
     /**
@@ -67,7 +84,7 @@ class CircleOps {
      * @param {Color} color - Fill color (must be opaque, alpha=255)
      * @param {Uint8Array|null} clipBuffer - Clip mask buffer
      */
-    static fillOpaque(surface, cx, cy, radius, color, clipBuffer) {
+    static fill_Opaq(surface, cx, cy, radius, color, clipBuffer) {
         const width = surface.width;
         const height = surface.height;
         const data32 = surface.data32;
@@ -97,13 +114,13 @@ class CircleOps {
 
             // Draw bottom scanline
             if (abs_y_bottom >= 0 && abs_y_bottom < height) {
-                SpanOps.fillOpaque(data32, width, height, abs_x_min, abs_y_bottom, spanWidth, packedColor, clipBuffer);
+                SpanOps.fill_Opaq(data32, width, height, abs_x_min, abs_y_bottom, spanWidth, packedColor, clipBuffer);
             }
 
             // Draw top scanline (skip overdraw conditions)
             const drawTop = rel_y > 0 && !(rel_y === 1 && yOffset === 0);
             if (drawTop && abs_y_top >= 0 && abs_y_top < height) {
-                SpanOps.fillOpaque(data32, width, height, abs_x_min, abs_y_top, spanWidth, packedColor, clipBuffer);
+                SpanOps.fill_Opaq(data32, width, height, abs_x_min, abs_y_top, spanWidth, packedColor, clipBuffer);
             }
         }
     }
@@ -119,7 +136,7 @@ class CircleOps {
      * @param {number} globalAlpha - Context global alpha
      * @param {Uint8Array|null} clipBuffer - Clip mask buffer
      */
-    static fillAlpha(surface, cx, cy, radius, color, globalAlpha, clipBuffer) {
+    static fill_Alpha(surface, cx, cy, radius, color, globalAlpha, clipBuffer) {
         const width = surface.width;
         const height = surface.height;
         const data = surface.data;
@@ -156,14 +173,14 @@ class CircleOps {
 
             // Draw bottom scanline
             if (abs_y_bottom >= 0 && abs_y_bottom < height) {
-                SpanOps.fillAlpha(data, width, height, abs_x_min, abs_y_bottom, spanWidth,
+                SpanOps.fill_Alpha(data, width, height, abs_x_min, abs_y_bottom, spanWidth,
                                    r, g, b, effectiveAlpha, invAlpha, clipBuffer);
             }
 
             // Draw top scanline (skip overdraw conditions)
             const drawTop = rel_y > 0 && !(rel_y === 1 && yOffset === 0);
             if (drawTop && abs_y_top >= 0 && abs_y_top < height) {
-                SpanOps.fillAlpha(data, width, height, abs_x_min, abs_y_top, spanWidth,
+                SpanOps.fill_Alpha(data, width, height, abs_x_min, abs_y_top, spanWidth,
                                    r, g, b, effectiveAlpha, invAlpha, clipBuffer);
             }
         }
@@ -178,7 +195,7 @@ class CircleOps {
      * @param {Color} color - Stroke color (must be opaque)
      * @param {Uint8Array|null} clipBuffer - Clip mask buffer
      */
-    static stroke1pxOpaque(surface, cx, cy, radius, color, clipBuffer) {
+    static stroke1px_Opaq(surface, cx, cy, radius, color, clipBuffer) {
         const width = surface.width;
         const height = surface.height;
         const data32 = surface.data32;
@@ -302,7 +319,7 @@ class CircleOps {
      * @param {number} globalAlpha - Context global alpha
      * @param {Uint8Array|null} clipBuffer - Clip mask buffer
      */
-    static stroke1pxAlpha(surface, cx, cy, radius, color, globalAlpha, clipBuffer) {
+    static stroke1px_Alpha(surface, cx, cy, radius, color, globalAlpha, clipBuffer) {
         const width = surface.width;
         const height = surface.height;
         const data = surface.data;
@@ -428,7 +445,7 @@ class CircleOps {
      * @param {number} globalAlpha - Context global alpha
      * @param {Uint8Array|null} clipBuffer - Clip mask buffer
      */
-    static fillAndStroke(surface, cx, cy, radius, lineWidth, fillColor, strokeColor, globalAlpha, clipBuffer) {
+    static fillStroke_Any(surface, cx, cy, radius, lineWidth, fillColor, strokeColor, globalAlpha, clipBuffer) {
         const width = surface.width;
         const height = surface.height;
         const data = surface.data;
@@ -599,7 +616,7 @@ class CircleOps {
      * @param {number} globalAlpha - Context global alpha
      * @param {Uint8Array|null} clipBuffer - Clip mask buffer
      */
-    static strokeThick(surface, cx, cy, radius, lineWidth, color, globalAlpha, clipBuffer) {
+    static strokeThick_Any(surface, cx, cy, radius, lineWidth, color, globalAlpha, clipBuffer) {
         const width = surface.width;
         const height = surface.height;
 
@@ -673,7 +690,7 @@ class CircleOps {
             }
         } else {
             // Semi-transparent: use alpha blending path
-            CircleOps.strokeThickAlpha(surface, cx, cy, radius, lineWidth, color, globalAlpha, clipBuffer);
+            CircleOps.strokeThick_Alpha(surface, cx, cy, radius, lineWidth, color, globalAlpha, clipBuffer);
         }
     }
 
@@ -688,7 +705,7 @@ class CircleOps {
      * @param {number} globalAlpha - Context global alpha
      * @param {Uint8Array|null} clipBuffer - Clip mask buffer
      */
-    static strokeThickAlpha(surface, cx, cy, radius, lineWidth, color, globalAlpha, clipBuffer) {
+    static strokeThick_Alpha(surface, cx, cy, radius, lineWidth, color, globalAlpha, clipBuffer) {
         const width = surface.width;
         const height = surface.height;
         const data = surface.data;

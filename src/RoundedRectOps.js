@@ -3,10 +3,34 @@
  * Follows the PolygonFiller/RectOps/CircleOps/LineOps pattern.
  *
  * Direct rendering is available exclusively via dedicated Context2D methods:
- * fillRoundRect(), strokeRoundRect(), fillAndStrokeRoundRect()
+ * fillRoundRect(), strokeRoundRect(), fillStroke_AA_AnyRoundRect()
  *
  * Path-based rounded rectangles (beginPath() + roundRect() + fill()/stroke()) use the
  * generic polygon pipeline for consistent, predictable behavior.
+ *
+ * CALL HIERARCHY:
+ * ---------------
+ * Layer 0 (Foundation): SpanOps.fill_Opaq, SpanOps.fill_Alpha
+ *
+ * Layer 1 (Primitives - call SpanOps, fallback to RectOps for radius=0):
+ *   fill_AA_Opaq, fill_AA_Alpha
+ *   stroke1px_AA_Opaq, stroke1px_AA_Alpha
+ *   strokeThick_AA_Opaq, strokeThick_AA_Alpha
+ *
+ * Layer 2 (Rotated - internal implementations):
+ *   _fill_Rot_Opaq, _fill_Rot_Alpha (called by fill_Rot_Any)
+ *   _stroke1px_Rot_Opaq, _stroke1px_Rot_Alpha (called by stroke_Rot_Any)
+ *   _strokeThick_Rot_Opaq, _strokeThick_Rot_Alpha (called by stroke_Rot_Any)
+ *
+ * Layer 3 (Dispatchers and Composites):
+ *   fill_Rot_Any       → _fill_Rot_Opaq / _fill_Rot_Alpha
+ *   stroke_Rot_Any     → _stroke1px_Rot_* / _strokeThick_Rot_* + LineOps.stroke_Any
+ *   fillStroke_AA_Any  → Inline implementation (SpanOps + corner arcs)
+ *   fillStroke_Rot_Any → fill_Rot_Any + stroke_Rot_Any
+ *
+ * NAMING PATTERN: {operation}[Thickness]_{orientation}_{opacity}
+ *   - Orientation: AA (axis-aligned) | Rot (rotated)
+ *   - Opacity: Opaq | Alpha | Any
  */
 class RoundedRectOps {
     /**
@@ -23,7 +47,7 @@ class RoundedRectOps {
      * @param {Color} color - Stroke color (must be opaque)
      * @param {Uint8Array|null} clipBuffer - Optional clip mask buffer
      */
-    static stroke1pxOpaque(surface, x, y, width, height, radii, color, clipBuffer = null) {
+    static stroke1px_AA_Opaq(surface, x, y, width, height, radii, color, clipBuffer = null) {
         const surfaceWidth = surface.width;
         const surfaceHeight = surface.height;
         const data32 = surface.data32;
@@ -36,7 +60,7 @@ class RoundedRectOps {
 
         // Fallback to RectOps for zero radius (rounded rect becomes regular rect)
         if (radius <= 0) {
-            RectOps.stroke1pxOpaque(surface, x, y, width, height, color);
+            RectOps.stroke1px_AA_Opaq(surface, x, y, width, height, color);
             return;
         }
 
@@ -123,7 +147,7 @@ class RoundedRectOps {
      * @param {number} globalAlpha - Global alpha value
      * @param {Uint8Array|null} clipBuffer - Optional clip mask buffer
      */
-    static stroke1pxAlpha(surface, x, y, width, height, radii, color, globalAlpha, clipBuffer = null) {
+    static stroke1px_AA_Alpha(surface, x, y, width, height, radii, color, globalAlpha, clipBuffer = null) {
         const surfaceWidth = surface.width;
         const surfaceHeight = surface.height;
         const data = surface.data;
@@ -136,7 +160,7 @@ class RoundedRectOps {
 
         // Fallback to RectOps for zero radius (rounded rect becomes regular rect)
         if (radius <= 0) {
-            RectOps.stroke1pxAlpha(surface, x, y, width, height, color, globalAlpha);
+            RectOps.stroke1px_AA_Alpha(surface, x, y, width, height, color, globalAlpha);
             return;
         }
 
@@ -244,7 +268,7 @@ class RoundedRectOps {
      * @param {Color} color - Fill color (must be opaque)
      * @param {Uint8Array|null} clipBuffer - Optional clip mask buffer
      */
-    static fillOpaque(surface, x, y, width, height, radii, color, clipBuffer = null) {
+    static fill_AA_Opaq(surface, x, y, width, height, radii, color, clipBuffer = null) {
         const surfaceWidth = surface.width;
         const surfaceHeight = surface.height;
         const data32 = surface.data32;
@@ -254,7 +278,7 @@ class RoundedRectOps {
 
         // Fallback to RectOps for zero radius
         if (radius <= 0) {
-            RectOps.fillOpaque(surface, x, y, width, height, color);
+            RectOps.fill_AA_Opaq(surface, x, y, width, height, color);
             return;
         }
 
@@ -312,7 +336,7 @@ class RoundedRectOps {
 
             // Fill scanline
             const spanLength = rightX - leftX + 1;
-            SpanOps.fillOpaque(data32, surfaceWidth, surfaceHeight, leftX, py, spanLength, packedColor, clipBuffer);
+            SpanOps.fill_Opaq(data32, surfaceWidth, surfaceHeight, leftX, py, spanLength, packedColor, clipBuffer);
         }
     }
 
@@ -330,7 +354,7 @@ class RoundedRectOps {
      * @param {number} globalAlpha - Global alpha value
      * @param {Uint8Array|null} clipBuffer - Optional clip mask buffer
      */
-    static fillAlpha(surface, x, y, width, height, radii, color, globalAlpha, clipBuffer = null) {
+    static fill_AA_Alpha(surface, x, y, width, height, radii, color, globalAlpha, clipBuffer = null) {
         const surfaceWidth = surface.width;
         const surfaceHeight = surface.height;
         const data = surface.data;
@@ -340,7 +364,7 @@ class RoundedRectOps {
 
         // Fallback to RectOps for zero radius
         if (radius <= 0) {
-            RectOps.fillAlpha(surface, x, y, width, height, color, globalAlpha);
+            RectOps.fill_AA_Alpha(surface, x, y, width, height, color, globalAlpha);
             return;
         }
 
@@ -363,7 +387,7 @@ class RoundedRectOps {
             let leftX = rectX;
             let rightX = rectX + rectW - 1;
 
-            // Adjust for rounded corners (same logic as fillOpaque)
+            // Adjust for rounded corners (same logic as fill_AA_Opaq)
             if (py < rectY + radius) {
                 const cornerCenterY = rectY + radius;
                 const dy = cornerCenterY - py - 0.5;
@@ -400,7 +424,7 @@ class RoundedRectOps {
 
             // Fill scanline with alpha blending
             const spanLength = rightX - leftX + 1;
-            SpanOps.fillAlpha(data, surfaceWidth, surfaceHeight, leftX, py, spanLength, r, g, b, incomingAlpha, inverseIncomingAlpha, clipBuffer);
+            SpanOps.fill_Alpha(data, surfaceWidth, surfaceHeight, leftX, py, spanLength, r, g, b, incomingAlpha, inverseIncomingAlpha, clipBuffer);
         }
     }
 
@@ -418,7 +442,7 @@ class RoundedRectOps {
      * @param {Color} color - Stroke color (must be opaque)
      * @param {Uint8Array|null} clipBuffer - Optional clip mask buffer
      */
-    static strokeThickOpaque(surface, x, y, width, height, radii, lineWidth, color, clipBuffer = null) {
+    static strokeThick_AA_Opaq(surface, x, y, width, height, radii, lineWidth, color, clipBuffer = null) {
         const surfaceWidth = surface.width;
         const surfaceHeight = surface.height;
         const data32 = surface.data32;
@@ -428,7 +452,7 @@ class RoundedRectOps {
 
         // Fallback to RectOps for zero radius (rounded rect becomes regular rect)
         if (radius <= 0) {
-            RectOps.strokeThickOpaque(surface, x, y, width, height, lineWidth, color, clipBuffer);
+            RectOps.strokeThick_AA_Opaq(surface, x, y, width, height, lineWidth, color, clipBuffer);
             return;
         }
 
@@ -514,24 +538,24 @@ class RoundedRectOps {
                     // Left span: from outerLeft to just before innerLeft
                     if (outerLeft < innerLeft) {
                         const leftSpanLength = innerLeft - outerLeft;
-                        SpanOps.fillOpaque(data32, surfaceWidth, surfaceHeight, outerLeft, py, leftSpanLength, packedColor, clipBuffer);
+                        SpanOps.fill_Opaq(data32, surfaceWidth, surfaceHeight, outerLeft, py, leftSpanLength, packedColor, clipBuffer);
                     }
 
                     // Right span: from just after innerRight to outerRight
                     if (innerRight < outerRight) {
                         const rightSpanStart = innerRight + 1;
                         const rightSpanLength = outerRight - innerRight;
-                        SpanOps.fillOpaque(data32, surfaceWidth, surfaceHeight, rightSpanStart, py, rightSpanLength, packedColor, clipBuffer);
+                        SpanOps.fill_Opaq(data32, surfaceWidth, surfaceHeight, rightSpanStart, py, rightSpanLength, packedColor, clipBuffer);
                     }
                 } else {
                     // Inner region invalid at this Y, fill entire outer span
                     const spanLength = outerRight - outerLeft + 1;
-                    SpanOps.fillOpaque(data32, surfaceWidth, surfaceHeight, outerLeft, py, spanLength, packedColor, clipBuffer);
+                    SpanOps.fill_Opaq(data32, surfaceWidth, surfaceHeight, outerLeft, py, spanLength, packedColor, clipBuffer);
                 }
             } else {
                 // Not in inner region, fill entire outer span
                 const spanLength = outerRight - outerLeft + 1;
-                SpanOps.fillOpaque(data32, surfaceWidth, surfaceHeight, outerLeft, py, spanLength, packedColor, clipBuffer);
+                SpanOps.fill_Opaq(data32, surfaceWidth, surfaceHeight, outerLeft, py, spanLength, packedColor, clipBuffer);
             }
         }
     }
@@ -551,7 +575,7 @@ class RoundedRectOps {
      * @param {number} globalAlpha - Global alpha value
      * @param {Uint8Array|null} clipBuffer - Optional clip mask buffer
      */
-    static strokeThickAlpha(surface, x, y, width, height, radii, lineWidth, color, globalAlpha, clipBuffer = null) {
+    static strokeThick_AA_Alpha(surface, x, y, width, height, radii, lineWidth, color, globalAlpha, clipBuffer = null) {
         const surfaceWidth = surface.width;
         const surfaceHeight = surface.height;
         const data = surface.data;
@@ -561,7 +585,7 @@ class RoundedRectOps {
 
         // Fallback to RectOps for zero radius (rounded rect becomes regular rect)
         if (radius <= 0) {
-            RectOps.strokeThickAlpha(surface, x, y, width, height, lineWidth, color, globalAlpha, clipBuffer);
+            RectOps.strokeThick_AA_Alpha(surface, x, y, width, height, lineWidth, color, globalAlpha, clipBuffer);
             return;
         }
 
@@ -586,7 +610,7 @@ class RoundedRectOps {
         const innerH = Math.floor(height - lineWidth);
         const innerRadius = Math.max(0, radius - halfStroke);
 
-        // Helper to calculate x extent (same as strokeThickOpaque)
+        // Helper to calculate x extent (same as strokeThick_AA_Opaq)
         const getXExtent = (py, rectX, rectW, rectY, rectH, rad) => {
             if (rad <= 0) {
                 return { leftX: rectX, rightX: rectX + rectW - 1 };
@@ -646,21 +670,21 @@ class RoundedRectOps {
 
                     if (outerLeft < innerLeft) {
                         const leftSpanLength = innerLeft - outerLeft;
-                        SpanOps.fillAlpha(data, surfaceWidth, surfaceHeight, outerLeft, py, leftSpanLength, r, g, b, incomingAlpha, inverseIncomingAlpha, clipBuffer);
+                        SpanOps.fill_Alpha(data, surfaceWidth, surfaceHeight, outerLeft, py, leftSpanLength, r, g, b, incomingAlpha, inverseIncomingAlpha, clipBuffer);
                     }
 
                     if (innerRight < outerRight) {
                         const rightSpanStart = innerRight + 1;
                         const rightSpanLength = outerRight - innerRight;
-                        SpanOps.fillAlpha(data, surfaceWidth, surfaceHeight, rightSpanStart, py, rightSpanLength, r, g, b, incomingAlpha, inverseIncomingAlpha, clipBuffer);
+                        SpanOps.fill_Alpha(data, surfaceWidth, surfaceHeight, rightSpanStart, py, rightSpanLength, r, g, b, incomingAlpha, inverseIncomingAlpha, clipBuffer);
                     }
                 } else {
                     const spanLength = outerRight - outerLeft + 1;
-                    SpanOps.fillAlpha(data, surfaceWidth, surfaceHeight, outerLeft, py, spanLength, r, g, b, incomingAlpha, inverseIncomingAlpha, clipBuffer);
+                    SpanOps.fill_Alpha(data, surfaceWidth, surfaceHeight, outerLeft, py, spanLength, r, g, b, incomingAlpha, inverseIncomingAlpha, clipBuffer);
                 }
             } else {
                 const spanLength = outerRight - outerLeft + 1;
-                SpanOps.fillAlpha(data, surfaceWidth, surfaceHeight, outerLeft, py, spanLength, r, g, b, incomingAlpha, inverseIncomingAlpha, clipBuffer);
+                SpanOps.fill_Alpha(data, surfaceWidth, surfaceHeight, outerLeft, py, spanLength, r, g, b, incomingAlpha, inverseIncomingAlpha, clipBuffer);
             }
         }
     }
@@ -685,7 +709,7 @@ class RoundedRectOps {
      * @param {number} globalAlpha - Global alpha value
      * @param {Uint8Array|null} clipBuffer - Optional clip mask buffer
      */
-    static fillAndStroke(surface, x, y, width, height, radii, lineWidth, fillColor, strokeColor, globalAlpha, clipBuffer = null) {
+    static fillStroke_AA_Any(surface, x, y, width, height, radii, lineWidth, fillColor, strokeColor, globalAlpha, clipBuffer = null) {
         const surfaceWidth = surface.width;
         const surfaceHeight = surface.height;
         const data = surface.data;
@@ -704,16 +728,16 @@ class RoundedRectOps {
         if (radius <= 0) {
             if (hasFill) {
                 if (fillColor.a === 255 && globalAlpha >= 1.0) {
-                    RectOps.fillOpaque(surface, x, y, width, height, fillColor);
+                    RectOps.fill_AA_Opaq(surface, x, y, width, height, fillColor);
                 } else {
-                    RectOps.fillAlpha(surface, x, y, width, height, fillColor, globalAlpha);
+                    RectOps.fill_AA_Alpha(surface, x, y, width, height, fillColor, globalAlpha);
                 }
             }
             if (hasStroke) {
                 if (strokeColor.a === 255 && globalAlpha >= 1.0) {
-                    RectOps.strokeThickOpaque(surface, x, y, width, height, lineWidth, strokeColor, clipBuffer);
+                    RectOps.strokeThick_AA_Opaq(surface, x, y, width, height, lineWidth, strokeColor, clipBuffer);
                 } else {
-                    RectOps.strokeThickAlpha(surface, x, y, width, height, lineWidth, strokeColor, globalAlpha, clipBuffer);
+                    RectOps.strokeThick_AA_Alpha(surface, x, y, width, height, lineWidth, strokeColor, globalAlpha, clipBuffer);
                 }
             }
             return;
@@ -869,7 +893,7 @@ class RoundedRectOps {
             }
         };
 
-        // Calculate stroke bounds - use original coordinates (like strokeThickOpaque)
+        // Calculate stroke bounds - use original coordinates (like strokeThick_AA_Opaq)
         // This avoids double-flooring which causes 1px shift when x/y have .5 fractional parts
         const outerRectX = Math.floor(x - halfStroke);
         const outerRectY = Math.floor(y - halfStroke);
@@ -973,22 +997,22 @@ class RoundedRectOps {
      * @param {number} globalAlpha - Global alpha value
      * @param {Uint8Array|null} clipBuffer - Optional clip mask buffer
      */
-    static fillRotated(surface, centerX, centerY, width, height, radii, rotation, color, globalAlpha, clipBuffer = null) {
+    static fill_Rot_Any(surface, centerX, centerY, width, height, radii, rotation, color, globalAlpha, clipBuffer = null) {
         // Normalize radius
         const radius = this._normalizeRadius(radii, width, height);
 
-        // Fallback to RectOps.fillRotated for zero radius
+        // Fallback to RectOps.fill_Rot_Any for zero radius
         if (radius <= 0) {
-            RectOps.fillRotated(surface, centerX, centerY, width, height, rotation, color, globalAlpha, clipBuffer);
+            RectOps.fill_Rot_Any(surface, centerX, centerY, width, height, rotation, color, globalAlpha, clipBuffer);
             return;
         }
 
         const isOpaqueColor = color.a === 255 && globalAlpha >= 1.0;
 
         if (isOpaqueColor) {
-            RoundedRectOps._fillOpaqueRotated(surface, centerX, centerY, width, height, radius, rotation, color, clipBuffer);
+            RoundedRectOps._fill_Rot_Opaq(surface, centerX, centerY, width, height, radius, rotation, color, clipBuffer);
         } else if (color.a > 0) {
-            RoundedRectOps._fillAlphaRotated(surface, centerX, centerY, width, height, radius, rotation, color, globalAlpha, clipBuffer);
+            RoundedRectOps._fill_Rot_Alpha(surface, centerX, centerY, width, height, radius, rotation, color, globalAlpha, clipBuffer);
         }
     }
 
@@ -1011,7 +1035,7 @@ class RoundedRectOps {
      * @param {Color} color - Fill color (must be opaque)
      * @param {Uint8Array|null} clipBuffer - Optional clip mask buffer
      */
-    static _fillOpaqueRotated(surface, centerX, centerY, width, height, radius, rotation, color, clipBuffer) {
+    static _fill_Rot_Opaq(surface, centerX, centerY, width, height, radius, rotation, color, clipBuffer) {
         const surfaceWidth = surface.width;
         const surfaceHeight = surface.height;
         const data32 = surface.data32;
@@ -1182,7 +1206,7 @@ class RoundedRectOps {
     /**
      * Internal: Alpha fill for rotated rounded rectangle using Edge Buffer Rasterization.
      *
-     * Same algorithm as _fillOpaqueRotated but with alpha blending in the fill phase.
+     * Same algorithm as _fill_Rot_Opaq but with alpha blending in the fill phase.
      *
      * @param {Surface} surface - Target surface
      * @param {number} centerX - Center X coordinate
@@ -1195,7 +1219,7 @@ class RoundedRectOps {
      * @param {number} globalAlpha - Global alpha value
      * @param {Uint8Array|null} clipBuffer - Optional clip mask buffer
      */
-    static _fillAlphaRotated(surface, centerX, centerY, width, height, radius, rotation, color, globalAlpha, clipBuffer) {
+    static _fill_Rot_Alpha(surface, centerX, centerY, width, height, radius, rotation, color, globalAlpha, clipBuffer) {
         const surfaceWidth = surface.width;
         const surfaceHeight = surface.height;
         const data = surface.data;
@@ -1357,7 +1381,7 @@ class RoundedRectOps {
      * Direct rendering for stroked rotated rounded rectangle.
      * Dispatches to appropriate sub-method based on lineWidth and opacity.
      *
-     * Uses center-based coordinates (like RectOps.strokeRotated) since rotation
+     * Uses center-based coordinates (like RectOps.stroke_Rot_Any) since rotation
      * naturally occurs around the center point.
      *
      * @param {Surface} surface - Target surface
@@ -1372,13 +1396,13 @@ class RoundedRectOps {
      * @param {number} globalAlpha - Global alpha value
      * @param {Uint8Array|null} clipBuffer - Optional clip mask buffer
      */
-    static strokeRotated(surface, centerX, centerY, width, height, radii, rotation, lineWidth, color, globalAlpha, clipBuffer = null) {
+    static stroke_Rot_Any(surface, centerX, centerY, width, height, radii, rotation, lineWidth, color, globalAlpha, clipBuffer = null) {
         // Normalize radius
         let radius = this._normalizeRadius(radii, width, height);
 
-        // Fallback to RectOps.strokeRotated for zero radius (rounded rect becomes regular rect)
+        // Fallback to RectOps.stroke_Rot_Any for zero radius (rounded rect becomes regular rect)
         if (radius <= 0) {
-            RectOps.strokeRotated(surface, centerX, centerY, width, height, rotation, lineWidth, color, globalAlpha, clipBuffer);
+            RectOps.stroke_Rot_Any(surface, centerX, centerY, width, height, rotation, lineWidth, color, globalAlpha, clipBuffer);
             return;
         }
 
@@ -1388,18 +1412,18 @@ class RoundedRectOps {
         // Handle 1px strokes
         if (lineWidth <= 1) {
             if (isOpaqueColor) {
-                RoundedRectOps._stroke1pxOpaqueRotated(surface, centerX, centerY, width, height, radius, rotation, color, clipBuffer);
+                RoundedRectOps._stroke1px_Rot_Opaq(surface, centerX, centerY, width, height, radius, rotation, color, clipBuffer);
             } else if (isSemiTransparentColor) {
-                RoundedRectOps._stroke1pxAlphaRotated(surface, centerX, centerY, width, height, radius, rotation, color, globalAlpha, clipBuffer);
+                RoundedRectOps._stroke1px_Rot_Alpha(surface, centerX, centerY, width, height, radius, rotation, color, globalAlpha, clipBuffer);
             }
             return;
         }
 
         // Handle thick strokes
         if (isSemiTransparentColor) {
-            RoundedRectOps._strokeThickAlphaRotated(surface, centerX, centerY, width, height, radius, rotation, lineWidth, color, globalAlpha, clipBuffer);
+            RoundedRectOps._strokeThick_Rot_Alpha(surface, centerX, centerY, width, height, radius, rotation, lineWidth, color, globalAlpha, clipBuffer);
         } else if (isOpaqueColor) {
-            RoundedRectOps._strokeThickOpaqueRotated(surface, centerX, centerY, width, height, radius, rotation, lineWidth, color, clipBuffer);
+            RoundedRectOps._strokeThick_Rot_Opaq(surface, centerX, centerY, width, height, radius, rotation, lineWidth, color, clipBuffer);
         }
     }
 
@@ -1420,12 +1444,12 @@ class RoundedRectOps {
      * @param {number} globalAlpha - Global alpha value
      * @param {Uint8Array|null} clipBuffer - Optional clip mask buffer
      */
-    static fillAndStrokeRotated(surface, centerX, centerY, width, height, radii, rotation, lineWidth, fillColor, strokeColor, globalAlpha, clipBuffer = null) {
+    static fillStroke_Rot_Any(surface, centerX, centerY, width, height, radii, rotation, lineWidth, fillColor, strokeColor, globalAlpha, clipBuffer = null) {
         const FILL_EPSILON = 0.0001;
 
         // Fill first (with slight contraction to prevent speckles at fill/stroke boundary)
         if (fillColor && fillColor.a > 0) {
-            RoundedRectOps.fillRotated(
+            RoundedRectOps.fill_Rot_Any(
                 surface,
                 centerX, centerY,
                 width - FILL_EPSILON, height - FILL_EPSILON,
@@ -1439,7 +1463,7 @@ class RoundedRectOps {
 
         // Stroke on top
         if (strokeColor && strokeColor.a > 0 && lineWidth > 0) {
-            RoundedRectOps.strokeRotated(
+            RoundedRectOps.stroke_Rot_Any(
                 surface,
                 centerX, centerY,
                 width, height,
@@ -1469,7 +1493,7 @@ class RoundedRectOps {
      * @param {Color} color - Stroke color (must be opaque)
      * @param {Uint8Array|null} clipBuffer - Optional clip mask buffer
      */
-    static _stroke1pxOpaqueRotated(surface, centerX, centerY, width, height, radius, rotation, color, clipBuffer) {
+    static _stroke1px_Rot_Opaq(surface, centerX, centerY, width, height, radius, rotation, color, clipBuffer) {
         // Pre-compute rotation
         const cos = Math.cos(rotation);
         const sin = Math.sin(rotation);
@@ -1501,7 +1525,7 @@ class RoundedRectOps {
             { start: transform(-hw, hh - radius), end: transform(-hw, -hh + radius) }
         ];
 
-        // Draw 4 straight edges via LineOps.strokeDirect
+        // Draw 4 straight edges via LineOps.stroke_Any
         for (const edge of edgeEndpoints) {
             // Skip zero-length edges (occurs when radius = half width or half height)
             // This prevents extra pixels at arc junction points
@@ -1510,7 +1534,7 @@ class RoundedRectOps {
             const edgeLength = Math.sqrt(dx * dx + dy * dy);
             if (edgeLength < 0.5) continue;
 
-            LineOps.strokeDirect(
+            LineOps.stroke_Any(
                 surface,
                 edge.start.x, edge.start.y,
                 edge.end.x, edge.end.y,
@@ -1548,7 +1572,7 @@ class RoundedRectOps {
 
             if (useSmallRadiusMethod) {
                 // Angle-based iteration with exact endpoints (guaranteed junction alignment)
-                ArcOps.stroke1pxOpaqueExactEndpoints(
+                ArcOps.stroke1px_Opaq_Exact(
                     surface,
                     screenCenter.x, screenCenter.y,
                     radius,
@@ -1559,7 +1583,7 @@ class RoundedRectOps {
                 );
             } else {
                 // Bresenham for larger radii (more efficient)
-                ArcOps.stroke1pxOpaque(
+                ArcOps.stroke1px_Opaq(
                     surface,
                     screenCenter.x, screenCenter.y,
                     radius,
@@ -1588,7 +1612,7 @@ class RoundedRectOps {
      * @param {number} globalAlpha - Global alpha value
      * @param {Uint8Array|null} clipBuffer - Optional clip mask buffer
      */
-    static _stroke1pxAlphaRotated(surface, centerX, centerY, width, height, radius, rotation, color, globalAlpha, clipBuffer) {
+    static _stroke1px_Rot_Alpha(surface, centerX, centerY, width, height, radius, rotation, color, globalAlpha, clipBuffer) {
         const surfaceWidth = surface.width;
         const surfaceHeight = surface.height;
         const data = surface.data;
@@ -1683,7 +1707,7 @@ class RoundedRectOps {
             { localCx: -hw + radius, localCy: hh - radius, startAngle: Math.PI * 0.5, endAngle: Math.PI }           // Bottom-left
         ];
 
-        // Collect corner arc pixels using angle-based iteration (same as stroke1pxOpaqueExactEndpoints)
+        // Collect corner arc pixels using angle-based iteration (same as stroke1px_AA_OpaqExactEndpoints)
         for (const corner of corners) {
             const screenCenter = transform(corner.localCx, corner.localCy);
             const cx = screenCenter.x;
@@ -1759,7 +1783,7 @@ class RoundedRectOps {
      * @param {Color} color - Stroke color (must be opaque)
      * @param {Uint8Array|null} clipBuffer - Optional clip mask buffer
      */
-    static _strokeThickOpaqueRotated(surface, centerX, centerY, width, height, radius, rotation, lineWidth, color, clipBuffer) {
+    static _strokeThick_Rot_Opaq(surface, centerX, centerY, width, height, radius, rotation, lineWidth, color, clipBuffer) {
         const surfaceWidth = surface.width;
         const surfaceHeight = surface.height;
         const data32 = surface.data32;
@@ -1941,21 +1965,21 @@ class RoundedRectOps {
                     const leftStart = Math.max(0, outerLeft);
                     const leftEnd = Math.min(surfaceWidth - 1, innerLeft - 1);
                     if (leftStart <= leftEnd) {
-                        SpanOps.fillOpaque(data32, surfaceWidth, surfaceHeight, leftStart, y, leftEnd - leftStart + 1, packedColor, clipBuffer);
+                        SpanOps.fill_Opaq(data32, surfaceWidth, surfaceHeight, leftStart, y, leftEnd - leftStart + 1, packedColor, clipBuffer);
                     }
 
                     // Right span
                     const rightStart = Math.max(0, innerRight + 1);
                     const rightEnd = Math.min(surfaceWidth - 1, outerRight);
                     if (rightStart <= rightEnd) {
-                        SpanOps.fillOpaque(data32, surfaceWidth, surfaceHeight, rightStart, y, rightEnd - rightStart + 1, packedColor, clipBuffer);
+                        SpanOps.fill_Opaq(data32, surfaceWidth, surfaceHeight, rightStart, y, rightEnd - rightStart + 1, packedColor, clipBuffer);
                     }
                 } else {
                     // No inner hole on this row: fill entire outer span
                     const x0 = Math.max(0, outerLeft);
                     const x1 = Math.min(surfaceWidth - 1, outerRight);
                     if (x0 <= x1) {
-                        SpanOps.fillOpaque(data32, surfaceWidth, surfaceHeight, x0, y, x1 - x0 + 1, packedColor, clipBuffer);
+                        SpanOps.fill_Opaq(data32, surfaceWidth, surfaceHeight, x0, y, x1 - x0 + 1, packedColor, clipBuffer);
                     }
                 }
             } else {
@@ -1963,7 +1987,7 @@ class RoundedRectOps {
                 const x0 = Math.max(0, outerLeft);
                 const x1 = Math.min(surfaceWidth - 1, outerRight);
                 if (x0 <= x1) {
-                    SpanOps.fillOpaque(data32, surfaceWidth, surfaceHeight, x0, y, x1 - x0 + 1, packedColor, clipBuffer);
+                    SpanOps.fill_Opaq(data32, surfaceWidth, surfaceHeight, x0, y, x1 - x0 + 1, packedColor, clipBuffer);
                 }
             }
         }
@@ -1986,7 +2010,7 @@ class RoundedRectOps {
      * @param {number} globalAlpha - Global alpha value
      * @param {Uint8Array|null} clipBuffer - Optional clip mask buffer
      */
-    static _strokeThickAlphaRotated(surface, centerX, centerY, width, height, radius, rotation, lineWidth, color, globalAlpha, clipBuffer) {
+    static _strokeThick_Rot_Alpha(surface, centerX, centerY, width, height, radius, rotation, lineWidth, color, globalAlpha, clipBuffer) {
         const surfaceWidth = surface.width;
         const surfaceHeight = surface.height;
         const data = surface.data;

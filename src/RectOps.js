@@ -7,6 +7,25 @@
  *
  * Path-based rectangles (beginPath() + rect() + fill()/stroke()) use the
  * generic polygon pipeline for consistent, predictable behavior.
+ *
+ * CALL HIERARCHY:
+ * ---------------
+ * Layer 0 (Foundation): SpanOps.fill_Opaq, SpanOps.fill_Alpha
+ *
+ * Layer 1 (Primitives - do atomic rendering):
+ *   fill_AA_Opaq, fill_AA_Alpha, fill_Rot_Any
+ *   stroke1px_AA_Opaq, stroke1px_AA_Alpha
+ *   strokeThick_AA_Opaq, strokeThick_AA_Alpha
+ *   _stroke_Rot_Alpha (internal)
+ *
+ * Layer 2 (Composites - call other *Ops methods):
+ *   fillStroke_AA_Any    → SpanOps (inline)
+ *   stroke_Rot_Any       → LineOps.stroke_Any (for edges), _stroke_Rot_Alpha
+ *   fillStroke_Rot_Any   → fill_Rot_Any + stroke_Rot_Any
+ *
+ * NAMING PATTERN: {operation}[Thickness]_{orientation}_{opacity}
+ *   - AA = Axis-Aligned, Rot = Rotated
+ *   - Opaq = Opaque only, Alpha = Semi-transparent, Any = Handles both
  */
 class RectOps {
     /**
@@ -20,7 +39,7 @@ class RectOps {
      * @param {Color} color - Stroke color (must be opaque)
      * @param {Uint8Array|null} clipBuffer - Optional clip mask buffer
      */
-    static stroke1pxOpaque(surface, x, y, width, height, color, clipBuffer = null) {
+    static stroke1px_AA_Opaq(surface, x, y, width, height, color, clipBuffer = null) {
         const surfaceWidth = surface.width;
         const surfaceHeight = surface.height;
         const data32 = surface.data32;
@@ -88,7 +107,7 @@ class RectOps {
      * @param {number} globalAlpha - Context global alpha (0-1)
      * @param {Uint8Array|null} clipBuffer - Optional clip mask buffer
      */
-    static stroke1pxAlpha(surface, x, y, width, height, color, globalAlpha, clipBuffer = null) {
+    static stroke1px_AA_Alpha(surface, x, y, width, height, color, globalAlpha, clipBuffer = null) {
         const surfaceWidth = surface.width;
         const surfaceHeight = surface.height;
         const data = surface.data;
@@ -159,7 +178,7 @@ class RectOps {
      * @param {Color} color - Stroke color (must be opaque)
      * @param {Uint8Array|null} clipBuffer - Optional clip mask buffer
      */
-    static strokeThickOpaque(surface, x, y, width, height, lineWidth, color, clipBuffer = null) {
+    static strokeThick_AA_Opaq(surface, x, y, width, height, lineWidth, color, clipBuffer = null) {
         const surfaceWidth = surface.width;
         const surfaceHeight = surface.height;
         const data32 = surface.data32;
@@ -222,7 +241,7 @@ class RectOps {
      * @param {number} globalAlpha - Context global alpha (0-1)
      * @param {Uint8Array|null} clipBuffer - Optional clip mask buffer
      */
-    static strokeThickAlpha(surface, x, y, width, height, lineWidth, color, globalAlpha, clipBuffer = null) {
+    static strokeThick_AA_Alpha(surface, x, y, width, height, lineWidth, color, globalAlpha, clipBuffer = null) {
         const surfaceWidth = surface.width;
         const surfaceHeight = surface.height;
         const data = surface.data;
@@ -346,7 +365,7 @@ class RectOps {
      * @param {Color} color - Fill color (must be opaque)
      * @param {Uint8Array|null} clipBuffer - Clip mask buffer
      */
-    static fillOpaque(surface, x, y, width, height, color, clipBuffer) {
+    static fill_AA_Opaq(surface, x, y, width, height, color, clipBuffer) {
         const surfaceWidth = surface.width;
         const surfaceHeight = surface.height;
         const data32 = surface.data32;
@@ -383,7 +402,7 @@ class RectOps {
      * @param {number} globalAlpha - Context global alpha (0-1)
      * @param {Uint8Array|null} clipBuffer - Clip mask buffer
      */
-    static fillAlpha(surface, x, y, width, height, color, globalAlpha, clipBuffer) {
+    static fill_AA_Alpha(surface, x, y, width, height, color, globalAlpha, clipBuffer) {
         const surfaceWidth = surface.width;
         const surfaceHeight = surface.height;
         const data = surface.data;
@@ -444,7 +463,7 @@ class RectOps {
      * @param {number} globalAlpha - Context global alpha (0-1)
      * @param {Uint8Array|null} clipBuffer - Clip mask buffer
      */
-    static fillAndStroke(surface, x, y, width, height, lineWidth, fillColor, strokeColor, globalAlpha, clipBuffer = null) {
+    static fillStroke_AA_Any(surface, x, y, width, height, lineWidth, fillColor, strokeColor, globalAlpha, clipBuffer = null) {
         const surfaceWidth = surface.width;
         const surfaceHeight = surface.height;
         const data = surface.data;
@@ -501,9 +520,9 @@ class RectOps {
             if (length <= 0) return;
 
             if (fillIsOpaque) {
-                SpanOps.fillOpaque(data32, surfaceWidth, surfaceHeight, spanLeft, py, length, fillPacked, clipBuffer);
+                SpanOps.fill_Opaq(data32, surfaceWidth, surfaceHeight, spanLeft, py, length, fillPacked, clipBuffer);
             } else {
-                SpanOps.fillAlpha(data, surfaceWidth, surfaceHeight, spanLeft, py, length,
+                SpanOps.fill_Alpha(data, surfaceWidth, surfaceHeight, spanLeft, py, length,
                     fillColor.r, fillColor.g, fillColor.b, fillEffectiveAlpha, fillInvAlpha, clipBuffer);
             }
         };
@@ -515,9 +534,9 @@ class RectOps {
             if (length <= 0) return;
 
             if (strokeIsOpaque) {
-                SpanOps.fillOpaque(data32, surfaceWidth, surfaceHeight, spanLeft, py, length, strokePacked, clipBuffer);
+                SpanOps.fill_Opaq(data32, surfaceWidth, surfaceHeight, spanLeft, py, length, strokePacked, clipBuffer);
             } else {
-                SpanOps.fillAlpha(data, surfaceWidth, surfaceHeight, spanLeft, py, length,
+                SpanOps.fill_Alpha(data, surfaceWidth, surfaceHeight, spanLeft, py, length,
                     strokeColor.r, strokeColor.g, strokeColor.b, strokeEffectiveAlpha, strokeInvAlpha, clipBuffer);
             }
         };
@@ -603,15 +622,15 @@ class RectOps {
      * @param {number} globalAlpha - Context global alpha (0-1)
      * @param {Uint8Array|null} clipBuffer - Clip mask buffer
      */
-    static fillAndStrokeRotated(surface, centerX, centerY, width, height, rotation,
+    static fillStroke_Rot_Any(surface, centerX, centerY, width, height, rotation,
                                 lineWidth, fillColor, strokeColor, globalAlpha, clipBuffer) {
         // Fill first, then stroke on top
         if (fillColor && fillColor.a > 0) {
-            RectOps.fillRotated(surface, centerX, centerY, width, height,
+            RectOps.fill_Rot_Any(surface, centerX, centerY, width, height,
                                rotation, fillColor, globalAlpha, clipBuffer);
         }
         if (strokeColor && strokeColor.a > 0 && lineWidth > 0) {
-            RectOps.strokeRotated(surface, centerX, centerY, width, height,
+            RectOps.stroke_Rot_Any(surface, centerX, centerY, width, height,
                                  rotation, lineWidth, strokeColor, globalAlpha, clipBuffer);
         }
     }
@@ -628,7 +647,7 @@ class RectOps {
      * @param {number} globalAlpha - Context global alpha (0-1)
      * @param {Uint8Array|null} clipBuffer - Clip mask buffer
      */
-    static fillRotated(surface, centerX, centerY, width, height, rotation, color, globalAlpha, clipBuffer) {
+    static fill_Rot_Any(surface, centerX, centerY, width, height, rotation, color, globalAlpha, clipBuffer) {
         const surfaceWidth = surface.width;
         const surfaceHeight = surface.height;
         const data32 = surface.data32;
@@ -983,7 +1002,7 @@ class RectOps {
      * @param {number} globalAlpha - Context global alpha (0-1)
      * @param {Uint8Array|null} clipBuffer - Clip mask buffer
      */
-    static strokeRotatedAlpha(surface, centerX, centerY, width, height, rotation,
+    static _stroke_Rot_Alpha(surface, centerX, centerY, width, height, rotation,
                               lineWidth, color, globalAlpha, clipBuffer) {
         const surfaceWidth = surface.width;
         const surfaceHeight = surface.height;
@@ -1062,7 +1081,7 @@ class RectOps {
      * @param {number} globalAlpha - Context global alpha (0-1)
      * @param {Uint8Array|null} clipBuffer - Clip mask buffer
      */
-    static strokeRotated(surface, centerX, centerY, width, height, rotation, lineWidth, color, globalAlpha, clipBuffer) {
+    static stroke_Rot_Any(surface, centerX, centerY, width, height, rotation, lineWidth, color, globalAlpha, clipBuffer) {
         const cos = Math.cos(rotation);
         const sin = Math.sin(rotation);
         const hw = width / 2;
@@ -1081,7 +1100,7 @@ class RectOps {
 
         // For thick semitransparent strokes, use Set-based approach to prevent overdraw
         if (lineWidth > 1 && isSemiTransparentColor) {
-            return RectOps.strokeRotatedAlpha(surface, centerX, centerY, width, height,
+            return RectOps._stroke_Rot_Alpha(surface, centerX, centerY, width, height,
                 rotation, lineWidth, color, globalAlpha, clipBuffer);
         }
 
@@ -1091,7 +1110,7 @@ class RectOps {
                 const p1 = corners[i];
                 const p2 = corners[(i + 1) % 4];
 
-                LineOps.strokeDirect(
+                LineOps.stroke_Any(
                     surface,
                     p1.x, p1.y,
                     p2.x, p2.y,
@@ -1116,7 +1135,7 @@ class RectOps {
             const p2 = corners[(i + 1) % 4];
             const line = RectOps._extendLine(p1, p2, halfStroke);
 
-            LineOps.strokeDirect(
+            LineOps.stroke_Any(
                 surface,
                 line.start.x, line.start.y,
                 line.end.x, line.end.y,
@@ -1136,7 +1155,7 @@ class RectOps {
             const p2 = corners[(i + 1) % 4];
             const line = RectOps._shortenLine(p1, p2, halfStroke);
 
-            LineOps.strokeDirect(
+            LineOps.stroke_Any(
                 surface,
                 line.start.x, line.start.y,
                 line.end.x, line.end.y,

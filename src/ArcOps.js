@@ -10,6 +10,22 @@
  *
  * Unlike CircleOps (which handles full circles), ArcOps handles partial arcs
  * by filtering pixels based on angle range using isAngleInRange().
+ *
+ * CALL HIERARCHY:
+ * ---------------
+ * Layer 0 (Foundation): CircleOps.generateExtents (for Bresenham data)
+ *
+ * Layer 1 (Primitives - do atomic rendering):
+ *   fill_Opaq, fill_Alpha (use CircleOps extents + angle filtering)
+ *   stroke1px_Opaq, stroke1px_Alpha, stroke1px_Opaq_Exact
+ *   strokeOuter_Opaq, strokeOuter_Alpha
+ *
+ * Layer 2 (Composites):
+ *   fillStrokeOuter_Any → inline rendering (single-pass)
+ *
+ * NAMING PATTERN: {operation}[Thickness]_{opacity}
+ *   - Opaq = Opaque only, Alpha = Semi-transparent, Any = Handles both
+ *   - (No orientation suffix - arcs are defined by angles, not rotation)
  */
 class ArcOps {
     /**
@@ -72,7 +88,7 @@ class ArcOps {
      * @param {Color} color - Fill color
      * @param {Uint8Array|null} clipBuffer - Clip mask buffer
      */
-    static fillOpaque(surface, cx, cy, radius, startAngle, endAngle, color, clipBuffer) {
+    static fill_Opaq(surface, cx, cy, radius, startAngle, endAngle, color, clipBuffer) {
         const width = surface.width;
         const height = surface.height;
         const data32 = surface.data32;
@@ -144,7 +160,7 @@ class ArcOps {
      * @param {number} globalAlpha - Context global alpha
      * @param {Uint8Array|null} clipBuffer - Clip mask buffer
      */
-    static fillAlpha(surface, cx, cy, radius, startAngle, endAngle, color, globalAlpha, clipBuffer) {
+    static fill_Alpha(surface, cx, cy, radius, startAngle, endAngle, color, globalAlpha, clipBuffer) {
         const width = surface.width;
         const height = surface.height;
         const data = surface.data;
@@ -233,7 +249,7 @@ class ArcOps {
      * @param {Color} color - Stroke color (must be opaque)
      * @param {Uint8Array|null} clipBuffer - Clip mask buffer
      */
-    static stroke1pxOpaque(surface, cx, cy, radius, startAngle, endAngle, color, clipBuffer) {
+    static stroke1px_Opaq(surface, cx, cy, radius, startAngle, endAngle, color, clipBuffer) {
         const width = surface.width;
         const height = surface.height;
         const data32 = surface.data32;
@@ -329,7 +345,7 @@ class ArcOps {
      * @param {Color} color - Stroke color (must be opaque)
      * @param {Uint8Array|null} clipBuffer - Clip mask buffer
      */
-    static stroke1pxOpaqueExactEndpoints(surface, cx, cy, radius, startAngle, endAngle, color, clipBuffer) {
+    static stroke1px_Opaq_Exact(surface, cx, cy, radius, startAngle, endAngle, color, clipBuffer) {
         const width = surface.width;
         const height = surface.height;
         const data32 = surface.data32;
@@ -411,7 +427,7 @@ class ArcOps {
      * @param {number} globalAlpha - Context global alpha
      * @param {Uint8Array|null} clipBuffer - Clip mask buffer
      */
-    static stroke1pxAlpha(surface, cx, cy, radius, startAngle, endAngle, color, globalAlpha, clipBuffer) {
+    static stroke1px_Alpha(surface, cx, cy, radius, startAngle, endAngle, color, globalAlpha, clipBuffer) {
         const width = surface.width;
         const height = surface.height;
         const data = surface.data;
@@ -532,7 +548,7 @@ class ArcOps {
      * @param {Color} color - Stroke color
      * @param {Uint8Array|null} clipBuffer - Clip mask buffer
      */
-    static strokeOuterOpaque(surface, cx, cy, radius, startAngle, endAngle, lineWidth, color, clipBuffer) {
+    static strokeOuter_Opaq(surface, cx, cy, radius, startAngle, endAngle, lineWidth, color, clipBuffer) {
         const width = surface.width;
         const height = surface.height;
         const data32 = surface.data32;
@@ -632,7 +648,7 @@ class ArcOps {
      * @param {number} globalAlpha - Context global alpha
      * @param {Uint8Array|null} clipBuffer - Clip mask buffer
      */
-    static strokeOuterAlpha(surface, cx, cy, radius, startAngle, endAngle, lineWidth, color, globalAlpha, clipBuffer) {
+    static strokeOuter_Alpha(surface, cx, cy, radius, startAngle, endAngle, lineWidth, color, globalAlpha, clipBuffer) {
         const width = surface.width;
         const height = surface.height;
         const data = surface.data;
@@ -762,7 +778,7 @@ class ArcOps {
      * @param {number} globalAlpha - Context global alpha
      * @param {Uint8Array|null} clipBuffer - Clip mask buffer
      */
-    static fillAndStrokeOuter(surface, cx, cy, radius, startAngle, endAngle, lineWidth,
+    static fillStrokeOuter_Any(surface, cx, cy, radius, startAngle, endAngle, lineWidth,
         fillColor, strokeColor, globalAlpha, clipBuffer) {
         const width = surface.width;
         const height = surface.height;

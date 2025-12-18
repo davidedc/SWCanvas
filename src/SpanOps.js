@@ -2,6 +2,17 @@
  * SpanOps - Static utility methods for horizontal span filling
  * Used by RectOps, CircleOps, and LineOps for optimized pixel rendering.
  * Follows PolygonFiller pattern with static methods.
+ *
+ * CALL HIERARCHY:
+ * ---------------
+ * Layer 0 (Foundation): This class is the foundation layer.
+ *   - No dependencies on other *Ops classes
+ *   - Called by: RectOps, CircleOps, LineOps, ArcOps, RoundedRectOps
+ *
+ * NAMING PATTERN: {operation}_{opacity}
+ *   - fill_Opaq: Opaque span fill (32-bit writes)
+ *   - fill_Alpha: Semi-transparent span fill (alpha blending)
+ *   - blendPixel_Alpha: Single pixel alpha blending
  */
 class SpanOps {
     /**
@@ -15,7 +26,7 @@ class SpanOps {
      * @param {number} packedColor - Pre-packed 32-bit RGBA color
      * @param {Uint8Array|null} clipBuffer - Optional clip mask buffer
      */
-    static fillOpaque(data32, surfaceWidth, surfaceHeight, startX, y, length, packedColor, clipBuffer) {
+    static fill_Opaq(data32, surfaceWidth, surfaceHeight, startX, y, length, packedColor, clipBuffer) {
         // Y bounds check - use floor for consistent pixel alignment
         const yi = Math.floor(y);
         if (yi < 0 || yi >= surfaceHeight) return;
@@ -76,7 +87,7 @@ class SpanOps {
      * @param {number} invAlpha - Inverse alpha (1 - alpha)
      * @param {Uint8Array|null} clipBuffer - Optional clip mask buffer
      */
-    static fillAlpha(data, surfaceWidth, surfaceHeight, startX, y, length, r, g, b, alpha, invAlpha, clipBuffer) {
+    static fill_Alpha(data, surfaceWidth, surfaceHeight, startX, y, length, r, g, b, alpha, invAlpha, clipBuffer) {
         // Y bounds check - use floor for consistent pixel alignment
         const yi = Math.floor(y);
         if (yi < 0 || yi >= surfaceHeight) return;
@@ -114,7 +125,7 @@ class SpanOps {
                 const bitOffset = pixelIndex & 7;
                 if ((clipBuffer[byteIndex] & (1 << bitOffset)) !== 0) {
                     const offset = rowOffset + px * 4;
-                    SpanOps.blendPixelAlpha(data, offset, r, g, b, alpha, invAlpha);
+                    SpanOps.blendPixel_Alpha(data, offset, r, g, b, alpha, invAlpha);
                 }
                 px++;
             }
@@ -122,7 +133,7 @@ class SpanOps {
             // No clipping
             for (let px = x; px < endX; px++) {
                 const offset = rowOffset + px * 4;
-                SpanOps.blendPixelAlpha(data, offset, r, g, b, alpha, invAlpha);
+                SpanOps.blendPixel_Alpha(data, offset, r, g, b, alpha, invAlpha);
             }
         }
     }
@@ -137,7 +148,7 @@ class SpanOps {
      * @param {number} alpha - Alpha as fraction (0-1)
      * @param {number} invAlpha - Inverse alpha (1 - alpha)
      */
-    static blendPixelAlpha(data, offset, r, g, b, alpha, invAlpha) {
+    static blendPixel_Alpha(data, offset, r, g, b, alpha, invAlpha) {
         // Source-over alpha blending formula
         const dstA = data[offset + 3] / 255;
         const dstAScaled = dstA * invAlpha;

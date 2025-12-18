@@ -7,6 +7,20 @@
  *
  * Path-based lines (beginPath() + moveTo() + lineTo() + stroke()) use the
  * generic polygon pipeline for consistent, predictable behavior.
+ *
+ * CALL HIERARCHY:
+ * ---------------
+ * Layer 0 (Foundation): SpanOps.fill_Opaq, SpanOps.fill_Alpha
+ *
+ * Layer 1 (Internal):
+ *   _strokeThick_PolyScan (polygon scanline for thick lines)
+ *
+ * Layer 2 (Public dispatcher):
+ *   stroke_Any → Bresenham (thin), SpanOps (thick AA), _strokeThick_PolyScan
+ *
+ * NAMING PATTERN: {operation}_{opacity}
+ *   - Any = Handles all opacity/thickness cases (dispatcher)
+ *   - (No orientation suffix - lines handle all angles)
  */
 class LineOps {
     /**
@@ -24,7 +38,7 @@ class LineOps {
      * @param {boolean} isSemiTransparentColor - True if color needs alpha blending
      * @returns {boolean} True if direct rendering was used, false if path-based rendering needed
      */
-    static strokeDirect(surface, x1, y1, x2, y2, lineWidth, paintSource, globalAlpha, clipBuffer, isOpaqueColor, isSemiTransparentColor) {
+    static stroke_Any(surface, x1, y1, x2, y2, lineWidth, paintSource, globalAlpha, clipBuffer, isOpaqueColor, isSemiTransparentColor) {
         const width = surface.width;
         const height = surface.height;
 
@@ -101,7 +115,7 @@ class LineOps {
                 const packedColor = Surface.packColor(paintSource.r, paintSource.g, paintSource.b, 255);
 
                 for (let y = topY; y < bottomY; y++) {
-                    SpanOps.fillOpaque(data32, width, height, leftX, y, rightX - leftX, packedColor, clipBuffer);
+                    SpanOps.fill_Opaq(data32, width, height, leftX, y, rightX - leftX, packedColor, clipBuffer);
                 }
                 return true;
             } else if (x1i === x2i) {
@@ -114,12 +128,12 @@ class LineOps {
                 const packedColor = Surface.packColor(paintSource.r, paintSource.g, paintSource.b, 255);
 
                 for (let y = topY; y < bottomY; y++) {
-                    SpanOps.fillOpaque(data32, width, height, leftX, y, rightX - leftX, packedColor, clipBuffer);
+                    SpanOps.fill_Opaq(data32, width, height, leftX, y, rightX - leftX, packedColor, clipBuffer);
                 }
                 return true;
             } else {
                 // Non-axis-aligned thick line - use polygon scan algorithm
-                LineOps.strokeThickPolygonScan(surface, x1, y1, x2, y2, lineWidth, paintSource, globalAlpha, clipBuffer, false);
+                LineOps._strokeThick_PolyScan(surface, x1, y1, x2, y2, lineWidth, paintSource, globalAlpha, clipBuffer, false);
                 return true;
             }
         } else if (isSemiTransparentColor && lineWidth <= 1.5) {
@@ -198,7 +212,7 @@ class LineOps {
             return true;
         } else if (isSemiTransparentColor) {
             // Direct rendering for thick semitransparent lines: polygon scan with alpha blending
-            LineOps.strokeThickPolygonScan(surface, x1, y1, x2, y2, lineWidth, paintSource, globalAlpha, clipBuffer, true);
+            LineOps._strokeThick_PolyScan(surface, x1, y1, x2, y2, lineWidth, paintSource, globalAlpha, clipBuffer, true);
             return true;
         }
 
@@ -220,7 +234,7 @@ class LineOps {
      * @param {Uint8Array|null} clipBuffer - Clip mask buffer
      * @param {boolean} useSemiTransparent - If true, use alpha blending
      */
-    static strokeThickPolygonScan(surface, x1, y1, x2, y2, lineWidth, paintSource, globalAlpha, clipBuffer, useSemiTransparent = false) {
+    static _strokeThick_PolyScan(surface, x1, y1, x2, y2, lineWidth, paintSource, globalAlpha, clipBuffer, useSemiTransparent = false) {
         const width = surface.width;
         const height = surface.height;
         const data32 = surface.data32;
@@ -252,9 +266,9 @@ class LineOps {
                 const leftX = Math.max(0, centerX - radius);
                 const rightX = Math.min(width - 1, centerX + radius);
                 if (useSemiTransparent) {
-                    SpanOps.fillAlpha(data, width, height, leftX, y, rightX - leftX + 1, r, g, b, incomingAlpha, inverseIncomingAlpha, clipBuffer);
+                    SpanOps.fill_Alpha(data, width, height, leftX, y, rightX - leftX + 1, r, g, b, incomingAlpha, inverseIncomingAlpha, clipBuffer);
                 } else {
-                    SpanOps.fillOpaque(data32, width, height, leftX, y, rightX - leftX + 1, packedColor, clipBuffer);
+                    SpanOps.fill_Opaq(data32, width, height, leftX, y, rightX - leftX + 1, packedColor, clipBuffer);
                 }
             }
             return;
@@ -359,9 +373,9 @@ class LineOps {
 
                 if (spanLength > 0) {
                     if (useSemiTransparent) {
-                        SpanOps.fillAlpha(data, width, height, leftX, y, spanLength, r, g, b, incomingAlpha, inverseIncomingAlpha, clipBuffer);
+                        SpanOps.fill_Alpha(data, width, height, leftX, y, spanLength, r, g, b, incomingAlpha, inverseIncomingAlpha, clipBuffer);
                     } else {
-                        SpanOps.fillOpaque(data32, width, height, leftX, y, spanLength, packedColor, clipBuffer);
+                        SpanOps.fill_Opaq(data32, width, height, leftX, y, spanLength, packedColor, clipBuffer);
                     }
                 }
             }
