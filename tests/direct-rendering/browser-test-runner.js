@@ -3,81 +3,10 @@
  *
  * Runs direct rendering tests comparing SWCanvas output with native HTML5 Canvas
  * and verifies that direct rendering is used where expected.
+ *
+ * Note: SWCanvas-compatible polyfills are loaded from lib/swcanvas-compat-polyfill.js
+ * via a script tag in index.html before this file.
  */
-
-// Polyfill direct shape APIs on native CanvasRenderingContext2D
-(function installPolyfills() {
-    const proto = CanvasRenderingContext2D.prototype;
-
-    if (!proto.fillCircle) {
-        proto.fillCircle = function (cx, cy, r) {
-            this.beginPath();
-            this.arc(cx, cy, r, 0, Math.PI * 2);
-            this.fill();
-        };
-    }
-
-    if (!proto.strokeCircle) {
-        proto.strokeCircle = function (cx, cy, r) {
-            this.beginPath();
-            this.arc(cx, cy, r, 0, Math.PI * 2);
-            this.stroke();
-        };
-    }
-
-    if (!proto.fillAndStrokeCircle) {
-        proto.fillAndStrokeCircle = function (cx, cy, r) {
-            this.beginPath();
-            this.arc(cx, cy, r, 0, Math.PI * 2);
-            this.fill();
-            this.stroke();
-        };
-    }
-
-    if (!proto.strokeLine) {
-        proto.strokeLine = function (x1, y1, x2, y2) {
-            this.beginPath();
-            this.moveTo(x1, y1);
-            this.lineTo(x2, y2);
-            this.stroke();
-        };
-    }
-
-    // Arc method polyfills
-    if (!proto.fillArc) {
-        proto.fillArc = function (cx, cy, r, startAngle, endAngle, anticlockwise = false) {
-            this.beginPath();
-            this.moveTo(cx, cy);
-            this.arc(cx, cy, r, startAngle, endAngle, anticlockwise);
-            this.closePath();
-            this.fill();
-        };
-    }
-
-    if (!proto.outerStrokeArc) {
-        proto.outerStrokeArc = function (cx, cy, r, startAngle, endAngle, anticlockwise = false) {
-            this.beginPath();
-            this.arc(cx, cy, r, startAngle, endAngle, anticlockwise);
-            this.stroke();
-        };
-    }
-
-    if (!proto.fillAndOuterStrokeArc) {
-        proto.fillAndOuterStrokeArc = function (cx, cy, r, startAngle, endAngle, anticlockwise = false) {
-            // Fill the pie slice
-            this.beginPath();
-            this.moveTo(cx, cy);
-            this.arc(cx, cy, r, startAngle, endAngle, anticlockwise);
-            this.closePath();
-            this.fill();
-
-            // Stroke only the outer arc
-            this.beginPath();
-            this.arc(cx, cy, r, startAngle, endAngle, anticlockwise);
-            this.stroke();
-        };
-    }
-})();
 
 /**
  * Direct Rendering Test Runner for browser
