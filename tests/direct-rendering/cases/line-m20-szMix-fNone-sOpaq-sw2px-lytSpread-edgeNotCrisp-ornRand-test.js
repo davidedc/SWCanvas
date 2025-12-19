@@ -108,15 +108,8 @@ function drawTest(ctx, currentIterationNumber, instances = null) {
             } :
             getRandomPoint(0, currentCanvasWidth, currentCanvasHeight, 0);
 
-        // Draw the line using the canvas-like API
-        if (typeof ctx.strokeLine === 'function') {
-            ctx.strokeLine(start.x, start.y, end.x, end.y);
-        } else {
-            ctx.beginPath();
-            ctx.moveTo(start.x, start.y);
-            ctx.lineTo(end.x, end.y);
-            ctx.stroke();
-        }
+        // Draw the line
+        ctx.strokeLine(start.x, start.y, end.x, end.y);
 
         if (!isTrueMultiInstance) {
             logs.push(`─ 2px Black line from (${start.x.toFixed(1)}, ${start.y.toFixed(1)}) to (${end.x.toFixed(1)}, ${end.y.toFixed(1)}) color: ${ctx.strokeStyle} thickness: ${ctx.lineWidth}`);

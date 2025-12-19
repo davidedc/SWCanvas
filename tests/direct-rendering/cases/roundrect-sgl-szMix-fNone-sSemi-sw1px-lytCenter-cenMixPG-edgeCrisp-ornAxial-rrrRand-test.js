@@ -65,14 +65,8 @@ registerDirectRenderingTest(
         ctx.strokeStyle = 'rgba(255, 0, 0, 0.5)';
         ctx.lineWidth = 1;
 
-        // Use SWCanvas direct rendering method if available
-        if (typeof ctx.strokeRoundRect === 'function') {
-            ctx.strokeRoundRect(x, y, width, height, radius);
-        } else {
-            ctx.beginPath();
-            ctx.roundRect(x, y, width, height, radius);
-            ctx.stroke();
-        }
+        // Use direct rendering method
+        ctx.strokeRoundRect(x, y, width, height, radius);
 
         return {
             logs: [`Semi-transparent 1px stroked rounded rect at (${x}, ${y}) size ${width}x${height}, radius=${radius}`],

@@ -100,16 +100,8 @@ function drawTest(ctx, currentIterationNumber, instances = null) {
         ctx.strokeStyle = strokeColorStr;
         ctx.lineWidth = 1; // Fixed 1px stroke
 
-        // Use SWCanvas unified fillAndStrokeRoundRect to prevent fill/stroke speckles
-        if (typeof ctx.fillAndStrokeRoundRect === 'function') {
-            ctx.fillAndStrokeRoundRect(geomX, geomY, width, height, radius);
-        } else {
-            // Fallback for HTML5 Canvas: use standard path-based approach
-            ctx.beginPath();
-            ctx.roundRect(geomX, geomY, width, height, radius);
-            ctx.fill();
-            ctx.stroke();
-        }
+        // Use unified fillAndStrokeRoundRect
+        ctx.fillAndStrokeRoundRect(geomX, geomY, width, height, radius);
 
         if (!isPerformanceRun) {
             logs.push(

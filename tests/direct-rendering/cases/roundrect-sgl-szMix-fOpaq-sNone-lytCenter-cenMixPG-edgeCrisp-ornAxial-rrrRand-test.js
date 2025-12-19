@@ -86,14 +86,8 @@ registerDirectRenderingTest(
         // Opaque fill color (uses direct rendering)
         ctx.fillStyle = 'rgb(255, 0, 0)';
 
-        // Use SWCanvas direct rendering method if available
-        if (typeof ctx.fillRoundRect === 'function') {
-            ctx.fillRoundRect(x, y, rectWidth, rectHeight, radius);
-        } else {
-            ctx.beginPath();
-            ctx.roundRect(x, y, rectWidth, rectHeight, radius);
-            ctx.fill();
-        }
+        // Use direct rendering method
+        ctx.fillRoundRect(x, y, rectWidth, rectHeight, radius);
 
         return {
             logs: [`Opaque filled rounded rect at (${x}, ${y}) size ${rectWidth}x${rectHeight}, radius=${radius}, atPixelX=${atPixelX}, atPixelY=${atPixelY}`],

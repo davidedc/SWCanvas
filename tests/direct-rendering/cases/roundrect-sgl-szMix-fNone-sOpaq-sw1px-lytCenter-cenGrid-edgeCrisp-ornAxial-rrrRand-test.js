@@ -102,14 +102,8 @@ function drawTest(ctx, currentIterationNumber, instances = null) {
         ctx.strokeStyle = strokeColorStr;
         ctx.lineWidth = 1;
 
-        // Use SWCanvas direct rendering if available, otherwise standard HTML5 Canvas path
-        if (typeof ctx.strokeRoundRect === 'function') {
-            ctx.strokeRoundRect(geomX, geomY, finalRectWidth, finalRectHeight, radius);
-        } else {
-            ctx.beginPath();
-            ctx.roundRect(geomX, geomY, finalRectWidth, finalRectHeight, radius);
-            ctx.stroke();
-        }
+        // Use direct rendering
+        ctx.strokeRoundRect(geomX, geomY, finalRectWidth, finalRectHeight, radius);
 
         if (!isPerformanceRun || i === 0) {
             const currentLogs = [

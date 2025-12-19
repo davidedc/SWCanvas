@@ -70,15 +70,8 @@ function drawTest(ctx, currentIterationNumber, instances = null) {
         const start = getRandomPoint(0, canvasWidth, canvasHeight, 0);
         const end = getRandomPoint(0, canvasWidth, canvasHeight, 0);
 
-        // Draw the line - use strokeLine if available, otherwise use path API
-        if (typeof ctx.strokeLine === 'function') {
-            ctx.strokeLine(start.x, start.y, end.x, end.y);
-        } else {
-            ctx.beginPath();
-            ctx.moveTo(start.x, start.y);
-            ctx.lineTo(end.x, end.y);
-            ctx.stroke();
-        }
+        // Draw the line
+        ctx.strokeLine(start.x, start.y, end.x, end.y);
 
         if (!isPerformanceRun) {
             logs.push(`─ 3px Black line from (${start.x.toFixed(1)}, ${start.y.toFixed(1)}) to (${end.x.toFixed(1)}, ${end.y.toFixed(1)})`);
