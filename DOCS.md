@@ -56,12 +56,13 @@ Each document has a **single responsibility** to avoid duplication:
 ## Quick Navigation
 
 - **Getting started** → README.md
-- **Understanding the design** → ARCHITECTURE.md  
+- **Understanding the design** → ARCHITECTURE.md
 - **Adding/running tests** → tests/README.md
 - **Build utilities** → tests/build/README.md
 - **Debug utilities** → debug/README.md
 - **Examples and demos** → examples/README.md
 - **Direct rendering system** → DIRECT-RENDERING-SUMMARY.MD
+- **Optional utilities** → lib/swcanvas-compat-polyfill.js
 - **Development with Claude** → CLAUDE.md
 
 ## Documentation Maintenance

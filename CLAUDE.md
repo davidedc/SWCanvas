@@ -72,6 +72,9 @@ src/ImageProcessor.js         # ImageLike validation and format conversion
 # HTML5 Canvas Compatibility Layer
 src/SWCanvasElement.js        # Canvas-like object (width/height properties, getContext)
 src/CanvasCompatibleContext2D.js  # HTML5 Canvas 2D Context API wrapper
+
+# Optional Utilities
+lib/swcanvas-compat-polyfill.js  # HTML5 Canvas polyfill for SWCanvas-specific methods
 ```
 
 ### Key Systems

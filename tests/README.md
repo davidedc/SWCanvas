@@ -239,6 +239,8 @@ node tests/direct-rendering/run-direct-rendering-tests.js -i 10
 open tests/direct-rendering/index.html
 ```
 
+**Browser Polyfills**: Browser tests use polyfills from `lib/swcanvas-compat-polyfill.js` which add SWCanvas-compatible methods (`fillCircle`, `strokeRoundRect`, `fillAndStrokeRoundRect`, etc.) to native HTML5 Canvas, enabling side-by-side comparison testing.
+
 **Test Coverage**:
 - Circle fill and stroke operations
 - Rectangle fill and stroke operations
