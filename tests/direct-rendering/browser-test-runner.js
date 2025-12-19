@@ -10,7 +10,7 @@
     const proto = CanvasRenderingContext2D.prototype;
 
     if (!proto.fillCircle) {
-        proto.fillCircle = function(cx, cy, r) {
+        proto.fillCircle = function (cx, cy, r) {
             this.beginPath();
             this.arc(cx, cy, r, 0, Math.PI * 2);
             this.fill();
@@ -18,7 +18,7 @@
     }
 
     if (!proto.strokeCircle) {
-        proto.strokeCircle = function(cx, cy, r) {
+        proto.strokeCircle = function (cx, cy, r) {
             this.beginPath();
             this.arc(cx, cy, r, 0, Math.PI * 2);
             this.stroke();
@@ -26,7 +26,7 @@
     }
 
     if (!proto.fillAndStrokeCircle) {
-        proto.fillAndStrokeCircle = function(cx, cy, r) {
+        proto.fillAndStrokeCircle = function (cx, cy, r) {
             this.beginPath();
             this.arc(cx, cy, r, 0, Math.PI * 2);
             this.fill();
@@ -35,7 +35,7 @@
     }
 
     if (!proto.strokeLine) {
-        proto.strokeLine = function(x1, y1, x2, y2) {
+        proto.strokeLine = function (x1, y1, x2, y2) {
             this.beginPath();
             this.moveTo(x1, y1);
             this.lineTo(x2, y2);
@@ -43,21 +43,9 @@
         };
     }
 
-    if (!proto.fillRectShape) {
-        proto.fillRectShape = function(x, y, w, h) {
-            this.fillRect(x, y, w, h);
-        };
-    }
-
-    if (!proto.strokeRectShape) {
-        proto.strokeRectShape = function(x, y, w, h) {
-            this.strokeRect(x, y, w, h);
-        };
-    }
-
     // Arc method polyfills
     if (!proto.fillArc) {
-        proto.fillArc = function(cx, cy, r, startAngle, endAngle, anticlockwise = false) {
+        proto.fillArc = function (cx, cy, r, startAngle, endAngle, anticlockwise = false) {
             this.beginPath();
             this.moveTo(cx, cy);
             this.arc(cx, cy, r, startAngle, endAngle, anticlockwise);
@@ -67,7 +55,7 @@
     }
 
     if (!proto.outerStrokeArc) {
-        proto.outerStrokeArc = function(cx, cy, r, startAngle, endAngle, anticlockwise = false) {
+        proto.outerStrokeArc = function (cx, cy, r, startAngle, endAngle, anticlockwise = false) {
             this.beginPath();
             this.arc(cx, cy, r, startAngle, endAngle, anticlockwise);
             this.stroke();
@@ -75,7 +63,7 @@
     }
 
     if (!proto.fillAndOuterStrokeArc) {
-        proto.fillAndOuterStrokeArc = function(cx, cy, r, startAngle, endAngle, anticlockwise = false) {
+        proto.fillAndOuterStrokeArc = function (cx, cy, r, startAngle, endAngle, anticlockwise = false) {
             // Fill the pie slice
             this.beginPath();
             this.moveTo(cx, cy);
@@ -739,8 +727,8 @@ class DirectRenderingTestRunner {
 
                     passed = boundsMatch;
                     details = `SW: T=${swExtremes.topY} B=${swExtremes.bottomY} L=${swExtremes.leftX} R=${swExtremes.rightX} | ` +
-                             `Canvas: T=${canvasExtremes.topY} B=${canvasExtremes.bottomY} L=${canvasExtremes.leftX} R=${canvasExtremes.rightX}` +
-                             (boundsMatch ? '' : ' (MISMATCH)');
+                        `Canvas: T=${canvasExtremes.topY} B=${canvasExtremes.bottomY} L=${canvasExtremes.leftX} R=${canvasExtremes.rightX}` +
+                        (boundsMatch ? '' : ' (MISMATCH)');
                 }
 
                 results.push({
@@ -848,7 +836,7 @@ class DirectRenderingTestRunner {
                     passed,
                     knownFailure: isKnownFailure && !passed,
                     details: `SW: ${speckleCount} (${expectedMsg})` + (passed ? '' : `${firstInfo}`) +
-                             (!passed && isKnownFailure ? ' [KNOWN]' : '')
+                        (!passed && isKnownFailure ? ' [KNOWN]' : '')
                 });
             }
         }
@@ -871,7 +859,7 @@ class DirectRenderingTestRunner {
                 name: 'Dimension Consistency',
                 passed,
                 details: passed ? `${result.expectedWidth}x${result.expectedHeight}px` :
-                                 result.issues.join('; ')
+                    result.issues.join('; ')
             });
         }
 
@@ -1248,7 +1236,7 @@ class DirectRenderingTestRunner {
                 const actualY = sourceY + py;
 
                 const isOutOfBounds = actualX < 0 || actualY < 0 ||
-                                      actualX >= canvasWidth || actualY >= canvasHeight;
+                    actualX >= canvasWidth || actualY >= canvasHeight;
 
                 if (isOutOfBounds) {
                     ctx.fillStyle = 'rgb(128, 128, 128)'; // Grey for out-of-bounds
