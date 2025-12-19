@@ -3,7 +3,7 @@
  * Follows PolygonFiller pattern with static methods.
  *
  * Direct rendering is available exclusively via dedicated Context2D methods:
- * fillCircle(), strokeCircle(), fillAndStrokeCircle()
+ * fillCircle(), strokeCircle(), fillStrokeCircle()
  *
  * Path-based circles (beginPath() + arc() + fill()/stroke()) use the
  * generic polygon pipeline for consistent, predictable behavior.
@@ -174,14 +174,14 @@ class CircleOps {
             // Draw bottom scanline
             if (abs_y_bottom >= 0 && abs_y_bottom < height) {
                 SpanOps.fill_Alpha(data, width, height, abs_x_min, abs_y_bottom, spanWidth,
-                                   r, g, b, effectiveAlpha, invAlpha, clipBuffer);
+                    r, g, b, effectiveAlpha, invAlpha, clipBuffer);
             }
 
             // Draw top scanline (skip overdraw conditions)
             const drawTop = rel_y > 0 && !(rel_y === 1 && yOffset === 0);
             if (drawTop && abs_y_top >= 0 && abs_y_top < height) {
                 SpanOps.fill_Alpha(data, width, height, abs_x_min, abs_y_top, spanWidth,
-                                   r, g, b, effectiveAlpha, invAlpha, clipBuffer);
+                    r, g, b, effectiveAlpha, invAlpha, clipBuffer);
             }
         }
     }

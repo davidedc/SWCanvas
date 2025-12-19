@@ -634,8 +634,8 @@ SpanOps.blendPixelAlpha(data, offset, r, g, b, alpha, invAlpha)
 RectOps.fillOpaque(surface, x, y, width, height, color, clipBuffer)
 RectOps.fillAlpha(surface, x, y, width, height, color, globalAlpha, clipBuffer)
 RectOps.fillRotated(surface, centerX, centerY, width, height, rotation, color, globalAlpha, clipBuffer)
-RectOps.fillAndStroke(surface, x, y, width, height, lineWidth, fillColor, strokeColor, globalAlpha, clipBuffer)
-RectOps.fillAndStrokeRotated(surface, centerX, centerY, width, height, rotation, ...)
+RectOps.fillStroke(surface, x, y, width, height, lineWidth, fillColor, strokeColor, globalAlpha, clipBuffer)
+RectOps.fillStrokeRotated(surface, centerX, centerY, width, height, rotation, ...)
 
 // Stroke methods
 RectOps.stroke1pxOpaque(surface, x, y, width, height, color, clipBuffer)
@@ -650,7 +650,7 @@ RectOps.strokeRotated(surface, centerX, centerY, width, height, rotation, lineWi
 // Fill methods
 CircleOps.fillOpaque(surface, cx, cy, radius, color, clipBuffer)
 CircleOps.fillAlpha(surface, cx, cy, radius, color, globalAlpha, clipBuffer)
-CircleOps.fillAndStroke(surface, cx, cy, radius, lineWidth, fillColor, strokeColor, globalAlpha, clipBuffer)
+CircleOps.fillStroke(surface, cx, cy, radius, lineWidth, fillColor, strokeColor, globalAlpha, clipBuffer)
 
 // Stroke methods
 CircleOps.stroke1pxOpaque(surface, cx, cy, radius, color, clipBuffer)
@@ -673,7 +673,7 @@ LineOps.strokeThickPolygonScan(surface, x1, y1, x2, y2, lineWidth, paintSource, 
 // Fill methods (pie slices)
 ArcOps.fillOpaque(surface, cx, cy, radius, startAngle, endAngle, color, clipBuffer)
 ArcOps.fillAlpha(surface, cx, cy, radius, startAngle, endAngle, color, globalAlpha, clipBuffer)
-ArcOps.fillAndStrokeOuter(surface, cx, cy, radius, startAngle, endAngle, lineWidth, fillColor, strokeColor, globalAlpha, clipBuffer)
+ArcOps.fillStrokeOuter(surface, cx, cy, radius, startAngle, endAngle, lineWidth, fillColor, strokeColor, globalAlpha, clipBuffer)
 
 // Stroke methods (arc curves)
 ArcOps.stroke1pxOpaque(surface, cx, cy, radius, startAngle, endAngle, color, clipBuffer)
@@ -687,7 +687,7 @@ ArcOps.strokeOuterAlpha(surface, cx, cy, radius, startAngle, endAngle, lineWidth
 // Fill methods
 RoundedRectOps.fillOpaque(surface, x, y, width, height, radii, color, clipBuffer)
 RoundedRectOps.fillAlpha(surface, x, y, width, height, radii, color, globalAlpha, clipBuffer)
-RoundedRectOps.fillAndStroke(surface, x, y, width, height, radii, lineWidth, fillColor, strokeColor, globalAlpha, clipBuffer)
+RoundedRectOps.fillStroke(surface, x, y, width, height, radii, lineWidth, fillColor, strokeColor, globalAlpha, clipBuffer)
 
 // Stroke methods
 RoundedRectOps.stroke1pxOpaque(surface, x, y, width, height, radii, color, clipBuffer)

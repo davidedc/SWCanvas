@@ -36,7 +36,7 @@
  *
  * UNCAPTURED ASPECTS IN FILENAME / FACETS ABOVE:
  * ----------------------------------------------
- * - Uses SWCanvas direct API method `ctx.fillAndOuterStrokeArc()` for unified fill+stroke rendering.
+ * - Uses SWCanvas direct API method `ctx.fillOuterStrokeArc()` for unified fill+stroke rendering.
  * - Extent check validates that arc bounds match between SWCanvas and HTML5 Canvas.
  * - The 90-degree arc only covers one quadrant, so extent bounds are quadrant-specific.
  *
@@ -73,7 +73,7 @@ registerDirectRenderingTest(
         ctx.fillStyle = fillColor;
         ctx.strokeStyle = strokeColor;
         ctx.lineWidth = strokeWidth;
-        ctx.fillAndOuterStrokeArc(centerX, centerY, radius, startAngle, endAngle);
+        ctx.fillOuterStrokeArc(centerX, centerY, radius, startAngle, endAngle);
 
         return {
             logs: [`90deg Arc: center=(${centerX.toFixed(1)},${centerY.toFixed(1)}), r=${radius.toFixed(1)}, sw=${strokeWidth}, quadrant=${quadrant.name}, fillType=${fillType}, centerType=${atPixel ? 'pixel' : 'grid'}`],

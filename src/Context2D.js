@@ -296,7 +296,7 @@ class Context2D {
         const isSourceOver = this.globalCompositeOperation === 'source-over';
         const noClip = !this._clipMask;
         const noShadow = !this.shadowColor || this.shadowColor === 'transparent' ||
-                        (this.shadowBlur === 0 && this.shadowOffsetX === 0 && this.shadowOffsetY === 0);
+            (this.shadowBlur === 0 && this.shadowOffsetX === 0 && this.shadowOffsetY === 0);
 
         // Direct rendering: Color fill with source-over, no shadows (clipping supported)
         if (isColor && isSourceOver && noShadow) {
@@ -304,7 +304,7 @@ class Context2D {
             const clipBuffer = this._clipMask ? this._clipMask.buffer : null;
 
             // Decompose transform
-            const center = transform.transformPoint({x: x + width / 2, y: y + height / 2});
+            const center = transform.transformPoint({ x: x + width / 2, y: y + height / 2 });
             const rotation = transform.rotationAngle;
             const scaleX = transform.scaleX;
             const scaleY = transform.scaleY;
@@ -316,7 +316,7 @@ class Context2D {
             // Non-uniform scale + rotation produces a parallelogram, not a rotated rectangle
             // Check matrix structure: for uniform scale+rotation, a=d and b=-c
             const isUniformScale = Math.abs(transform.a - transform.d) < 0.001 &&
-                                   Math.abs(transform.b + transform.c) < 0.001;
+                Math.abs(transform.b + transform.c) < 0.001;
 
             if (isAxisAligned) {
                 // Axis-aligned: use direct fill (works with non-uniform scale)
@@ -369,7 +369,7 @@ class Context2D {
         const isSourceOver = this.globalCompositeOperation === 'source-over';
         const noClip = !this._clipMask;
         const noShadow = !this.shadowColor || this.shadowColor === 'transparent' ||
-                        (this.shadowBlur === 0 && this.shadowOffsetX === 0 && this.shadowOffsetY === 0);
+            (this.shadowBlur === 0 && this.shadowOffsetX === 0 && this.shadowOffsetY === 0);
 
         // Direct rendering: Color stroke with source-over, no shadows (clipping supported)
         if (isColor && isSourceOver && noShadow) {
@@ -377,7 +377,7 @@ class Context2D {
             const clipBuffer = this._clipMask ? this._clipMask.buffer : null;
 
             // Decompose transform
-            const center = transform.transformPoint({x: x + width / 2, y: y + height / 2});
+            const center = transform.transformPoint({ x: x + width / 2, y: y + height / 2 });
             const rotation = transform.rotationAngle;
             const scaleX = transform.scaleX;
             const scaleY = transform.scaleY;
@@ -390,7 +390,7 @@ class Context2D {
             // Non-uniform scale + rotation produces a parallelogram, not a rotated rectangle
             // Check matrix structure: for uniform scale+rotation, a=d and b=-c
             const isUniformScale = Math.abs(transform.a - transform.d) < 0.001 &&
-                                   Math.abs(transform.b + transform.c) < 0.001;
+                Math.abs(transform.b + transform.c) < 0.001;
 
             if (isAxisAligned) {
                 // Axis-aligned: use direct rendering with adjusted coordinates (works with non-uniform scale)
@@ -466,7 +466,7 @@ class Context2D {
      * @param {number} width - Rectangle width
      * @param {number} height - Rectangle height
      */
-    fillAndStrokeRect(x, y, width, height) {
+    fillStrokeRect(x, y, width, height) {
         // Validate parameters
         if (typeof x !== 'number' || typeof y !== 'number' ||
             typeof width !== 'number' || typeof height !== 'number') {
@@ -488,7 +488,7 @@ class Context2D {
         const strokeIsColor = strokePaint instanceof Color;
         const isSourceOver = this.globalCompositeOperation === 'source-over';
         const noShadow = !this.shadowColor || this.shadowColor === 'transparent' ||
-                        (this.shadowBlur === 0 && this.shadowOffsetX === 0 && this.shadowOffsetY === 0);
+            (this.shadowBlur === 0 && this.shadowOffsetX === 0 && this.shadowOffsetY === 0);
         const clipBuffer = this._clipMask ? this._clipMask.buffer : null;
 
         // Direct rendering: both fill and stroke are solid colors, source-over, no shadows
@@ -500,7 +500,7 @@ class Context2D {
                 const transform = this._transform;
 
                 // Decompose transform
-                const center = transform.transformPoint({x: x + width / 2, y: y + height / 2});
+                const center = transform.transformPoint({ x: x + width / 2, y: y + height / 2 });
                 const rotation = transform.rotationAngle;
                 const scaleX = transform.scaleX;
                 const scaleY = transform.scaleY;
@@ -512,7 +512,7 @@ class Context2D {
                 // Non-uniform scale + rotation produces a parallelogram, not a rotated rectangle
                 // Check matrix structure: for uniform scale+rotation, a=d and b=-c
                 const isUniformScale = Math.abs(transform.a - transform.d) < 0.001 &&
-                                       Math.abs(transform.b + transform.c) < 0.001;
+                    Math.abs(transform.b + transform.c) < 0.001;
 
                 if (isAxisAligned) {
                     // Axis-aligned: use unified fill+stroke (works with non-uniform scale)
@@ -693,14 +693,14 @@ class Context2D {
         const isColor = paintSource instanceof Color;
         const isSourceOver = this.globalCompositeOperation === 'source-over';
         const noShadow = !this.shadowColor || this.shadowColor === 'transparent' ||
-                        (this.shadowBlur === 0 && this.shadowOffsetX === 0 && this.shadowOffsetY === 0);
+            (this.shadowBlur === 0 && this.shadowOffsetX === 0 && this.shadowOffsetY === 0);
         const clipBuffer = this._clipMask ? this._clipMask.buffer : null;
 
         if (isColor && isSourceOver && noShadow && paintSource.a > 0) {
             const transform = this._transform;
 
             // Decompose transform
-            const center = transform.transformPoint({x: x + width / 2, y: y + height / 2});
+            const center = transform.transformPoint({ x: x + width / 2, y: y + height / 2 });
             const rotation = transform.rotationAngle;
             const scaleX = transform.scaleX;
             const scaleY = transform.scaleY;
@@ -711,7 +711,7 @@ class Context2D {
 
             // Check matrix structure for uniform scale: a=d and b=-c
             const isUniformScale = Math.abs(transform.a - transform.d) < 0.001 &&
-                                   Math.abs(transform.b + transform.c) < 0.001;
+                Math.abs(transform.b + transform.c) < 0.001;
 
             if (isUniformScale) {
                 const scaledRadius = radius * scaleX;
@@ -826,14 +826,14 @@ class Context2D {
         const isColor = paintSource instanceof Color;
         const isSourceOver = this.globalCompositeOperation === 'source-over';
         const noShadow = !this.shadowColor || this.shadowColor === 'transparent' ||
-                        (this.shadowBlur === 0 && this.shadowOffsetX === 0 && this.shadowOffsetY === 0);
+            (this.shadowBlur === 0 && this.shadowOffsetX === 0 && this.shadowOffsetY === 0);
         const clipBuffer = this._clipMask ? this._clipMask.buffer : null;
 
         if (isColor && isSourceOver && noShadow && paintSource.a > 0) {
             const transform = this._transform;
 
             // Decompose transform
-            const center = transform.transformPoint({x: x + width / 2, y: y + height / 2});
+            const center = transform.transformPoint({ x: x + width / 2, y: y + height / 2 });
             const rotation = transform.rotationAngle;
             const scaleX = transform.scaleX;
             const scaleY = transform.scaleY;
@@ -842,7 +842,7 @@ class Context2D {
 
             // Check matrix structure for uniform scale: a=d and b=-c
             const isUniformScale = Math.abs(transform.a - transform.d) < 0.001 &&
-                                   Math.abs(transform.b + transform.c) < 0.001;
+                Math.abs(transform.b + transform.c) < 0.001;
 
             if (isUniformScale) {
                 const scaledRadius = radius * scaleX;
@@ -907,7 +907,7 @@ class Context2D {
      * @param {number} height - Rectangle height
      * @param {number|number[]} radii - Corner radius (single value or array)
      */
-    fillAndStrokeRoundRect(x, y, width, height, radii) {
+    fillStrokeRoundRect(x, y, width, height, radii) {
         // Validate parameters
         if (typeof x !== 'number' || typeof y !== 'number' ||
             typeof width !== 'number' || typeof height !== 'number') {
@@ -925,9 +925,9 @@ class Context2D {
         // Normalize radius to check for zero
         let radius = Array.isArray(radii) ? radii[0] : (radii || 0);
 
-        // Fallback to fillAndStrokeRect for zero radius
+        // Fallback to fillStrokeRect for zero radius
         if (radius <= 0) {
-            this.fillAndStrokeRect(x, y, width, height);
+            this.fillStrokeRect(x, y, width, height);
             return;
         }
 
@@ -938,7 +938,7 @@ class Context2D {
         const strokeIsColor = strokePaint instanceof Color;
         const isSourceOver = this.globalCompositeOperation === 'source-over';
         const noShadow = !this.shadowColor || this.shadowColor === 'transparent' ||
-                        (this.shadowBlur === 0 && this.shadowOffsetX === 0 && this.shadowOffsetY === 0);
+            (this.shadowBlur === 0 && this.shadowOffsetX === 0 && this.shadowOffsetY === 0);
         const clipBuffer = this._clipMask ? this._clipMask.buffer : null;
 
         // Direct rendering: both fill and stroke are solid colors, source-over, no shadows
@@ -950,7 +950,7 @@ class Context2D {
                 const transform = this._transform;
 
                 // Decompose transform
-                const center = transform.transformPoint({x: x + width / 2, y: y + height / 2});
+                const center = transform.transformPoint({ x: x + width / 2, y: y + height / 2 });
                 const rotation = transform.rotationAngle;
                 const scaleX = transform.scaleX;
                 const scaleY = transform.scaleY;
@@ -960,7 +960,7 @@ class Context2D {
 
                 // Check matrix structure for uniform scale: a=d and b=-c
                 const isUniformScale = Math.abs(transform.a - transform.d) < 0.001 &&
-                                       Math.abs(transform.b + transform.c) < 0.001;
+                    Math.abs(transform.b + transform.c) < 0.001;
 
                 // For rounded rects, non-uniform scale turns circles into ellipses
                 // Only use direct rendering for uniform scale or identity
@@ -1693,7 +1693,7 @@ class Context2D {
      * @param {number} centerY - Center Y coordinate
      * @param {number} radius - Circle radius
      */
-    fillAndStrokeCircle(centerX, centerY, radius) {
+    fillStrokeCircle(centerX, centerY, radius) {
         if (radius <= 0) return;
 
         // Transform center point
@@ -1873,7 +1873,7 @@ class Context2D {
      * @param {number} endAngle - End angle in radians
      * @param {boolean} [anticlockwise=false] - Direction
      */
-    fillAndOuterStrokeArc(centerX, centerY, radius, startAngle, endAngle, anticlockwise = false) {
+    fillOuterStrokeArc(centerX, centerY, radius, startAngle, endAngle, anticlockwise = false) {
         if (radius <= 0) return;
 
         // Transform center point

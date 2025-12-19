@@ -35,7 +35,7 @@
  * UNCAPTURED ASPECTS IN FILENAME / FACETS ABOVE:
  * ----------------------------------------------
  * - Both fill and stroke colors are randomized semitransparent colors.
- * - Uses SWCanvas direct API method `ctx.fillAndOuterStrokeArc()` for unified fill+stroke rendering.
+ * - Uses SWCanvas direct API method `ctx.fillOuterStrokeArc()` for unified fill+stroke rendering.
  * - Gap positioned randomly within a single quadrant.
  *
  */
@@ -70,7 +70,7 @@ registerDirectRenderingTest(
         ctx.fillStyle = fillColor;
         ctx.strokeStyle = strokeColor;
         ctx.lineWidth = strokeWidth;
-        ctx.fillAndOuterStrokeArc(centerX, centerY, radius, startAngle, endAngle);
+        ctx.fillOuterStrokeArc(centerX, centerY, radius, startAngle, endAngle);
 
         return {
             logs: [`Arc: center=(${centerX.toFixed(1)},${centerY.toFixed(1)}), r=${radius.toFixed(1)}, sw=${strokeWidth.toFixed(1)}, gap=${gapSizeDeg.toFixed(1)}°`],

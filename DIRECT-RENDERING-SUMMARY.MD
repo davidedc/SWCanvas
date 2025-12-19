@@ -12,17 +12,17 @@ SWCanvas implements direct renderings for 5 shape types: Rectangle, RoundedRect,
 |-------------------------|---------------------------------------|-----------------------------|
 | Rectangle Fill          | Context2D.fillRect()                  | rasterizer.fillRect()       |
 | Rectangle Stroke        | Context2D.strokeRect()                | rasterizer.stroke(path)     |
-| Rectangle Fill+Stroke   | Context2D.fillAndStrokeRect()         | Separate fill + stroke      |
+| Rectangle Fill+Stroke   | Context2D.fillStrokeRect()         | Separate fill + stroke      |
 | RoundedRect Fill        | Context2D.fillRoundRect()             | path.roundRect() + fill()   |
 | RoundedRect Stroke      | Context2D.strokeRoundRect()           | path.roundRect() + stroke() |
-| RoundedRect Fill+Stroke | Context2D.fillAndStrokeRoundRect()    | Separate fill + stroke      |
+| RoundedRect Fill+Stroke | Context2D.fillStrokeRoundRect()    | Separate fill + stroke      |
 | Circle Fill             | Context2D.fillCircle()                | path.arc() + fill()         |
 | Circle Stroke           | Context2D.strokeCircle()              | path.arc() + stroke()       |
-| Circle Fill+Stroke      | Context2D.fillAndStrokeCircle()       | Separate fill + stroke      |
+| Circle Fill+Stroke      | Context2D.fillStrokeCircle()       | Separate fill + stroke      |
 | Line Stroke             | Context2D.strokeLine()                | path moveTo/lineTo + stroke |
 | Arc Fill                | Context2D.fillArc()                   | path.arc() + fill()         |
 | Arc Stroke              | Context2D.outerStrokeArc()            | path.arc() + stroke()       |
-| Arc Fill+Stroke         | Context2D.fillAndOuterStrokeArc()     | Separate fill + stroke      |
+| Arc Fill+Stroke         | Context2D.fillOuterStrokeArc()     | Separate fill + stroke      |
 
 All entry points are in `Context2D.js`. Use grep to find exact locations: `grep -n "methodName(" src/Context2D.js`
 
@@ -287,25 +287,25 @@ if (clipBuffer[byteIndex] === 0) {
 | 8-way symmetry      | CircleOps.stroke1px*                     | Generate 8 points per Bresenham step   |
 | Edge function       | RectOps.fillRotated                      | Test if pixel inside rotated rect      |
 | Polygon scanline    | LineOps.strokeThickPolygonScan           | Fill thick diagonal lines              |
-| Sqrt-based extent   | CircleOps.fillAndStroke, strokeThick     | Analytical circle intersection         |
-| Annulus (ring)      | CircleOps.strokeThick, fillAndStroke     | Inner/outer radius for thick strokes   |
+| Sqrt-based extent   | CircleOps.fillStroke, strokeThick     | Analytical circle intersection         |
+| Annulus (ring)      | CircleOps.strokeThick, fillStroke     | Inner/outer radius for thick strokes   |
 | Angle filtering     | ArcOps.*                                 | Filter Bresenham points by angle range |
 | Angle-based iterate | ArcOps.stroke1pxOpaqueExactEndpoints     | Exact start/end pixels for junctions   |
 | Set deduplication   | CircleOps.stroke1pxAlpha, ArcOps         | Prevent overdraw for alpha blending    |
 | Hybrid edges+arcs   | RoundedRectOps.strokeRotated (1px)       | 4 lines + 4 arcs for rotated rrect     |
 | Edge Buffer Raster  | RoundedRectOps.fillRotated               | O(H+P+A) optimal rotated fill          |
 | Dual Edge Buffer    | RoundedRectOps.strokeRotated (thick)     | Outer+inner perimeters, fill annulus   |
-| Span-based fill-first | RectOps.fillAndStroke                  | Correct semi-transparent stroke blending |
+| Span-based fill-first | RectOps.fillStroke                  | Correct semi-transparent stroke blending |
 
 ### 6.4 Special Optimizations
 
 | Optimization         | Where                                                          | Description                                        |
 |----------------------|----------------------------------------------------------------|----------------------------------------------------|
-| Epsilon contraction  | CircleOps.fillAndStroke, RoundedRectOps.fillAndStroke          | FILL_EPSILON = 0.0001 prevents boundary speckles   |
+| Epsilon contraction  | CircleOps.fillStroke, RoundedRectOps.fillStroke          | FILL_EPSILON = 0.0001 prevents boundary speckles   |
 | Line extend/shorten  | RectOps.strokeRotated                                          | Proper miter corners for thick rotated rect stroke |
 | Crisp center adjust  | CircleOps, ArcOps                                              | floor(cx - 0.5) for consistent pixel placement     |
 | Exact endpoints      | ArcOps.stroke1pxOpaqueExactEndpoints                           | Angle-based iteration guarantees junction pixels   |
-| Conditional fill extent | RectOps.fillAndStroke                                          | Semi-transparent stroke → PATH extent; opaque → INNER extent |
+| Conditional fill extent | RectOps.fillStroke                                          | Semi-transparent stroke → PATH extent; opaque → INNER extent |
 
 ---
 
@@ -319,7 +319,7 @@ if (clipBuffer[byteIndex] === 0) {
 | Stroke 1px alpha      | ✓    | ✓         | ✓      | ✓    | ✓   |
 | Stroke thick opaque   | ✓    | ✓         | ✓      | ✓    | ✓   |
 | Stroke thick alpha    | ✓    | ✓         | ✓      | ✓    | ✓   |
-| fillAndStroke()       | ✓    | ✓         | ✓      | N/A  | ✓   |
+| fillStroke()       | ✓    | ✓         | ✓      | N/A  | ✓   |
 | Rotation support      | ✓    | ✓         | N/A    | ✓    | ✗   |
 | Clipping TO (respects clip) | ✓    | ✓         | ✓      | ✓    | ✓   |
 | Clipping AT (defines clip)  | ✗    | ✗         | ✗      | N/A  | ✗   |

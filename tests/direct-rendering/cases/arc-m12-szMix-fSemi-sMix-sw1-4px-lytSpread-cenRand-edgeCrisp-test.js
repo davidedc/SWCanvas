@@ -9,7 +9,7 @@
  *
  * | Facet                  | Value          | Reason
  * |------------------------|----------------|-----------------------------------------------------------------------------------------------------
- * | Shape category         | arcs           | The test draws arcs using `ctx.fillAndOuterStrokeArc()`.
+ * | Shape category         | arcs           | The test draws arcs using `ctx.fillOuterStrokeArc()`.
  * | Count                  | multiple (12)  | The test draws 12 arc instances using a loop.
  * | SizeCategory           | mixed          | The radius is randomized in the range [8, 42], spanning multiple size categories.
  * | FillStyle              | semitransparent| `getRandomColor('semitransparent')` is called for the fill.
@@ -34,7 +34,7 @@
  *
  * UNCAPTURED ASPECTS IN FILENAME / FACETS ABOVE:
  * ----------------------------------------------
- * - Uses SWCanvas direct API method `ctx.fillAndOuterStrokeArc()` for combined fill+stroke.
+ * - Uses SWCanvas direct API method `ctx.fillOuterStrokeArc()` for combined fill+stroke.
  * - Each arc is drawn with independently randomized parameters.
  * - Gap positioned randomly within a single quadrant for each arc.
  * - 60px margin from canvas edges for arc positioning.
@@ -74,7 +74,7 @@ registerDirectRenderingTest(
             ctx.fillStyle = fillColor;
             ctx.strokeStyle = strokeColor;
             ctx.lineWidth = strokeWidth;
-            ctx.fillAndOuterStrokeArc(centerX, centerY, radius, startAngle, endAngle);
+            ctx.fillOuterStrokeArc(centerX, centerY, radius, startAngle, endAngle);
 
             logs.push(`Arc ${i + 1}: center=(${centerX.toFixed(1)},${centerY.toFixed(1)}), r=${radius.toFixed(1)}, sw=${strokeWidth.toFixed(1)}, gap=${gapSizeDeg.toFixed(1)}°`);
         }

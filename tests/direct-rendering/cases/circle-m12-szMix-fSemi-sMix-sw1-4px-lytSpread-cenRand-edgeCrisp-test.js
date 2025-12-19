@@ -9,7 +9,7 @@
  *
  * | Facet                  | Value          | Reason
  * |------------------------|----------------|-----------------------------------------------------------------------------------------------------
- * | Shape category         | circles        | The test draws circles using `ctx.fillAndStrokeCircle()`.
+ * | Shape category         | circles        | The test draws circles using `ctx.fillStrokeCircle()`.
  * | Count                  | multiple (12)  | The test draws 12 circle instances using a loop.
  * | SizeCategory           | mixed          | The radius is randomized in the range [8, 42], spanning multiple size categories.
  * | FillStyle              | semitransparent| `getRandomColor('semitransparent')` is called for the fill.
@@ -34,7 +34,7 @@
  *
  * UNCAPTURED ASPECTS IN FILENAME / FACETS ABOVE:
  * ----------------------------------------------
- * - Uses SWCanvas direct API method `ctx.fillAndStrokeCircle()` for combined fill+stroke.
+ * - Uses SWCanvas direct API method `ctx.fillStrokeCircle()` for combined fill+stroke.
  * - Each circle is drawn with independently randomized parameters.
  * - 60px margin from canvas edges for circle positioning.
  *
@@ -74,7 +74,7 @@ registerDirectRenderingTest(
             ctx.fillStyle = fillColor;
             ctx.strokeStyle = strokeColor;
             ctx.lineWidth = strokeWidth;
-            ctx.fillAndStrokeCircle(centerX, centerY, radius);
+            ctx.fillStrokeCircle(centerX, centerY, radius);
 
             logs.push(`Circle ${i + 1}: center=(${centerX.toFixed(1)},${centerY.toFixed(1)}), r=${radius.toFixed(1)}, sw=${strokeWidth.toFixed(1)}`);
         }

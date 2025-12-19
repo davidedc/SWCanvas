@@ -9,7 +9,7 @@
  *
  * | Facet                  | Value               | Reason
  * |------------------------|---------------------|----------------------------------------------------------------------------------------------------------------------------
- * | Shape category         | `rounded-rects`     | The test renders a rounded rectangle using `ctx.fillAndStrokeRoundRect()` (unified method to prevent speckles).
+ * | Shape category         | `rounded-rects`     | The test renders a rounded rectangle using `ctx.fillStrokeRoundRect()` (unified method to prevent speckles).
  * | Count                  | `single`            | The test logic draws only one shape instance in visual test mode.
  * | SizeCategory           | `mixed`             | The rectangle's width/height are randomized (e.g., from `50` to `~530px`), spanning M, L, and XL size categories.
  * | FillStyle              | `semitransparent`   | Fill color is set with a random alpha between 50 and 150 (out of 255) using `getRandomColor("semitransparent-light")`.
@@ -105,8 +105,8 @@ function drawTest(ctx, currentIterationNumber, instances = null) {
         ctx.strokeStyle = strokeColorStr;
         ctx.lineWidth = strokeWidth;
 
-        // Use unified fillAndStrokeRoundRect
-        ctx.fillAndStrokeRoundRect(geomX, geomY, finalRectWidth, finalRectHeight, radius);
+        // Use unified fillStrokeRoundRect
+        ctx.fillStrokeRoundRect(geomX, geomY, finalRectWidth, finalRectHeight, radius);
 
         if (!isPerformanceRun || i === 0) {
             const currentLogs = [

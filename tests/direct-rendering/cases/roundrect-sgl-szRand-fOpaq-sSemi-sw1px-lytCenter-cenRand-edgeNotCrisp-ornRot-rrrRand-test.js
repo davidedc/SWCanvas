@@ -3,12 +3,12 @@
  * =================
  *
  * Description: Tests opaque fill + 1px semi-transparent stroke on a single rotated rounded rectangle.
- *              Uses SeededRandom for reproducibility. Uses high-level API (ctx.fillAndStrokeRoundRect)
+ *              Uses SeededRandom for reproducibility. Uses high-level API (ctx.fillStrokeRoundRect)
  *              with transforms to test the combined fill+stroke rendering with alpha blending.
  *
  * | Facet                  | Value          | Reason
  * |------------------------|----------------|----------------------------------------------------------------------------------------------------------------------------------
- * | Shape category         | rounded-rects  | The test draws a rotated rounded rectangle via transforms + fillAndStrokeRoundRect.
+ * | Shape category         | rounded-rects  | The test draws a rotated rounded rectangle via transforms + fillStrokeRoundRect.
  * | Count                  | single         | Only 1 instance drawn for focused visual inspection.
  * | SizeCategory           | random         | Width/height randomly generated (60-140px range).
  * | FillStyle              | opaque         | Fill color is opaque green.
@@ -31,7 +31,7 @@ function drawTest(ctx, currentIterationNumber, instances = null) {
     const canvasHeight = ctx.canvas.height;
 
     // Check for roundRect support (works for both SWCanvas and modern HTML5 Canvas)
-    const hasFillAndStrokeRoundRect = typeof ctx.fillAndStrokeRoundRect === 'function';
+    const hasFillAndStrokeRoundRect = typeof ctx.fillStrokeRoundRect === 'function';
     const hasRoundRect = typeof ctx.roundRect === 'function';
 
     if (!hasFillAndStrokeRoundRect && !hasRoundRect) {
@@ -63,9 +63,9 @@ function drawTest(ctx, currentIterationNumber, instances = null) {
         context.strokeStyle = strokeRgba;
         context.lineWidth = lw;
 
-        if (typeof context.fillAndStrokeRoundRect === 'function') {
+        if (typeof context.fillStrokeRoundRect === 'function') {
             // SWCanvas high-level API
-            context.fillAndStrokeRoundRect(-w / 2, -h / 2, w, h, r);
+            context.fillStrokeRoundRect(-w / 2, -h / 2, w, h, r);
         } else {
             // HTML5 Canvas fallback: roundRect + fill + stroke
             context.beginPath();
@@ -144,7 +144,7 @@ registerDirectRenderingTest(
     },
     {
         title: 'Single Rotated Rounded Rectangle - Fill + 1px Semi-Transparent Stroke (Random)',
-        description: 'Tests high-level API rendering of opaque fill and 1px semi-transparent stroke on a single rotated rounded rectangle using transforms and fillAndStrokeRoundRect.',
+        description: 'Tests high-level API rendering of opaque fill and 1px semi-transparent stroke on a single rotated rounded rectangle using transforms and fillStrokeRoundRect.',
         displayName: 'Perf: Single Rotated RRect Fill+1px Alpha Stroke (Random)'
     }
 );

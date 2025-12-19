@@ -8,7 +8,7 @@
  *
  * | Facet                  | Value          | Reason
  * |------------------------|----------------|-----------------------------------------------------------------------------------------------------
- * | Shape category         | arcs           | The test draws exclusively `arc` shapes using `ctx.fillAndOuterStrokeArc`.
+ * | Shape category         | arcs           | The test draws exclusively `arc` shapes using `ctx.fillOuterStrokeArc`.
  * | Count                  | multi-5        | The test draws 5 instances in a loop for the visual regression case.
  * | SizeCategory           | mixed          | The radius is randomized in `[15, 65)`, which spans the S and M size categories for circles.
  * | FillStyle              | opaque         | `fillStyle` is set via `getRandomColor()` which produces a fully opaque color. A fill is applied.
@@ -86,12 +86,12 @@ function drawTest(ctx, currentIterationNumber, instances = null) {
         ctx.strokeStyle = strokeColor;
         ctx.lineWidth = strokeWidth;
 
-        // Use fillAndOuterStrokeArc as both fill and stroke are defined with random colors
-        ctx.fillAndOuterStrokeArc(drawCenterX, drawCenterY, radius, startAngleRad, endAngleRad, false);
+        // Use fillOuterStrokeArc as both fill and stroke are defined with random colors
+        ctx.fillOuterStrokeArc(drawCenterX, drawCenterY, radius, startAngleRad, endAngleRad, false);
 
         if (!isPerformanceRun) {
             logs.push(
-                `RandArc ${i+1}: center=(${center.x.toFixed(1)},${center.y.toFixed(1)}), r=${radius.toFixed(1)}, ang=(${startAngleDeg.toFixed(0)}\u00B0,${endAngleDeg.toFixed(0)}\u00B0), sw=${strokeWidth.toFixed(1)}`
+                `RandArc ${i + 1}: center=(${center.x.toFixed(1)},${center.y.toFixed(1)}), r=${radius.toFixed(1)}, ang=(${startAngleDeg.toFixed(0)}\u00B0,${endAngleDeg.toFixed(0)}\u00B0), sw=${strokeWidth.toFixed(1)}`
             );
         }
     }

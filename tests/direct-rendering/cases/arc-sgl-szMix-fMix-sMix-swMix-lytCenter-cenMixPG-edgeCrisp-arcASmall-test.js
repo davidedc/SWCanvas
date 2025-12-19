@@ -9,7 +9,7 @@
  *
  * | Facet                  | Value          | Reason
  * |------------------------|----------------|-----------------------------------------------------------------------------------------------------
- * | Shape category         | arcs           | The test draws arc slices using fillAndOuterStrokeArc.
+ * | Shape category         | arcs           | The test draws arc slices using fillOuterStrokeArc.
  * | Count                  | single         | The test draws one arc instance.
  * | SizeCategory           | mixed          | Radius randomized in [20, 80] range.
  * | FillStyle              | mixed          | Fill is randomly opaque, semitransparent, or none.
@@ -105,7 +105,7 @@ registerDirectRenderingTest(
             ctx.fillStyle = fillColor;
             ctx.strokeStyle = strokeColor;
             ctx.lineWidth = strokeWidth;
-            ctx.fillAndOuterStrokeArc(centerX, centerY, radius, startAngle, endAngle);
+            ctx.fillOuterStrokeArc(centerX, centerY, radius, startAngle, endAngle);
         } else if (hasFill) {
             ctx.fillStyle = fillColor;
             ctx.fillArc(centerX, centerY, radius, startAngle, endAngle);

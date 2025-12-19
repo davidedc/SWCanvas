@@ -3,7 +3,7 @@
  * Follows CircleOps/PolygonFiller pattern with static methods.
  *
  * Direct rendering is available exclusively via dedicated Context2D methods:
- * fillArc(), outerStrokeArc(), fillAndOuterStrokeArc()
+ * fillArc(), outerStrokeArc(), fillOuterStrokeArc()
  *
  * Path-based arcs (beginPath() + arc() + fill()/stroke()) use the
  * generic polygon pipeline for consistent, predictable behavior.
@@ -555,7 +555,7 @@ class ArcOps {
 
         const packedColor = Surface.packColor(color.r, color.g, color.b, 255);
 
-        // Use floating-point center like CircleOps.fillAndStroke() for correct boundaries
+        // Use floating-point center like CircleOps.fillStroke() for correct boundaries
         const cX = cx - 0.5;
         const cY = cy - 0.5;
 
@@ -658,7 +658,7 @@ class ArcOps {
         const invAlpha = 1 - effectiveAlpha;
         const r = color.r, g = color.g, b = color.b;
 
-        // Use floating-point center like CircleOps.fillAndStroke() for correct boundaries
+        // Use floating-point center like CircleOps.fillStroke() for correct boundaries
         const cX = cx - 0.5;
         const cY = cy - 0.5;
 
@@ -764,7 +764,7 @@ class ArcOps {
 
     /**
      * Fill and stroke an arc in a unified pass using sqrt-based analytical boundaries.
-     * Mirrors CircleOps.fillAndStroke() approach to prevent speckles between fill and stroke.
+     * Mirrors CircleOps.fillStroke() approach to prevent speckles between fill and stroke.
      * Uses epsilon contraction on fill boundaries to ensure clean fill/stroke interface.
      * @param {Surface} surface - Target surface
      * @param {number} cx - Center X
@@ -791,7 +791,7 @@ class ArcOps {
 
         if (!hasFill && !hasStroke) return;
 
-        // Single floating-point center for both fill and stroke (CircleOps.fillAndStroke approach)
+        // Single floating-point center for both fill and stroke (CircleOps.fillStroke approach)
         const cX = cx - 0.5;
         const cY = cy - 0.5;
 

@@ -9,7 +9,7 @@
  *
  * | Facet                  | Value          | Reason
  * |------------------------|----------------|----------------------------------------------------------------------------------------------------------------------------------
- * | Shape category         | rounded-rects  | The test draws rounded rectangles using `ctx.fillAndStrokeRoundRect()` (unified method to prevent speckles).
+ * | Shape category         | rounded-rects  | The test draws rounded rectangles using `ctx.fillStrokeRoundRect()` (unified method to prevent speckles).
  * | Count                  | multi-10       | The test draws 10 instances in a loop for visual regression.
  * | SizeCategory           | mixed          | `width` and `height` are randomized in `[50, 150]`, which spans 'M' (40-79px) and 'L' (80-159px) size categories.
  * | FillStyle              | semitransparent| `fillColorObj` is created via `getRandomColor("semitransparent")`, resulting in an alpha channel between 100-200.
@@ -100,8 +100,8 @@ function drawTest(ctx, currentIterationNumber, instances = null) {
         ctx.strokeStyle = strokeColorStr;
         ctx.lineWidth = 1; // Fixed 1px stroke
 
-        // Use unified fillAndStrokeRoundRect
-        ctx.fillAndStrokeRoundRect(geomX, geomY, width, height, radius);
+        // Use unified fillStrokeRoundRect
+        ctx.fillStrokeRoundRect(geomX, geomY, width, height, radius);
 
         if (!isPerformanceRun) {
             logs.push(
