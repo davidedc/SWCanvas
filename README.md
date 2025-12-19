@@ -39,6 +39,10 @@ SWCanvas focuses on deterministic 2D graphics primitives and does not implement 
 
 For animations beyond very basic drawings, expect significant performance limitations. The rendering engine uses CPU-based pixel manipulation in Javascript without GPU acceleration, making it unsuitable for intensive animated content.
 
+### Related Projects
+
+For a **minimal implementation** containing only transformations, basic shapes via direct drawing, and clipping (without the full path-based pipeline), see [Minimal-2D-Js-Software-Renderer](https://github.com/davidedc/Minimal-2D-Js-Software-Renderer). This proof-of-concept project demonstrates the core direct-rendering approach with a significantly smaller codebase.
+
 ## Quick Start
 
 ### Building
