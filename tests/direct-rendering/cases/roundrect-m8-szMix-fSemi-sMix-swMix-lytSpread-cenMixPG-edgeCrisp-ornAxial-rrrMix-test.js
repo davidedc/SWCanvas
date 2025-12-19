@@ -105,8 +105,8 @@ function drawTest(ctx, currentIterationNumber, instances = null) {
             geomX = Math.random() * Math.max(0, canvasWidth - finalRectWidth);
             geomY = Math.random() * Math.max(0, canvasHeight - finalRectHeight);
         } else if (!isPerformanceRun) { // For visual regression (numToDraw = 8), ensure shapes are reasonably on canvas
-            geomX = Math.max(0 - finalRectWidth / 4, Math.min(geomX, canvasWidth - finalRectWidth * 3/4));
-            geomY = Math.max(0 - finalRectHeight / 4, Math.min(geomY, canvasHeight - finalRectHeight* 3/4));
+            geomX = Math.max(0 - finalRectWidth / 4, Math.min(geomX, canvasWidth - finalRectWidth * 3 / 4));
+            geomY = Math.max(0 - finalRectHeight / 4, Math.min(geomY, canvasHeight - finalRectHeight * 3 / 4));
         }
 
         ctx.fillStyle = fillColorStr;
@@ -118,7 +118,7 @@ function drawTest(ctx, currentIterationNumber, instances = null) {
 
         if (!isPerformanceRun) {
             logs.push(
-                `AxAlignedRRect ${i+1}: center=(${finalCenter.x.toFixed(1)},${finalCenter.y.toFixed(1)}), W/H=(${finalRectWidth},${finalRectHeight}), r=${radius}, sw=${strokeWidth.toFixed(1)}`
+                `AxAlignedRRect ${i + 1}: center=(${finalCenter.x.toFixed(1)},${finalCenter.y.toFixed(1)}), W/H=(${finalRectWidth},${finalRectHeight}), r=${radius}, sw=${strokeWidth.toFixed(1)}`
             );
         }
     }

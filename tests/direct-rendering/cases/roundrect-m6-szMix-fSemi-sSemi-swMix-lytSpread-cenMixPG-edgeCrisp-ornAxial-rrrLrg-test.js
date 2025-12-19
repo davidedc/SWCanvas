@@ -114,7 +114,7 @@ function drawTest(ctx, currentIterationNumber, instances = null) {
 
         if (!isPerformanceRun) {
             logs.push(
-                `LargeTransRRect ${i+1}: center=(${finalCenter.x.toFixed(1)},${finalCenter.y.toFixed(1)}), W/H=(${finalRectWidth},${finalRectHeight}), r=${fixedRadius}, sw=${strokeWidth.toFixed(1)}`
+                `LargeTransRRect ${i + 1}: center=(${finalCenter.x.toFixed(1)},${finalCenter.y.toFixed(1)}), W/H=(${finalRectWidth},${finalRectHeight}), r=${fixedRadius}, sw=${strokeWidth.toFixed(1)}`
             );
         }
     }

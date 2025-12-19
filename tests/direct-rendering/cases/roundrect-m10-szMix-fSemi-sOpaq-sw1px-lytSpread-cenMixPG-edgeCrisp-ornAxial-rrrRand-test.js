@@ -92,8 +92,8 @@ function drawTest(ctx, currentIterationNumber, instances = null) {
                 geomY = Math.random() * Math.max(0, canvasHeight - height);
             }
         } else { // For visual regression, ensure shapes are reasonably on canvas
-            geomX = Math.max(0 - width/4, Math.min(geomX, canvasWidth - width*3/4));
-            geomY = Math.max(0 - height/4, Math.min(geomY, canvasHeight - height*3/4));
+            geomX = Math.max(0 - width / 4, Math.min(geomX, canvasWidth - width * 3 / 4));
+            geomY = Math.max(0 - height / 4, Math.min(geomY, canvasHeight - height * 3 / 4));
         }
 
         ctx.fillStyle = fillColorStr;
@@ -105,7 +105,7 @@ function drawTest(ctx, currentIterationNumber, instances = null) {
 
         if (!isPerformanceRun) {
             logs.push(
-                `ThinRRect ${i+1}: adjCenter=(${adjustedCenter.x.toFixed(1)},${adjustedCenter.y.toFixed(1)}), W/H=(${width},${height}), r=${radius}`
+                `ThinRRect ${i + 1}: adjCenter=(${adjustedCenter.x.toFixed(1)},${adjustedCenter.y.toFixed(1)}), W/H=(${width},${height}), r=${radius}`
             );
         }
     }
