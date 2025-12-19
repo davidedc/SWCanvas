@@ -26,7 +26,7 @@ SWCanvas resolves these competing paradigms through a three-layer architecture:
 
 ### Layer 1: Core Engine (Performance)
 ```
-# Shared primitives (from ../SWCanvas-primitives/ sibling repo)
+# Core Primitives (src/)
 Transform2D.js      → Immutable transformation mathematics
 Color.js            → Immutable color handling
 ColorParser.js      → CSS color string parsing

@@ -25,7 +25,16 @@ class ClipMask {
         Object.defineProperty(this, 'width', { value: width, writable: false });
         Object.defineProperty(this, 'height', { value: height, writable: false });
     }
-    
+
+    /**
+     * Direct buffer access for hot-loop optimizations (dual-access pattern).
+     * Use this for performance-critical code that needs direct bitwise operations.
+     * @returns {Uint8Array} The raw bit buffer
+     */
+    get buffer() {
+        return this._bitBuffer._buffer;
+    }
+
     /**
      * Get clip state for a pixel
      * @param {number} x - X coordinate

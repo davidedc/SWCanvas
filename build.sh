@@ -25,13 +25,13 @@ EOF
 
 # Concatenate source files in dependency order
 # Phase 1: Core Foundation classes (no dependencies)
-cat ../SWCanvas-primitives/Color.js >> dist/swcanvas.js
+cat src/Color.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
 cat src/Point.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
 cat src/Rectangle.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
-cat ../SWCanvas-primitives/Transform2D.js >> dist/swcanvas.js
+cat src/Transform2D.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
 cat src/SWPath2D.js >> dist/swcanvas.js  
 echo "" >> dist/swcanvas.js
@@ -71,11 +71,11 @@ cat src/PolygonFiller.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
 cat src/StrokeGenerator.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
-cat ../SWCanvas-primitives/BitBuffer.js >> dist/swcanvas.js
+cat src/BitBuffer.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
 cat src/BoundsTracker.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
-cat ../SWCanvas-primitives/ClipMask.js >> dist/swcanvas.js
+cat src/ClipMask.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
 cat src/SourceMask.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
@@ -85,7 +85,7 @@ cat src/BoxBlur.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
 cat src/ImageProcessor.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
-cat ../SWCanvas-primitives/ColorParser.js >> dist/swcanvas.js
+cat src/ColorParser.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
 
 # Phase 2.5: Paint sources (depend on foundation + ColorParser)

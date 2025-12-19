@@ -30,10 +30,10 @@ Refer to README.md for detailed usage examples and ARCHITECTURE.md for design ra
 
 ### Core Components
 ```
-# Shared Primitives (from ../SWCanvas-primitives/ sibling repo)
-../SWCanvas-primitives/Transform2D.js  # Immutable transformation matrix mathematics
-../SWCanvas-primitives/Color.js        # Immutable color handling with premultiplied alpha
-../SWCanvas-primitives/ColorParser.js  # CSS color string parsing (hex, rgb, named colors)
+# Core Primitives
+src/Transform2D.js    # Immutable transformation matrix mathematics
+src/Color.js          # Immutable color handling with premultiplied alpha
+src/ColorParser.js    # CSS color string parsing (hex, rgb, named colors)
 
 # Core Rendering Engine (SWCanvas.Core.*)
 src/Context2D.js              # Core 2D rendering context (explicit RGBA API)
