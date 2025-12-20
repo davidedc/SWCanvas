@@ -49,7 +49,7 @@ class Rasterizer {
         this._currentOp = {
             composite: params.composite || 'source-over',
             globalAlpha: params.globalAlpha !== undefined ? params.globalAlpha : 1.0,
-            transform: params.transform || new Transform2D(),
+            transform: params.transform || Transform2D.IDENTITY,
             clipMask: params.clipMask || null,  // Stencil-based clipping
             fillStyle: params.fillStyle || null,
             strokeStyle: params.strokeStyle || null,

@@ -57,7 +57,7 @@ class Context2D {
         // Current state
         this.globalAlpha = 1.0;
         this.globalCompositeOperation = 'source-over';
-        this._transform = new Transform2D();
+        this._transform = Transform2D.IDENTITY;
         this._fillStyle = new Color(0, 0, 0, 255); // Black
         this._strokeStyle = new Color(0, 0, 0, 255); // Black
 
@@ -171,7 +171,7 @@ class Context2D {
     }
 
     resetTransform() {
-        this._transform = new Transform2D();
+        this._transform = Transform2D.IDENTITY;
     }
 
     // Convenience transform methods - all post-multiply per HTML5 Canvas spec
@@ -2002,7 +2002,7 @@ class Context2D {
             this.arc(cx, cy, radius, 0, Math.PI * 2);
             // Temporarily set identity transform since we already transformed
             const savedTransform = this._transform;
-            this._transform = new Transform2D();
+            this._transform = Transform2D.IDENTITY;
             this.fill();
             this._transform = savedTransform;
         }
@@ -2041,7 +2041,7 @@ class Context2D {
         this.beginPath();
         this.arc(cx, cy, radius, 0, Math.PI * 2);
         const savedTransform = this._transform;
-        this._transform = new Transform2D();
+        this._transform = Transform2D.IDENTITY;
         const savedLineWidth = this._lineWidth;
         this._lineWidth = lineWidth;
         this.stroke();
@@ -2085,7 +2085,7 @@ class Context2D {
             this.moveTo(x1, y1);
             this.lineTo(x2, y2);
             const savedTransform = this._transform;
-            this._transform = new Transform2D();
+            this._transform = Transform2D.IDENTITY;
             const savedLineWidth = this._lineWidth;
             this._lineWidth = lineWidth;
             this.stroke();

@@ -50,25 +50,28 @@ class Transform2D {
      * @returns {Transform2D} Translation transformation
      */
     static translation(x, y) {
+        if (x === 0 && y === 0) return Transform2D.IDENTITY;
         return new Transform2D([1, 0, 0, 1, x, y]);
     }
-    
+
     /**
      * Create scaling transform
      * @param {number} sx - X scale factor
-     * @param {number} sy - Y scale factor  
+     * @param {number} sy - Y scale factor
      * @returns {Transform2D} Scaling transformation
      */
     static scaling(sx, sy) {
+        if (sx === 1 && sy === 1) return Transform2D.IDENTITY;
         return new Transform2D([sx, 0, 0, sy, 0, 0]);
     }
-    
+
     /**
      * Create rotation transform
      * @param {number} angleInRadians - Rotation angle in radians
      * @returns {Transform2D} Rotation transformation
      */
     static rotation(angleInRadians) {
+        if (angleInRadians === 0) return Transform2D.IDENTITY;
         const cos = Math.cos(angleInRadians);
         const sin = Math.sin(angleInRadians);
         return new Transform2D([cos, sin, -sin, cos, 0, 0]);
@@ -83,7 +86,11 @@ class Transform2D {
         if (!(other instanceof Transform2D)) {
             throw new Error('Can only multiply with another Transform2D');
         }
-        
+
+        // Short-circuit: identity * X = X, X * identity = X
+        if (this.isIdentity) return other;
+        if (other.isIdentity) return this;
+
         return new Transform2D([
             this.a * other.a + this.c * other.b,
             this.b * other.a + this.d * other.b,
@@ -101,8 +108,8 @@ class Transform2D {
      * @returns {Transform2D} New transformed matrix
      */
     translate(x, y) {
-        const t = Transform2D.translation(x, y);
-        return this.multiply(t);
+        if (x === 0 && y === 0) return this;
+        return this.multiply(Transform2D.translation(x, y));
     }
 
     /**
@@ -112,8 +119,8 @@ class Transform2D {
      * @returns {Transform2D} New transformed matrix
      */
     scale(sx, sy) {
-        const s = Transform2D.scaling(sx, sy);
-        return this.multiply(s);
+        if (sx === 1 && sy === 1) return this;
+        return this.multiply(Transform2D.scaling(sx, sy));
     }
 
     /**
@@ -122,8 +129,8 @@ class Transform2D {
      * @returns {Transform2D} New transformed matrix
      */
     rotate(angleInRadians) {
-        const r = Transform2D.rotation(angleInRadians);
-        return this.multiply(r);
+        if (angleInRadians === 0) return this;
+        return this.multiply(Transform2D.rotation(angleInRadians));
     }
 
     /**
@@ -185,7 +192,10 @@ class Transform2D {
      * @returns {boolean} True if identity
      */
     get isIdentity() {
-        return this.a === 1 && this.b === 0 && this.c === 0 && 
+        // Fast path: reference equality with cached identity
+        if (this === Transform2D.IDENTITY) return true;
+        // Fallback: component equality (for transforms created with [1,0,0,1,0,0])
+        return this.a === 1 && this.b === 0 && this.c === 0 &&
                this.d === 1 && this.e === 0 && this.f === 0;
     }
     
@@ -256,4 +266,7 @@ class Transform2D {
         return `Transform2D([${this.a}, ${this.b}, ${this.c}, ${this.d}, ${this.e}, ${this.f}])`;
     }
 }
+
+// Cache the identity matrix - immutable, so safe to share
+Transform2D.IDENTITY = new Transform2D();
 

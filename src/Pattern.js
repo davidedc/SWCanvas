@@ -26,7 +26,7 @@ class Pattern {
         this._repetition = repetition;
 
         // Pattern-specific transform (initially identity)
-        this._patternTransform = new Transform2D();
+        this._patternTransform = Transform2D.IDENTITY;
 
         Object.freeze(this);
     }
