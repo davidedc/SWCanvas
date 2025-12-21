@@ -109,7 +109,7 @@ class ClipMask {
     createPixelWriter() {
         return (x, y, coverage) => {
             // Bounds checking
-            if (x < 0 || x >= this._width || y < 0 || y >= this._height) return;
+            if (x < 0 || x >= this.width || y < 0 || y >= this.height) return;
             
             // Convert coverage to binary: >0.5 means inside, <=0.5 means outside
             const isInside = coverage > 0.5;
