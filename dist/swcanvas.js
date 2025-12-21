@@ -2,6 +2,103 @@
 'use strict';
 
 /**
+ * Centralized constants for SWCanvas.
+ * Loaded first in build order - available to all modules.
+ *
+ * DESIGN PRINCIPLE:
+ * The purpose of extracting magic numbers is to give semantic meaning to values
+ * that would otherwise be opaque. A constant should answer "what is this value's
+ * PURPOSE?" not just "what is this value?"
+ *
+ * Examples:
+ * - FILL_EPSILON = 0.0001      → Good: the name explains WHY this threshold exists
+ * - TAU = 2 * Math.PI          → Good: represents "one full turn", a distinct concept
+ * - PI = Math.PI               → Bad: just an alias, Math.PI is already perfectly clear
+ *
+ * We intentionally use Math.PI directly throughout the codebase because it is
+ * universally recognized, self-documenting JavaScript.
+ */
+class SWCanvasConstants {
+    // ═══════════════════════════════════════════════════════════════════════
+    // CORE GEOMETRY CONSTANTS
+    // ═══════════════════════════════════════════════════════════════════════
+
+    /** Floating-point near-zero threshold for degenerate case detection */
+    static FLOAT_EPSILON = 1e-10;
+
+    /** Epsilon for axis-aligned detection in transforms (~0.057 degrees) */
+    static TRANSFORM_EPSILON = 0.0001;
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // ANGLE CONSTANTS (radians)
+    // ═══════════════════════════════════════════════════════════════════════
+
+    /** Full circle: 2π radians (360°) */
+    static TAU = 2 * Math.PI;
+
+    /** Quarter turn: π/2 radians (90°) */
+    static HALF_PI = Math.PI / 2;
+
+    /** Three-quarter turn: 3π/2 radians (270°) */
+    static THREE_HALF_PI = 1.5 * Math.PI;
+
+    /** Eighth turn: π/4 radians (45°) */
+    static QUARTER_PI = Math.PI / 4;
+
+    /** Degrees to radians conversion factor: π/180 */
+    static DEG_TO_RAD = Math.PI / 180;
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // RENDERING TOLERANCES
+    // ═══════════════════════════════════════════════════════════════════════
+
+    /** Epsilon for fill boundary contraction to prevent speckles */
+    static FILL_EPSILON = 0.0001;
+
+    /** Tolerance for detecting effective 1px strokes */
+    static STROKE_1PX_TOLERANCE = 0.001;
+
+    /** Tolerance for axis-aligned rotation detection */
+    static ANGLE_TOLERANCE = 0.001;
+
+    /** Minimum edge length worth processing */
+    static MIN_EDGE_LENGTH = 0.5;
+
+    /** Minimum edge length squared (for distance comparisons) */
+    static MIN_EDGE_LENGTH_SQUARED = 0.25;
+
+    /** Curve flattening tolerance for deterministic behavior */
+    static PATH_FLATTENING_TOLERANCE = 0.25;
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // LINE/STROKE THRESHOLDS
+    // ═══════════════════════════════════════════════════════════════════════
+
+    /** Threshold for thin line vs thick line rendering */
+    static THIN_LINE_THRESHOLD = 1.5;
+
+    /** Default miter limit ratio */
+    static DEFAULT_MITER_LIMIT = 10.0;
+}
+
+// File-scope aliases for zero-overhead access (inlined by JIT compilers)
+const FLOAT_EPSILON = SWCanvasConstants.FLOAT_EPSILON;
+const TRANSFORM_EPSILON = SWCanvasConstants.TRANSFORM_EPSILON;
+const TAU = SWCanvasConstants.TAU;
+const HALF_PI = SWCanvasConstants.HALF_PI;
+const THREE_HALF_PI = SWCanvasConstants.THREE_HALF_PI;
+const QUARTER_PI = SWCanvasConstants.QUARTER_PI;
+const DEG_TO_RAD = SWCanvasConstants.DEG_TO_RAD;
+const FILL_EPSILON = SWCanvasConstants.FILL_EPSILON;
+const STROKE_1PX_TOLERANCE = SWCanvasConstants.STROKE_1PX_TOLERANCE;
+const ANGLE_TOLERANCE = SWCanvasConstants.ANGLE_TOLERANCE;
+const MIN_EDGE_LENGTH = SWCanvasConstants.MIN_EDGE_LENGTH;
+const MIN_EDGE_LENGTH_SQUARED = SWCanvasConstants.MIN_EDGE_LENGTH_SQUARED;
+const PATH_FLATTENING_TOLERANCE = SWCanvasConstants.PATH_FLATTENING_TOLERANCE;
+const THIN_LINE_THRESHOLD = SWCanvasConstants.THIN_LINE_THRESHOLD;
+const DEFAULT_MITER_LIMIT = SWCanvasConstants.DEFAULT_MITER_LIMIT;
+
+/**
  * Color class for SWCanvas
  *
  * Encapsulates color operations, conversions, and alpha blending math.
@@ -562,7 +659,7 @@ class Point {
      * @param {number} tolerance - Tolerance for floating point comparison
      * @returns {boolean} True if points are equal within tolerance
      */
-    equals(other, tolerance = 1e-10) {
+    equals(other, tolerance = FLOAT_EPSILON) {
         return other instanceof Point &&
                Math.abs(this._x - other._x) < tolerance &&
                Math.abs(this._y - other._y) < tolerance;
@@ -573,7 +670,7 @@ class Point {
      * @param {number} tolerance - Tolerance for floating point comparison
      * @returns {boolean} True if point is at origin
      */
-    isOrigin(tolerance = 1e-10) {
+    isOrigin(tolerance = FLOAT_EPSILON) {
         return Math.abs(this._x) < tolerance && Math.abs(this._y) < tolerance;
     }
     
@@ -760,13 +857,11 @@ class Transform2D {
 
         // Pre-compute decomposition values using matrix-based axis detection
         // This avoids sqrt/atan2 for 90% of common cases (simple scaling/translation)
-        // EPSILON: Threshold for treating matrix components as zero during axis detection.
-        // Value 0.0001 balances numerical precision with tolerance for floating-point errors.
-        const EPSILON = 0.0001;
+        // Uses TRANSFORM_EPSILON from SWCanvasConstants for axis detection threshold
 
         // 1. Check for Axis Alignment (0° or 180°)
         // Most common case: Simple scaling/translation where b=0, c=0
-        if (Math.abs(this.b) < EPSILON && Math.abs(this.c) < EPSILON) {
+        if (Math.abs(this.b) < TRANSFORM_EPSILON && Math.abs(this.c) < TRANSFORM_EPSILON) {
             this.isAxisAligned = true;
             this.is90DegreeRotated = false; // No dimension swap needed
             this.scaleX = Math.abs(this.a); // No sqrt needed
@@ -775,12 +870,12 @@ class Transform2D {
         }
         // 2. Check for Perpendicular Alignment (90° or 270°)
         // Second common case: 90° rotation where a=0, d=0
-        else if (Math.abs(this.a) < EPSILON && Math.abs(this.d) < EPSILON) {
+        else if (Math.abs(this.a) < TRANSFORM_EPSILON && Math.abs(this.d) < TRANSFORM_EPSILON) {
             this.isAxisAligned = true;
             this.is90DegreeRotated = true; // Dimension swap needed
             this.scaleX = Math.abs(this.b); // No sqrt needed
             this.scaleY = Math.abs(this.c); // No sqrt needed
-            this.rotationAngle = (this.b > 0) ? Math.PI / 2 : -Math.PI / 2;
+            this.rotationAngle = (this.b > 0) ? HALF_PI : -HALF_PI;
         }
         // 3. Complex Rotation / Skew - fallback to trig
         else {
@@ -794,12 +889,12 @@ class Transform2D {
         // Pre-compute scaled line width factor (geometric mean of scales)
         this.scaledLineWidthFactor = Math.max(
             Math.sqrt(this.scaleX * this.scaleY),
-            0.0001
+            TRANSFORM_EPSILON
         );
 
         // Pre-compute uniform scale check: a=d, b=-c (rotation + uniform scale)
-        this.isUniformScale = Math.abs(this.a - this.d) < EPSILON &&
-                              Math.abs(this.b + this.c) < EPSILON;
+        this.isUniformScale = Math.abs(this.a - this.d) < TRANSFORM_EPSILON &&
+                              Math.abs(this.b + this.c) < TRANSFORM_EPSILON;
 
         // Make transformation immutable
         Object.freeze(this);
@@ -903,7 +998,7 @@ class Transform2D {
     invert() {
         const det = this.a * this.d - this.b * this.c;
         
-        if (Math.abs(det) < 1e-10) {
+        if (Math.abs(det) < FLOAT_EPSILON) {
             throw new Error('Transform2D matrix is not invertible (determinant ≈ 0)');
         }
         
@@ -990,7 +1085,7 @@ class Transform2D {
      * @param {number} tolerance - Floating point tolerance
      * @returns {boolean} True if transforms are equal within tolerance
      */
-    equals(other, tolerance = 1e-10) {
+    equals(other, tolerance = FLOAT_EPSILON) {
         return other instanceof Transform2D &&
                Math.abs(this.a - other.a) < tolerance &&
                Math.abs(this.b - other.b) < tolerance &&
@@ -2138,23 +2233,20 @@ class RectOps {
         }
     }
 
-    // Angle tolerance for axis-aligned detection (~0.057 degrees)
-    static ANGLE_TOLERANCE = 0.001;
-
     /**
      * Check if rotation angle is near axis-aligned (0°, 90°, 180°, 270°)
      * @param {number} angle - Rotation angle in radians
      * @returns {boolean} True if near axis-aligned
      */
     static isNearAxisAligned(angle) {
-        const tolerance = RectOps.ANGLE_TOLERANCE;
-        const normalized = ((angle % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+        const tolerance = ANGLE_TOLERANCE;
+        const normalized = ((angle % TAU) + TAU) % TAU;
         return (
             Math.abs(normalized) < tolerance ||
-            Math.abs(normalized - Math.PI / 2) < tolerance ||
+            Math.abs(normalized - HALF_PI) < tolerance ||
             Math.abs(normalized - Math.PI) < tolerance ||
-            Math.abs(normalized - 3 * Math.PI / 2) < tolerance ||
-            Math.abs(normalized - 2 * Math.PI) < tolerance
+            Math.abs(normalized - THREE_HALF_PI) < tolerance ||
+            Math.abs(normalized - TAU) < tolerance
         );
     }
 
@@ -2166,10 +2258,10 @@ class RectOps {
      * @returns {{adjustedWidth: number, adjustedHeight: number}} Adjusted dimensions
      */
     static getRotatedDimensions(width, height, angle) {
-        const tolerance = RectOps.ANGLE_TOLERANCE;
-        const normalized = ((angle % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
-        if (Math.abs(normalized - Math.PI / 2) < tolerance ||
-            Math.abs(normalized - 3 * Math.PI / 2) < tolerance) {
+        const tolerance = ANGLE_TOLERANCE;
+        const normalized = ((angle % TAU) + TAU) % TAU;
+        if (Math.abs(normalized - HALF_PI) < tolerance ||
+            Math.abs(normalized - THREE_HALF_PI) < tolerance) {
             return { adjustedWidth: height, adjustedHeight: width };
         }
         return { adjustedWidth: width, adjustedHeight: height };
@@ -3424,7 +3516,7 @@ class CircleOps {
      * Optimized circle fill+stroke approach using:
      * - Uses single floating-point center (cx - 0.5) for both operations
      * - Uses analytical boundary detection (sqrt-based) instead of Bresenham extents
-     * - Uses epsilon contraction (0.0001) on fill boundaries to prevent speckles
+     * - Uses epsilon contraction (FILL_EPSILON) on fill boundaries to prevent speckles
      * - Renders fill first, then stroke on top (stroke covers any micro-gaps)
      *
      * @param {Surface} surface - Target surface
@@ -3509,8 +3601,8 @@ class CircleOps {
             if (hasFill && fillDistSquared >= 0) {
                 const fillXDist = Math.sqrt(fillDistSquared);
                 // Epsilon contraction to prevent speckles at boundary
-                leftFillX = Math.max(minX, Math.ceil(cX - fillXDist + 0.0001));
-                rightFillX = Math.min(maxX, Math.floor(cX + fillXDist - 0.0001));
+                leftFillX = Math.max(minX, Math.ceil(cX - fillXDist + FILL_EPSILON));
+                rightFillX = Math.min(maxX, Math.floor(cX + fillXDist - FILL_EPSILON));
             }
 
             // Calculate inner circle boundaries (stroke inner boundary)
@@ -3832,8 +3924,8 @@ class ArcOps {
      */
     static isAngleInRange(px, py, startAngle, endAngle) {
         let angle = Math.atan2(py, px);
-        if (angle < 0) angle += 2 * Math.PI;
-        if (angle < startAngle) angle += 2 * Math.PI;
+        if (angle < 0) angle += TAU;
+        if (angle < startAngle) angle += TAU;
         return angle >= startAngle && angle <= endAngle;
     }
 
@@ -3849,11 +3941,11 @@ class ArcOps {
         let start = startAngle;
         let end = endAngle;
 
-        // Normalize to [0, 2π) range
-        start = start % (2 * Math.PI);
-        if (start < 0) start += 2 * Math.PI;
-        end = end % (2 * Math.PI);
-        if (end < 0) end += 2 * Math.PI;
+        // Normalize to [0, TAU) range
+        start = start % TAU;
+        if (start < 0) start += TAU;
+        end = end % TAU;
+        if (end < 0) end += TAU;
 
         if (anticlockwise) {
             // Swap and adjust for anticlockwise
@@ -3864,7 +3956,7 @@ class ArcOps {
 
         // Ensure end > start
         if (end <= start) {
-            end += 2 * Math.PI;
+            end += TAU;
         }
 
         return { start, end };
@@ -4645,8 +4737,8 @@ class ArcOps {
             if (hasFill && fillDistSquared >= 0) {
                 const fillXDist = Math.sqrt(fillDistSquared);
                 // Epsilon contraction to prevent speckles at boundary (CircleOps approach)
-                leftFillX = Math.max(minX, Math.ceil(cX - fillXDist + 0.0001));
-                rightFillX = Math.min(maxX, Math.floor(cX + fillXDist - 0.0001));
+                leftFillX = Math.max(minX, Math.ceil(cX - fillXDist + FILL_EPSILON));
+                rightFillX = Math.min(maxX, Math.floor(cX + fillXDist - FILL_EPSILON));
             }
 
             // Calculate inner circle boundaries (stroke inner boundary)
@@ -4786,7 +4878,7 @@ class LineOps {
         const width = surface.width;
         const height = surface.height;
 
-        if (isOpaqueColor && lineWidth <= 1.5) {
+        if (isOpaqueColor && lineWidth <= THIN_LINE_THRESHOLD) {
             // Direct rendering for thin lines: Bresenham algorithm
             const packedColor = Surface.packColor(paintSource.r, paintSource.g, paintSource.b, 255);
             const data32 = surface.data32;
@@ -4880,7 +4972,7 @@ class LineOps {
                 LineOps._strokeThick_PolyScan(surface, x1, y1, x2, y2, lineWidth, paintSource, globalAlpha, clipBuffer, false);
                 return true;
             }
-        } else if (isSemiTransparentColor && lineWidth <= 1.5) {
+        } else if (isSemiTransparentColor && lineWidth <= THIN_LINE_THRESHOLD) {
             // Direct rendering for thin semitransparent lines: Bresenham with alpha blending
             const data = surface.data;
             const r = paintSource.r;
@@ -5304,14 +5396,14 @@ class RoundedRectOps {
             const start = RoundedRectOps._transform(edge.start.x, edge.start.y, centerX, centerY, cos, sin);
             const end = RoundedRectOps._transform(edge.end.x, edge.end.y, centerX, centerY, cos, sin);
             const dx = end.x - start.x, dy = end.y - start.y;
-            if (dx * dx + dy * dy < 0.25) continue;
+            if (dx * dx + dy * dy < MIN_EDGE_LENGTH_SQUARED) continue;
             RoundedRectOps._generateEdgePixels(start.x, start.y, end.x, end.y, recorder);
         }
         const corners = [
-            { cx: -hw + r, cy: -hh + r, startAngle: Math.PI, endAngle: Math.PI * 1.5 },
-            { cx: hw - r, cy: -hh + r, startAngle: Math.PI * 1.5, endAngle: Math.PI * 2 },
-            { cx: hw - r, cy: hh - r, startAngle: 0, endAngle: Math.PI * 0.5 },
-            { cx: -hw + r, cy: hh - r, startAngle: Math.PI * 0.5, endAngle: Math.PI }
+            { cx: -hw + r, cy: -hh + r, startAngle: Math.PI, endAngle: THREE_HALF_PI },
+            { cx: hw - r, cy: -hh + r, startAngle: THREE_HALF_PI, endAngle: TAU },
+            { cx: hw - r, cy: hh - r, startAngle: 0, endAngle: HALF_PI },
+            { cx: -hw + r, cy: hh - r, startAngle: HALF_PI, endAngle: Math.PI }
         ];
         for (const corner of corners) {
             const screenCenter = RoundedRectOps._transform(corner.cx, corner.cy, centerX, centerY, cos, sin);
@@ -5408,7 +5500,7 @@ class RoundedRectOps {
         const drawCorner = (cx, cy, startAngle, endAngle) => {
             const sr = radius - 0.5;
             // Use 1 degree steps for smooth corners
-            const angleStep = Math.PI / 180;
+            const angleStep = DEG_TO_RAD;
             for (let angle = startAngle; angle <= endAngle; angle += angleStep) {
                 const px = Math.floor(cx + sr * Math.cos(angle));
                 const py = Math.floor(cy + sr * Math.sin(angle));
@@ -5417,13 +5509,13 @@ class RoundedRectOps {
         };
 
         // Top-left corner (180° to 270°)
-        drawCorner(posX + radius, posY + radius, Math.PI, Math.PI * 3 / 2);
+        drawCorner(posX + radius, posY + radius, Math.PI, THREE_HALF_PI);
         // Top-right corner (270° to 360°)
-        drawCorner(posX + posW - radius, posY + radius, Math.PI * 3 / 2, Math.PI * 2);
+        drawCorner(posX + posW - radius, posY + radius, THREE_HALF_PI, TAU);
         // Bottom-right corner (0° to 90°)
-        drawCorner(posX + posW - radius, posY + posH - radius, 0, Math.PI / 2);
+        drawCorner(posX + posW - radius, posY + posH - radius, 0, HALF_PI);
         // Bottom-left corner (90° to 180°)
-        drawCorner(posX + radius, posY + posH - radius, Math.PI / 2, Math.PI);
+        drawCorner(posX + radius, posY + posH - radius, HALF_PI, Math.PI);
     }
 
     /**
@@ -5498,7 +5590,7 @@ class RoundedRectOps {
         // Collect corner arc pixels
         const collectCorner = (cx, cy, startAngle, endAngle) => {
             const sr = radius - 0.5;
-            const angleStep = Math.PI / 180;
+            const angleStep = DEG_TO_RAD;
             for (let angle = startAngle; angle <= endAngle; angle += angleStep) {
                 const px = Math.floor(cx + sr * Math.cos(angle));
                 const py = Math.floor(cy + sr * Math.sin(angle));
@@ -5506,10 +5598,10 @@ class RoundedRectOps {
             }
         };
 
-        collectCorner(posX + radius, posY + radius, Math.PI, Math.PI * 3 / 2);
-        collectCorner(posX + posW - radius, posY + radius, Math.PI * 3 / 2, Math.PI * 2);
-        collectCorner(posX + posW - radius, posY + posH - radius, 0, Math.PI / 2);
-        collectCorner(posX + radius, posY + posH - radius, Math.PI / 2, Math.PI);
+        collectCorner(posX + radius, posY + radius, Math.PI, THREE_HALF_PI);
+        collectCorner(posX + posW - radius, posY + radius, THREE_HALF_PI, TAU);
+        collectCorner(posX + posW - radius, posY + posH - radius, 0, HALF_PI);
+        collectCorner(posX + radius, posY + posH - radius, HALF_PI, Math.PI);
 
         // Render all unique pixels once with alpha blending
         for (const pixelIndex of strokePixels) {
@@ -5958,9 +6050,6 @@ class RoundedRectOps {
 
         const halfStroke = lineWidth / 2;
 
-        // Epsilon contraction for fill boundaries (same as CircleOps)
-        const FILL_EPSILON = 0.0001;
-
         // Use PATH coordinates as reference for fill
         const pathX = Math.floor(x);
         const pathY = Math.floor(y);
@@ -6255,17 +6344,17 @@ class RoundedRectOps {
             // Skip zero-length edges (radius = half width or height)
             const dx = end.x - start.x;
             const dy = end.y - start.y;
-            if (dx * dx + dy * dy < 0.25) continue;
+            if (dx * dx + dy * dy < MIN_EDGE_LENGTH_SQUARED) continue;
 
             RoundedRectOps._generateEdgePixels(start.x, start.y, end.x, end.y, recordPixel);
         }
 
         // Corner definitions (local center and angle range)
         const corners = [
-            { cx: -hw + radius, cy: -hh + radius, startAngle: Math.PI, endAngle: Math.PI * 1.5 },         // Top-left
-            { cx: hw - radius, cy: -hh + radius, startAngle: Math.PI * 1.5, endAngle: Math.PI * 2 },      // Top-right
-            { cx: hw - radius, cy: hh - radius, startAngle: 0, endAngle: Math.PI * 0.5 },                 // Bottom-right
-            { cx: -hw + radius, cy: hh - radius, startAngle: Math.PI * 0.5, endAngle: Math.PI }           // Bottom-left
+            { cx: -hw + radius, cy: -hh + radius, startAngle: Math.PI, endAngle: THREE_HALF_PI },         // Top-left
+            { cx: hw - radius, cy: -hh + radius, startAngle: THREE_HALF_PI, endAngle: TAU },      // Top-right
+            { cx: hw - radius, cy: hh - radius, startAngle: 0, endAngle: HALF_PI },                 // Bottom-right
+            { cx: -hw + radius, cy: hh - radius, startAngle: HALF_PI, endAngle: Math.PI }           // Bottom-left
         ];
 
         // Generate corner arc perimeter pixels
@@ -6383,16 +6472,16 @@ class RoundedRectOps {
             const end = RoundedRectOps._transform(edge.end.x, edge.end.y, centerX, centerY, cos, sin);
             const dx = end.x - start.x;
             const dy = end.y - start.y;
-            if (dx * dx + dy * dy < 0.25) continue;
+            if (dx * dx + dy * dy < MIN_EDGE_LENGTH_SQUARED) continue;
             RoundedRectOps._generateEdgePixels(start.x, start.y, end.x, end.y, recordPixel);
         }
 
         // Corner definitions
         const corners = [
-            { cx: -hw + radius, cy: -hh + radius, startAngle: Math.PI, endAngle: Math.PI * 1.5 },
-            { cx: hw - radius, cy: -hh + radius, startAngle: Math.PI * 1.5, endAngle: Math.PI * 2 },
-            { cx: hw - radius, cy: hh - radius, startAngle: 0, endAngle: Math.PI * 0.5 },
-            { cx: -hw + radius, cy: hh - radius, startAngle: Math.PI * 0.5, endAngle: Math.PI }
+            { cx: -hw + radius, cy: -hh + radius, startAngle: Math.PI, endAngle: THREE_HALF_PI },
+            { cx: hw - radius, cy: -hh + radius, startAngle: THREE_HALF_PI, endAngle: TAU },
+            { cx: hw - radius, cy: hh - radius, startAngle: 0, endAngle: HALF_PI },
+            { cx: -hw + radius, cy: hh - radius, startAngle: HALF_PI, endAngle: Math.PI }
         ];
 
         for (const corner of corners) {
@@ -6513,8 +6602,6 @@ class RoundedRectOps {
      * @param {Uint8Array|null} clipBuffer - Optional clip mask buffer
      */
     static fillStroke_Rot_Any(surface, centerX, centerY, width, height, radii, rotation, lineWidth, fillColor, strokeColor, globalAlpha, clipBuffer = null) {
-        const FILL_EPSILON = 0.0001;
-
         // Fill first (with slight contraction to prevent speckles at fill/stroke boundary)
         if (fillColor && fillColor.a > 0) {
             RoundedRectOps.fill_Rot_Any(
@@ -6593,7 +6680,7 @@ class RoundedRectOps {
             const dx = edge.end.x - edge.start.x;
             const dy = edge.end.y - edge.start.y;
             const edgeLength = Math.sqrt(dx * dx + dy * dy);
-            if (edgeLength < 0.5) continue;
+            if (edgeLength < MIN_EDGE_LENGTH) continue;
 
             LineOps.stroke_Any(
                 surface,
@@ -6616,10 +6703,10 @@ class RoundedRectOps {
         // - Bottom-left: (-hw+radius, hh-radius), angles: π/2 to π
 
         const corners = [
-            { localCx: -hw + radius, localCy: -hh + radius, startAngle: Math.PI, endAngle: Math.PI * 1.5 },         // Top-left
-            { localCx: hw - radius, localCy: -hh + radius, startAngle: Math.PI * 1.5, endAngle: Math.PI * 2 },      // Top-right
-            { localCx: hw - radius, localCy: hh - radius, startAngle: 0, endAngle: Math.PI * 0.5 },                 // Bottom-right
-            { localCx: -hw + radius, localCy: hh - radius, startAngle: Math.PI * 0.5, endAngle: Math.PI }           // Bottom-left
+            { localCx: -hw + radius, localCy: -hh + radius, startAngle: Math.PI, endAngle: THREE_HALF_PI },         // Top-left
+            { localCx: hw - radius, localCy: -hh + radius, startAngle: THREE_HALF_PI, endAngle: TAU },      // Top-right
+            { localCx: hw - radius, localCy: hh - radius, startAngle: 0, endAngle: HALF_PI },                 // Bottom-right
+            { localCx: -hw + radius, localCy: hh - radius, startAngle: HALF_PI, endAngle: Math.PI }           // Bottom-left
         ];
 
         // Draw 4 corner arcs
@@ -6711,7 +6798,7 @@ class RoundedRectOps {
             const dx = edge.end.x - edge.start.x;
             const dy = edge.end.y - edge.start.y;
             const edgeLength = Math.sqrt(dx * dx + dy * dy);
-            if (edgeLength < 0.5) continue;
+            if (edgeLength < MIN_EDGE_LENGTH) continue;
 
             let x1i = Math.floor(edge.start.x);
             let y1i = Math.floor(edge.start.y);
@@ -6756,10 +6843,10 @@ class RoundedRectOps {
 
         // Calculate 4 corner arc centers and angles
         const corners = [
-            { localCx: -hw + radius, localCy: -hh + radius, startAngle: Math.PI, endAngle: Math.PI * 1.5 },         // Top-left
-            { localCx: hw - radius, localCy: -hh + radius, startAngle: Math.PI * 1.5, endAngle: Math.PI * 2 },      // Top-right
-            { localCx: hw - radius, localCy: hh - radius, startAngle: 0, endAngle: Math.PI * 0.5 },                 // Bottom-right
-            { localCx: -hw + radius, localCy: hh - radius, startAngle: Math.PI * 0.5, endAngle: Math.PI }           // Bottom-left
+            { localCx: -hw + radius, localCy: -hh + radius, startAngle: Math.PI, endAngle: THREE_HALF_PI },         // Top-left
+            { localCx: hw - radius, localCy: -hh + radius, startAngle: THREE_HALF_PI, endAngle: TAU },      // Top-right
+            { localCx: hw - radius, localCy: hh - radius, startAngle: 0, endAngle: HALF_PI },                 // Bottom-right
+            { localCx: -hw + radius, localCy: hh - radius, startAngle: HALF_PI, endAngle: Math.PI }           // Bottom-left
         ];
 
         // Collect corner arc pixels using angle-based iteration (same as stroke1px_AA_OpaqExactEndpoints)
@@ -8591,7 +8678,7 @@ class PathFlattener {
     static _flattenQuadraticBezier(x0, y0, x1, y1, x2, y2) {
         const points = [{x: x0, y: y0}];
         PathFlattener._flattenQuadraticBezierRecursive(
-            x0, y0, x1, y1, x2, y2, points, PathFlattener.TOLERANCE
+            x0, y0, x1, y1, x2, y2, points, PATH_FLATTENING_TOLERANCE
         );
         return points;
     }
@@ -8648,7 +8735,7 @@ class PathFlattener {
     static _flattenCubicBezier(x0, y0, x1, y1, x2, y2, x3, y3) {
         const points = [{x: x0, y: y0}];
         PathFlattener._flattenCubicBezierRecursive(
-            x0, y0, x1, y1, x2, y2, x3, y3, points, PathFlattener.TOLERANCE
+            x0, y0, x1, y1, x2, y2, x3, y3, points, PATH_FLATTENING_TOLERANCE
         );
         return points;
     }
@@ -8726,15 +8813,15 @@ class PathFlattener {
         let end = endAngle;
         
         if (!counterclockwise && end < start) {
-            end += 2 * Math.PI;
+            end += TAU;
         } else if (counterclockwise && start < end) {
-            start += 2 * Math.PI;
+            start += TAU;
         }
         
         const totalAngle = Math.abs(end - start);
         
         // Calculate number of segments needed for tolerance
-        const maxAngleStep = 2 * Math.acos(Math.max(0, 1 - PathFlattener.TOLERANCE / radius));
+        const maxAngleStep = 2 * Math.acos(Math.max(0, 1 - PATH_FLATTENING_TOLERANCE / radius));
         const segments = Math.max(1, Math.ceil(totalAngle / maxAngleStep));
         
         const points = [];
@@ -8772,16 +8859,16 @@ class PathFlattener {
         let end = endAngle;
         
         if (!counterclockwise && end < start) {
-            end += 2 * Math.PI;
+            end += TAU;
         } else if (counterclockwise && start < end) {
-            start += 2 * Math.PI;
+            start += TAU;
         }
         
         const totalAngle = Math.abs(end - start);
         
         // Calculate number of segments - use smaller radius for tolerance calculation
         const minRadius = Math.min(radiusX, radiusY);
-        const maxAngleStep = 2 * Math.acos(Math.max(0, 1 - PathFlattener.TOLERANCE / minRadius));
+        const maxAngleStep = 2 * Math.acos(Math.max(0, 1 - PATH_FLATTENING_TOLERANCE / minRadius));
         const segments = Math.max(1, Math.ceil(totalAngle / maxAngleStep));
         
         const points = [];
@@ -8828,9 +8915,9 @@ class PathFlattener {
         let end = endAngle;
         
         if (!counterclockwise && end < start) {
-            end += 2 * Math.PI;
+            end += TAU;
         } else if (counterclockwise && start < end) {
-            start += 2 * Math.PI;
+            start += TAU;
         }
         
         const totalAngle = Math.abs(end - start);
@@ -8838,7 +8925,7 @@ class PathFlattener {
         // Calculate number of segments needed for tolerance with minimum segments for smooth curves
         const maxAngleStep = 2 * Math.acos(Math.max(0, 1 - tolerance / radius));
         const minSegmentsFor90Deg = 16; // Minimum segments for a 90-degree arc
-        const minSegments = Math.ceil((totalAngle / (Math.PI / 2)) * minSegmentsFor90Deg);
+        const minSegments = Math.ceil((totalAngle / (HALF_PI)) * minSegmentsFor90Deg);
         const toleranceSegments = Math.ceil(totalAngle / maxAngleStep);
         const segments = Math.max(1, Math.max(minSegments, toleranceSegments));
         
@@ -8906,7 +8993,7 @@ class PathFlattener {
         const len2 = Math.sqrt(v2.x * v2.x + v2.y * v2.y);
         
         // If any vectors are zero-length (P0==P1, or P1==P2): degrade to lineTo(x1, y1)
-        if (len1 < 1e-10 || len2 < 1e-10) {
+        if (len1 < FLOAT_EPSILON || len2 < FLOAT_EPSILON) {
             const targetPoint = new Point(x1, y1);
             currentPoly.push(targetPoint.toObject());
             return {
@@ -8930,7 +9017,7 @@ class PathFlattener {
         const turnAngle = Math.acos(clampedDot);
         
         // If the three points are collinear (turn angle is ~0° or ~180°): just lineTo(x1, y1)
-        if (Math.abs(Math.sin(turnAngle)) < 1e-10) {
+        if (Math.abs(Math.sin(turnAngle)) < FLOAT_EPSILON) {
             const targetPoint = new Point(x1, y1);
             currentPoly.push(targetPoint.toObject());
             return {
@@ -8991,7 +9078,7 @@ class PathFlattener {
         }
         
         // Generate arc points with higher precision for smooth curves
-        const arcTolerance = Math.min(0.1, PathFlattener.TOLERANCE); // Use finer tolerance for arcTo
+        const arcTolerance = Math.min(0.1, PATH_FLATTENING_TOLERANCE); // Use finer tolerance for arcTo
         const arcPoints = PathFlattener._flattenArcWithTolerance(
             center.x, center.y, radius,
             startAngle, endAngle,
@@ -9014,9 +9101,6 @@ class PathFlattener {
         };
     }
 }
-
-// Class constants
-PathFlattener.TOLERANCE = 0.25; // Fixed tolerance for deterministic behavior
 /**
  * PolygonFiller class for SWCanvas
  *
@@ -9251,7 +9335,7 @@ class PolygonFiller {
             const p2 = polygon[(i + 1) % polygon.length];
 
             // Skip horizontal edges (avoid division by zero)
-            if (Math.abs(p1.y - p2.y) < 1e-10) continue;
+            if (Math.abs(p1.y - p2.y) < FLOAT_EPSILON) continue;
 
             // Check if scanline crosses this edge
             const minY = Math.min(p1.y, p2.y);
@@ -9483,7 +9567,7 @@ class PolygonFiller {
     static isPointInPolygons(x, y, polygons, fillRule = 'nonzero') {
         if (polygons.length === 0) return false;
 
-        const epsilon = 1e-10;
+        const epsilon = FLOAT_EPSILON;
 
         // First check if point is exactly on any edge (HTML5 Canvas inclusive behavior)
         for (const polygon of polygons) {
@@ -9640,7 +9724,7 @@ class StrokeGenerator {
             lineWidth: 1.0,
             lineJoin: 'miter',
             lineCap: 'butt',
-            miterLimit: 10.0,
+            miterLimit: DEFAULT_MITER_LIMIT,
             lineDash: [],
             lineDashOffset: 0
         };
@@ -9885,8 +9969,8 @@ class StrokeGenerator {
      */
     static _isPathClosed(points) {
         return points.length > 2 && 
-               Math.abs(points[0].x - points[points.length - 1].x) < 1e-10 &&
-               Math.abs(points[0].y - points[points.length - 1].y) < 1e-10;
+               Math.abs(points[0].x - points[points.length - 1].x) < FLOAT_EPSILON &&
+               Math.abs(points[0].y - points[points.length - 1].y) < FLOAT_EPSILON;
     }
     
     /**
@@ -9905,7 +9989,7 @@ class StrokeGenerator {
             
             // Skip zero-length segments
             const length = p1.distanceTo(p2);
-            if (length < 1e-10) continue;
+            if (length < FLOAT_EPSILON) continue;
             
             const segment = StrokeGenerator._createSegment(p1, p2, halfWidth, length);
             segments.push(segment);
@@ -9987,7 +10071,7 @@ class StrokeGenerator {
         const cross = seg1.tangent.cross(seg2.tangent);
         
         // Check for 180-degree turn (parallel segments)
-        if (Math.abs(cross) < 1e-10) {
+        if (Math.abs(cross) < FLOAT_EPSILON) {
             return StrokeGenerator._generateBevelJoin(seg1, seg2, joinPoint);
         }
         
@@ -10141,9 +10225,9 @@ class StrokeGenerator {
         // Normalize angles to go the correct way around (from original implementation)
         let angleDiff = endAngle - startAngle;
         if (angleDiff > Math.PI) {
-            angleDiff -= 2 * Math.PI;
+            angleDiff -= TAU;
         } else if (angleDiff < -Math.PI) {
-            angleDiff += 2 * Math.PI;
+            angleDiff += TAU;
         }
         
         // We want to go the convex way (positive turn)
@@ -10155,7 +10239,7 @@ class StrokeGenerator {
             angleDiff = -angleDiff;
         }
         
-        const segments = Math.max(2, Math.ceil(angleDiff / (Math.PI / 4))); // At least 2 segments
+        const segments = Math.max(2, Math.ceil(angleDiff / (QUARTER_PI))); // At least 2 segments
         const angleStep = angleDiff / segments;
         
         const triangles = [];
@@ -10330,7 +10414,7 @@ class StrokeGenerator {
     static _lineIntersection(p1, p2, p3, p4) {
         const denom = (p1.x - p2.x) * (p3.y - p4.y) - (p1.y - p2.y) * (p3.x - p4.x);
         
-        if (Math.abs(denom) < 1e-10) {
+        if (Math.abs(denom) < FLOAT_EPSILON) {
             return null; // Lines are parallel
         }
         
@@ -10355,11 +10439,11 @@ class StrokeGenerator {
         let angleDiff = endAngle - startAngle;
         
         // Normalize angle difference
-        while (angleDiff > Math.PI) angleDiff -= 2 * Math.PI;
-        while (angleDiff < -Math.PI) angleDiff += 2 * Math.PI;
+        while (angleDiff > Math.PI) angleDiff -= TAU;
+        while (angleDiff < -Math.PI) angleDiff += TAU;
         
         const absAngle = Math.abs(angleDiff);
-        const segments = Math.max(2, Math.ceil(absAngle / (Math.PI / 4)));
+        const segments = Math.max(2, Math.ceil(absAngle / (QUARTER_PI)));
         const angleStep = angleDiff / segments;
         
         const triangles = [];
@@ -12709,14 +12793,14 @@ class ConicGradient extends Gradient {
 
         // Normalize angle to [0, 2π)
         while (pixelAngle < 0) {
-            pixelAngle += 2 * Math.PI;
+            pixelAngle += TAU;
         }
-        while (pixelAngle >= 2 * Math.PI) {
-            pixelAngle -= 2 * Math.PI;
+        while (pixelAngle >= TAU) {
+            pixelAngle -= TAU;
         }
 
         // Convert angle to parameter t [0, 1]
-        const t = pixelAngle / (2 * Math.PI);
+        const t = pixelAngle / (TAU);
 
         return this._getColorAt(t);
     }
@@ -13802,7 +13886,7 @@ class Context2D {
         this._lineWidth = 1.0;
         this.lineJoin = 'miter';  // 'miter', 'round', 'bevel'
         this.lineCap = 'butt';    // 'butt', 'round', 'square'
-        this.miterLimit = 10.0;
+        this.miterLimit = DEFAULT_MITER_LIMIT;
 
         // Line dash properties
         this._lineDash = [];         // Internal working dash pattern (may be duplicated)
@@ -14186,7 +14270,7 @@ class Context2D {
                 const tlX = center.x - finalW / 2;
                 const tlY = center.y - finalH / 2;
 
-                const is1pxStroke = Math.abs(scaledLineWidth - 1) < 0.001;
+                const is1pxStroke = Math.abs(scaledLineWidth - 1) < STROKE_1PX_TOLERANCE;
                 const isThickStroke = scaledLineWidth > 1;
 
                 if (is1pxStroke) {
@@ -14466,7 +14550,7 @@ class Context2D {
                 const center = t.transformPoint({ x: x + width / 2, y: y + height / 2 });
                 const scaledLineWidth = t.getScaledLineWidth(this._lineWidth);
                 const scaledRadius = radius * t.scaleX;
-                const is1pxStroke = Math.abs(scaledLineWidth - 1) < 0.001;
+                const is1pxStroke = Math.abs(scaledLineWidth - 1) < STROKE_1PX_TOLERANCE;
                 const isOpaque = this._strokeStyle.a === 255 && this.globalAlpha >= 1.0;
 
                 if (t.isIdentity) {
@@ -15099,7 +15183,7 @@ class Context2D {
             const p2 = polygon[(i + 1) % polygon.length];
 
             // Skip horizontal edges
-            if (Math.abs(p1.y - p2.y) < 1e-10) continue;
+            if (Math.abs(p1.y - p2.y) < FLOAT_EPSILON) continue;
 
             // Check if scanline crosses this edge
             const minY = Math.min(p1.y, p2.y);
@@ -15518,7 +15602,7 @@ class Context2D {
 
         if (isColor && isSourceOver && isButtCap) {
             const isOpaque = paintSource.a === 255 && this.globalAlpha >= 1.0;
-            const is1pxStroke = Math.abs(scaledLineWidth - 1) < 0.001;
+            const is1pxStroke = Math.abs(scaledLineWidth - 1) < STROKE_1PX_TOLERANCE;
 
             if (is1pxStroke) {
                 // Optimized 1px stroke path
@@ -15684,7 +15768,7 @@ class Context2D {
             // Path-based rendering: use path system for gradients/patterns/non-source-over compositing
             Context2D._markPathBasedRendering(); // Mark path-based rendering for testing
             this.beginPath();
-            this.arc(cx, cy, radius, 0, Math.PI * 2);
+            this.arc(cx, cy, radius, 0, TAU);
             // Temporarily set identity transform since we already transformed
             const savedTransform = this._transform;
             this._transform = Transform2D.IDENTITY;
@@ -15699,7 +15783,7 @@ class Context2D {
      */
     _strokeCircleDirect(cx, cy, radius, lineWidth, paintSource) {
         const isColor = paintSource instanceof Color;
-        const is1pxStroke = Math.abs(lineWidth - 1) < 0.001;
+        const is1pxStroke = Math.abs(lineWidth - 1) < STROKE_1PX_TOLERANCE;
         const isSourceOver = this.globalCompositeOperation === 'source-over';
         const clipBuffer = this._clipMask ? this._clipMask.buffer : null;
 
@@ -15724,7 +15808,7 @@ class Context2D {
         // Fallback to path system for gradients, patterns, or non-source-over compositing
         Context2D._markPathBasedRendering();
         this.beginPath();
-        this.arc(cx, cy, radius, 0, Math.PI * 2);
+        this.arc(cx, cy, radius, 0, TAU);
         const savedTransform = this._transform;
         this._transform = Transform2D.IDENTITY;
         const savedLineWidth = this._lineWidth;
