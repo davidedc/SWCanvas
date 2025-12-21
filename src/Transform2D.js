@@ -22,9 +22,9 @@ class Transform2D {
                     throw new Error(`Transform2D component ${i} must be a finite number`);
                 }
             }
-            
+
             this.a = init[0];
-            this.b = init[1]; 
+            this.b = init[1];
             this.c = init[2];
             this.d = init[3];
             this.e = init[4];
@@ -37,7 +37,48 @@ class Transform2D {
             this.c = 0; this.d = 1;
             this.e = 0; this.f = 0;
         }
-        
+
+        // Pre-compute decomposition values using matrix-based axis detection
+        // This avoids sqrt/atan2 for 90% of common cases (simple scaling/translation)
+        const EPSILON = 0.0001;
+
+        // 1. Check for Axis Alignment (0° or 180°)
+        // Most common case: Simple scaling/translation where b=0, c=0
+        if (Math.abs(this.b) < EPSILON && Math.abs(this.c) < EPSILON) {
+            this.isAxisAligned = true;
+            this.is90DegreeRotated = false; // No dimension swap needed
+            this.scaleX = Math.abs(this.a); // No sqrt needed
+            this.scaleY = Math.abs(this.d); // No sqrt needed
+            this.rotationAngle = (this.a < 0) ? Math.PI : 0;
+        }
+        // 2. Check for Perpendicular Alignment (90° or 270°)
+        // Second common case: 90° rotation where a=0, d=0
+        else if (Math.abs(this.a) < EPSILON && Math.abs(this.d) < EPSILON) {
+            this.isAxisAligned = true;
+            this.is90DegreeRotated = true; // Dimension swap needed
+            this.scaleX = Math.abs(this.b); // No sqrt needed
+            this.scaleY = Math.abs(this.c); // No sqrt needed
+            this.rotationAngle = (this.b > 0) ? Math.PI / 2 : -Math.PI / 2;
+        }
+        // 3. Complex Rotation / Skew - fallback to trig
+        else {
+            this.isAxisAligned = false;
+            this.is90DegreeRotated = false;
+            this.scaleX = Math.sqrt(this.a * this.a + this.b * this.b);
+            this.scaleY = Math.sqrt(this.c * this.c + this.d * this.d);
+            this.rotationAngle = Math.atan2(-this.c, this.a);
+        }
+
+        // Pre-compute scaled line width factor (geometric mean of scales)
+        this.scaledLineWidthFactor = Math.max(
+            Math.sqrt(this.scaleX * this.scaleY),
+            0.0001
+        );
+
+        // Pre-compute uniform scale check: a=d, b=-c (rotation + uniform scale)
+        this.isUniformScale = Math.abs(this.a - this.d) < EPSILON &&
+                              Math.abs(this.b + this.c) < EPSILON;
+
         // Make transformation immutable
         Object.freeze(this);
     }
@@ -207,39 +248,18 @@ class Transform2D {
         return this.a * this.d - this.b * this.c;
     }
 
-    /**
-     * Get the rotation angle from the transformation matrix
-     * @returns {number} Rotation angle in radians
-     */
-    get rotationAngle() {
-        return Math.atan2(-this.c, this.a);
-    }
-
-    /**
-     * Get the X scale factor from the transformation matrix
-     * @returns {number} Scale factor along X axis
-     */
-    get scaleX() {
-        return Math.sqrt(this.a * this.a + this.b * this.b);
-    }
-
-    /**
-     * Get the Y scale factor from the transformation matrix
-     * @returns {number} Scale factor along Y axis
-     */
-    get scaleY() {
-        return Math.sqrt(this.c * this.c + this.d * this.d);
-    }
+    // Note: rotationAngle, scaleX, scaleY, isAxisAligned, is90DegreeRotated, isUniformScale,
+    // and scaledLineWidthFactor are now pre-computed direct properties set in the constructor.
+    // This avoids sqrt/atan2 calls on every access (90% of transforms are simple scale/translate).
 
     /**
      * Calculate the scaled line width based on the current transformation
-     * Uses the geometric mean of scale factors, clamped to avoid zero
+     * Uses pre-computed scaledLineWidthFactor for efficiency
      * @param {number} baseWidth - The base line width before transformation
      * @returns {number} The scaled line width
      */
     getScaledLineWidth(baseWidth) {
-        const scale = Math.max(Math.sqrt(this.scaleX * this.scaleY), 0.0001);
-        return baseWidth * scale;
+        return baseWidth * this.scaledLineWidthFactor;
     }
 
     /**
