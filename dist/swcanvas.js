@@ -691,9 +691,9 @@ class Transform2D {
                     throw new Error(`Transform2D component ${i} must be a finite number`);
                 }
             }
-            
+
             this.a = init[0];
-            this.b = init[1]; 
+            this.b = init[1];
             this.c = init[2];
             this.d = init[3];
             this.e = init[4];
@@ -706,7 +706,48 @@ class Transform2D {
             this.c = 0; this.d = 1;
             this.e = 0; this.f = 0;
         }
-        
+
+        // Pre-compute decomposition values using matrix-based axis detection
+        // This avoids sqrt/atan2 for 90% of common cases (simple scaling/translation)
+        const EPSILON = 0.0001;
+
+        // 1. Check for Axis Alignment (0° or 180°)
+        // Most common case: Simple scaling/translation where b=0, c=0
+        if (Math.abs(this.b) < EPSILON && Math.abs(this.c) < EPSILON) {
+            this.isAxisAligned = true;
+            this.is90DegreeRotated = false; // No dimension swap needed
+            this.scaleX = Math.abs(this.a); // No sqrt needed
+            this.scaleY = Math.abs(this.d); // No sqrt needed
+            this.rotationAngle = (this.a < 0) ? Math.PI : 0;
+        }
+        // 2. Check for Perpendicular Alignment (90° or 270°)
+        // Second common case: 90° rotation where a=0, d=0
+        else if (Math.abs(this.a) < EPSILON && Math.abs(this.d) < EPSILON) {
+            this.isAxisAligned = true;
+            this.is90DegreeRotated = true; // Dimension swap needed
+            this.scaleX = Math.abs(this.b); // No sqrt needed
+            this.scaleY = Math.abs(this.c); // No sqrt needed
+            this.rotationAngle = (this.b > 0) ? Math.PI / 2 : -Math.PI / 2;
+        }
+        // 3. Complex Rotation / Skew - fallback to trig
+        else {
+            this.isAxisAligned = false;
+            this.is90DegreeRotated = false;
+            this.scaleX = Math.sqrt(this.a * this.a + this.b * this.b);
+            this.scaleY = Math.sqrt(this.c * this.c + this.d * this.d);
+            this.rotationAngle = Math.atan2(-this.c, this.a);
+        }
+
+        // Pre-compute scaled line width factor (geometric mean of scales)
+        this.scaledLineWidthFactor = Math.max(
+            Math.sqrt(this.scaleX * this.scaleY),
+            0.0001
+        );
+
+        // Pre-compute uniform scale check: a=d, b=-c (rotation + uniform scale)
+        this.isUniformScale = Math.abs(this.a - this.d) < EPSILON &&
+                              Math.abs(this.b + this.c) < EPSILON;
+
         // Make transformation immutable
         Object.freeze(this);
     }
@@ -876,39 +917,18 @@ class Transform2D {
         return this.a * this.d - this.b * this.c;
     }
 
-    /**
-     * Get the rotation angle from the transformation matrix
-     * @returns {number} Rotation angle in radians
-     */
-    get rotationAngle() {
-        return Math.atan2(-this.c, this.a);
-    }
-
-    /**
-     * Get the X scale factor from the transformation matrix
-     * @returns {number} Scale factor along X axis
-     */
-    get scaleX() {
-        return Math.sqrt(this.a * this.a + this.b * this.b);
-    }
-
-    /**
-     * Get the Y scale factor from the transformation matrix
-     * @returns {number} Scale factor along Y axis
-     */
-    get scaleY() {
-        return Math.sqrt(this.c * this.c + this.d * this.d);
-    }
+    // Note: rotationAngle, scaleX, scaleY, isAxisAligned, is90DegreeRotated, isUniformScale,
+    // and scaledLineWidthFactor are now pre-computed direct properties set in the constructor.
+    // This avoids sqrt/atan2 calls on every access (90% of transforms are simple scale/translate).
 
     /**
      * Calculate the scaled line width based on the current transformation
-     * Uses the geometric mean of scale factors, clamped to avoid zero
+     * Uses pre-computed scaledLineWidthFactor for efficiency
      * @param {number} baseWidth - The base line width before transformation
      * @returns {number} The scaled line width
      */
     getScaledLineWidth(baseWidth) {
-        const scale = Math.max(Math.sqrt(this.scaleX * this.scaleY), 0.0001);
-        return baseWidth * scale;
+        return baseWidth * this.scaledLineWidthFactor;
     }
 
     /**
@@ -13969,7 +13989,7 @@ class Context2D {
 
         // Current state
         this.globalAlpha = 1.0;
-        this.globalCompositeOperation = 'source-over';
+        this._globalCompositeOperation = 'source-over';
         this._transform = Transform2D.IDENTITY;
         this._fillStyle = new Color(0, 0, 0, 255); // Black
         this._strokeStyle = new Color(0, 0, 0, 255); // Black
@@ -13996,6 +14016,10 @@ class Context2D {
 
         // Stencil-based clipping system (only clipping mechanism)
         this._clipMask = null;  // ClipMask instance for 1-bit per pixel clipping
+
+        // Cached state flags for direct rendering eligibility (performance optimization)
+        this._noShadow = true;       // Updated when shadow properties change
+        this._isSourceOver = true;   // Updated when globalCompositeOperation changes
     }
 
     // HTML5 Canvas-compatible lineWidth property with validation
@@ -14011,6 +14035,55 @@ class Context2D {
             this._lineWidth = value;
         }
         // Otherwise, keep the current value unchanged (ignore invalid input)
+    }
+
+    // HTML5 Canvas-compatible globalCompositeOperation property with cached flag
+    get globalCompositeOperation() {
+        return this._globalCompositeOperation;
+    }
+
+    set globalCompositeOperation(value) {
+        this._globalCompositeOperation = value;
+        this._isSourceOver = (value === 'source-over');
+    }
+
+    /**
+     * Update cached shadow flag based on current shadow properties
+     * @private
+     */
+    _updateNoShadowFlag() {
+        this._noShadow = !this.shadowColor ||
+            this.shadowColor === Color.transparent ||
+            (this.shadowBlur === 0 && this.shadowOffsetX === 0 && this.shadowOffsetY === 0);
+    }
+
+    /**
+     * Fast-path check for direct rendering eligibility.
+     * @param {Color|Gradient|Pattern} paintSource - The paint to check
+     * @returns {boolean} true if direct rendering can be used
+     * @private
+     */
+    _canUseDirectRendering(paintSource) {
+        return this._isSourceOver &&
+            this._noShadow &&
+            (paintSource instanceof Color) &&
+            paintSource.a > 0;
+    }
+
+    /**
+     * Fast-path check for dual (fill+stroke) direct rendering eligibility.
+     * @param {Color|Gradient|Pattern} fillPaint - Fill paint source
+     * @param {Color|Gradient|Pattern} strokePaint - Stroke paint source
+     * @returns {boolean} true if direct rendering can be used
+     * @private
+     */
+    _canUseDirectRenderingForFillStroke(fillPaint, strokePaint) {
+        if (!this._isSourceOver || !this._noShadow) return false;
+        if (!(fillPaint instanceof Color) || !(strokePaint instanceof Color)) return false;
+
+        const hasFill = fillPaint.a > 0;
+        const hasStroke = strokePaint.a > 0 && this._lineWidth > 0;
+        return hasFill || hasStroke;
     }
 
     // State management
@@ -14040,7 +14113,10 @@ class Context2D {
             shadowColor: this.shadowColor, // Color is immutable, safe to share
             shadowBlur: this.shadowBlur,
             shadowOffsetX: this.shadowOffsetX,
-            shadowOffsetY: this.shadowOffsetY
+            shadowOffsetY: this.shadowOffsetY,
+            // Cached state flags
+            _noShadow: this._noShadow,
+            _isSourceOver: this._isSourceOver
         });
     }
 
@@ -14049,7 +14125,8 @@ class Context2D {
 
         const state = this.stateStack.pop();
         this.globalAlpha = state.globalAlpha;
-        this.globalCompositeOperation = state.globalCompositeOperation;
+        // Use backing field directly to avoid setter overhead (flags are saved separately)
+        this._globalCompositeOperation = state.globalCompositeOperation;
         this._transform = state.transform;
         this._fillStyle = state.fillStyle;
         this._strokeStyle = state.strokeStyle;
@@ -14070,6 +14147,10 @@ class Context2D {
         this.shadowBlur = state.shadowBlur || 0;
         this.shadowOffsetX = state.shadowOffsetX || 0;
         this.shadowOffsetY = state.shadowOffsetY || 0;
+
+        // Restore cached state flags
+        this._noShadow = state._noShadow ?? true;
+        this._isSourceOver = state._isSourceOver ?? true;
     }
 
     // Transform methods
@@ -14135,6 +14216,7 @@ class Context2D {
             a = a !== undefined ? a : 255;
             this.shadowColor = new Color(r, g, b, a);
         }
+        this._updateNoShadowFlag();
     }
 
     setShadowBlur(blur) {
@@ -14145,6 +14227,7 @@ class Context2D {
             throw new Error('Shadow blur must be non-negative');
         }
         this.shadowBlur = blur;
+        this._updateNoShadowFlag();
     }
 
     setShadowOffsetX(offset) {
@@ -14152,6 +14235,7 @@ class Context2D {
             throw new Error('Shadow offsetX must be a number');
         }
         this.shadowOffsetX = offset;
+        this._updateNoShadowFlag();
     }
 
     setShadowOffsetY(offset) {
@@ -14159,6 +14243,7 @@ class Context2D {
             throw new Error('Shadow offsetY must be a number');
         }
         this.shadowOffsetY = offset;
+        this._updateNoShadowFlag();
     }
 
     // Path methods (delegated to internal path)
@@ -14204,53 +14289,40 @@ class Context2D {
 
     // Drawing methods - rectangle operations
     fillRect(x, y, width, height) {
-        const paintSource = this._fillStyle;
-        const isColor = paintSource instanceof Color;
-        const isSourceOver = this.globalCompositeOperation === 'source-over';
-        const noClip = !this._clipMask;
-        const noShadow = !this.shadowColor || this.shadowColor === 'transparent' ||
-            (this.shadowBlur === 0 && this.shadowOffsetX === 0 && this.shadowOffsetY === 0);
-
         // Direct rendering: Color fill with source-over, no shadows (clipping supported)
-        if (isColor && isSourceOver && noShadow) {
-            const transform = this._transform;
-            const clipBuffer = this._clipMask ? this._clipMask.buffer : null;
+        if (this._canUseDirectRendering(this._fillStyle)) {
+            const t = this._transform;
+            const clip = this._clipMask ? this._clipMask.buffer : null;
 
-            // Decompose transform
-            const center = transform.transformPoint({ x: x + width / 2, y: y + height / 2 });
-            const rotation = transform.rotationAngle;
-            const scaleX = transform.scaleX;
-            const scaleY = transform.scaleY;
-            const scaledWidth = width * scaleX;
-            const scaledHeight = height * scaleY;
+            // Fast access to pre-computed transform values (no getters, no sqrt/atan2)
+            const scaledW = width * t.scaleX;
+            const scaledH = height * t.scaleY;
+            const center = t.transformPoint({ x: x + width / 2, y: y + height / 2 });
 
-            const isOpaque = paintSource.a === 255 && this.globalAlpha >= 1.0;
-            const isAxisAligned = RectOps.isNearAxisAligned(rotation);
-            // Non-uniform scale + rotation produces a parallelogram, not a rotated rectangle
-            // Check matrix structure: for uniform scale+rotation, a=d and b=-c
-            const isUniformScale = Math.abs(transform.a - transform.d) < 0.001 &&
-                Math.abs(transform.b + transform.c) < 0.001;
+            // Inline opacity check
+            const isOpaque = this._fillStyle.a === 255 && this.globalAlpha >= 1.0;
 
-            if (isAxisAligned) {
-                // Axis-aligned: use direct fill (works with non-uniform scale)
-                const { adjustedWidth, adjustedHeight } = RectOps.getRotatedDimensions(scaledWidth, scaledHeight, rotation);
-                const topLeftX = center.x - adjustedWidth / 2;
-                const topLeftY = center.y - adjustedHeight / 2;
+            if (t.isAxisAligned) {
+                // Inline dimension swapping - no RectOps.getRotatedDimensions() call needed
+                const finalW = t.is90DegreeRotated ? scaledH : scaledW;
+                const finalH = t.is90DegreeRotated ? scaledW : scaledH;
+                const tlX = center.x - finalW / 2;
+                const tlY = center.y - finalH / 2;
 
                 if (isOpaque) {
-                    RectOps.fill_AA_Opaq(this.surface, topLeftX, topLeftY, adjustedWidth, adjustedHeight, paintSource, clipBuffer);
+                    RectOps.fill_AA_Opaq(this.surface, tlX, tlY, finalW, finalH, this._fillStyle, clip);
                     return;
-                } else if (paintSource.a > 0) {
-                    RectOps.fill_AA_Alpha(this.surface, topLeftX, topLeftY, adjustedWidth, adjustedHeight, paintSource, this.globalAlpha, clipBuffer);
+                } else {
+                    RectOps.fill_AA_Alpha(this.surface, tlX, tlY, finalW, finalH, this._fillStyle, this.globalAlpha, clip);
                     return;
                 }
-            } else if (isUniformScale) {
+            } else if (t.isUniformScale) {
                 // Rotated with uniform scale: use edge-function algorithm
                 if (isOpaque) {
-                    RectOps.fill_Rot_Any(this.surface, center.x, center.y, scaledWidth, scaledHeight, rotation, paintSource, 1.0, clipBuffer);
+                    RectOps.fill_Rot_Any(this.surface, center.x, center.y, scaledW, scaledH, t.rotationAngle, this._fillStyle, 1.0, clip);
                     return;
-                } else if (paintSource.a > 0) {
-                    RectOps.fill_Rot_Any(this.surface, center.x, center.y, scaledWidth, scaledHeight, rotation, paintSource, this.globalAlpha, clipBuffer);
+                } else {
+                    RectOps.fill_Rot_Any(this.surface, center.x, center.y, scaledW, scaledH, t.rotationAngle, this._fillStyle, this.globalAlpha, clip);
                     return;
                 }
             }
@@ -14277,66 +14349,50 @@ class Context2D {
     }
 
     strokeRect(x, y, width, height) {
-        const paintSource = this._strokeStyle;
-        const isColor = paintSource instanceof Color;
-        const isSourceOver = this.globalCompositeOperation === 'source-over';
-        const noClip = !this._clipMask;
-        const noShadow = !this.shadowColor || this.shadowColor === 'transparent' ||
-            (this.shadowBlur === 0 && this.shadowOffsetX === 0 && this.shadowOffsetY === 0);
-
         // Direct rendering: Color stroke with source-over, no shadows (clipping supported)
-        if (isColor && isSourceOver && noShadow) {
-            const transform = this._transform;
-            const clipBuffer = this._clipMask ? this._clipMask.buffer : null;
+        if (this._canUseDirectRendering(this._strokeStyle)) {
+            const t = this._transform;
+            const clip = this._clipMask ? this._clipMask.buffer : null;
 
-            // Decompose transform
-            const center = transform.transformPoint({ x: x + width / 2, y: y + height / 2 });
-            const rotation = transform.rotationAngle;
-            const scaleX = transform.scaleX;
-            const scaleY = transform.scaleY;
-            const scaledWidth = width * scaleX;
-            const scaledHeight = height * scaleY;
-            const scaledLineWidth = transform.getScaledLineWidth(this._lineWidth);
+            // Fast access to pre-computed transform values
+            const scaledW = width * t.scaleX;
+            const scaledH = height * t.scaleY;
+            const center = t.transformPoint({ x: x + width / 2, y: y + height / 2 });
+            const scaledLineWidth = t.getScaledLineWidth(this._lineWidth);
 
-            const isOpaque = paintSource.a === 255 && this.globalAlpha >= 1.0;
-            const isAxisAligned = RectOps.isNearAxisAligned(rotation);
-            // Non-uniform scale + rotation produces a parallelogram, not a rotated rectangle
-            // Check matrix structure: for uniform scale+rotation, a=d and b=-c
-            const isUniformScale = Math.abs(transform.a - transform.d) < 0.001 &&
-                Math.abs(transform.b + transform.c) < 0.001;
+            const isOpaque = this._strokeStyle.a === 255 && this.globalAlpha >= 1.0;
 
-            if (isAxisAligned) {
-                // Axis-aligned: use direct rendering with adjusted coordinates (works with non-uniform scale)
-                const { adjustedWidth, adjustedHeight } = RectOps.getRotatedDimensions(scaledWidth, scaledHeight, rotation);
-                const topLeftX = center.x - adjustedWidth / 2;
-                const topLeftY = center.y - adjustedHeight / 2;
+            if (t.isAxisAligned) {
+                // Inline dimension swapping
+                const finalW = t.is90DegreeRotated ? scaledH : scaledW;
+                const finalH = t.is90DegreeRotated ? scaledW : scaledH;
+                const tlX = center.x - finalW / 2;
+                const tlY = center.y - finalH / 2;
 
                 const is1pxStroke = Math.abs(scaledLineWidth - 1) < 0.001;
                 const isThickStroke = scaledLineWidth > 1;
 
                 if (is1pxStroke) {
                     if (isOpaque) {
-                        RectOps.stroke1px_AA_Opaq(this.surface, topLeftX, topLeftY, adjustedWidth, adjustedHeight, paintSource, clipBuffer);
+                        RectOps.stroke1px_AA_Opaq(this.surface, tlX, tlY, finalW, finalH, this._strokeStyle, clip);
                         return;
-                    } else if (paintSource.a > 0) {
-                        RectOps.stroke1px_AA_Alpha(this.surface, topLeftX, topLeftY, adjustedWidth, adjustedHeight, paintSource, this.globalAlpha, clipBuffer);
+                    } else {
+                        RectOps.stroke1px_AA_Alpha(this.surface, tlX, tlY, finalW, finalH, this._strokeStyle, this.globalAlpha, clip);
                         return;
                     }
                 } else if (isThickStroke) {
                     if (isOpaque) {
-                        RectOps.strokeThick_AA_Opaq(this.surface, topLeftX, topLeftY, adjustedWidth, adjustedHeight, scaledLineWidth, paintSource, clipBuffer);
+                        RectOps.strokeThick_AA_Opaq(this.surface, tlX, tlY, finalW, finalH, scaledLineWidth, this._strokeStyle, clip);
                         return;
-                    } else if (paintSource.a > 0) {
-                        RectOps.strokeThick_AA_Alpha(this.surface, topLeftX, topLeftY, adjustedWidth, adjustedHeight, scaledLineWidth, paintSource, this.globalAlpha, clipBuffer);
+                    } else {
+                        RectOps.strokeThick_AA_Alpha(this.surface, tlX, tlY, finalW, finalH, scaledLineWidth, this._strokeStyle, this.globalAlpha, clip);
                         return;
                     }
                 }
-            } else if (isUniformScale) {
+            } else if (t.isUniformScale) {
                 // Rotated with uniform scale: use line-based stroke
-                if (paintSource.a > 0) {
-                    RectOps.stroke_Rot_Any(this.surface, center.x, center.y, scaledWidth, scaledHeight, rotation, scaledLineWidth, paintSource, this.globalAlpha, clipBuffer);
-                    return;
-                }
+                RectOps.stroke_Rot_Any(this.surface, center.x, center.y, scaledW, scaledH, t.rotationAngle, scaledLineWidth, this._strokeStyle, this.globalAlpha, clip);
+                return;
             }
             // Non-uniform scale + rotation: fall through to path-based rendering (produces parallelogram)
         }
@@ -14394,70 +14450,51 @@ class Context2D {
             return; // Nothing to draw for zero dimensions
         }
 
-        // Check for direct rendering conditions
-        const fillPaint = this._fillStyle;
-        const strokePaint = this._strokeStyle;
-        const fillIsColor = fillPaint instanceof Color;
-        const strokeIsColor = strokePaint instanceof Color;
-        const isSourceOver = this.globalCompositeOperation === 'source-over';
-        const noShadow = !this.shadowColor || this.shadowColor === 'transparent' ||
-            (this.shadowBlur === 0 && this.shadowOffsetX === 0 && this.shadowOffsetY === 0);
-        const clipBuffer = this._clipMask ? this._clipMask.buffer : null;
-
         // Direct rendering: both fill and stroke are solid colors, source-over, no shadows
-        if (fillIsColor && strokeIsColor && isSourceOver && noShadow) {
-            const hasFill = fillPaint.a > 0;
-            const hasStroke = strokePaint.a > 0 && this._lineWidth > 0;
+        if (this._canUseDirectRenderingForFillStroke(this._fillStyle, this._strokeStyle)) {
+            const t = this._transform;
+            const clip = this._clipMask ? this._clipMask.buffer : null;
 
-            if (hasFill || hasStroke) {
-                const transform = this._transform;
+            const hasFill = this._fillStyle.a > 0;
+            const hasStroke = this._strokeStyle.a > 0 && this._lineWidth > 0;
 
-                // Decompose transform
-                const center = transform.transformPoint({ x: x + width / 2, y: y + height / 2 });
-                const rotation = transform.rotationAngle;
-                const scaleX = transform.scaleX;
-                const scaleY = transform.scaleY;
-                const scaledWidth = width * scaleX;
-                const scaledHeight = height * scaleY;
-                const scaledLineWidth = transform.getScaledLineWidth(this._lineWidth);
+            // Fast access to pre-computed transform values
+            const scaledW = width * t.scaleX;
+            const scaledH = height * t.scaleY;
+            const center = t.transformPoint({ x: x + width / 2, y: y + height / 2 });
+            const scaledLineWidth = t.getScaledLineWidth(this._lineWidth);
 
-                const isAxisAligned = RectOps.isNearAxisAligned(rotation);
-                // Non-uniform scale + rotation produces a parallelogram, not a rotated rectangle
-                // Check matrix structure: for uniform scale+rotation, a=d and b=-c
-                const isUniformScale = Math.abs(transform.a - transform.d) < 0.001 &&
-                    Math.abs(transform.b + transform.c) < 0.001;
+            if (t.isAxisAligned) {
+                // Inline dimension swapping
+                const finalW = t.is90DegreeRotated ? scaledH : scaledW;
+                const finalH = t.is90DegreeRotated ? scaledW : scaledH;
+                const tlX = center.x - finalW / 2;
+                const tlY = center.y - finalH / 2;
 
-                if (isAxisAligned) {
-                    // Axis-aligned: use unified fill+stroke (works with non-uniform scale)
-                    const { adjustedWidth, adjustedHeight } = RectOps.getRotatedDimensions(scaledWidth, scaledHeight, rotation);
-                    const topLeftX = center.x - adjustedWidth / 2;
-                    const topLeftY = center.y - adjustedHeight / 2;
-
-                    RectOps.fillStroke_AA_Any(
-                        this.surface,
-                        topLeftX, topLeftY, adjustedWidth, adjustedHeight,
-                        scaledLineWidth,
-                        hasFill ? fillPaint : null,
-                        hasStroke ? strokePaint : null,
-                        this.globalAlpha,
-                        clipBuffer
-                    );
-                    return;
-                } else if (isUniformScale) {
-                    // Rotated with uniform scale: use rotated fill+stroke wrapper
-                    RectOps.fillStroke_Rot_Any(
-                        this.surface,
-                        center.x, center.y, scaledWidth, scaledHeight, rotation,
-                        scaledLineWidth,
-                        hasFill ? fillPaint : null,
-                        hasStroke ? strokePaint : null,
-                        this.globalAlpha,
-                        clipBuffer
-                    );
-                    return;
-                }
-                // Non-uniform scale + rotation: fall through to path-based rendering (produces parallelogram)
+                RectOps.fillStroke_AA_Any(
+                    this.surface,
+                    tlX, tlY, finalW, finalH,
+                    scaledLineWidth,
+                    hasFill ? this._fillStyle : null,
+                    hasStroke ? this._strokeStyle : null,
+                    this.globalAlpha,
+                    clip
+                );
+                return;
+            } else if (t.isUniformScale) {
+                // Rotated with uniform scale: use rotated fill+stroke wrapper
+                RectOps.fillStroke_Rot_Any(
+                    this.surface,
+                    center.x, center.y, scaledW, scaledH, t.rotationAngle,
+                    scaledLineWidth,
+                    hasFill ? this._fillStyle : null,
+                    hasStroke ? this._strokeStyle : null,
+                    this.globalAlpha,
+                    clip
+                );
+                return;
             }
+            // Non-uniform scale + rotation: fall through to path-based rendering (produces parallelogram)
         }
 
         // Path-based rendering: gradients, patterns, non-source-over, shadows, or parallelograms
@@ -14600,93 +14637,71 @@ class Context2D {
             return;
         }
 
-        const paintSource = this._strokeStyle;
+        // Direct rendering: Color stroke with source-over, no shadows
+        if (this._canUseDirectRendering(this._strokeStyle)) {
+            const t = this._transform;
+            const clip = this._clipMask ? this._clipMask.buffer : null;
 
-        // Direct rendering conditions
-        const isColor = paintSource instanceof Color;
-        const isSourceOver = this.globalCompositeOperation === 'source-over';
-        const noShadow = !this.shadowColor || this.shadowColor === 'transparent' ||
-            (this.shadowBlur === 0 && this.shadowOffsetX === 0 && this.shadowOffsetY === 0);
-        const clipBuffer = this._clipMask ? this._clipMask.buffer : null;
+            // Rounded rects require uniform scale (non-uniform would make ellipses)
+            if (t.isUniformScale) {
+                const scaledW = width * t.scaleX;
+                const scaledH = height * t.scaleY;
+                const center = t.transformPoint({ x: x + width / 2, y: y + height / 2 });
+                const scaledLineWidth = t.getScaledLineWidth(this._lineWidth);
+                const scaledRadius = radius * t.scaleX;
+                const is1pxStroke = Math.abs(scaledLineWidth - 1) < 0.001;
+                const isOpaque = this._strokeStyle.a === 255 && this.globalAlpha >= 1.0;
 
-        if (isColor && isSourceOver && noShadow && paintSource.a > 0) {
-            const transform = this._transform;
-
-            // Decompose transform
-            const center = transform.transformPoint({ x: x + width / 2, y: y + height / 2 });
-            const rotation = transform.rotationAngle;
-            const scaleX = transform.scaleX;
-            const scaleY = transform.scaleY;
-            const scaledWidth = width * scaleX;
-            const scaledHeight = height * scaleY;
-            const scaledLineWidth = transform.getScaledLineWidth(this._lineWidth);
-            const is1pxStroke = Math.abs(scaledLineWidth - 1) < 0.001;
-
-            // Check matrix structure for uniform scale: a=d and b=-c
-            const isUniformScale = Math.abs(transform.a - transform.d) < 0.001 &&
-                Math.abs(transform.b + transform.c) < 0.001;
-
-            if (isUniformScale) {
-                const scaledRadius = radius * scaleX;
-                const isOpaque = paintSource.a === 255 && this.globalAlpha >= 1.0;
-
-                if (transform.isIdentity) {
+                if (t.isIdentity) {
                     // No transform: use axis-aligned methods with original coordinates
                     if (is1pxStroke) {
                         if (isOpaque) {
-                            RoundedRectOps.stroke1px_AA_Opaq(this.surface, x, y, width, height, radii, paintSource, clipBuffer);
-                            return;
+                            RoundedRectOps.stroke1px_AA_Opaq(this.surface, x, y, width, height, radii, this._strokeStyle, clip);
                         } else {
-                            RoundedRectOps.stroke1px_AA_Alpha(this.surface, x, y, width, height, radii, paintSource, this.globalAlpha, clipBuffer);
-                            return;
+                            RoundedRectOps.stroke1px_AA_Alpha(this.surface, x, y, width, height, radii, this._strokeStyle, this.globalAlpha, clip);
                         }
                     } else {
                         if (isOpaque) {
-                            RoundedRectOps.strokeThick_AA_Opaq(this.surface, x, y, width, height, radii, this._lineWidth, paintSource, clipBuffer);
-                            return;
+                            RoundedRectOps.strokeThick_AA_Opaq(this.surface, x, y, width, height, radii, this._lineWidth, this._strokeStyle, clip);
                         } else {
-                            RoundedRectOps.strokeThick_AA_Alpha(this.surface, x, y, width, height, radii, this._lineWidth, paintSource, this.globalAlpha, clipBuffer);
-                            return;
+                            RoundedRectOps.strokeThick_AA_Alpha(this.surface, x, y, width, height, radii, this._lineWidth, this._strokeStyle, this.globalAlpha, clip);
                         }
                     }
+                    return;
                 }
 
-                const isAxisAligned = RectOps.isNearAxisAligned(rotation);
-
-                if (isAxisAligned) {
-                    // Axis-aligned rotation (90/180/270): adjust dimensions
-                    const { adjustedWidth, adjustedHeight } = RectOps.getRotatedDimensions(scaledWidth, scaledHeight, rotation);
-                    const topLeftX = center.x - adjustedWidth / 2;
-                    const topLeftY = center.y - adjustedHeight / 2;
+                if (t.isAxisAligned) {
+                    // Inline dimension swapping
+                    const finalW = t.is90DegreeRotated ? scaledH : scaledW;
+                    const finalH = t.is90DegreeRotated ? scaledW : scaledH;
+                    const tlX = center.x - finalW / 2;
+                    const tlY = center.y - finalH / 2;
 
                     if (is1pxStroke) {
                         if (isOpaque) {
-                            RoundedRectOps.stroke1px_AA_Opaq(this.surface, topLeftX, topLeftY, adjustedWidth, adjustedHeight, scaledRadius, paintSource, clipBuffer);
-                            return;
+                            RoundedRectOps.stroke1px_AA_Opaq(this.surface, tlX, tlY, finalW, finalH, scaledRadius, this._strokeStyle, clip);
                         } else {
-                            RoundedRectOps.stroke1px_AA_Alpha(this.surface, topLeftX, topLeftY, adjustedWidth, adjustedHeight, scaledRadius, paintSource, this.globalAlpha, clipBuffer);
-                            return;
+                            RoundedRectOps.stroke1px_AA_Alpha(this.surface, tlX, tlY, finalW, finalH, scaledRadius, this._strokeStyle, this.globalAlpha, clip);
                         }
                     } else {
                         if (isOpaque) {
-                            RoundedRectOps.strokeThick_AA_Opaq(this.surface, topLeftX, topLeftY, adjustedWidth, adjustedHeight, scaledRadius, scaledLineWidth, paintSource, clipBuffer);
-                            return;
+                            RoundedRectOps.strokeThick_AA_Opaq(this.surface, tlX, tlY, finalW, finalH, scaledRadius, scaledLineWidth, this._strokeStyle, clip);
                         } else {
-                            RoundedRectOps.strokeThick_AA_Alpha(this.surface, topLeftX, topLeftY, adjustedWidth, adjustedHeight, scaledRadius, scaledLineWidth, paintSource, this.globalAlpha, clipBuffer);
-                            return;
+                            RoundedRectOps.strokeThick_AA_Alpha(this.surface, tlX, tlY, finalW, finalH, scaledRadius, scaledLineWidth, this._strokeStyle, this.globalAlpha, clip);
                         }
                     }
+                    return;
                 } else {
                     // Rotated with uniform scale: use strokeRotated
                     RoundedRectOps.stroke_Rot_Any(
                         this.surface,
-                        center.x, center.y, scaledWidth, scaledHeight,
+                        center.x, center.y, scaledW, scaledH,
                         scaledRadius,
-                        rotation,
+                        t.rotationAngle,
                         scaledLineWidth,
-                        paintSource,
+                        this._strokeStyle,
                         this.globalAlpha,
-                        clipBuffer
+                        clip
                     );
                     return;
                 }
@@ -14734,69 +14749,52 @@ class Context2D {
             return;
         }
 
-        // Check for direct rendering conditions
-        const paintSource = this._fillStyle;
-        const isColor = paintSource instanceof Color;
-        const isSourceOver = this.globalCompositeOperation === 'source-over';
-        const noShadow = !this.shadowColor || this.shadowColor === 'transparent' ||
-            (this.shadowBlur === 0 && this.shadowOffsetX === 0 && this.shadowOffsetY === 0);
-        const clipBuffer = this._clipMask ? this._clipMask.buffer : null;
+        // Direct rendering: Color fill with source-over, no shadows
+        if (this._canUseDirectRendering(this._fillStyle)) {
+            const t = this._transform;
+            const clip = this._clipMask ? this._clipMask.buffer : null;
 
-        if (isColor && isSourceOver && noShadow && paintSource.a > 0) {
-            const transform = this._transform;
+            // Rounded rects require uniform scale (non-uniform would make ellipses)
+            if (t.isUniformScale) {
+                const scaledW = width * t.scaleX;
+                const scaledH = height * t.scaleY;
+                const center = t.transformPoint({ x: x + width / 2, y: y + height / 2 });
+                const scaledRadius = radius * t.scaleX;
+                const isOpaque = this._fillStyle.a === 255 && this.globalAlpha >= 1.0;
 
-            // Decompose transform
-            const center = transform.transformPoint({ x: x + width / 2, y: y + height / 2 });
-            const rotation = transform.rotationAngle;
-            const scaleX = transform.scaleX;
-            const scaleY = transform.scaleY;
-            const scaledWidth = width * scaleX;
-            const scaledHeight = height * scaleY;
-
-            // Check matrix structure for uniform scale: a=d and b=-c
-            const isUniformScale = Math.abs(transform.a - transform.d) < 0.001 &&
-                Math.abs(transform.b + transform.c) < 0.001;
-
-            if (isUniformScale) {
-                const scaledRadius = radius * scaleX;
-                const isOpaque = paintSource.a === 255 && this.globalAlpha >= 1.0;
-
-                if (transform.isIdentity) {
+                if (t.isIdentity) {
                     // No transform: use axis-aligned methods with original coordinates
                     if (isOpaque) {
-                        RoundedRectOps.fill_AA_Opaq(this.surface, x, y, width, height, radii, paintSource, clipBuffer);
-                        return;
+                        RoundedRectOps.fill_AA_Opaq(this.surface, x, y, width, height, radii, this._fillStyle, clip);
                     } else {
-                        RoundedRectOps.fill_AA_Alpha(this.surface, x, y, width, height, radii, paintSource, this.globalAlpha, clipBuffer);
-                        return;
+                        RoundedRectOps.fill_AA_Alpha(this.surface, x, y, width, height, radii, this._fillStyle, this.globalAlpha, clip);
                     }
+                    return;
                 }
 
-                const isAxisAligned = RectOps.isNearAxisAligned(rotation);
-
-                if (isAxisAligned) {
-                    // Axis-aligned rotation (90/180/270): adjust dimensions
-                    const { adjustedWidth, adjustedHeight } = RectOps.getRotatedDimensions(scaledWidth, scaledHeight, rotation);
-                    const topLeftX = center.x - adjustedWidth / 2;
-                    const topLeftY = center.y - adjustedHeight / 2;
+                if (t.isAxisAligned) {
+                    // Inline dimension swapping
+                    const finalW = t.is90DegreeRotated ? scaledH : scaledW;
+                    const finalH = t.is90DegreeRotated ? scaledW : scaledH;
+                    const tlX = center.x - finalW / 2;
+                    const tlY = center.y - finalH / 2;
 
                     if (isOpaque) {
-                        RoundedRectOps.fill_AA_Opaq(this.surface, topLeftX, topLeftY, adjustedWidth, adjustedHeight, scaledRadius, paintSource, clipBuffer);
-                        return;
+                        RoundedRectOps.fill_AA_Opaq(this.surface, tlX, tlY, finalW, finalH, scaledRadius, this._fillStyle, clip);
                     } else {
-                        RoundedRectOps.fill_AA_Alpha(this.surface, topLeftX, topLeftY, adjustedWidth, adjustedHeight, scaledRadius, paintSource, this.globalAlpha, clipBuffer);
-                        return;
+                        RoundedRectOps.fill_AA_Alpha(this.surface, tlX, tlY, finalW, finalH, scaledRadius, this._fillStyle, this.globalAlpha, clip);
                     }
+                    return;
                 } else {
                     // Rotated with uniform scale: use fillRotated
                     RoundedRectOps.fill_Rot_Any(
                         this.surface,
-                        center.x, center.y, scaledWidth, scaledHeight,
+                        center.x, center.y, scaledW, scaledH,
                         scaledRadius,
-                        rotation,
-                        paintSource,
+                        t.rotationAngle,
+                        this._fillStyle,
                         this.globalAlpha,
-                        clipBuffer
+                        clip
                     );
                     return;
                 }
@@ -14844,95 +14842,72 @@ class Context2D {
             return;
         }
 
-        // Check for direct rendering conditions
-        const fillPaint = this._fillStyle;
-        const strokePaint = this._strokeStyle;
-        const fillIsColor = fillPaint instanceof Color;
-        const strokeIsColor = strokePaint instanceof Color;
-        const isSourceOver = this.globalCompositeOperation === 'source-over';
-        const noShadow = !this.shadowColor || this.shadowColor === 'transparent' ||
-            (this.shadowBlur === 0 && this.shadowOffsetX === 0 && this.shadowOffsetY === 0);
-        const clipBuffer = this._clipMask ? this._clipMask.buffer : null;
-
         // Direct rendering: both fill and stroke are solid colors, source-over, no shadows
-        if (fillIsColor && strokeIsColor && isSourceOver && noShadow) {
-            const hasFill = fillPaint.a > 0;
-            const hasStroke = strokePaint.a > 0 && this._lineWidth > 0;
+        if (this._canUseDirectRenderingForFillStroke(this._fillStyle, this._strokeStyle)) {
+            const t = this._transform;
+            const clip = this._clipMask ? this._clipMask.buffer : null;
 
-            if (hasFill || hasStroke) {
-                const transform = this._transform;
+            const hasFill = this._fillStyle.a > 0;
+            const hasStroke = this._strokeStyle.a > 0 && this._lineWidth > 0;
 
-                // Decompose transform
-                const center = transform.transformPoint({ x: x + width / 2, y: y + height / 2 });
-                const rotation = transform.rotationAngle;
-                const scaleX = transform.scaleX;
-                const scaleY = transform.scaleY;
-                const scaledWidth = width * scaleX;
-                const scaledHeight = height * scaleY;
-                const scaledLineWidth = transform.getScaledLineWidth(this._lineWidth);
+            // Rounded rects require uniform scale (non-uniform would make ellipses)
+            if (t.isUniformScale) {
+                const scaledW = width * t.scaleX;
+                const scaledH = height * t.scaleY;
+                const center = t.transformPoint({ x: x + width / 2, y: y + height / 2 });
+                const scaledLineWidth = t.getScaledLineWidth(this._lineWidth);
+                const scaledRadius = radius * t.scaleX;
 
-                // Check matrix structure for uniform scale: a=d and b=-c
-                const isUniformScale = Math.abs(transform.a - transform.d) < 0.001 &&
-                    Math.abs(transform.b + transform.c) < 0.001;
-
-                // For rounded rects, non-uniform scale turns circles into ellipses
-                // Only use direct rendering for uniform scale or identity
-                if (isUniformScale) {
-                    // Scale radius uniformly
-                    const scaledRadius = radius * scaleX;
-
-                    if (transform.isIdentity) {
-                        // Axis-aligned, no transform: use top-left coordinates
-                        RoundedRectOps.fillStroke_AA_Any(
-                            this.surface,
-                            x, y, width, height,
-                            radii,
-                            this._lineWidth,
-                            hasFill ? fillPaint : null,
-                            hasStroke ? strokePaint : null,
-                            this.globalAlpha,
-                            clipBuffer
-                        );
-                        return;
-                    }
-
-                    const isAxisAligned = RectOps.isNearAxisAligned(rotation);
-
-                    if (isAxisAligned) {
-                        // Axis-aligned with uniform scale: adjust for potential 90/180/270 degree rotation
-                        const { adjustedWidth, adjustedHeight } = RectOps.getRotatedDimensions(scaledWidth, scaledHeight, rotation);
-                        const topLeftX = center.x - adjustedWidth / 2;
-                        const topLeftY = center.y - adjustedHeight / 2;
-
-                        RoundedRectOps.fillStroke_AA_Any(
-                            this.surface,
-                            topLeftX, topLeftY, adjustedWidth, adjustedHeight,
-                            scaledRadius,
-                            scaledLineWidth,
-                            hasFill ? fillPaint : null,
-                            hasStroke ? strokePaint : null,
-                            this.globalAlpha,
-                            clipBuffer
-                        );
-                        return;
-                    } else {
-                        // Rotated with uniform scale: use rotated fill+stroke
-                        RoundedRectOps.fillStroke_Rot_Any(
-                            this.surface,
-                            center.x, center.y, scaledWidth, scaledHeight,
-                            scaledRadius,
-                            rotation,
-                            scaledLineWidth,
-                            hasFill ? fillPaint : null,
-                            hasStroke ? strokePaint : null,
-                            this.globalAlpha,
-                            clipBuffer
-                        );
-                        return;
-                    }
+                if (t.isIdentity) {
+                    // Axis-aligned, no transform: use top-left coordinates
+                    RoundedRectOps.fillStroke_AA_Any(
+                        this.surface,
+                        x, y, width, height,
+                        radii,
+                        this._lineWidth,
+                        hasFill ? this._fillStyle : null,
+                        hasStroke ? this._strokeStyle : null,
+                        this.globalAlpha,
+                        clip
+                    );
+                    return;
                 }
-                // Non-uniform scale: fall through to path-based rendering
+
+                if (t.isAxisAligned) {
+                    // Inline dimension swapping
+                    const finalW = t.is90DegreeRotated ? scaledH : scaledW;
+                    const finalH = t.is90DegreeRotated ? scaledW : scaledH;
+                    const tlX = center.x - finalW / 2;
+                    const tlY = center.y - finalH / 2;
+
+                    RoundedRectOps.fillStroke_AA_Any(
+                        this.surface,
+                        tlX, tlY, finalW, finalH,
+                        scaledRadius,
+                        scaledLineWidth,
+                        hasFill ? this._fillStyle : null,
+                        hasStroke ? this._strokeStyle : null,
+                        this.globalAlpha,
+                        clip
+                    );
+                    return;
+                } else {
+                    // Rotated with uniform scale: use rotated fill+stroke
+                    RoundedRectOps.fillStroke_Rot_Any(
+                        this.surface,
+                        center.x, center.y, scaledW, scaledH,
+                        scaledRadius,
+                        t.rotationAngle,
+                        scaledLineWidth,
+                        hasFill ? this._fillStyle : null,
+                        hasStroke ? this._strokeStyle : null,
+                        this.globalAlpha,
+                        clip
+                    );
+                    return;
+                }
             }
+            // Non-uniform scale: fall through to path-based rendering
         }
 
         // Path-based rendering: use sequential fill + stroke
