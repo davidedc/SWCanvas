@@ -3,12 +3,14 @@
 
 /**
  * Color class for SWCanvas
- * 
+ *
  * Encapsulates color operations, conversions, and alpha blending math.
  * Follows Joshua Bloch's principle of making classes immutable where practical.
- * 
+ *
  * Internally uses premultiplied sRGB for consistency with HTML5 Canvas behavior.
- * Provides methods for converting between premultiplied and non-premultiplied forms.
+ * Premultiplied form simplifies alpha compositing: result = src + dst*(1-srcA)
+ * instead of requiring division during blending. API exposes non-premultiplied
+ * values for user convenience; conversions happen transparently.
  */
 class Color {
     /**
@@ -709,6 +711,8 @@ class Transform2D {
 
         // Pre-compute decomposition values using matrix-based axis detection
         // This avoids sqrt/atan2 for 90% of common cases (simple scaling/translation)
+        // EPSILON: Threshold for treating matrix components as zero during axis detection.
+        // Value 0.0001 balances numerical precision with tolerance for floating-point errors.
         const EPSILON = 0.0001;
 
         // 1. Check for Axis Alignment (0° or 180°)
@@ -1140,8 +1144,9 @@ class Surface {
         // Allocate pixel data (RGBA, non-premultiplied)
         this.data = new Uint8ClampedArray(this.stride * height);
 
-        // Uint32Array view for optimized opaque pixel writes
+        // Uint32Array view for optimized opaque pixel writes (little-endian ABGR layout)
         // Shares same underlying ArrayBuffer - no additional memory cost
+        // Use Surface.packColor() for correct byte ordering
         this.data32 = new Uint32Array(this.data.buffer);
     }
 
@@ -7310,16 +7315,14 @@ class RoundedRectOps {
 
 /**
  * CompositeOperations utility class for SWCanvas
- * 
+ *
  * Centralized implementation of HTML5 Canvas globalCompositeOperation modes.
  * Provides optimized blending functions for various composite operations.
  * Supports full Porter-Duff compositing operations and follows Canvas 2D API spec.
- * 
- * STATUS: Fully implemented with canvas-wide compositing support
- * 
- * ALL OPERATIONS WORKING CORRECTLY:
+ *
+ * Supported operations:
  * - source-over (default) - Source drawn on top of destination
- * - destination-over - Source drawn behind destination  
+ * - destination-over - Source drawn behind destination
  * - source-atop - Source drawn only where destination exists
  * - destination-atop - Destination visible only where source exists
  * - source-in - Source visible only where destination exists
@@ -7328,10 +7331,10 @@ class RoundedRectOps {
  * - destination-out - Destination erased where source exists
  * - xor - Both visible except in overlap areas
  * - copy - Source replaces destination completely
- * 
+ *
  * The implementation uses a dual rendering approach:
  * - Source-bounded operations (source-over, destination-over, destination-out, xor, source-atop) process only source-covered pixels
- * - Canvas-wide operations (destination-atop, source-in, destination-in, source-out, copy) 
+ * - Canvas-wide operations (destination-atop, source-in, destination-in, source-out, copy)
  *   use source coverage masks and full-region compositing to correctly handle pixels outside the source area
  */
 class CompositeOperations {
@@ -9367,6 +9370,7 @@ class PolygonFiller {
      */
     static _fillPolygonsStandard(surface, polygons, paintSource, fillRule, transform, clipMask, globalAlpha, subPixelOpacity, composite, sourceMask) {
         // Mark path-based rendering for testing (helps verify direct rendering is used when expected)
+        // Check for Context2D existence since PolygonFiller may be used in isolation (e.g., unit tests)
         if (typeof Context2D !== 'undefined' && Context2D._markPathBasedRendering) {
             Context2D._markPathBasedRendering();
         }
@@ -10953,15 +10957,19 @@ class BoundsTracker {
     
     /**
      * Get bounds width (returns 0 if empty)
-     * @returns {number} Width of bounding box
+     * Bounds are inclusive pixel coordinates, so width = maxX - minX + 1
+     * (e.g., minX=0 to maxX=10 spans 11 pixels)
+     * @returns {number} Width of bounding box in pixels
      */
     getWidth() {
         return this._bounds.isEmpty ? 0 : (this._bounds.maxX - this._bounds.minX + 1);
     }
-    
+
     /**
      * Get bounds height (returns 0 if empty)
-     * @returns {number} Height of bounding box
+     * Bounds are inclusive pixel coordinates, so height = maxY - minY + 1
+     * (e.g., minY=0 to maxY=10 spans 11 pixels)
+     * @returns {number} Height of bounding box in pixels
      */
     getHeight() {
         return this._bounds.isEmpty ? 0 : (this._bounds.maxY - this._bounds.minY + 1);
@@ -11229,7 +11237,7 @@ class ClipMask {
     createPixelWriter() {
         return (x, y, coverage) => {
             // Bounds checking
-            if (x < 0 || x >= this._width || y < 0 || y >= this._height) return;
+            if (x < 0 || x >= this.width || y < 0 || y >= this.height) return;
             
             // Convert coverage to binary: >0.5 means inside, <=0.5 means outside
             const isInside = coverage > 0.5;
@@ -12337,10 +12345,13 @@ class ImageProcessor {
 }
 /**
  * ColorParser for SWCanvas
- * 
+ *
  * Parses CSS color strings into RGBA values for use with Core API.
  * Supports hex, RGB/RGBA functions, and named colors.
  * Includes caching for performance optimization.
+ *
+ * All colors are interpreted as sRGB (no gamma correction applied,
+ * matching HTML5 Canvas behavior).
  */
 class ColorParser {
     constructor() {
@@ -12734,10 +12745,11 @@ class Gradient {
 
     /**
      * Calculate color for a pixel position (must be implemented by subclasses)
-     * @param {number} x - Pixel x coordinate in canvas space
-     * @param {number} y - Pixel y coordinate in canvas space  
-     * @param {Transform2D} transform - Current canvas transform
-     * @returns {Color} Color for this pixel
+     * Subclasses should use the transform to map pixel coordinates to gradient space.
+     * @param {number} x - Pixel x coordinate in canvas space (integer)
+     * @param {number} y - Pixel y coordinate in canvas space (integer)
+     * @param {Transform2D} transform - Current canvas transform (used to invert pixel to gradient coords)
+     * @returns {Color} Color for this pixel (non-null Color instance)
      * @abstract
      */
     getColorForPixel(x, y, transform) {
@@ -13317,10 +13329,9 @@ class Rasterizer {
      * @private
      */
     _renderToShadowBuffer(shadowBuffer, renderFunc) {
-        // This is a simplified approach - we render normally and extract alpha
-        // A more sophisticated implementation would render directly to the shadow buffer
-
-        // For now, create a temporary surface to capture the shape
+        // Implementation approach: render to temporary surface, then extract alpha
+        // This provides correct results with all paint sources (gradients, patterns, colors)
+        // Create a temporary surface to capture the shape
         const tempSurface = new Surface(this._surface.width, this._surface.height);
         const tempRasterizer = new Rasterizer(tempSurface);
 
@@ -15231,27 +15242,7 @@ class Context2D {
             this._clipMask = tempClipMask;
         }
 
-        // NOTE: Browser Compatibility - Clip Path Auto-Stroking
-        // ========================================================
-        // Some browsers (particularly older versions and certain rendering modes) 
-        // automatically stroke the clip boundary with a thin line when clip() is called.
-        // This is NON-STANDARD behavior not defined in the HTML5 Canvas specification.
-        // 
-        // Modern browsers like Chrome do NOT exhibit this behavior.
-        // SWCanvas correctly follows the spec by not auto-stroking clip paths.
-        //
-        // If we wanted to replicate this browser quirk for compatibility:
-        // ------------------------------------------------------------
-        // // Auto-stroke the clip path with a hairline (before restore)
-        // if (this._strokeStyle && this._strokeStyle[3] > 0) {  // If stroke is visible
-        //     const savedLineWidth = this.lineWidth;
-        //     this.lineWidth = 0.1;  // Hairline width
-        //     this.stroke(pathToClip);
-        //     this.lineWidth = savedLineWidth;
-        // }
-        // ------------------------------------------------------------
-        // We choose NOT to implement this as it's against spec and not present
-        // in modern browsers. The visual difference in tests is expected.
+        // clip() does not auto-stroke the path (per HTML5 Canvas spec)
     }
 
     // Helper method to fill polygons directly to a clip buffer
