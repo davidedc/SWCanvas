@@ -40,13 +40,11 @@ class Transform2D {
 
         // Pre-compute decomposition values using matrix-based axis detection
         // This avoids sqrt/atan2 for 90% of common cases (simple scaling/translation)
-        // EPSILON: Threshold for treating matrix components as zero during axis detection.
-        // Value 0.0001 balances numerical precision with tolerance for floating-point errors.
-        const EPSILON = 0.0001;
+        // Uses TRANSFORM_EPSILON from SWCanvasConstants for axis detection threshold
 
         // 1. Check for Axis Alignment (0° or 180°)
         // Most common case: Simple scaling/translation where b=0, c=0
-        if (Math.abs(this.b) < EPSILON && Math.abs(this.c) < EPSILON) {
+        if (Math.abs(this.b) < TRANSFORM_EPSILON && Math.abs(this.c) < TRANSFORM_EPSILON) {
             this.isAxisAligned = true;
             this.is90DegreeRotated = false; // No dimension swap needed
             this.scaleX = Math.abs(this.a); // No sqrt needed
@@ -55,12 +53,12 @@ class Transform2D {
         }
         // 2. Check for Perpendicular Alignment (90° or 270°)
         // Second common case: 90° rotation where a=0, d=0
-        else if (Math.abs(this.a) < EPSILON && Math.abs(this.d) < EPSILON) {
+        else if (Math.abs(this.a) < TRANSFORM_EPSILON && Math.abs(this.d) < TRANSFORM_EPSILON) {
             this.isAxisAligned = true;
             this.is90DegreeRotated = true; // Dimension swap needed
             this.scaleX = Math.abs(this.b); // No sqrt needed
             this.scaleY = Math.abs(this.c); // No sqrt needed
-            this.rotationAngle = (this.b > 0) ? Math.PI / 2 : -Math.PI / 2;
+            this.rotationAngle = (this.b > 0) ? HALF_PI : -HALF_PI;
         }
         // 3. Complex Rotation / Skew - fallback to trig
         else {
@@ -74,12 +72,12 @@ class Transform2D {
         // Pre-compute scaled line width factor (geometric mean of scales)
         this.scaledLineWidthFactor = Math.max(
             Math.sqrt(this.scaleX * this.scaleY),
-            0.0001
+            TRANSFORM_EPSILON
         );
 
         // Pre-compute uniform scale check: a=d, b=-c (rotation + uniform scale)
-        this.isUniformScale = Math.abs(this.a - this.d) < EPSILON &&
-                              Math.abs(this.b + this.c) < EPSILON;
+        this.isUniformScale = Math.abs(this.a - this.d) < TRANSFORM_EPSILON &&
+                              Math.abs(this.b + this.c) < TRANSFORM_EPSILON;
 
         // Make transformation immutable
         Object.freeze(this);
@@ -183,7 +181,7 @@ class Transform2D {
     invert() {
         const det = this.a * this.d - this.b * this.c;
         
-        if (Math.abs(det) < 1e-10) {
+        if (Math.abs(det) < FLOAT_EPSILON) {
             throw new Error('Transform2D matrix is not invertible (determinant ≈ 0)');
         }
         
@@ -270,7 +268,7 @@ class Transform2D {
      * @param {number} tolerance - Floating point tolerance
      * @returns {boolean} True if transforms are equal within tolerance
      */
-    equals(other, tolerance = 1e-10) {
+    equals(other, tolerance = FLOAT_EPSILON) {
         return other instanceof Transform2D &&
                Math.abs(this.a - other.a) < tolerance &&
                Math.abs(this.b - other.b) < tolerance &&

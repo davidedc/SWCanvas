@@ -290,7 +290,7 @@ class Point {
      * @param {number} tolerance - Tolerance for floating point comparison
      * @returns {boolean} True if points are equal within tolerance
      */
-    equals(other, tolerance = 1e-10) {
+    equals(other, tolerance = FLOAT_EPSILON) {
         return other instanceof Point &&
                Math.abs(this._x - other._x) < tolerance &&
                Math.abs(this._y - other._y) < tolerance;
@@ -301,7 +301,7 @@ class Point {
      * @param {number} tolerance - Tolerance for floating point comparison
      * @returns {boolean} True if point is at origin
      */
-    isOrigin(tolerance = 1e-10) {
+    isOrigin(tolerance = FLOAT_EPSILON) {
         return Math.abs(this._x) < tolerance && Math.abs(this._y) < tolerance;
     }
     

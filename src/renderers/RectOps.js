@@ -318,23 +318,20 @@ class RectOps {
         }
     }
 
-    // Angle tolerance for axis-aligned detection (~0.057 degrees)
-    static ANGLE_TOLERANCE = 0.001;
-
     /**
      * Check if rotation angle is near axis-aligned (0°, 90°, 180°, 270°)
      * @param {number} angle - Rotation angle in radians
      * @returns {boolean} True if near axis-aligned
      */
     static isNearAxisAligned(angle) {
-        const tolerance = RectOps.ANGLE_TOLERANCE;
-        const normalized = ((angle % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+        const tolerance = ANGLE_TOLERANCE;
+        const normalized = ((angle % TAU) + TAU) % TAU;
         return (
             Math.abs(normalized) < tolerance ||
-            Math.abs(normalized - Math.PI / 2) < tolerance ||
+            Math.abs(normalized - HALF_PI) < tolerance ||
             Math.abs(normalized - Math.PI) < tolerance ||
-            Math.abs(normalized - 3 * Math.PI / 2) < tolerance ||
-            Math.abs(normalized - 2 * Math.PI) < tolerance
+            Math.abs(normalized - THREE_HALF_PI) < tolerance ||
+            Math.abs(normalized - TAU) < tolerance
         );
     }
 
@@ -346,10 +343,10 @@ class RectOps {
      * @returns {{adjustedWidth: number, adjustedHeight: number}} Adjusted dimensions
      */
     static getRotatedDimensions(width, height, angle) {
-        const tolerance = RectOps.ANGLE_TOLERANCE;
-        const normalized = ((angle % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
-        if (Math.abs(normalized - Math.PI / 2) < tolerance ||
-            Math.abs(normalized - 3 * Math.PI / 2) < tolerance) {
+        const tolerance = ANGLE_TOLERANCE;
+        const normalized = ((angle % TAU) + TAU) % TAU;
+        if (Math.abs(normalized - HALF_PI) < tolerance ||
+            Math.abs(normalized - THREE_HALF_PI) < tolerance) {
             return { adjustedWidth: height, adjustedHeight: width };
         }
         return { adjustedWidth: width, adjustedHeight: height };

@@ -175,14 +175,14 @@ class RoundedRectOps {
             const start = RoundedRectOps._transform(edge.start.x, edge.start.y, centerX, centerY, cos, sin);
             const end = RoundedRectOps._transform(edge.end.x, edge.end.y, centerX, centerY, cos, sin);
             const dx = end.x - start.x, dy = end.y - start.y;
-            if (dx * dx + dy * dy < 0.25) continue;
+            if (dx * dx + dy * dy < MIN_EDGE_LENGTH_SQUARED) continue;
             RoundedRectOps._generateEdgePixels(start.x, start.y, end.x, end.y, recorder);
         }
         const corners = [
-            { cx: -hw + r, cy: -hh + r, startAngle: Math.PI, endAngle: Math.PI * 1.5 },
-            { cx: hw - r, cy: -hh + r, startAngle: Math.PI * 1.5, endAngle: Math.PI * 2 },
-            { cx: hw - r, cy: hh - r, startAngle: 0, endAngle: Math.PI * 0.5 },
-            { cx: -hw + r, cy: hh - r, startAngle: Math.PI * 0.5, endAngle: Math.PI }
+            { cx: -hw + r, cy: -hh + r, startAngle: Math.PI, endAngle: THREE_HALF_PI },
+            { cx: hw - r, cy: -hh + r, startAngle: THREE_HALF_PI, endAngle: TAU },
+            { cx: hw - r, cy: hh - r, startAngle: 0, endAngle: HALF_PI },
+            { cx: -hw + r, cy: hh - r, startAngle: HALF_PI, endAngle: Math.PI }
         ];
         for (const corner of corners) {
             const screenCenter = RoundedRectOps._transform(corner.cx, corner.cy, centerX, centerY, cos, sin);
@@ -279,7 +279,7 @@ class RoundedRectOps {
         const drawCorner = (cx, cy, startAngle, endAngle) => {
             const sr = radius - 0.5;
             // Use 1 degree steps for smooth corners
-            const angleStep = Math.PI / 180;
+            const angleStep = DEG_TO_RAD;
             for (let angle = startAngle; angle <= endAngle; angle += angleStep) {
                 const px = Math.floor(cx + sr * Math.cos(angle));
                 const py = Math.floor(cy + sr * Math.sin(angle));
@@ -288,13 +288,13 @@ class RoundedRectOps {
         };
 
         // Top-left corner (180° to 270°)
-        drawCorner(posX + radius, posY + radius, Math.PI, Math.PI * 3 / 2);
+        drawCorner(posX + radius, posY + radius, Math.PI, THREE_HALF_PI);
         // Top-right corner (270° to 360°)
-        drawCorner(posX + posW - radius, posY + radius, Math.PI * 3 / 2, Math.PI * 2);
+        drawCorner(posX + posW - radius, posY + radius, THREE_HALF_PI, TAU);
         // Bottom-right corner (0° to 90°)
-        drawCorner(posX + posW - radius, posY + posH - radius, 0, Math.PI / 2);
+        drawCorner(posX + posW - radius, posY + posH - radius, 0, HALF_PI);
         // Bottom-left corner (90° to 180°)
-        drawCorner(posX + radius, posY + posH - radius, Math.PI / 2, Math.PI);
+        drawCorner(posX + radius, posY + posH - radius, HALF_PI, Math.PI);
     }
 
     /**
@@ -369,7 +369,7 @@ class RoundedRectOps {
         // Collect corner arc pixels
         const collectCorner = (cx, cy, startAngle, endAngle) => {
             const sr = radius - 0.5;
-            const angleStep = Math.PI / 180;
+            const angleStep = DEG_TO_RAD;
             for (let angle = startAngle; angle <= endAngle; angle += angleStep) {
                 const px = Math.floor(cx + sr * Math.cos(angle));
                 const py = Math.floor(cy + sr * Math.sin(angle));
@@ -377,10 +377,10 @@ class RoundedRectOps {
             }
         };
 
-        collectCorner(posX + radius, posY + radius, Math.PI, Math.PI * 3 / 2);
-        collectCorner(posX + posW - radius, posY + radius, Math.PI * 3 / 2, Math.PI * 2);
-        collectCorner(posX + posW - radius, posY + posH - radius, 0, Math.PI / 2);
-        collectCorner(posX + radius, posY + posH - radius, Math.PI / 2, Math.PI);
+        collectCorner(posX + radius, posY + radius, Math.PI, THREE_HALF_PI);
+        collectCorner(posX + posW - radius, posY + radius, THREE_HALF_PI, TAU);
+        collectCorner(posX + posW - radius, posY + posH - radius, 0, HALF_PI);
+        collectCorner(posX + radius, posY + posH - radius, HALF_PI, Math.PI);
 
         // Render all unique pixels once with alpha blending
         for (const pixelIndex of strokePixels) {
@@ -829,9 +829,6 @@ class RoundedRectOps {
 
         const halfStroke = lineWidth / 2;
 
-        // Epsilon contraction for fill boundaries (same as CircleOps)
-        const FILL_EPSILON = 0.0001;
-
         // Use PATH coordinates as reference for fill
         const pathX = Math.floor(x);
         const pathY = Math.floor(y);
@@ -1126,17 +1123,17 @@ class RoundedRectOps {
             // Skip zero-length edges (radius = half width or height)
             const dx = end.x - start.x;
             const dy = end.y - start.y;
-            if (dx * dx + dy * dy < 0.25) continue;
+            if (dx * dx + dy * dy < MIN_EDGE_LENGTH_SQUARED) continue;
 
             RoundedRectOps._generateEdgePixels(start.x, start.y, end.x, end.y, recordPixel);
         }
 
         // Corner definitions (local center and angle range)
         const corners = [
-            { cx: -hw + radius, cy: -hh + radius, startAngle: Math.PI, endAngle: Math.PI * 1.5 },         // Top-left
-            { cx: hw - radius, cy: -hh + radius, startAngle: Math.PI * 1.5, endAngle: Math.PI * 2 },      // Top-right
-            { cx: hw - radius, cy: hh - radius, startAngle: 0, endAngle: Math.PI * 0.5 },                 // Bottom-right
-            { cx: -hw + radius, cy: hh - radius, startAngle: Math.PI * 0.5, endAngle: Math.PI }           // Bottom-left
+            { cx: -hw + radius, cy: -hh + radius, startAngle: Math.PI, endAngle: THREE_HALF_PI },         // Top-left
+            { cx: hw - radius, cy: -hh + radius, startAngle: THREE_HALF_PI, endAngle: TAU },      // Top-right
+            { cx: hw - radius, cy: hh - radius, startAngle: 0, endAngle: HALF_PI },                 // Bottom-right
+            { cx: -hw + radius, cy: hh - radius, startAngle: HALF_PI, endAngle: Math.PI }           // Bottom-left
         ];
 
         // Generate corner arc perimeter pixels
@@ -1254,16 +1251,16 @@ class RoundedRectOps {
             const end = RoundedRectOps._transform(edge.end.x, edge.end.y, centerX, centerY, cos, sin);
             const dx = end.x - start.x;
             const dy = end.y - start.y;
-            if (dx * dx + dy * dy < 0.25) continue;
+            if (dx * dx + dy * dy < MIN_EDGE_LENGTH_SQUARED) continue;
             RoundedRectOps._generateEdgePixels(start.x, start.y, end.x, end.y, recordPixel);
         }
 
         // Corner definitions
         const corners = [
-            { cx: -hw + radius, cy: -hh + radius, startAngle: Math.PI, endAngle: Math.PI * 1.5 },
-            { cx: hw - radius, cy: -hh + radius, startAngle: Math.PI * 1.5, endAngle: Math.PI * 2 },
-            { cx: hw - radius, cy: hh - radius, startAngle: 0, endAngle: Math.PI * 0.5 },
-            { cx: -hw + radius, cy: hh - radius, startAngle: Math.PI * 0.5, endAngle: Math.PI }
+            { cx: -hw + radius, cy: -hh + radius, startAngle: Math.PI, endAngle: THREE_HALF_PI },
+            { cx: hw - radius, cy: -hh + radius, startAngle: THREE_HALF_PI, endAngle: TAU },
+            { cx: hw - radius, cy: hh - radius, startAngle: 0, endAngle: HALF_PI },
+            { cx: -hw + radius, cy: hh - radius, startAngle: HALF_PI, endAngle: Math.PI }
         ];
 
         for (const corner of corners) {
@@ -1384,8 +1381,6 @@ class RoundedRectOps {
      * @param {Uint8Array|null} clipBuffer - Optional clip mask buffer
      */
     static fillStroke_Rot_Any(surface, centerX, centerY, width, height, radii, rotation, lineWidth, fillColor, strokeColor, globalAlpha, clipBuffer = null) {
-        const FILL_EPSILON = 0.0001;
-
         // Fill first (with slight contraction to prevent speckles at fill/stroke boundary)
         if (fillColor && fillColor.a > 0) {
             RoundedRectOps.fill_Rot_Any(
@@ -1464,7 +1459,7 @@ class RoundedRectOps {
             const dx = edge.end.x - edge.start.x;
             const dy = edge.end.y - edge.start.y;
             const edgeLength = Math.sqrt(dx * dx + dy * dy);
-            if (edgeLength < 0.5) continue;
+            if (edgeLength < MIN_EDGE_LENGTH) continue;
 
             LineOps.stroke_Any(
                 surface,
@@ -1487,10 +1482,10 @@ class RoundedRectOps {
         // - Bottom-left: (-hw+radius, hh-radius), angles: π/2 to π
 
         const corners = [
-            { localCx: -hw + radius, localCy: -hh + radius, startAngle: Math.PI, endAngle: Math.PI * 1.5 },         // Top-left
-            { localCx: hw - radius, localCy: -hh + radius, startAngle: Math.PI * 1.5, endAngle: Math.PI * 2 },      // Top-right
-            { localCx: hw - radius, localCy: hh - radius, startAngle: 0, endAngle: Math.PI * 0.5 },                 // Bottom-right
-            { localCx: -hw + radius, localCy: hh - radius, startAngle: Math.PI * 0.5, endAngle: Math.PI }           // Bottom-left
+            { localCx: -hw + radius, localCy: -hh + radius, startAngle: Math.PI, endAngle: THREE_HALF_PI },         // Top-left
+            { localCx: hw - radius, localCy: -hh + radius, startAngle: THREE_HALF_PI, endAngle: TAU },      // Top-right
+            { localCx: hw - radius, localCy: hh - radius, startAngle: 0, endAngle: HALF_PI },                 // Bottom-right
+            { localCx: -hw + radius, localCy: hh - radius, startAngle: HALF_PI, endAngle: Math.PI }           // Bottom-left
         ];
 
         // Draw 4 corner arcs
@@ -1582,7 +1577,7 @@ class RoundedRectOps {
             const dx = edge.end.x - edge.start.x;
             const dy = edge.end.y - edge.start.y;
             const edgeLength = Math.sqrt(dx * dx + dy * dy);
-            if (edgeLength < 0.5) continue;
+            if (edgeLength < MIN_EDGE_LENGTH) continue;
 
             let x1i = Math.floor(edge.start.x);
             let y1i = Math.floor(edge.start.y);
@@ -1627,10 +1622,10 @@ class RoundedRectOps {
 
         // Calculate 4 corner arc centers and angles
         const corners = [
-            { localCx: -hw + radius, localCy: -hh + radius, startAngle: Math.PI, endAngle: Math.PI * 1.5 },         // Top-left
-            { localCx: hw - radius, localCy: -hh + radius, startAngle: Math.PI * 1.5, endAngle: Math.PI * 2 },      // Top-right
-            { localCx: hw - radius, localCy: hh - radius, startAngle: 0, endAngle: Math.PI * 0.5 },                 // Bottom-right
-            { localCx: -hw + radius, localCy: hh - radius, startAngle: Math.PI * 0.5, endAngle: Math.PI }           // Bottom-left
+            { localCx: -hw + radius, localCy: -hh + radius, startAngle: Math.PI, endAngle: THREE_HALF_PI },         // Top-left
+            { localCx: hw - radius, localCy: -hh + radius, startAngle: THREE_HALF_PI, endAngle: TAU },      // Top-right
+            { localCx: hw - radius, localCy: hh - radius, startAngle: 0, endAngle: HALF_PI },                 // Bottom-right
+            { localCx: -hw + radius, localCy: hh - radius, startAngle: HALF_PI, endAngle: Math.PI }           // Bottom-left
         ];
 
         // Collect corner arc pixels using angle-based iteration (same as stroke1px_AA_OpaqExactEndpoints)

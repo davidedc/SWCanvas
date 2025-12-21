@@ -242,7 +242,7 @@ class PathFlattener {
     static _flattenQuadraticBezier(x0, y0, x1, y1, x2, y2) {
         const points = [{x: x0, y: y0}];
         PathFlattener._flattenQuadraticBezierRecursive(
-            x0, y0, x1, y1, x2, y2, points, PathFlattener.TOLERANCE
+            x0, y0, x1, y1, x2, y2, points, PATH_FLATTENING_TOLERANCE
         );
         return points;
     }
@@ -299,7 +299,7 @@ class PathFlattener {
     static _flattenCubicBezier(x0, y0, x1, y1, x2, y2, x3, y3) {
         const points = [{x: x0, y: y0}];
         PathFlattener._flattenCubicBezierRecursive(
-            x0, y0, x1, y1, x2, y2, x3, y3, points, PathFlattener.TOLERANCE
+            x0, y0, x1, y1, x2, y2, x3, y3, points, PATH_FLATTENING_TOLERANCE
         );
         return points;
     }
@@ -377,15 +377,15 @@ class PathFlattener {
         let end = endAngle;
         
         if (!counterclockwise && end < start) {
-            end += 2 * Math.PI;
+            end += TAU;
         } else if (counterclockwise && start < end) {
-            start += 2 * Math.PI;
+            start += TAU;
         }
         
         const totalAngle = Math.abs(end - start);
         
         // Calculate number of segments needed for tolerance
-        const maxAngleStep = 2 * Math.acos(Math.max(0, 1 - PathFlattener.TOLERANCE / radius));
+        const maxAngleStep = 2 * Math.acos(Math.max(0, 1 - PATH_FLATTENING_TOLERANCE / radius));
         const segments = Math.max(1, Math.ceil(totalAngle / maxAngleStep));
         
         const points = [];
@@ -423,16 +423,16 @@ class PathFlattener {
         let end = endAngle;
         
         if (!counterclockwise && end < start) {
-            end += 2 * Math.PI;
+            end += TAU;
         } else if (counterclockwise && start < end) {
-            start += 2 * Math.PI;
+            start += TAU;
         }
         
         const totalAngle = Math.abs(end - start);
         
         // Calculate number of segments - use smaller radius for tolerance calculation
         const minRadius = Math.min(radiusX, radiusY);
-        const maxAngleStep = 2 * Math.acos(Math.max(0, 1 - PathFlattener.TOLERANCE / minRadius));
+        const maxAngleStep = 2 * Math.acos(Math.max(0, 1 - PATH_FLATTENING_TOLERANCE / minRadius));
         const segments = Math.max(1, Math.ceil(totalAngle / maxAngleStep));
         
         const points = [];
@@ -479,9 +479,9 @@ class PathFlattener {
         let end = endAngle;
         
         if (!counterclockwise && end < start) {
-            end += 2 * Math.PI;
+            end += TAU;
         } else if (counterclockwise && start < end) {
-            start += 2 * Math.PI;
+            start += TAU;
         }
         
         const totalAngle = Math.abs(end - start);
@@ -489,7 +489,7 @@ class PathFlattener {
         // Calculate number of segments needed for tolerance with minimum segments for smooth curves
         const maxAngleStep = 2 * Math.acos(Math.max(0, 1 - tolerance / radius));
         const minSegmentsFor90Deg = 16; // Minimum segments for a 90-degree arc
-        const minSegments = Math.ceil((totalAngle / (Math.PI / 2)) * minSegmentsFor90Deg);
+        const minSegments = Math.ceil((totalAngle / (HALF_PI)) * minSegmentsFor90Deg);
         const toleranceSegments = Math.ceil(totalAngle / maxAngleStep);
         const segments = Math.max(1, Math.max(minSegments, toleranceSegments));
         
@@ -557,7 +557,7 @@ class PathFlattener {
         const len2 = Math.sqrt(v2.x * v2.x + v2.y * v2.y);
         
         // If any vectors are zero-length (P0==P1, or P1==P2): degrade to lineTo(x1, y1)
-        if (len1 < 1e-10 || len2 < 1e-10) {
+        if (len1 < FLOAT_EPSILON || len2 < FLOAT_EPSILON) {
             const targetPoint = new Point(x1, y1);
             currentPoly.push(targetPoint.toObject());
             return {
@@ -581,7 +581,7 @@ class PathFlattener {
         const turnAngle = Math.acos(clampedDot);
         
         // If the three points are collinear (turn angle is ~0° or ~180°): just lineTo(x1, y1)
-        if (Math.abs(Math.sin(turnAngle)) < 1e-10) {
+        if (Math.abs(Math.sin(turnAngle)) < FLOAT_EPSILON) {
             const targetPoint = new Point(x1, y1);
             currentPoly.push(targetPoint.toObject());
             return {
@@ -642,7 +642,7 @@ class PathFlattener {
         }
         
         // Generate arc points with higher precision for smooth curves
-        const arcTolerance = Math.min(0.1, PathFlattener.TOLERANCE); // Use finer tolerance for arcTo
+        const arcTolerance = Math.min(0.1, PATH_FLATTENING_TOLERANCE); // Use finer tolerance for arcTo
         const arcPoints = PathFlattener._flattenArcWithTolerance(
             center.x, center.y, radius,
             startAngle, endAngle,
@@ -665,6 +665,3 @@ class PathFlattener {
         };
     }
 }
-
-// Class constants
-PathFlattener.TOLERANCE = 0.25; // Fixed tolerance for deterministic behavior

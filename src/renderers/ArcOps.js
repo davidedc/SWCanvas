@@ -38,8 +38,8 @@ class ArcOps {
      */
     static isAngleInRange(px, py, startAngle, endAngle) {
         let angle = Math.atan2(py, px);
-        if (angle < 0) angle += 2 * Math.PI;
-        if (angle < startAngle) angle += 2 * Math.PI;
+        if (angle < 0) angle += TAU;
+        if (angle < startAngle) angle += TAU;
         return angle >= startAngle && angle <= endAngle;
     }
 
@@ -55,11 +55,11 @@ class ArcOps {
         let start = startAngle;
         let end = endAngle;
 
-        // Normalize to [0, 2π) range
-        start = start % (2 * Math.PI);
-        if (start < 0) start += 2 * Math.PI;
-        end = end % (2 * Math.PI);
-        if (end < 0) end += 2 * Math.PI;
+        // Normalize to [0, TAU) range
+        start = start % TAU;
+        if (start < 0) start += TAU;
+        end = end % TAU;
+        if (end < 0) end += TAU;
 
         if (anticlockwise) {
             // Swap and adjust for anticlockwise
@@ -70,7 +70,7 @@ class ArcOps {
 
         // Ensure end > start
         if (end <= start) {
-            end += 2 * Math.PI;
+            end += TAU;
         }
 
         return { start, end };
@@ -851,8 +851,8 @@ class ArcOps {
             if (hasFill && fillDistSquared >= 0) {
                 const fillXDist = Math.sqrt(fillDistSquared);
                 // Epsilon contraction to prevent speckles at boundary (CircleOps approach)
-                leftFillX = Math.max(minX, Math.ceil(cX - fillXDist + 0.0001));
-                rightFillX = Math.min(maxX, Math.floor(cX + fillXDist - 0.0001));
+                leftFillX = Math.max(minX, Math.ceil(cX - fillXDist + FILL_EPSILON));
+                rightFillX = Math.min(maxX, Math.floor(cX + fillXDist - FILL_EPSILON));
             }
 
             // Calculate inner circle boundaries (stroke inner boundary)

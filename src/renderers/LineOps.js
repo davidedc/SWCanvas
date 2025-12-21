@@ -42,7 +42,7 @@ class LineOps {
         const width = surface.width;
         const height = surface.height;
 
-        if (isOpaqueColor && lineWidth <= 1.5) {
+        if (isOpaqueColor && lineWidth <= THIN_LINE_THRESHOLD) {
             // Direct rendering for thin lines: Bresenham algorithm
             const packedColor = Surface.packColor(paintSource.r, paintSource.g, paintSource.b, 255);
             const data32 = surface.data32;
@@ -136,7 +136,7 @@ class LineOps {
                 LineOps._strokeThick_PolyScan(surface, x1, y1, x2, y2, lineWidth, paintSource, globalAlpha, clipBuffer, false);
                 return true;
             }
-        } else if (isSemiTransparentColor && lineWidth <= 1.5) {
+        } else if (isSemiTransparentColor && lineWidth <= THIN_LINE_THRESHOLD) {
             // Direct rendering for thin semitransparent lines: Bresenham with alpha blending
             const data = surface.data;
             const r = paintSource.r;

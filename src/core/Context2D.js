@@ -65,7 +65,7 @@ class Context2D {
         this._lineWidth = 1.0;
         this.lineJoin = 'miter';  // 'miter', 'round', 'bevel'
         this.lineCap = 'butt';    // 'butt', 'round', 'square'
-        this.miterLimit = 10.0;
+        this.miterLimit = DEFAULT_MITER_LIMIT;
 
         // Line dash properties
         this._lineDash = [];         // Internal working dash pattern (may be duplicated)
@@ -449,7 +449,7 @@ class Context2D {
                 const tlX = center.x - finalW / 2;
                 const tlY = center.y - finalH / 2;
 
-                const is1pxStroke = Math.abs(scaledLineWidth - 1) < 0.001;
+                const is1pxStroke = Math.abs(scaledLineWidth - 1) < STROKE_1PX_TOLERANCE;
                 const isThickStroke = scaledLineWidth > 1;
 
                 if (is1pxStroke) {
@@ -729,7 +729,7 @@ class Context2D {
                 const center = t.transformPoint({ x: x + width / 2, y: y + height / 2 });
                 const scaledLineWidth = t.getScaledLineWidth(this._lineWidth);
                 const scaledRadius = radius * t.scaleX;
-                const is1pxStroke = Math.abs(scaledLineWidth - 1) < 0.001;
+                const is1pxStroke = Math.abs(scaledLineWidth - 1) < STROKE_1PX_TOLERANCE;
                 const isOpaque = this._strokeStyle.a === 255 && this.globalAlpha >= 1.0;
 
                 if (t.isIdentity) {
@@ -1362,7 +1362,7 @@ class Context2D {
             const p2 = polygon[(i + 1) % polygon.length];
 
             // Skip horizontal edges
-            if (Math.abs(p1.y - p2.y) < 1e-10) continue;
+            if (Math.abs(p1.y - p2.y) < FLOAT_EPSILON) continue;
 
             // Check if scanline crosses this edge
             const minY = Math.min(p1.y, p2.y);
@@ -1781,7 +1781,7 @@ class Context2D {
 
         if (isColor && isSourceOver && isButtCap) {
             const isOpaque = paintSource.a === 255 && this.globalAlpha >= 1.0;
-            const is1pxStroke = Math.abs(scaledLineWidth - 1) < 0.001;
+            const is1pxStroke = Math.abs(scaledLineWidth - 1) < STROKE_1PX_TOLERANCE;
 
             if (is1pxStroke) {
                 // Optimized 1px stroke path
@@ -1947,7 +1947,7 @@ class Context2D {
             // Path-based rendering: use path system for gradients/patterns/non-source-over compositing
             Context2D._markPathBasedRendering(); // Mark path-based rendering for testing
             this.beginPath();
-            this.arc(cx, cy, radius, 0, Math.PI * 2);
+            this.arc(cx, cy, radius, 0, TAU);
             // Temporarily set identity transform since we already transformed
             const savedTransform = this._transform;
             this._transform = Transform2D.IDENTITY;
@@ -1962,7 +1962,7 @@ class Context2D {
      */
     _strokeCircleDirect(cx, cy, radius, lineWidth, paintSource) {
         const isColor = paintSource instanceof Color;
-        const is1pxStroke = Math.abs(lineWidth - 1) < 0.001;
+        const is1pxStroke = Math.abs(lineWidth - 1) < STROKE_1PX_TOLERANCE;
         const isSourceOver = this.globalCompositeOperation === 'source-over';
         const clipBuffer = this._clipMask ? this._clipMask.buffer : null;
 
@@ -1987,7 +1987,7 @@ class Context2D {
         // Fallback to path system for gradients, patterns, or non-source-over compositing
         Context2D._markPathBasedRendering();
         this.beginPath();
-        this.arc(cx, cy, radius, 0, Math.PI * 2);
+        this.arc(cx, cy, radius, 0, TAU);
         const savedTransform = this._transform;
         this._transform = Transform2D.IDENTITY;
         const savedLineWidth = this._lineWidth;

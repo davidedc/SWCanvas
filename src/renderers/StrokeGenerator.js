@@ -53,7 +53,7 @@ class StrokeGenerator {
             lineWidth: 1.0,
             lineJoin: 'miter',
             lineCap: 'butt',
-            miterLimit: 10.0,
+            miterLimit: DEFAULT_MITER_LIMIT,
             lineDash: [],
             lineDashOffset: 0
         };
@@ -298,8 +298,8 @@ class StrokeGenerator {
      */
     static _isPathClosed(points) {
         return points.length > 2 && 
-               Math.abs(points[0].x - points[points.length - 1].x) < 1e-10 &&
-               Math.abs(points[0].y - points[points.length - 1].y) < 1e-10;
+               Math.abs(points[0].x - points[points.length - 1].x) < FLOAT_EPSILON &&
+               Math.abs(points[0].y - points[points.length - 1].y) < FLOAT_EPSILON;
     }
     
     /**
@@ -318,7 +318,7 @@ class StrokeGenerator {
             
             // Skip zero-length segments
             const length = p1.distanceTo(p2);
-            if (length < 1e-10) continue;
+            if (length < FLOAT_EPSILON) continue;
             
             const segment = StrokeGenerator._createSegment(p1, p2, halfWidth, length);
             segments.push(segment);
@@ -400,7 +400,7 @@ class StrokeGenerator {
         const cross = seg1.tangent.cross(seg2.tangent);
         
         // Check for 180-degree turn (parallel segments)
-        if (Math.abs(cross) < 1e-10) {
+        if (Math.abs(cross) < FLOAT_EPSILON) {
             return StrokeGenerator._generateBevelJoin(seg1, seg2, joinPoint);
         }
         
@@ -554,9 +554,9 @@ class StrokeGenerator {
         // Normalize angles to go the correct way around (from original implementation)
         let angleDiff = endAngle - startAngle;
         if (angleDiff > Math.PI) {
-            angleDiff -= 2 * Math.PI;
+            angleDiff -= TAU;
         } else if (angleDiff < -Math.PI) {
-            angleDiff += 2 * Math.PI;
+            angleDiff += TAU;
         }
         
         // We want to go the convex way (positive turn)
@@ -568,7 +568,7 @@ class StrokeGenerator {
             angleDiff = -angleDiff;
         }
         
-        const segments = Math.max(2, Math.ceil(angleDiff / (Math.PI / 4))); // At least 2 segments
+        const segments = Math.max(2, Math.ceil(angleDiff / (QUARTER_PI))); // At least 2 segments
         const angleStep = angleDiff / segments;
         
         const triangles = [];
@@ -743,7 +743,7 @@ class StrokeGenerator {
     static _lineIntersection(p1, p2, p3, p4) {
         const denom = (p1.x - p2.x) * (p3.y - p4.y) - (p1.y - p2.y) * (p3.x - p4.x);
         
-        if (Math.abs(denom) < 1e-10) {
+        if (Math.abs(denom) < FLOAT_EPSILON) {
             return null; // Lines are parallel
         }
         
@@ -768,11 +768,11 @@ class StrokeGenerator {
         let angleDiff = endAngle - startAngle;
         
         // Normalize angle difference
-        while (angleDiff > Math.PI) angleDiff -= 2 * Math.PI;
-        while (angleDiff < -Math.PI) angleDiff += 2 * Math.PI;
+        while (angleDiff > Math.PI) angleDiff -= TAU;
+        while (angleDiff < -Math.PI) angleDiff += TAU;
         
         const absAngle = Math.abs(angleDiff);
-        const segments = Math.max(2, Math.ceil(absAngle / (Math.PI / 4)));
+        const segments = Math.max(2, Math.ceil(absAngle / (QUARTER_PI)));
         const angleStep = angleDiff / segments;
         
         const triangles = [];

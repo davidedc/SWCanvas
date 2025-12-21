@@ -432,7 +432,7 @@ class CircleOps {
      * Optimized circle fill+stroke approach using:
      * - Uses single floating-point center (cx - 0.5) for both operations
      * - Uses analytical boundary detection (sqrt-based) instead of Bresenham extents
-     * - Uses epsilon contraction (0.0001) on fill boundaries to prevent speckles
+     * - Uses epsilon contraction (FILL_EPSILON) on fill boundaries to prevent speckles
      * - Renders fill first, then stroke on top (stroke covers any micro-gaps)
      *
      * @param {Surface} surface - Target surface
@@ -517,8 +517,8 @@ class CircleOps {
             if (hasFill && fillDistSquared >= 0) {
                 const fillXDist = Math.sqrt(fillDistSquared);
                 // Epsilon contraction to prevent speckles at boundary
-                leftFillX = Math.max(minX, Math.ceil(cX - fillXDist + 0.0001));
-                rightFillX = Math.min(maxX, Math.floor(cX + fillXDist - 0.0001));
+                leftFillX = Math.max(minX, Math.ceil(cX - fillXDist + FILL_EPSILON));
+                rightFillX = Math.min(maxX, Math.floor(cX + fillXDist - FILL_EPSILON));
             }
 
             // Calculate inner circle boundaries (stroke inner boundary)

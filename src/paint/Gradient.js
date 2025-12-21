@@ -294,14 +294,14 @@ class ConicGradient extends Gradient {
 
         // Normalize angle to [0, 2π)
         while (pixelAngle < 0) {
-            pixelAngle += 2 * Math.PI;
+            pixelAngle += TAU;
         }
-        while (pixelAngle >= 2 * Math.PI) {
-            pixelAngle -= 2 * Math.PI;
+        while (pixelAngle >= TAU) {
+            pixelAngle -= TAU;
         }
 
         // Convert angle to parameter t [0, 1]
-        const t = pixelAngle / (2 * Math.PI);
+        const t = pixelAngle / (TAU);
 
         return this._getColorAt(t);
     }

@@ -232,7 +232,7 @@ class PolygonFiller {
             const p2 = polygon[(i + 1) % polygon.length];
 
             // Skip horizontal edges (avoid division by zero)
-            if (Math.abs(p1.y - p2.y) < 1e-10) continue;
+            if (Math.abs(p1.y - p2.y) < FLOAT_EPSILON) continue;
 
             // Check if scanline crosses this edge
             const minY = Math.min(p1.y, p2.y);
@@ -464,7 +464,7 @@ class PolygonFiller {
     static isPointInPolygons(x, y, polygons, fillRule = 'nonzero') {
         if (polygons.length === 0) return false;
 
-        const epsilon = 1e-10;
+        const epsilon = FLOAT_EPSILON;
 
         // First check if point is exactly on any edge (HTML5 Canvas inclusive behavior)
         for (const polygon of polygons) {

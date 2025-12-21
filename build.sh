@@ -24,6 +24,10 @@ cat > dist/swcanvas.js << 'EOF'
 EOF
 
 # Concatenate source files in dependency order
+# Phase 0: Constants (no dependencies - load first)
+cat src/SWCanvasConstants.js >> dist/swcanvas.js
+echo "" >> dist/swcanvas.js
+
 # Phase 1: Core Foundation classes (no dependencies)
 cat src/core/Color.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
