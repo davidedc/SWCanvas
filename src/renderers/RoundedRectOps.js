@@ -33,6 +33,170 @@
  *   - Opacity: Opaq | Alpha | Any
  */
 class RoundedRectOps {
+    // =========================================================================
+    // Private Static Helpers (extracted to eliminate per-call function allocations)
+    // =========================================================================
+
+    /**
+     * Transform local coordinates to screen coordinates using rotation matrix.
+     * @param {number} localX - Local X coordinate
+     * @param {number} localY - Local Y coordinate
+     * @param {number} centerX - Center X in screen coordinates
+     * @param {number} centerY - Center Y in screen coordinates
+     * @param {number} cos - Cosine of rotation angle
+     * @param {number} sin - Sine of rotation angle
+     * @returns {{x: number, y: number}} Screen coordinates
+     * @private
+     */
+    static _transform(localX, localY, centerX, centerY, cos, sin) {
+        return {
+            x: centerX + localX * cos - localY * sin,
+            y: centerY + localX * sin + localY * cos
+        };
+    }
+
+    /**
+     * Generate edge pixels using Bresenham's line algorithm.
+     * @param {number} x0 - Start X coordinate
+     * @param {number} y0 - Start Y coordinate
+     * @param {number} x1 - End X coordinate
+     * @param {number} y1 - End Y coordinate
+     * @param {function(number, number): void} recorder - Pixel recording callback
+     * @private
+     */
+    static _generateEdgePixels(x0, y0, x1, y1, recorder) {
+        const ix0 = Math.floor(x0), iy0 = Math.floor(y0);
+        const ix1 = Math.floor(x1), iy1 = Math.floor(y1);
+        const dx = Math.abs(ix1 - ix0), dy = Math.abs(iy1 - iy0);
+        const sx = ix0 < ix1 ? 1 : -1, sy = iy0 < iy1 ? 1 : -1;
+        let err = dx - dy, x = ix0, y = iy0;
+        while (true) {
+            recorder(x, y);
+            if (x === ix1 && y === iy1) break;
+            const e2 = 2 * err;
+            if (e2 > -dy) { err -= dy; x += sx; }
+            if (e2 < dx) { err += dx; y += sy; }
+        }
+    }
+
+    /**
+     * Generate arc pixels using angle-based iteration.
+     * @param {number} cx - Center X coordinate
+     * @param {number} cy - Center Y coordinate
+     * @param {number} r - Arc radius
+     * @param {number} startAngle - Start angle in radians
+     * @param {number} endAngle - End angle in radians
+     * @param {function(number, number): void} recorder - Pixel recording callback
+     * @private
+     */
+    static _generateArcPixels(cx, cy, r, startAngle, endAngle, recorder) {
+        if (r <= 0) return;
+        const arcLength = r * Math.abs(endAngle - startAngle);
+        const steps = Math.max(Math.ceil(arcLength), 8);
+        const angleStep = (endAngle - startAngle) / steps;
+        let lastPx = null, lastPy = null;
+        for (let i = 0; i <= steps; i++) {
+            const angle = startAngle + i * angleStep;
+            const px = Math.floor(cx + r * Math.cos(angle));
+            const py = Math.floor(cy + r * Math.sin(angle));
+            if (px !== lastPx || py !== lastPy) {
+                recorder(px, py);
+                lastPx = px;
+                lastPy = py;
+            }
+        }
+    }
+
+    /**
+     * Calculate X extent for rounded corner at a given scanline Y.
+     * @param {number} py - Scanline Y coordinate
+     * @param {number} rectX - Rectangle left X
+     * @param {number} rectW - Rectangle width
+     * @param {number} rectY - Rectangle top Y
+     * @param {number} rectH - Rectangle height
+     * @param {number} radius - Corner radius
+     * @param {number} [epsilon=0] - Epsilon for inset calculation
+     * @returns {{leftX: number, rightX: number}} X extent or {-1, -1} if outside
+     * @private
+     */
+    static _getXExtent(py, rectX, rectW, rectY, rectH, radius, epsilon = 0) {
+        if (py < rectY || py >= rectY + rectH) {
+            return { leftX: -1, rightX: -1 };
+        }
+        if (radius <= 0) {
+            return { leftX: rectX, rightX: rectX + rectW - 1 };
+        }
+        let leftX = rectX, rightX = rectX + rectW - 1;
+        if (py < rectY + radius) {
+            const dy = rectY + radius - py - 0.5;
+            const dySquared = dy * dy, radiusSquared = radius * radius;
+            if (dySquared < radiusSquared) {
+                const dx = Math.sqrt(radiusSquared - dySquared);
+                leftX = Math.ceil(rectX + radius - dx + epsilon);
+                rightX = Math.floor(rectX + rectW - radius + dx - 1 - epsilon);
+            } else {
+                return { leftX: -1, rightX: -1 };
+            }
+        } else if (py >= rectY + rectH - radius) {
+            const dy = py - (rectY + rectH - radius) + 0.5;
+            const dySquared = dy * dy, radiusSquared = radius * radius;
+            if (dySquared < radiusSquared) {
+                const dx = Math.sqrt(radiusSquared - dySquared);
+                leftX = Math.ceil(rectX + radius - dx + epsilon);
+                rightX = Math.floor(rectX + rectW - radius + dx - 1 - epsilon);
+            } else {
+                return { leftX: -1, rightX: -1 };
+            }
+        }
+        return { leftX, rightX };
+    }
+
+    /**
+     * Generate perimeter pixels for a rounded rectangle.
+     * @param {number} hw - Half-width
+     * @param {number} hh - Half-height
+     * @param {number} r - Corner radius
+     * @param {function(number, number): void} recorder - Pixel recording callback
+     * @param {number} centerX - Center X in screen coordinates
+     * @param {number} centerY - Center Y in screen coordinates
+     * @param {number} cos - Cosine of rotation angle
+     * @param {number} sin - Sine of rotation angle
+     * @param {number} rotation - Rotation angle in radians
+     * @private
+     */
+    static _generatePerimeter(hw, hh, r, recorder, centerX, centerY, cos, sin, rotation) {
+        const edges = [
+            { start: { x: -hw + r, y: -hh }, end: { x: hw - r, y: -hh } },
+            { start: { x: hw, y: -hh + r }, end: { x: hw, y: hh - r } },
+            { start: { x: hw - r, y: hh }, end: { x: -hw + r, y: hh } },
+            { start: { x: -hw, y: hh - r }, end: { x: -hw, y: -hh + r } }
+        ];
+        for (const edge of edges) {
+            const start = RoundedRectOps._transform(edge.start.x, edge.start.y, centerX, centerY, cos, sin);
+            const end = RoundedRectOps._transform(edge.end.x, edge.end.y, centerX, centerY, cos, sin);
+            const dx = end.x - start.x, dy = end.y - start.y;
+            if (dx * dx + dy * dy < 0.25) continue;
+            RoundedRectOps._generateEdgePixels(start.x, start.y, end.x, end.y, recorder);
+        }
+        const corners = [
+            { cx: -hw + r, cy: -hh + r, startAngle: Math.PI, endAngle: Math.PI * 1.5 },
+            { cx: hw - r, cy: -hh + r, startAngle: Math.PI * 1.5, endAngle: Math.PI * 2 },
+            { cx: hw - r, cy: hh - r, startAngle: 0, endAngle: Math.PI * 0.5 },
+            { cx: -hw + r, cy: hh - r, startAngle: Math.PI * 0.5, endAngle: Math.PI }
+        ];
+        for (const corner of corners) {
+            const screenCenter = RoundedRectOps._transform(corner.cx, corner.cy, centerX, centerY, cos, sin);
+            RoundedRectOps._generateArcPixels(
+                screenCenter.x, screenCenter.y, r,
+                corner.startAngle + rotation, corner.endAngle + rotation, recorder
+            );
+        }
+    }
+
+    // =========================================================================
+    // Public Static Methods
+    // =========================================================================
+
     /**
      * Direct rendering for 1px opaque stroke on axis-aligned rounded rectangle.
      * Uses direct pixel setting for corners via angle iteration and
@@ -473,52 +637,12 @@ class RoundedRectOps {
         const innerH = Math.floor(height - lineWidth);
         const innerRadius = Math.max(0, radius - halfStroke);
 
-        // Helper to calculate x extent for rounded corner at a given y
-        const getXExtent = (py, rectX, rectW, rectY, rectH, r) => {
-            if (r <= 0) {
-                return { leftX: rectX, rightX: rectX + rectW - 1 };
-            }
-
-            let leftX = rectX;
-            let rightX = rectX + rectW - 1;
-
-            if (py < rectY + r) {
-                const cornerCenterY = rectY + r;
-                const dy = cornerCenterY - py - 0.5;
-                const dySquared = dy * dy;
-                const radiusSquared = r * r;
-
-                if (dySquared < radiusSquared) {
-                    const dx = Math.sqrt(radiusSquared - dySquared);
-                    leftX = Math.ceil(rectX + r - dx);
-                    rightX = Math.floor(rectX + rectW - r + dx - 1);
-                } else {
-                    return { leftX: -1, rightX: -1 }; // Outside
-                }
-            } else if (py >= rectY + rectH - r) {
-                const cornerCenterY = rectY + rectH - r;
-                const dy = py - cornerCenterY + 0.5;
-                const dySquared = dy * dy;
-                const radiusSquared = r * r;
-
-                if (dySquared < radiusSquared) {
-                    const dx = Math.sqrt(radiusSquared - dySquared);
-                    leftX = Math.ceil(rectX + r - dx);
-                    rightX = Math.floor(rectX + rectW - r + dx - 1);
-                } else {
-                    return { leftX: -1, rightX: -1 }; // Outside
-                }
-            }
-
-            return { leftX, rightX };
-        };
-
         // For each scanline in the outer bounds
         for (let py = outerY; py < outerY + outerH; py++) {
             if (py < 0 || py >= surfaceHeight) continue;
 
             // Get outer extent
-            const outer = getXExtent(py, outerX, outerW, outerY, outerH, outerRadius);
+            const outer = RoundedRectOps._RoundedRectOps._getXExtent(py, outerX, outerW, outerY, outerH, outerRadius);
             if (outer.leftX < 0) continue; // Outside outer bounds
 
             // Clamp outer to surface
@@ -528,7 +652,7 @@ class RoundedRectOps {
 
             // Check if we're in the inner region (hollow part)
             if (innerW > 0 && innerH > 0 && py >= innerY && py < innerY + innerH) {
-                const inner = getXExtent(py, innerX, innerW, innerY, innerH, innerRadius);
+                const inner = RoundedRectOps._RoundedRectOps._getXExtent(py, innerX, innerW, innerY, innerH, innerRadius);
 
                 if (inner.leftX >= 0 && inner.rightX >= inner.leftX) {
                     // Draw left and right stroke spans around the inner region
@@ -610,51 +734,11 @@ class RoundedRectOps {
         const innerH = Math.floor(height - lineWidth);
         const innerRadius = Math.max(0, radius - halfStroke);
 
-        // Helper to calculate x extent (same as strokeThick_AA_Opaq)
-        const getXExtent = (py, rectX, rectW, rectY, rectH, rad) => {
-            if (rad <= 0) {
-                return { leftX: rectX, rightX: rectX + rectW - 1 };
-            }
-
-            let leftX = rectX;
-            let rightX = rectX + rectW - 1;
-
-            if (py < rectY + rad) {
-                const cornerCenterY = rectY + rad;
-                const dy = cornerCenterY - py - 0.5;
-                const dySquared = dy * dy;
-                const radiusSquared = rad * rad;
-
-                if (dySquared < radiusSquared) {
-                    const dx = Math.sqrt(radiusSquared - dySquared);
-                    leftX = Math.ceil(rectX + rad - dx);
-                    rightX = Math.floor(rectX + rectW - rad + dx - 1);
-                } else {
-                    return { leftX: -1, rightX: -1 };
-                }
-            } else if (py >= rectY + rectH - rad) {
-                const cornerCenterY = rectY + rectH - rad;
-                const dy = py - cornerCenterY + 0.5;
-                const dySquared = dy * dy;
-                const radiusSquared = rad * rad;
-
-                if (dySquared < radiusSquared) {
-                    const dx = Math.sqrt(radiusSquared - dySquared);
-                    leftX = Math.ceil(rectX + rad - dx);
-                    rightX = Math.floor(rectX + rectW - rad + dx - 1);
-                } else {
-                    return { leftX: -1, rightX: -1 };
-                }
-            }
-
-            return { leftX, rightX };
-        };
-
         // For each scanline in the outer bounds
         for (let py = outerY; py < outerY + outerH; py++) {
             if (py < 0 || py >= surfaceHeight) continue;
 
-            const outer = getXExtent(py, outerX, outerW, outerY, outerH, outerRadius);
+            const outer = RoundedRectOps._RoundedRectOps._getXExtent(py, outerX, outerW, outerY, outerH, outerRadius);
             if (outer.leftX < 0) continue;
 
             const outerLeft = Math.max(0, outer.leftX);
@@ -662,7 +746,7 @@ class RoundedRectOps {
             if (outerLeft > outerRight) continue;
 
             if (innerW > 0 && innerH > 0 && py >= innerY && py < innerY + innerH) {
-                const inner = getXExtent(py, innerX, innerW, innerY, innerH, innerRadius);
+                const inner = RoundedRectOps._RoundedRectOps._getXExtent(py, innerX, innerW, innerY, innerH, innerRadius);
 
                 if (inner.leftX >= 0 && inner.rightX >= inner.leftX) {
                     const innerLeft = Math.max(0, inner.leftX);
@@ -779,50 +863,6 @@ class RoundedRectOps {
         const fillPacked = fillIsOpaque ? Surface.packColor(fillColor.r, fillColor.g, fillColor.b, 255) : 0;
         const strokePacked = strokeIsOpaque ? Surface.packColor(strokeColor.r, strokeColor.g, strokeColor.b, 255) : 0;
 
-        // Helper to calculate X extent for a given radius at scanline py
-        // Calculates corner centers locally from the passed rectangle bounds
-        const getXExtent = (py, rectX, rectW, rectY, rectH, cornerRadius, epsilon = 0) => {
-            if (py < rectY || py >= rectY + rectH) {
-                return { leftX: -1, rightX: -1 };
-            }
-
-            let leftX = rectX;
-            let rightX = rectX + rectW - 1;
-
-            // Check if in top corner region (based on THIS rect's corner zone)
-            if (py < rectY + cornerRadius) {
-                // Top corners - calculate corner center from THIS rect's bounds
-                const cornerCenterY = rectY + cornerRadius;
-                const dy = cornerCenterY - py - 0.5;
-                const dySquared = dy * dy;
-                const radiusSquared = cornerRadius * cornerRadius;
-
-                if (dySquared < radiusSquared) {
-                    const dx = Math.sqrt(radiusSquared - dySquared);
-                    leftX = Math.ceil(rectX + cornerRadius - dx + epsilon);
-                    rightX = Math.floor(rectX + rectW - cornerRadius + dx - 1 - epsilon);
-                } else {
-                    return { leftX: -1, rightX: -1 };
-                }
-            } else if (py >= rectY + rectH - cornerRadius) {
-                // Bottom corners - calculate corner center from THIS rect's bounds
-                const cornerCenterY = rectY + rectH - cornerRadius;
-                const dy = py - cornerCenterY + 0.5;
-                const dySquared = dy * dy;
-                const radiusSquared = cornerRadius * cornerRadius;
-
-                if (dySquared < radiusSquared) {
-                    const dx = Math.sqrt(radiusSquared - dySquared);
-                    leftX = Math.ceil(rectX + cornerRadius - dx + epsilon);
-                    rightX = Math.floor(rectX + rectW - cornerRadius + dx - 1 - epsilon);
-                } else {
-                    return { leftX: -1, rightX: -1 };
-                }
-            }
-
-            return { leftX, rightX };
-        };
-
         // Helper to render fill span
         const renderFillSpan = (startX, endX, py) => {
             if (startX > endX) return;
@@ -910,10 +950,10 @@ class RoundedRectOps {
             if (py < 0 || py >= surfaceHeight) continue;
 
             // Get outer stroke extent - uses pre-calculated bounds from original coordinates
-            const outerExtent = hasStroke ? getXExtent(py, outerRectX, outerRectW, outerRectY, outerRectH, outerRadius, 0) : { leftX: -1, rightX: -1 };
+            const outerExtent = hasStroke ? RoundedRectOps._getXExtent(py, outerRectX, outerRectW, outerRectY, outerRectH, outerRadius, 0) : { leftX: -1, rightX: -1 };
 
             // Get inner stroke extent - uses pre-calculated bounds from original coordinates
-            const innerExtent = (hasStroke && innerRectH > 0) ? getXExtent(py, innerRectX, innerRectW, innerRectY, innerRectH, innerRadius, 0) : { leftX: -1, rightX: -1 };
+            const innerExtent = (hasStroke && innerRectH > 0) ? RoundedRectOps._getXExtent(py, innerRectX, innerRectW, innerRectY, innerRectH, innerRadius, 0) : { leftX: -1, rightX: -1 };
 
             // Determine fill extent based on stroke transparency
             let fillExtent = { leftX: -1, rightX: -1 };
@@ -925,7 +965,7 @@ class RoundedRectOps {
                     if (strokeIsSemiTransparent) {
                         // Semi-transparent stroke: fill uses PATH extent for proper overlap blending
                         // Stroke will render on top and blend in the overlap region
-                        fillExtent = getXExtent(py, pathX, pathW, pathY, pathH, fillRadius, FILL_EPSILON);
+                        fillExtent = RoundedRectOps._getXExtent(py, pathX, pathW, pathY, pathH, fillRadius, FILL_EPSILON);
                         // Clamp fill to outer boundary to prevent speckles at the edge
                         if (fillExtent.leftX >= 0 && outerExtent.leftX >= 0) {
                             fillExtent.leftX = Math.max(fillExtent.leftX, outerExtent.leftX);
@@ -941,7 +981,7 @@ class RoundedRectOps {
                     }
                 } else {
                     // Fill-only: use standard fill extent calculation
-                    fillExtent = getXExtent(py, pathX, pathW, pathY, pathH, fillRadius, FILL_EPSILON);
+                    fillExtent = RoundedRectOps._getXExtent(py, pathX, pathW, pathY, pathH, fillRadius, FILL_EPSILON);
                 }
             }
 
@@ -1070,59 +1110,6 @@ class RoundedRectOps {
             if (x > maxX[row]) maxX[row] = x;
         };
 
-        // Helper to transform local coordinates to screen coordinates
-        const transform = (localX, localY) => ({
-            x: centerX + localX * cos - localY * sin,
-            y: centerY + localX * sin + localY * cos
-        });
-
-        // Generate edge pixels using Bresenham
-        const generateEdgePixels = (x0, y0, x1, y1) => {
-            const ix0 = Math.floor(x0);
-            const iy0 = Math.floor(y0);
-            const ix1 = Math.floor(x1);
-            const iy1 = Math.floor(y1);
-
-            const dx = Math.abs(ix1 - ix0);
-            const dy = Math.abs(iy1 - iy0);
-            const sx = ix0 < ix1 ? 1 : -1;
-            const sy = iy0 < iy1 ? 1 : -1;
-            let err = dx - dy;
-
-            let x = ix0, y = iy0;
-            while (true) {
-                recordPixel(x, y);
-                if (x === ix1 && y === iy1) break;
-
-                const e2 = 2 * err;
-                if (e2 > -dy) { err -= dy; x += sx; }
-                if (e2 < dx) { err += dx; y += sy; }
-            }
-        };
-
-        // Generate arc pixels using angle-based iteration
-        const generateArcPixels = (cx, cy, r, startAngle, endAngle) => {
-            // Step size: approximately 1 pixel per step
-            const arcLength = r * Math.abs(endAngle - startAngle);
-            const steps = Math.max(Math.ceil(arcLength), 8);
-            const angleStep = (endAngle - startAngle) / steps;
-
-            let lastPx = null, lastPy = null;
-
-            for (let i = 0; i <= steps; i++) {
-                const angle = startAngle + i * angleStep;
-                const px = Math.floor(cx + r * Math.cos(angle));
-                const py = Math.floor(cy + r * Math.sin(angle));
-
-                // Skip duplicate pixels
-                if (px !== lastPx || py !== lastPy) {
-                    recordPixel(px, py);
-                    lastPx = px;
-                    lastPy = py;
-                }
-            }
-        };
-
         // Edge endpoints in local space (centered at origin)
         const edges = [
             { start: { x: -hw + radius, y: -hh }, end: { x: hw - radius, y: -hh } },      // Top
@@ -1133,15 +1120,15 @@ class RoundedRectOps {
 
         // Generate edge perimeter pixels
         for (const edge of edges) {
-            const start = transform(edge.start.x, edge.start.y);
-            const end = transform(edge.end.x, edge.end.y);
+            const start = RoundedRectOps._transform(edge.start.x, edge.start.y, centerX, centerY, cos, sin);
+            const end = RoundedRectOps._transform(edge.end.x, edge.end.y, centerX, centerY, cos, sin);
 
             // Skip zero-length edges (radius = half width or height)
             const dx = end.x - start.x;
             const dy = end.y - start.y;
             if (dx * dx + dy * dy < 0.25) continue;
 
-            generateEdgePixels(start.x, start.y, end.x, end.y);
+            RoundedRectOps._generateEdgePixels(start.x, start.y, end.x, end.y, recordPixel);
         }
 
         // Corner definitions (local center and angle range)
@@ -1154,12 +1141,13 @@ class RoundedRectOps {
 
         // Generate corner arc perimeter pixels
         for (const corner of corners) {
-            const screenCenter = transform(corner.cx, corner.cy);
-            generateArcPixels(
+            const screenCenter = RoundedRectOps._transform(corner.cx, corner.cy, centerX, centerY, cos, sin);
+            RoundedRectOps._generateArcPixels(
                 screenCenter.x, screenCenter.y,
                 radius,
                 corner.startAngle + rotation,
-                corner.endAngle + rotation
+                corner.endAngle + rotation,
+                recordPixel
             );
         }
 
@@ -1253,56 +1241,6 @@ class RoundedRectOps {
             if (x > maxX[row]) maxX[row] = x;
         };
 
-        const transform = (localX, localY) => ({
-            x: centerX + localX * cos - localY * sin,
-            y: centerY + localX * sin + localY * cos
-        });
-
-        // Generate edge pixels using Bresenham
-        const generateEdgePixels = (x0, y0, x1, y1) => {
-            const ix0 = Math.floor(x0);
-            const iy0 = Math.floor(y0);
-            const ix1 = Math.floor(x1);
-            const iy1 = Math.floor(y1);
-
-            const dx = Math.abs(ix1 - ix0);
-            const dy = Math.abs(iy1 - iy0);
-            const sx = ix0 < ix1 ? 1 : -1;
-            const sy = iy0 < iy1 ? 1 : -1;
-            let err = dx - dy;
-
-            let x = ix0, y = iy0;
-            while (true) {
-                recordPixel(x, y);
-                if (x === ix1 && y === iy1) break;
-
-                const e2 = 2 * err;
-                if (e2 > -dy) { err -= dy; x += sx; }
-                if (e2 < dx) { err += dx; y += sy; }
-            }
-        };
-
-        // Generate arc pixels
-        const generateArcPixels = (cx, cy, r, startAngle, endAngle) => {
-            const arcLength = r * Math.abs(endAngle - startAngle);
-            const steps = Math.max(Math.ceil(arcLength), 8);
-            const angleStep = (endAngle - startAngle) / steps;
-
-            let lastPx = null, lastPy = null;
-
-            for (let i = 0; i <= steps; i++) {
-                const angle = startAngle + i * angleStep;
-                const px = Math.floor(cx + r * Math.cos(angle));
-                const py = Math.floor(cy + r * Math.sin(angle));
-
-                if (px !== lastPx || py !== lastPy) {
-                    recordPixel(px, py);
-                    lastPx = px;
-                    lastPy = py;
-                }
-            }
-        };
-
         // Edge endpoints
         const edges = [
             { start: { x: -hw + radius, y: -hh }, end: { x: hw - radius, y: -hh } },
@@ -1312,12 +1250,12 @@ class RoundedRectOps {
         ];
 
         for (const edge of edges) {
-            const start = transform(edge.start.x, edge.start.y);
-            const end = transform(edge.end.x, edge.end.y);
+            const start = RoundedRectOps._transform(edge.start.x, edge.start.y, centerX, centerY, cos, sin);
+            const end = RoundedRectOps._transform(edge.end.x, edge.end.y, centerX, centerY, cos, sin);
             const dx = end.x - start.x;
             const dy = end.y - start.y;
             if (dx * dx + dy * dy < 0.25) continue;
-            generateEdgePixels(start.x, start.y, end.x, end.y);
+            RoundedRectOps._generateEdgePixels(start.x, start.y, end.x, end.y, recordPixel);
         }
 
         // Corner definitions
@@ -1329,12 +1267,13 @@ class RoundedRectOps {
         ];
 
         for (const corner of corners) {
-            const screenCenter = transform(corner.cx, corner.cy);
-            generateArcPixels(
+            const screenCenter = RoundedRectOps._transform(corner.cx, corner.cy, centerX, centerY, cos, sin);
+            RoundedRectOps._generateArcPixels(
                 screenCenter.x, screenCenter.y,
                 radius,
                 corner.startAngle + rotation,
-                corner.endAngle + rotation
+                corner.endAngle + rotation,
+                recordPixel
             );
         }
 
@@ -1500,13 +1439,6 @@ class RoundedRectOps {
         const hw = width / 2;   // half-width
         const hh = height / 2;  // half-height
 
-        // Helper to transform local coordinates to screen coordinates
-        // Local coords are centered at origin, screen coords are centered at (centerX, centerY)
-        const transform = (localX, localY) => ({
-            x: centerX + localX * cos - localY * sin,
-            y: centerY + localX * sin + localY * cos
-        });
-
         // Calculate 8 edge endpoints in local space, then transform to screen space
         // Local coordinates (centered at origin):
         // - Top edge: (-hw+radius, -hh) to (hw-radius, -hh)
@@ -1516,13 +1448,13 @@ class RoundedRectOps {
 
         const edgeEndpoints = [
             // Top edge
-            { start: transform(-hw + radius, -hh), end: transform(hw - radius, -hh) },
+            { start: RoundedRectOps._transform(-hw + radius, -hh, centerX, centerY, cos, sin), end: RoundedRectOps._transform(hw - radius, -hh, centerX, centerY, cos, sin) },
             // Right edge
-            { start: transform(hw, -hh + radius), end: transform(hw, hh - radius) },
+            { start: RoundedRectOps._transform(hw, -hh + radius, centerX, centerY, cos, sin), end: RoundedRectOps._transform(hw, hh - radius, centerX, centerY, cos, sin) },
             // Bottom edge
-            { start: transform(hw - radius, hh), end: transform(-hw + radius, hh) },
+            { start: RoundedRectOps._transform(hw - radius, hh, centerX, centerY, cos, sin), end: RoundedRectOps._transform(-hw + radius, hh, centerX, centerY, cos, sin) },
             // Left edge
-            { start: transform(-hw, hh - radius), end: transform(-hw, -hh + radius) }
+            { start: RoundedRectOps._transform(-hw, hh - radius, centerX, centerY, cos, sin), end: RoundedRectOps._transform(-hw, -hh + radius, centerX, centerY, cos, sin) }
         ];
 
         // Draw 4 straight edges via LineOps.stroke_Any
@@ -1568,7 +1500,7 @@ class RoundedRectOps {
         const useSmallRadiusMethod = true;
 
         for (const corner of corners) {
-            const screenCenter = transform(corner.localCx, corner.localCy);
+            const screenCenter = RoundedRectOps._transform(corner.localCx, corner.localCy, centerX, centerY, cos, sin);
 
             if (useSmallRadiusMethod) {
                 // Angle-based iteration with exact endpoints (guaranteed junction alignment)
@@ -1629,25 +1561,19 @@ class RoundedRectOps {
         const hw = width / 2;   // half-width
         const hh = height / 2;  // half-height
 
-        // Helper to transform local coordinates to screen coordinates
-        const transform = (localX, localY) => ({
-            x: centerX + localX * cos - localY * sin,
-            y: centerY + localX * sin + localY * cos
-        });
-
         // Use Set to collect unique pixel positions (prevents overdraw at junctions)
         const strokePixels = new Set();
 
         // Calculate 8 edge endpoints in local space, then transform to screen space
         const edgeEndpoints = [
             // Top edge
-            { start: transform(-hw + radius, -hh), end: transform(hw - radius, -hh) },
+            { start: RoundedRectOps._transform(-hw + radius, -hh, centerX, centerY, cos, sin), end: RoundedRectOps._transform(hw - radius, -hh, centerX, centerY, cos, sin) },
             // Right edge
-            { start: transform(hw, -hh + radius), end: transform(hw, hh - radius) },
+            { start: RoundedRectOps._transform(hw, -hh + radius, centerX, centerY, cos, sin), end: RoundedRectOps._transform(hw, hh - radius, centerX, centerY, cos, sin) },
             // Bottom edge
-            { start: transform(hw - radius, hh), end: transform(-hw + radius, hh) },
+            { start: RoundedRectOps._transform(hw - radius, hh, centerX, centerY, cos, sin), end: RoundedRectOps._transform(-hw + radius, hh, centerX, centerY, cos, sin) },
             // Left edge
-            { start: transform(-hw, hh - radius), end: transform(-hw, -hh + radius) }
+            { start: RoundedRectOps._transform(-hw, hh - radius, centerX, centerY, cos, sin), end: RoundedRectOps._transform(-hw, -hh + radius, centerX, centerY, cos, sin) }
         ];
 
         // Collect edge pixels via Bresenham (inline to collect into Set)
@@ -1709,7 +1635,7 @@ class RoundedRectOps {
 
         // Collect corner arc pixels using angle-based iteration (same as stroke1px_AA_OpaqExactEndpoints)
         for (const corner of corners) {
-            const screenCenter = transform(corner.localCx, corner.localCy);
+            const screenCenter = RoundedRectOps._transform(corner.localCx, corner.localCy, centerX, centerY, cos, sin);
             const cx = screenCenter.x;
             const cy = screenCenter.y;
             const startAngle = corner.startAngle + rotation;
@@ -1848,103 +1774,12 @@ class RoundedRectOps {
             if (x > innerMaxX[row]) innerMaxX[row] = x;
         } : null;
 
-        // Transform local to screen coordinates
-        const transform = (localX, localY) => ({
-            x: centerX + localX * cos - localY * sin,
-            y: centerY + localX * sin + localY * cos
-        });
-
-        // Generate edge pixels using Bresenham
-        const generateEdgePixels = (x0, y0, x1, y1, recorder) => {
-            const ix0 = Math.floor(x0);
-            const iy0 = Math.floor(y0);
-            const ix1 = Math.floor(x1);
-            const iy1 = Math.floor(y1);
-
-            const dx = Math.abs(ix1 - ix0);
-            const dy = Math.abs(iy1 - iy0);
-            const sx = ix0 < ix1 ? 1 : -1;
-            const sy = iy0 < iy1 ? 1 : -1;
-            let err = dx - dy;
-
-            let x = ix0, y = iy0;
-            while (true) {
-                recorder(x, y);
-                if (x === ix1 && y === iy1) break;
-
-                const e2 = 2 * err;
-                if (e2 > -dy) { err -= dy; x += sx; }
-                if (e2 < dx) { err += dx; y += sy; }
-            }
-        };
-
-        // Generate arc pixels
-        const generateArcPixels = (cx, cy, r, startAngle, endAngle, recorder) => {
-            if (r <= 0) return;
-            const arcLength = r * Math.abs(endAngle - startAngle);
-            const steps = Math.max(Math.ceil(arcLength), 8);
-            const angleStep = (endAngle - startAngle) / steps;
-
-            let lastPx = null, lastPy = null;
-
-            for (let i = 0; i <= steps; i++) {
-                const angle = startAngle + i * angleStep;
-                const px = Math.floor(cx + r * Math.cos(angle));
-                const py = Math.floor(cy + r * Math.sin(angle));
-
-                if (px !== lastPx || py !== lastPy) {
-                    recorder(px, py);
-                    lastPx = px;
-                    lastPy = py;
-                }
-            }
-        };
-
-        // Generate perimeter for a rounded rect
-        const generatePerimeter = (hw, hh, r, recorder) => {
-            // Edge endpoints in local space
-            const edges = [
-                { start: { x: -hw + r, y: -hh }, end: { x: hw - r, y: -hh } },  // Top
-                { start: { x: hw, y: -hh + r }, end: { x: hw, y: hh - r } },    // Right
-                { start: { x: hw - r, y: hh }, end: { x: -hw + r, y: hh } },    // Bottom
-                { start: { x: -hw, y: hh - r }, end: { x: -hw, y: -hh + r } }   // Left
-            ];
-
-            for (const edge of edges) {
-                const start = transform(edge.start.x, edge.start.y);
-                const end = transform(edge.end.x, edge.end.y);
-                const dx = end.x - start.x;
-                const dy = end.y - start.y;
-                if (dx * dx + dy * dy < 0.25) continue;
-                generateEdgePixels(start.x, start.y, end.x, end.y, recorder);
-            }
-
-            // Corner definitions
-            const corners = [
-                { cx: -hw + r, cy: -hh + r, startAngle: Math.PI, endAngle: Math.PI * 1.5 },
-                { cx: hw - r, cy: -hh + r, startAngle: Math.PI * 1.5, endAngle: Math.PI * 2 },
-                { cx: hw - r, cy: hh - r, startAngle: 0, endAngle: Math.PI * 0.5 },
-                { cx: -hw + r, cy: hh - r, startAngle: Math.PI * 0.5, endAngle: Math.PI }
-            ];
-
-            for (const corner of corners) {
-                const screenCenter = transform(corner.cx, corner.cy);
-                generateArcPixels(
-                    screenCenter.x, screenCenter.y,
-                    r,
-                    corner.startAngle + rotation,
-                    corner.endAngle + rotation,
-                    recorder
-                );
-            }
-        };
-
         // Generate outer perimeter
-        generatePerimeter(outerHW, outerHH, outerRadius, recordOuter);
+        RoundedRectOps._generatePerimeter(outerHW, outerHH, outerRadius, recordOuter, centerX, centerY, cos, sin, rotation);
 
         // Generate inner perimeter (if inner rect exists)
         if (hasInnerRect) {
-            generatePerimeter(innerHW, innerHH, innerRadius, recordInner);
+            RoundedRectOps._generatePerimeter(innerHW, innerHH, innerRadius, recordInner, centerX, centerY, cos, sin, rotation);
         }
 
         // Fill annulus per scanline
@@ -2080,103 +1915,12 @@ class RoundedRectOps {
             if (x > innerMaxX[row]) innerMaxX[row] = x;
         } : null;
 
-        // Transform local to screen coordinates
-        const transform = (localX, localY) => ({
-            x: centerX + localX * cos - localY * sin,
-            y: centerY + localX * sin + localY * cos
-        });
-
-        // Generate edge pixels using Bresenham
-        const generateEdgePixels = (x0, y0, x1, y1, recorder) => {
-            const ix0 = Math.floor(x0);
-            const iy0 = Math.floor(y0);
-            const ix1 = Math.floor(x1);
-            const iy1 = Math.floor(y1);
-
-            const dx = Math.abs(ix1 - ix0);
-            const dy = Math.abs(iy1 - iy0);
-            const sx = ix0 < ix1 ? 1 : -1;
-            const sy = iy0 < iy1 ? 1 : -1;
-            let err = dx - dy;
-
-            let x = ix0, y = iy0;
-            while (true) {
-                recorder(x, y);
-                if (x === ix1 && y === iy1) break;
-
-                const e2 = 2 * err;
-                if (e2 > -dy) { err -= dy; x += sx; }
-                if (e2 < dx) { err += dx; y += sy; }
-            }
-        };
-
-        // Generate arc pixels
-        const generateArcPixels = (cx, cy, rad, startAngle, endAngle, recorder) => {
-            if (rad <= 0) return;
-            const arcLength = rad * Math.abs(endAngle - startAngle);
-            const steps = Math.max(Math.ceil(arcLength), 8);
-            const angleStep = (endAngle - startAngle) / steps;
-
-            let lastPx = null, lastPy = null;
-
-            for (let i = 0; i <= steps; i++) {
-                const angle = startAngle + i * angleStep;
-                const px = Math.floor(cx + rad * Math.cos(angle));
-                const py = Math.floor(cy + rad * Math.sin(angle));
-
-                if (px !== lastPx || py !== lastPy) {
-                    recorder(px, py);
-                    lastPx = px;
-                    lastPy = py;
-                }
-            }
-        };
-
-        // Generate perimeter for a rounded rect
-        const generatePerimeter = (hw, hh, rad, recorder) => {
-            // Edge endpoints in local space
-            const edges = [
-                { start: { x: -hw + rad, y: -hh }, end: { x: hw - rad, y: -hh } },  // Top
-                { start: { x: hw, y: -hh + rad }, end: { x: hw, y: hh - rad } },    // Right
-                { start: { x: hw - rad, y: hh }, end: { x: -hw + rad, y: hh } },    // Bottom
-                { start: { x: -hw, y: hh - rad }, end: { x: -hw, y: -hh + rad } }   // Left
-            ];
-
-            for (const edge of edges) {
-                const start = transform(edge.start.x, edge.start.y);
-                const end = transform(edge.end.x, edge.end.y);
-                const dx = end.x - start.x;
-                const dy = end.y - start.y;
-                if (dx * dx + dy * dy < 0.25) continue;
-                generateEdgePixels(start.x, start.y, end.x, end.y, recorder);
-            }
-
-            // Corner definitions
-            const corners = [
-                { cx: -hw + rad, cy: -hh + rad, startAngle: Math.PI, endAngle: Math.PI * 1.5 },
-                { cx: hw - rad, cy: -hh + rad, startAngle: Math.PI * 1.5, endAngle: Math.PI * 2 },
-                { cx: hw - rad, cy: hh - rad, startAngle: 0, endAngle: Math.PI * 0.5 },
-                { cx: -hw + rad, cy: hh - rad, startAngle: Math.PI * 0.5, endAngle: Math.PI }
-            ];
-
-            for (const corner of corners) {
-                const screenCenter = transform(corner.cx, corner.cy);
-                generateArcPixels(
-                    screenCenter.x, screenCenter.y,
-                    rad,
-                    corner.startAngle + rotation,
-                    corner.endAngle + rotation,
-                    recorder
-                );
-            }
-        };
-
         // Generate outer perimeter
-        generatePerimeter(outerHW, outerHH, outerRadius, recordOuter);
+        RoundedRectOps._generatePerimeter(outerHW, outerHH, outerRadius, recordOuter, centerX, centerY, cos, sin, rotation);
 
         // Generate inner perimeter (if inner rect exists)
         if (hasInnerRect) {
-            generatePerimeter(innerHW, innerHH, innerRadius, recordInner);
+            RoundedRectOps._generatePerimeter(innerHW, innerHH, innerRadius, recordInner, centerX, centerY, cos, sin, rotation);
         }
 
         // Fill annulus per scanline with alpha blending
