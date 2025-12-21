@@ -1,6 +1,6 @@
 # SWCanvas Test Suite
 
-This directory contains the comprehensive **modular test infrastructure** for SWCanvas, with 36 core tests + 140 visual tests + 67 direct rendering tests and cross-platform compatibility.
+This directory contains the comprehensive **modular test infrastructure** for SWCanvas, with 36 core tests + 140 visual tests + 79 direct rendering tests and cross-platform compatibility.
 
 ## Modular Test Architecture
 
@@ -20,8 +20,8 @@ tests/
 │   ├── index.html                 # Main browser test page (interactive + comparisons)
 │   ├── minimal-example.html       # Minimal usage example
 │   └── browser-test-helpers.js    # Browser-specific interactive testing tools
-├── direct-rendering/              # Direct rendering path verification tests (67 tests)
-│   ├── cases/                     # 67 individual parametrized test case files
+├── direct-rendering/              # Direct rendering path verification tests (79 tests)
+│   ├── cases/                     # 79 individual parametrized test case files
 │   ├── run-direct-rendering-tests.js    # Test runner with path verification
 │   ├── direct-rendering-test-utils.js   # Test utilities and registration
 │   ├── browser-test-runner.js     # Browser-based test execution
@@ -50,10 +50,10 @@ npm run build  # Concatenates individual test files
 npm test       # Runs 36 core + 140 visual tests
 
 # Direct rendering tests (run separately)
-npm run test:direct-rendering  # Runs 67 direct rendering path verification tests
+npm run test:direct-rendering  # Runs 79 direct rendering path verification tests
 ```
 
-**Note**: Direct rendering tests verify optimized code paths are invoked and run separately from the main test suite. See the [Direct Rendering Tests](#direct-rendering-tests---67-tests) section for details.
+**Note**: Direct rendering tests verify optimized code paths are invoked and run separately from the main test suite. See the [Direct Rendering Tests](#direct-rendering-tests---79-tests) section for details.
 
 ### Browser Tests
 1. Open `tests/browser/index.html` in a web browser (automatically runs all tests on page load)
@@ -208,13 +208,13 @@ Interactive tests requiring DOM and visual comparison:
 - ✅ Real-time pixel value debugging
 - ✅ PNG file download functionality
 
-### Direct Rendering Tests - 67 Tests
+### Direct Rendering Tests - 79 Tests
 **Location**: `/tests/direct-rendering/cases/` (individual files)
 
 **Purpose**: Verify that optimized direct rendering code paths are invoked instead of path-based fallback rendering. These tests use dedicated shape APIs (`fillCircle`, `strokeRect`, etc.) that bypass the path-based rendering pipeline for performance.
 
 **Key Characteristics**:
-- **67 parametrized test cases** with combinatorial coverage
+- **79 parametrized test cases** with combinatorial coverage
 - **Path verification**: Critical `wasPathBasedUsed()` check - tests FAIL if path-based rendering was used
 - **Seeded random**: Deterministic reproducibility across runs
 - **Dual-environment**: Runs in both Node.js and browser
@@ -328,7 +328,7 @@ Standard HTML5 Canvas API ensures consistent colors:
 ### Comprehensive Modular Test Coverage
 - **36 modular core tests** covering all API functionality with individual files
 - **140 modular visual tests** covering all major Canvas2D features
-- **67 direct rendering tests** verifying optimized rendering path invocation
+- **79 direct rendering tests** verifying optimized rendering path invocation
 - **Build-time concatenation** for optimal performance
 - **Smart test runner** with automatic fallback system
 - **Cross-platform validation** (Node.js + browsers)

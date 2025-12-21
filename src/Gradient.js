@@ -123,10 +123,11 @@ class Gradient {
 
     /**
      * Calculate color for a pixel position (must be implemented by subclasses)
-     * @param {number} x - Pixel x coordinate in canvas space
-     * @param {number} y - Pixel y coordinate in canvas space  
-     * @param {Transform2D} transform - Current canvas transform
-     * @returns {Color} Color for this pixel
+     * Subclasses should use the transform to map pixel coordinates to gradient space.
+     * @param {number} x - Pixel x coordinate in canvas space (integer)
+     * @param {number} y - Pixel y coordinate in canvas space (integer)
+     * @param {Transform2D} transform - Current canvas transform (used to invert pixel to gradient coords)
+     * @returns {Color} Color for this pixel (non-null Color instance)
      * @abstract
      */
     getColorForPixel(x, y, transform) {

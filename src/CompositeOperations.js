@@ -1,15 +1,13 @@
 /**
  * CompositeOperations utility class for SWCanvas
- * 
+ *
  * Centralized implementation of HTML5 Canvas globalCompositeOperation modes.
  * Provides optimized blending functions for various composite operations.
  * Supports full Porter-Duff compositing operations and follows Canvas 2D API spec.
- * 
- * STATUS: Fully implemented with canvas-wide compositing support
- * 
- * ALL OPERATIONS WORKING CORRECTLY:
+ *
+ * Supported operations:
  * - source-over (default) - Source drawn on top of destination
- * - destination-over - Source drawn behind destination  
+ * - destination-over - Source drawn behind destination
  * - source-atop - Source drawn only where destination exists
  * - destination-atop - Destination visible only where source exists
  * - source-in - Source visible only where destination exists
@@ -18,10 +16,10 @@
  * - destination-out - Destination erased where source exists
  * - xor - Both visible except in overlap areas
  * - copy - Source replaces destination completely
- * 
+ *
  * The implementation uses a dual rendering approach:
  * - Source-bounded operations (source-over, destination-over, destination-out, xor, source-atop) process only source-covered pixels
- * - Canvas-wide operations (destination-atop, source-in, destination-in, source-out, copy) 
+ * - Canvas-wide operations (destination-atop, source-in, destination-in, source-out, copy)
  *   use source coverage masks and full-region compositing to correctly handle pixels outside the source area
  */
 class CompositeOperations {

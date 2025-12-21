@@ -44,8 +44,9 @@ class Surface {
         // Allocate pixel data (RGBA, non-premultiplied)
         this.data = new Uint8ClampedArray(this.stride * height);
 
-        // Uint32Array view for optimized opaque pixel writes
+        // Uint32Array view for optimized opaque pixel writes (little-endian ABGR layout)
         // Shares same underlying ArrayBuffer - no additional memory cost
+        // Use Surface.packColor() for correct byte ordering
         this.data32 = new Uint32Array(this.data.buffer);
     }
 

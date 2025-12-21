@@ -1,9 +1,12 @@
 /**
  * ColorParser for SWCanvas
- * 
+ *
  * Parses CSS color strings into RGBA values for use with Core API.
  * Supports hex, RGB/RGBA functions, and named colors.
  * Includes caching for performance optimization.
+ *
+ * All colors are interpreted as sRGB (no gamma correction applied,
+ * matching HTML5 Canvas behavior).
  */
 class ColorParser {
     constructor() {

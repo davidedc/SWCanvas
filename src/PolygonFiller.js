@@ -144,6 +144,7 @@ class PolygonFiller {
      */
     static _fillPolygonsStandard(surface, polygons, paintSource, fillRule, transform, clipMask, globalAlpha, subPixelOpacity, composite, sourceMask) {
         // Mark path-based rendering for testing (helps verify direct rendering is used when expected)
+        // Check for Context2D existence since PolygonFiller may be used in isolation (e.g., unit tests)
         if (typeof Context2D !== 'undefined' && Context2D._markPathBasedRendering) {
             Context2D._markPathBasedRendering();
         }

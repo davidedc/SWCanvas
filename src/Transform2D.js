@@ -40,6 +40,8 @@ class Transform2D {
 
         // Pre-compute decomposition values using matrix-based axis detection
         // This avoids sqrt/atan2 for 90% of common cases (simple scaling/translation)
+        // EPSILON: Threshold for treating matrix components as zero during axis detection.
+        // Value 0.0001 balances numerical precision with tolerance for floating-point errors.
         const EPSILON = 0.0001;
 
         // 1. Check for Axis Alignment (0° or 180°)

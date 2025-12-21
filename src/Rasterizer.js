@@ -187,10 +187,9 @@ class Rasterizer {
      * @private
      */
     _renderToShadowBuffer(shadowBuffer, renderFunc) {
-        // This is a simplified approach - we render normally and extract alpha
-        // A more sophisticated implementation would render directly to the shadow buffer
-
-        // For now, create a temporary surface to capture the shape
+        // Implementation approach: render to temporary surface, then extract alpha
+        // This provides correct results with all paint sources (gradients, patterns, colors)
+        // Create a temporary surface to capture the shape
         const tempSurface = new Surface(this._surface.width, this._surface.height);
         const tempRasterizer = new Rasterizer(tempSurface);
 

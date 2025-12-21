@@ -13,7 +13,7 @@ This file provides Claude with essential context about the SWCanvas project for 
 - **Drop-in replacement**: True HTML5 Canvas 2D Context compatibility
 - **Memory efficient**: 1-bit stencil clipping, optimized algorithms
 - **Sub-pixel accurate**: Thin strokes render with proportional opacity (no anti-aliasing)
-- **Well-tested**: 36 core tests + 140 visual tests + 62 direct rendering tests with pixel-level validation
+- **Well-tested**: 36 core tests + 140 visual tests + 79 direct rendering tests with pixel-level validation
 - **Paint Sources**: Full HTML5-compatible gradients (linear, radial, conic) and patterns
 
 ## API Usage
@@ -79,81 +79,18 @@ lib/swcanvas-compat-polyfill.js  # HTML5 Canvas polyfill for SWCanvas-specific m
 
 ### Key Systems
 
-#### Stencil-Based Clipping System
-- Uses 1-bit per pixel stencil buffer (memory efficient)
-- **ClipMask class**: Encapsulates all bit manipulation operations
-- Supports proper clip intersections with AND operations
-- Handles nested clipping via save/restore stack
-- Instance methods for creating, manipulating, and checking stencil buffers
+See ARCHITECTURE.md for complete details on all systems below.
 
-#### Color System (Object-Oriented Design)
-- **Color class**: Immutable color handling with premultiplied alpha internally
-- **Surface class**: Stores non-premultiplied RGBA (0-255) with immutable dimensions
-- Color class handles conversion between premultiplied/non-premultiplied forms
-- CSS color names mapped to exact RGB values using ColorParser.js
-- Alpha blending uses source-over composition with correct math
-- Global alpha applied correctly via `Color.withGlobalAlpha()` method
-
-#### Transform System
-- **Transform2D class**: Immutable transformation matrix (replaces Matrix)
-- Static factory methods: `.translation()`, `.scaling()`, `.rotation()` (identity is default constructor)
-- Accumulative: `transform()` multiplies with current matrix
-- Absolute: `setTransform()` replaces current matrix
-- Transform order matters: translate→scale ≠ scale→translate
-- Comprehensive API with validation and utility methods
-
-#### Geometry System
-- **Point class**: Immutable 2D points with rich operations (distance, interpolation, transformations)
-- **Rectangle class**: Immutable rectangles with geometric operations (union, intersection, bounds checking)
-- Both classes follow value object pattern with proper equals() methods
-- Extensive mathematical operations for geometric computations
-
-#### Sub-pixel Stroke System
-- **Deterministic sub-pixel rendering**: Strokes thinner than 1px render with proportional opacity
-- **HTML5Canvas compliance**: `lineWidth = 0` values are ignored per HTML5 Canvas specification
-- **Opacity-based thinning**: 0.5px stroke = 1px stroke at 50% opacity (no anti-aliasing)
-- **Universal paint source support**: Works with Colors, Gradients, and Patterns seamlessly
-- **Implementation location**: `Rasterizer.js` stroke() method calculates subPixelOpacity, `PolygonFiller.js` applies during paint evaluation
-- **Formula**: `subPixelOpacity = lineWidth` (for strokes < 1px)
-- **Visual consistency**: Maintains deterministic output across platforms
-- **Browser compatibility**: Matches modern HTML5Canvas behavior for edge cases
-
-#### Thick Polyline Join Testing
-- **Systematic join testing**: Tests 076-078 provide comprehensive coverage of lineJoin behaviors
-- **Join types covered**: bevel, miter (with miterLimit), round - each with multiple angle combinations
-- **Dash pattern integration**: Each join type tested with no dash, thin, medium, and thick dash patterns
-- **Canvas dimensions**: 600x500-550px to accommodate multiple test patterns per canvas
-- **Visual markers**: Small colored rectangles used instead of text for Core API compatibility
-
-#### Line Dashing System
-- **HTML5 Canvas-compatible API**: `setLineDash()`, `getLineDash()`, `lineDashOffset` property
-- **Deterministic dash patterns**: Consistent dash spacing across all platforms 
-- **Complex path support**: Works with curves, arcs, transforms, and clipping
-- **Odd-length pattern handling**: Automatically duplicates odd-length arrays per HTML5 spec
-- **Implementation location**: `StrokeGenerator.js` applies dash patterns before stroke generation
-- **Algorithm**: Walks path segments, breaks at dash boundaries, generates only visible segments
-- **State management**: Dash properties saved/restored with context state stack
-
-#### Paint Source System
-- **Unified paint source architecture**: Colors, gradients, and patterns all implement consistent interface
-- **LinearGradient**: Linear color transitions with `addColorStop()` API matching HTML5 Canvas
-- **RadialGradient**: Radial color transitions between two circles (inner/outer radius)
-- **ConicGradient**: Sweep gradients around a center point with configurable start angle
-- **Pattern**: Repeating image patterns with repetition modes (`repeat`, `repeat-x`, `repeat-y`, `no-repeat`)
-- **Per-pixel evaluation**: All paint sources evaluated at rasterization time with transform awareness
-- **Color interpolation**: Linear interpolation between color stops for smooth gradients
-- **Global alpha support**: Global alpha correctly applied during per-pixel paint evaluation
-- **Sub-pixel stroke integration**: Sub-pixel opacity applied to all paint source types during evaluation
-- **Implementation location**: `PolygonFiller.js` evaluates paint sources via `_evaluatePaintSource()` method
-
-#### Direct Rendering System
-See DIRECT-RENDERING-SUMMARY.MD for complete direct rendering system design (RectOps, CircleOps, LineOps, ArcOps, RoundedRectOps - method signatures, usage patterns, and performance characteristics).
-
-#### Shadow Rendering System
-See ARCHITECTURE.md for complete shadow rendering system design (ShadowBuffer, BoxBlur, dual-buffer pipeline).
-
-#### Composite Operations System
-See ARCHITECTURE.md for complete Porter-Duff composite operations design (10 operations, source masks, visual test coverage).
+- **Clipping**: 1-bit stencil buffer via ClipMask class with AND intersections and save/restore support
+- **Color**: Immutable Color class with premultiplied alpha; Surface stores non-premultiplied RGBA
+- **Transform**: Immutable Transform2D matrix with factory methods (.translation(), .scaling(), .rotation())
+- **Geometry**: Immutable Point and Rectangle classes with rich operations
+- **Sub-pixel Strokes**: Strokes < 1px render with proportional opacity (0.5px = 50% opacity)
+- **Line Dashing**: HTML5-compatible setLineDash()/getLineDash() via StrokeGenerator.js
+- **Paint Sources**: Unified interface for Color, LinearGradient, RadialGradient, ConicGradient, Pattern
+- **Direct Rendering**: See DIRECT-RENDERING-SUMMARY.MD for RectOps, CircleOps, LineOps, ArcOps, RoundedRectOps
+- **Shadows**: See ARCHITECTURE.md for ShadowBuffer and BoxBlur dual-buffer pipeline
+- **Compositing**: See ARCHITECTURE.md for Porter-Duff operations (10 modes with source masks)
 
 ## Build & Test Commands
 
@@ -191,7 +128,7 @@ SWCanvas uses a comprehensive test system with modular architecture. See `tests/
 - Build utilities and renumbering tools
 - Cross-platform validation approach
 
-Quick reference: `npm run build` then `npm test` to run all 36 core + 140 visual tests. Direct rendering tests (62 tests) run separately via `npm run test:direct-rendering`.
+Quick reference: `npm run build` then `npm test` to run all 36 core + 140 visual tests. Direct rendering tests (79 tests) run separately via `npm run test:direct-rendering`.
 
 ## Common Tasks
 
@@ -223,9 +160,9 @@ See `debug/README.md` for comprehensive debugging utilities, templates, and work
 
 **clearRect Implementation**: `clearRect` uses direct pixel manipulation (`Context2D._clearRectDirect`) rather than the standard composite operation pipeline. This avoids global compositing issues that would affect the entire canvas. The implementation handles both axis-aligned and transformed rectangles correctly while respecting clipping masks.
 
-## Architecture Status
+## Architecture
 
-Project fully implemented with object-oriented ES6 class design. See ARCHITECTURE.md for complete architectural details and design patterns.
+Uses object-oriented ES6 class design throughout. See ARCHITECTURE.md for complete architectural details and design patterns.
 
 ## Important Notes for Claude
 

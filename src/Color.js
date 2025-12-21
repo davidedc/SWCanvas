@@ -1,11 +1,13 @@
 /**
  * Color class for SWCanvas
- * 
+ *
  * Encapsulates color operations, conversions, and alpha blending math.
  * Follows Joshua Bloch's principle of making classes immutable where practical.
- * 
+ *
  * Internally uses premultiplied sRGB for consistency with HTML5 Canvas behavior.
- * Provides methods for converting between premultiplied and non-premultiplied forms.
+ * Premultiplied form simplifies alpha compositing: result = src + dst*(1-srcA)
+ * instead of requiring division during blending. API exposes non-premultiplied
+ * values for user convenience; conversions happen transparently.
  */
 class Color {
     /**

@@ -83,15 +83,19 @@ class BoundsTracker {
     
     /**
      * Get bounds width (returns 0 if empty)
-     * @returns {number} Width of bounding box
+     * Bounds are inclusive pixel coordinates, so width = maxX - minX + 1
+     * (e.g., minX=0 to maxX=10 spans 11 pixels)
+     * @returns {number} Width of bounding box in pixels
      */
     getWidth() {
         return this._bounds.isEmpty ? 0 : (this._bounds.maxX - this._bounds.minX + 1);
     }
-    
+
     /**
      * Get bounds height (returns 0 if empty)
-     * @returns {number} Height of bounding box
+     * Bounds are inclusive pixel coordinates, so height = maxY - minY + 1
+     * (e.g., minY=0 to maxY=10 spans 11 pixels)
+     * @returns {number} Height of bounding box in pixels
      */
     getHeight() {
         return this._bounds.isEmpty ? 0 : (this._bounds.maxY - this._bounds.minY + 1);
