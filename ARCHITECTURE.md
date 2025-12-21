@@ -26,42 +26,50 @@ SWCanvas resolves these competing paradigms through a three-layer architecture:
 
 ### Layer 1: Core Engine (Performance)
 ```
-# Core Primitives (src/)
-Transform2D.js      → Immutable transformation mathematics
-Color.js            → Immutable color handling
-ColorParser.js      → CSS color string parsing
+src/core/           → Core engine primitives
+  Transform2D.js    → Immutable transformation mathematics
+  Color.js          → Immutable color handling
+  Surface.js        → Raw pixel buffer management
+  Context2D.js      → High-performance rendering engine
+  SWPath2D.js       → Path definition and command recording
+  ClipMask.js       → Stencil-based clipping using BitBuffer composition
 
-# Core source files (src/)
-Surface.js          → Raw pixel buffer management
-Context2D.js        → High-performance rendering engine
-Point/Rectangle.js  → Pure geometric value objects
-BitBuffer.js        → 1-bit per pixel utility for memory-efficient mask operations
-BoundsTracker.js    → Reusable bounds tracking utility for optimization (composition component)
-ClipMask.js         → Stencil-based clipping using BitBuffer composition
-SourceMask.js       → Source coverage tracking using BitBuffer and BoundsTracker composition
-Gradient.js         → Linear, radial, and conic gradient paint sources
-Pattern.js          → Repeating image pattern paint sources
-SWPath2D.js         → Path definition and command recording
-ShadowBuffer.js     → Sparse shadow alpha storage with extended bounds and BoundsTracker composition
-BoxBlur.js          → Multi-pass box blur algorithm approximating Gaussian blur
+src/utils/          → Shared utilities
+  Point.js          → Immutable 2D point operations
+  Rectangle.js      → Immutable rectangle operations
+  BitBuffer.js      → 1-bit per pixel utility for memory-efficient mask operations
+  BoundsTracker.js  → Reusable bounds tracking utility for optimization
 
-# Shape-Specific Direct Renderers (static utility classes)
-FastPixelOps.js     → Fast pixel operation utilities (optimized pixel writes)
-SpanOps.js          → Horizontal span fill utilities (shared by shape renderers)
-RectOps.js          → Rectangle stroke direct rendering (1px opaque/alpha, thick strokes)
-CircleOps.js        → Circle fill/stroke direct rendering (Bresenham, annulus rendering)
-ArcOps.js           → Arc fill/stroke direct rendering (partial arcs, pie slices)
-LineOps.js          → Line stroke direct rendering (Bresenham, polygon scan algorithm)
-RoundedRectOps.js   → Rounded rectangle direct rendering (fill, stroke, combined)
+src/paint/          → Paint sources
+  Gradient.js       → Linear, radial, and conic gradient paint sources
+  Pattern.js        → Repeating image pattern paint sources
+  ColorParser.js    → CSS color string parsing
+
+src/filters/        → Effects
+  ShadowBuffer.js   → Sparse shadow alpha storage with extended bounds
+  BoxBlur.js        → Multi-pass box blur algorithm approximating Gaussian blur
+
+src/renderers/      → Shape-Specific Direct Renderers (static utility classes)
+  FastPixelOps.js   → Fast pixel operation utilities (optimized pixel writes)
+  SpanOps.js        → Horizontal span fill utilities (shared by shape renderers)
+  RectOps.js        → Rectangle stroke direct rendering (1px opaque/alpha, thick strokes)
+  CircleOps.js      → Circle fill/stroke direct rendering (Bresenham, annulus rendering)
+  ArcOps.js         → Arc fill/stroke direct rendering (partial arcs, pie slices)
+  LineOps.js        → Line stroke direct rendering (Bresenham, polygon scan algorithm)
+  RoundedRectOps.js → Rounded rectangle direct rendering (fill, stroke, combined)
+  PolygonFiller.js  → Scanline polygon filling with paint source support
+  PathFlattener.js  → Converts paths to polygons
+  StrokeGenerator.js → Geometric stroke path generation with line dashing
 ```
 
 **Purpose**: Maximum performance graphics operations with zero overhead.
 
 ### Layer 2: HTML5 Compatibility (Familiarity)
 ```
-SWCanvasElement.js           → HTMLCanvasElement mimic
-CanvasCompatibleContext2D.js → CanvasRenderingContext2D mimic
-ColorParser.js               → CSS color string processing
+src/compat/
+  SWCanvasElement.js           → HTMLCanvasElement mimic
+  CanvasCompatibleContext2D.js → CanvasRenderingContext2D mimic
+  SourceMask.js                → Source coverage tracking for canvas-wide compositing
 ```
 
 **Purpose**: Familiar HTML5 Canvas API for web developers.
@@ -710,12 +718,12 @@ RoundedRectOps.strokeThickAlpha(surface, x, y, width, height, radii, lineWidth, 
 The shape ops classes depend on `Surface` and are loaded in Phase 1.5 of the build:
 ```bash
 # Phase 1.5: Shape rendering operations (depend on Surface)
-cat src/SpanOps.js >> dist/swcanvas.js
-cat src/RectOps.js >> dist/swcanvas.js
-cat src/CircleOps.js >> dist/swcanvas.js
-cat src/ArcOps.js >> dist/swcanvas.js
-cat src/LineOps.js >> dist/swcanvas.js
-cat src/RoundedRectOps.js >> dist/swcanvas.js
+cat src/renderers/SpanOps.js >> dist/swcanvas.js
+cat src/renderers/RectOps.js >> dist/swcanvas.js
+cat src/renderers/CircleOps.js >> dist/swcanvas.js
+cat src/renderers/ArcOps.js >> dist/swcanvas.js
+cat src/renderers/LineOps.js >> dist/swcanvas.js
+cat src/renderers/RoundedRectOps.js >> dist/swcanvas.js
 ```
 
 Note: `FastPixelOps.js` is loaded earlier (before Phase 1.5) as it provides foundational pixel utilities.

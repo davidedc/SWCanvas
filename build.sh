@@ -25,85 +25,85 @@ EOF
 
 # Concatenate source files in dependency order
 # Phase 1: Core Foundation classes (no dependencies)
-cat src/Color.js >> dist/swcanvas.js
+cat src/core/Color.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
-cat src/Point.js >> dist/swcanvas.js
+cat src/utils/Point.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
-cat src/Rectangle.js >> dist/swcanvas.js
+cat src/utils/Rectangle.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
-cat src/Transform2D.js >> dist/swcanvas.js
+cat src/core/Transform2D.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
-cat src/SWPath2D.js >> dist/swcanvas.js  
+cat src/core/SWPath2D.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
-cat src/Surface.js >> dist/swcanvas.js
+cat src/core/Surface.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
-cat src/FastPixelOps.js >> dist/swcanvas.js
+cat src/renderers/FastPixelOps.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
 
 # Phase 1.5: Shape rendering operations (depend on Surface)
-cat src/SpanOps.js >> dist/swcanvas.js
+cat src/renderers/SpanOps.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
-cat src/RectOps.js >> dist/swcanvas.js
+cat src/renderers/RectOps.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
-cat src/CircleOps.js >> dist/swcanvas.js
+cat src/renderers/CircleOps.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
-cat src/ArcOps.js >> dist/swcanvas.js
+cat src/renderers/ArcOps.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
-cat src/LineOps.js >> dist/swcanvas.js
+cat src/renderers/LineOps.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
-cat src/RoundedRectOps.js >> dist/swcanvas.js
+cat src/renderers/RoundedRectOps.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
 
 # Phase 2: Core Service classes (depend on foundation)
-cat src/CompositeOperations.js >> dist/swcanvas.js
+cat src/utils/CompositeOperations.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
-cat src/BitmapEncodingOptions.js >> dist/swcanvas.js
+cat src/io/BitmapEncodingOptions.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
-cat src/BitmapEncoder.js >> dist/swcanvas.js
+cat src/io/BitmapEncoder.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
-cat src/PngEncodingOptions.js >> dist/swcanvas.js
+cat src/io/PngEncodingOptions.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
-cat src/PngEncoder.js >> dist/swcanvas.js
+cat src/io/PngEncoder.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
-cat src/PathFlattener.js >> dist/swcanvas.js
+cat src/renderers/PathFlattener.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
-cat src/PolygonFiller.js >> dist/swcanvas.js
+cat src/renderers/PolygonFiller.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
-cat src/StrokeGenerator.js >> dist/swcanvas.js
+cat src/renderers/StrokeGenerator.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
-cat src/BitBuffer.js >> dist/swcanvas.js
+cat src/utils/BitBuffer.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
-cat src/BoundsTracker.js >> dist/swcanvas.js
+cat src/utils/BoundsTracker.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
-cat src/ClipMask.js >> dist/swcanvas.js
+cat src/core/ClipMask.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
-cat src/SourceMask.js >> dist/swcanvas.js
+cat src/compat/SourceMask.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
-cat src/ShadowBuffer.js >> dist/swcanvas.js
+cat src/filters/ShadowBuffer.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
-cat src/BoxBlur.js >> dist/swcanvas.js
+cat src/filters/BoxBlur.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
-cat src/ImageProcessor.js >> dist/swcanvas.js
+cat src/utils/ImageProcessor.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
-cat src/ColorParser.js >> dist/swcanvas.js
+cat src/paint/ColorParser.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
 
 # Phase 2.5: Paint sources (depend on foundation + ColorParser)
-cat src/Gradient.js >> dist/swcanvas.js
+cat src/paint/Gradient.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
-cat src/Pattern.js >> dist/swcanvas.js
+cat src/paint/Pattern.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
 
 # Phase 3: Core rendering classes (depend on services)
-cat src/Rasterizer.js >> dist/swcanvas.js
+cat src/core/Rasterizer.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
-cat src/Context2D.js >> dist/swcanvas.js
+cat src/core/Context2D.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
 
 # Phase 4: Canvas compatibility layer (depends on Core)
-cat src/CanvasCompatibleContext2D.js >> dist/swcanvas.js
+cat src/compat/CanvasCompatibleContext2D.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
-cat src/SWCanvasElement.js >> dist/swcanvas.js
+cat src/compat/SWCanvasElement.js >> dist/swcanvas.js
 
 # Add compatibility layer and dual API setup
 cat >> dist/swcanvas.js << 'EOF'

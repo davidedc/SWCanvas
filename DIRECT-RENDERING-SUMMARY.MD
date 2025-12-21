@@ -24,7 +24,7 @@ SWCanvas implements direct renderings for 5 shape types: Rectangle, RoundedRect,
 | Arc Stroke              | Context2D.outerStrokeArc()            | path.arc() + stroke()       |
 | Arc Fill+Stroke         | Context2D.fillOuterStrokeArc()     | Separate fill + stroke      |
 
-All entry points are in `Context2D.js`. Use grep to find exact locations: `grep -n "methodName(" src/Context2D.js`
+All entry points are in `Context2D.js`. Use grep to find exact locations: `grep -n "methodName(" src/core/Context2D.js`
 
 **Notes:**
 - Direct rendering is available **exclusively** via dedicated methods (e.g., `fillCircle()`, `strokeRect()`). Path-based rendering (`beginPath()` + `arc()/rect()` + `fill()/stroke()`) always uses the generic polygon pipeline for consistent, predictable behavior.
@@ -423,16 +423,16 @@ All *Ops files have this header: `SpanOps.js`, `RectOps.js`, `CircleOps.js`, `Ar
 
 ## 10. Code File Summary
 
-| File                  | Purpose                              |
-|-----------------------|--------------------------------------|
-| src/SpanOps.js        | Shared horizontal span utilities     |
-| src/RectOps.js        | Rectangle direct renderings                 |
-| src/CircleOps.js      | Circle direct renderings                    |
-| src/LineOps.js        | Line direct renderings                      |
-| src/RoundedRectOps.js | Rounded rectangle direct renderings         |
-| src/ArcOps.js         | Partial arc direct renderings               |
-| src/FastPixelOps.js   | Low-level pixel ops and clipping     |
-| src/Context2D.js      | Entry points and dispatch logic      |
+| File                           | Purpose                              |
+|--------------------------------|--------------------------------------|
+| src/renderers/SpanOps.js       | Shared horizontal span utilities     |
+| src/renderers/RectOps.js       | Rectangle direct renderings          |
+| src/renderers/CircleOps.js     | Circle direct renderings             |
+| src/renderers/LineOps.js       | Line direct renderings               |
+| src/renderers/RoundedRectOps.js| Rounded rectangle direct renderings  |
+| src/renderers/ArcOps.js        | Partial arc direct renderings        |
+| src/renderers/FastPixelOps.js  | Low-level pixel ops and clipping     |
+| src/core/Context2D.js          | Entry points and dispatch logic      |
 
 ---
 

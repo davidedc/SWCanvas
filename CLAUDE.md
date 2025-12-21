@@ -30,48 +30,55 @@ Refer to README.md for detailed usage examples and ARCHITECTURE.md for design ra
 
 ### Core Components
 ```
-# Core Primitives
-src/Transform2D.js    # Immutable transformation matrix mathematics
-src/Color.js          # Immutable color handling with premultiplied alpha
-src/ColorParser.js    # CSS color string parsing (hex, rgb, named colors)
-
-# Core Rendering Engine (SWCanvas.Core.*)
-src/Context2D.js              # Core 2D rendering context (explicit RGBA API)
-src/Rasterizer.js             # Low-level pixel operations and rendering pipeline
-src/Surface.js                # Memory buffer management - RGBA pixel data
-src/SWPath2D.js               # Path definition and command recording
-src/BitBuffer.js              # 1-bit per pixel utility for mask operations (composition component)
-src/BoundsTracker.js          # Reusable bounds tracking utility for optimization (composition component)
-src/ClipMask.js               # 1-bit stencil buffer using BitBuffer composition
-src/SourceMask.js             # 1-bit source coverage tracking using BitBuffer and BoundsTracker composition
-src/Gradient.js               # Linear, radial, and conic gradient paint sources
-src/Pattern.js                # Repeating image pattern paint sources
-src/ShadowBuffer.js           # Sparse shadow alpha storage with extended bounds and BoundsTracker composition
-src/BoxBlur.js                # Multi-pass box blur algorithm approximating Gaussian blur
-src/Point.js                  # Immutable 2D point operations
-src/Rectangle.js              # Immutable rectangle operations
-src/PolygonFiller.js          # Scanline polygon filling with paint source support
-src/PathFlattener.js          # Converts paths to polygons
-src/StrokeGenerator.js        # Geometric stroke path generation with line dashing
-
-# Shape-Specific Direct Renderers (static utility classes)
-src/SpanOps.js                # Horizontal span filling utilities (shared by shape ops)
-src/RectOps.js                # Rectangle stroke direct rendering (1px opaque/alpha, thick)
-src/CircleOps.js              # Circle fill/stroke direct rendering (Bresenham, annulus)
-src/LineOps.js                # Line stroke direct rendering (Bresenham, polygon scan)
-src/ArcOps.js                 # Arc fill/stroke direct rendering (partial arcs, pie slices)
-src/RoundedRectOps.js         # Rounded rectangle direct rendering (fill, stroke, combined)
-src/FastPixelOps.js           # Fast pixel operation utilities
-src/CompositeOperations.js    # Porter-Duff composite operation utilities
-src/PngEncoder.js             # PNG file format encoding with transparency support
-src/PngEncodingOptions.js     # PNG encoding configuration (immutable options, Joshua Bloch patterns)
-src/BitmapEncoder.js          # BMP file format encoding (legacy - composites with background)
-src/BitmapEncodingOptions.js  # BMP encoding configuration (immutable options, Joshua Bloch patterns)
-src/ImageProcessor.js         # ImageLike validation and format conversion
-
-# HTML5 Canvas Compatibility Layer
-src/SWCanvasElement.js        # Canvas-like object (width/height properties, getContext)
-src/CanvasCompatibleContext2D.js  # HTML5 Canvas 2D Context API wrapper
+src/
+├── core/                     # Core engine primitives
+│   ├── Context2D.js          # Core 2D rendering context (explicit RGBA API)
+│   ├── Rasterizer.js         # Low-level pixel operations and rendering pipeline
+│   ├── Surface.js            # Memory buffer management - RGBA pixel data
+│   ├── SWPath2D.js           # Path definition and command recording
+│   ├── Transform2D.js        # Immutable transformation matrix mathematics
+│   ├── Color.js              # Immutable color handling with premultiplied alpha
+│   └── ClipMask.js           # 1-bit stencil buffer using BitBuffer composition
+│
+├── renderers/                # Shape-specific direct renderers (static utility classes)
+│   ├── SpanOps.js            # Horizontal span filling utilities (shared by shape ops)
+│   ├── FastPixelOps.js       # Fast pixel operation utilities
+│   ├── RectOps.js            # Rectangle stroke direct rendering (1px opaque/alpha, thick)
+│   ├── CircleOps.js          # Circle fill/stroke direct rendering (Bresenham, annulus)
+│   ├── LineOps.js            # Line stroke direct rendering (Bresenham, polygon scan)
+│   ├── ArcOps.js             # Arc fill/stroke direct rendering (partial arcs, pie slices)
+│   ├── RoundedRectOps.js     # Rounded rectangle direct rendering (fill, stroke, combined)
+│   ├── PolygonFiller.js      # Scanline polygon filling with paint source support
+│   ├── PathFlattener.js      # Converts paths to polygons
+│   └── StrokeGenerator.js    # Geometric stroke path generation with line dashing
+│
+├── utils/                    # Shared internal utilities
+│   ├── BitBuffer.js          # 1-bit per pixel utility for mask operations
+│   ├── BoundsTracker.js      # Reusable bounds tracking utility for optimization
+│   ├── Point.js              # Immutable 2D point operations
+│   ├── Rectangle.js          # Immutable rectangle operations
+│   ├── ImageProcessor.js     # ImageLike validation and format conversion
+│   └── CompositeOperations.js # Porter-Duff composite operation utilities
+│
+├── paint/                    # Paint sources (gradients, patterns, colors)
+│   ├── Gradient.js           # Linear, radial, and conic gradient paint sources
+│   ├── Pattern.js            # Repeating image pattern paint sources
+│   └── ColorParser.js        # CSS color string parsing (hex, rgb, named colors)
+│
+├── filters/                  # Image processing & effects
+│   ├── BoxBlur.js            # Multi-pass box blur algorithm approximating Gaussian blur
+│   └── ShadowBuffer.js       # Sparse shadow alpha storage with extended bounds
+│
+├── io/                       # File format encoders
+│   ├── PngEncoder.js         # PNG file format encoding with transparency support
+│   ├── PngEncodingOptions.js # PNG encoding configuration (immutable options)
+│   ├── BitmapEncoder.js      # BMP file format encoding (legacy - composites with background)
+│   └── BitmapEncodingOptions.js # BMP encoding configuration (immutable options)
+│
+└── compat/                   # HTML5 Canvas Compatibility Layer
+    ├── SWCanvasElement.js    # Canvas-like object (width/height properties, getContext)
+    ├── CanvasCompatibleContext2D.js  # HTML5 Canvas 2D Context API wrapper
+    └── SourceMask.js         # 1-bit source coverage tracking for canvas-wide compositing
 
 # Optional Utilities
 lib/swcanvas-compat-polyfill.js  # HTML5 Canvas polyfill for SWCanvas-specific methods
@@ -150,9 +157,9 @@ See README.md for complete API usage examples.
 See `debug/README.md` for comprehensive debugging utilities, templates, and workflow patterns.
 
 ### Making API Changes (OO Structure)
-1. Update `src/Context2D.js` for public API changes
-2. Update `src/Rasterizer.js` for rendering pipeline changes
-3. Update relevant classes (`PolygonFiller.js`, `StrokeGenerator.js`, etc.) as needed
+1. Update `src/core/Context2D.js` for public API changes
+2. Update `src/core/Rasterizer.js` for rendering pipeline changes
+3. Update relevant classes in `src/renderers/` (PolygonFiller.js, StrokeGenerator.js, etc.) as needed
 4. Ensure both SWCanvas and HTML5Canvas paths in tests do the same thing
 5. Run full test suite to verify no regressions
 
@@ -209,6 +216,13 @@ Uses object-oriented ES6 class design throughout. See ARCHITECTURE.md for comple
 ### File Organization
 - **One Class Per File**: Each class in its own appropriately named file
 - **Clear Dependencies**: Build script maintains proper dependency order
-- **Focused Modules**: Related functionality grouped logically (geometry/, rendering/, etc.)
+- **Semantic Subdirectories**: Source organized into 7 categories:
+  - `src/core/` - Core engine primitives (Context2D, Surface, Transform2D, etc.)
+  - `src/renderers/` - Shape-specific direct renderers (*Ops classes)
+  - `src/utils/` - Shared utilities (BitBuffer, BoundsTracker, Point, Rectangle)
+  - `src/paint/` - Paint sources (Gradient, Pattern, ColorParser)
+  - `src/filters/` - Effects (BoxBlur, ShadowBuffer)
+  - `src/io/` - File encoders (PngEncoder, BitmapEncoder)
+  - `src/compat/` - HTML5 Canvas compatibility layer
 
 This context reflects the current object-oriented architecture and development patterns for effective collaboration.
