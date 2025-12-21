@@ -51,8 +51,8 @@ class Context2D {
         this.surface = surface;
         this.rasterizer = new Rasterizer(surface);
 
-        // State stack
-        this.stateStack = [];
+        // State stack (uses Snapshot/Memento pattern for storage only)
+        this._stateStack = new StateStack();
 
         // Current state
         this.globalAlpha = 1.0;
@@ -154,26 +154,28 @@ class Context2D {
     }
 
     // State management
-    save() {
-        // Deep copy clipMask if it exists
-        let clipMaskCopy = null;
-        if (this._clipMask) {
-            clipMaskCopy = this._clipMask.clone();
-        }
 
-        this.stateStack.push({
+    /**
+     * Create a complete state snapshot for save/restore
+     * @returns {Object} Snapshot of all saveable state
+     * @private
+     */
+    _createSnapshot() {
+        return {
             globalAlpha: this.globalAlpha,
-            globalCompositeOperation: this.globalCompositeOperation,
-            transform: new Transform2D([this._transform.a, this._transform.b, this._transform.c,
-            this._transform.d, this._transform.e, this._transform.f]),
+            globalCompositeOperation: this._globalCompositeOperation,
+            transform: new Transform2D([
+                this._transform.a, this._transform.b, this._transform.c,
+                this._transform.d, this._transform.e, this._transform.f
+            ]),
             fillStyle: this._fillStyle, // Paint sources are immutable, safe to share
             strokeStyle: this._strokeStyle, // Paint sources are immutable, safe to share
-            clipMask: clipMaskCopy,   // Deep copy of clip mask
+            clipMask: this._clipMask ? this._clipMask.clone() : null, // Deep copy of clip mask
             lineWidth: this._lineWidth,
             lineJoin: this.lineJoin,
             lineCap: this.lineCap,
             miterLimit: this.miterLimit,
-            lineDash: this._lineDash.slice(),    // Copy working dash pattern array
+            lineDash: this._lineDash.slice(), // Copy working dash pattern array
             originalLineDash: this._originalLineDash.slice(), // Copy original pattern
             lineDashOffset: this._lineDashOffset,
             // Shadow properties
@@ -184,40 +186,51 @@ class Context2D {
             // Cached state flags
             _noShadow: this._noShadow,
             _isSourceOver: this._isSourceOver
-        });
+        };
+    }
+
+    save() {
+        this._stateStack.push(this._createSnapshot());
+    }
+
+    /**
+     * Apply a state snapshot to restore context state
+     * @param {Object} snapshot - Previously saved state
+     * @private
+     */
+    _applySnapshot(snapshot) {
+        this.globalAlpha = snapshot.globalAlpha;
+        // Use backing field directly to avoid setter overhead (flags are saved separately)
+        this._globalCompositeOperation = snapshot.globalCompositeOperation;
+        this._transform = snapshot.transform;
+        this._fillStyle = snapshot.fillStyle;
+        this._strokeStyle = snapshot.strokeStyle;
+
+        // Restore clipMask (may be null)
+        this._clipMask = snapshot.clipMask;
+
+        this._lineWidth = snapshot.lineWidth;
+        this.lineJoin = snapshot.lineJoin;
+        this.lineCap = snapshot.lineCap;
+        this.miterLimit = snapshot.miterLimit;
+        this._lineDash = snapshot.lineDash || [];
+        this._originalLineDash = snapshot.originalLineDash || [];
+        this._lineDashOffset = snapshot.lineDashOffset || 0;
+
+        // Restore shadow properties
+        this.shadowColor = snapshot.shadowColor || Color.transparent;
+        this.shadowBlur = snapshot.shadowBlur || 0;
+        this.shadowOffsetX = snapshot.shadowOffsetX || 0;
+        this.shadowOffsetY = snapshot.shadowOffsetY || 0;
+
+        // Restore cached state flags
+        this._noShadow = snapshot._noShadow ?? true;
+        this._isSourceOver = snapshot._isSourceOver ?? true;
     }
 
     restore() {
-        if (this.stateStack.length === 0) return;
-
-        const state = this.stateStack.pop();
-        this.globalAlpha = state.globalAlpha;
-        // Use backing field directly to avoid setter overhead (flags are saved separately)
-        this._globalCompositeOperation = state.globalCompositeOperation;
-        this._transform = state.transform;
-        this._fillStyle = state.fillStyle;
-        this._strokeStyle = state.strokeStyle;
-
-        // Restore clipMask (may be null)
-        this._clipMask = state.clipMask;
-
-        this._lineWidth = state.lineWidth;
-        this.lineJoin = state.lineJoin;
-        this.lineCap = state.lineCap;
-        this.miterLimit = state.miterLimit;
-        this._lineDash = state.lineDash || [];
-        this._originalLineDash = state.originalLineDash || [];
-        this._lineDashOffset = state.lineDashOffset || 0;
-
-        // Restore shadow properties
-        this.shadowColor = state.shadowColor || Color.transparent;
-        this.shadowBlur = state.shadowBlur || 0;
-        this.shadowOffsetX = state.shadowOffsetX || 0;
-        this.shadowOffsetY = state.shadowOffsetY || 0;
-
-        // Restore cached state flags
-        this._noShadow = state._noShadow ?? true;
-        this._isSourceOver = state._isSourceOver ?? true;
+        if (this._stateStack.isEmpty()) return;
+        this._applySnapshot(this._stateStack.pop());
     }
 
     // Transform methods

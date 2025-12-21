@@ -27,6 +27,8 @@ EOF
 # Phase 1: Core Foundation classes (no dependencies)
 cat src/core/Color.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
+cat src/core/StateStack.js >> dist/swcanvas.js
+echo "" >> dist/swcanvas.js
 cat src/utils/Point.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
 cat src/utils/Rectangle.js >> dist/swcanvas.js
@@ -162,6 +164,7 @@ if (typeof window !== 'undefined') {
             Color: Color,
             Point: Point,
             Rectangle: Rectangle,
+            StateStack: StateStack,
             BitmapEncoder: BitmapEncoder,
             BitmapEncodingOptions: BitmapEncodingOptions,
             PngEncoder: PngEncoder,
@@ -193,7 +196,7 @@ if (typeof window !== 'undefined') {
         // HTML5 Canvas-compatible API (recommended for portability)
         createCanvas: createCanvas,
         createImageData: createImageData,
-        
+
         // Core API namespace (recommended for performance/control)
         Core: {
             Surface: CoreSurfaceFactory,
@@ -203,6 +206,7 @@ if (typeof window !== 'undefined') {
             Color: Color,
             Point: Point,
             Rectangle: Rectangle,
+            StateStack: StateStack,
             BitmapEncoder: BitmapEncoder,
             BitmapEncodingOptions: BitmapEncodingOptions,
             PngEncoder: PngEncoder,
