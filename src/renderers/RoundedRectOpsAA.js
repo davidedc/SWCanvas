@@ -525,7 +525,7 @@ class RoundedRectOpsAA {
             if (py < 0 || py >= surfaceHeight) continue;
 
             // Get outer extent
-            const outer = RoundedRectOpsAA._RoundedRectOpsAA._getXExtent(py, outerX, outerW, outerY, outerH, outerRadius);
+            const outer = RoundedRectOpsAA._getXExtent(py, outerX, outerW, outerY, outerH, outerRadius);
             if (outer.leftX < 0) continue; // Outside outer bounds
 
             // Clamp outer to surface
@@ -535,7 +535,7 @@ class RoundedRectOpsAA {
 
             // Check if we're in the inner region (hollow part)
             if (innerW > 0 && innerH > 0 && py >= innerY && py < innerY + innerH) {
-                const inner = RoundedRectOpsAA._RoundedRectOpsAA._getXExtent(py, innerX, innerW, innerY, innerH, innerRadius);
+                const inner = RoundedRectOpsAA._getXExtent(py, innerX, innerW, innerY, innerH, innerRadius);
 
                 if (inner.leftX >= 0 && inner.rightX >= inner.leftX) {
                     // Draw left and right stroke spans around the inner region
@@ -621,7 +621,7 @@ class RoundedRectOpsAA {
         for (let py = outerY; py < outerY + outerH; py++) {
             if (py < 0 || py >= surfaceHeight) continue;
 
-            const outer = RoundedRectOpsAA._RoundedRectOpsAA._getXExtent(py, outerX, outerW, outerY, outerH, outerRadius);
+            const outer = RoundedRectOpsAA._getXExtent(py, outerX, outerW, outerY, outerH, outerRadius);
             if (outer.leftX < 0) continue;
 
             const outerLeft = Math.max(0, outer.leftX);
@@ -629,7 +629,7 @@ class RoundedRectOpsAA {
             if (outerLeft > outerRight) continue;
 
             if (innerW > 0 && innerH > 0 && py >= innerY && py < innerY + innerH) {
-                const inner = RoundedRectOpsAA._RoundedRectOpsAA._getXExtent(py, innerX, innerW, innerY, innerH, innerRadius);
+                const inner = RoundedRectOpsAA._getXExtent(py, innerX, innerW, innerY, innerH, innerRadius);
 
                 if (inner.leftX >= 0 && inner.rightX >= inner.leftX) {
                     const innerLeft = Math.max(0, inner.leftX);
