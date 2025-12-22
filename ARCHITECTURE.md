@@ -52,6 +52,7 @@ src/filters/        → Effects
 src/renderers/      → Shape-Specific Direct Renderers (static utility classes)
   FastPixelOps.js   → Fast pixel operation utilities (optimized pixel writes)
   SpanOps.js        → Horizontal span fill utilities (shared by shape renderers)
+  QuadScanOps.js    → Quadrilateral scanline DDA for thick lines and rotated fills
   RectOpsAA.js      → Axis-aligned rectangle direct rendering (fill, stroke)
   RectOpsRot.js     → Rotated rectangle direct rendering (fill, stroke)
   CircleOps.js      → Circle fill/stroke direct rendering (Bresenham, annulus rendering)
@@ -629,6 +630,7 @@ Context2D                              # Orchestration and state management
 | Class | Purpose |
 |-------|---------|
 | **SpanOps** | Shared horizontal span filling (foundation for all shape renderers) |
+| **QuadScanOps** | Quadrilateral scanline fill (used by LineOps, RectOpsRot) |
 | **RectOpsAA** | Axis-aligned rectangle fill and stroke |
 | **RectOpsRot** | Rotated rectangle fill and stroke |
 | **CircleOps** | Circle fill and stroke (rotation-invariant) |
@@ -658,6 +660,7 @@ The shape ops classes depend on `Surface` and are loaded in Phase 1.5 of the bui
 ```bash
 # Phase 1.5: Shape rendering operations (depend on Surface)
 cat src/renderers/SpanOps.js >> dist/swcanvas.js
+cat src/renderers/QuadScanOps.js >> dist/swcanvas.js
 cat src/renderers/RectOpsRot.js >> dist/swcanvas.js
 cat src/renderers/RectOpsAA.js >> dist/swcanvas.js
 cat src/renderers/CircleOps.js >> dist/swcanvas.js

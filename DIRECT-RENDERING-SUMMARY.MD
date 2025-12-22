@@ -189,8 +189,8 @@ RoundedRectOpsAA.fillStroke_AA_Any() ► RectOpsAA.* methods
 LineOps.stroke_Any() ─────────────► SpanOps.fill_Opaq()
    (thick horizontal/vertical lines)
 
-LineOps._strokeThick_PolyScan() ──► SpanOps.fill_Opaq() / SpanOps.fill_Alpha()
-   (diagonal lines)
+LineOps._strokeThick_PolyScan() ──► QuadScanOps.lineToQuad + QuadScanOps.fillQuad
+   (thick diagonal lines via quad scanline)
 
 CircleOps.fill_Opaq() ────────────► SpanOps.fill_Opaq()
    (each scanline)
@@ -203,9 +203,20 @@ RoundedRectOpsAA.fill_AA_Opaq() ────► SpanOps.fill_Opaq()
 
 All *Ops.fill*() ─────────────────► SpanOps.fill_Opaq() or SpanOps.fill_Alpha()
    (most shapes)                      (shared horizontal span utility)
+
+RectOpsRot.fill_Rot_Any() ────────► QuadScanOps.fillQuad
+   (rotated rectangle fill)
+
+RectOpsRot._stroke_Rot_Alpha() ───► QuadScanOps.lineToQuad + QuadScanOps.fillQuad
+   (thick semi-transparent rotated strokes)
+
+QuadScanOps.fillQuad() ───────────► SpanOps.fill_Opaq / SpanOps.fill_Alpha
+   (each scanline span)
 ```
 
 **SpanOps is the shared primitive** - used by RectOpsAA, RectOpsRot, CircleOps, LineOps, RoundedRectOpsAA, RoundedRectOpsRot
+
+**QuadScanOps is the quad primitive** - used by LineOps (thick diagonal) and RectOpsRot (rotated fills/strokes)
 
 ---
 
@@ -304,6 +315,7 @@ if (clipBuffer[byteIndex] === 0) {
 | Edge Buffer Raster  | RoundedRectOpsRot.fill_Rot_Any             | O(H+P+A) optimal rotated fill          |
 | Dual Edge Buffer    | RoundedRectOpsRot.stroke_Rot_Any (thick)   | Outer+inner perimeters, fill annulus   |
 | Span-based fill-first | RectOpsAA.fillStroke                  | Correct semi-transparent stroke blending |
+| Incremental DDA     | QuadScanOps.fillQuad                     | 4x faster scanline traversal (1 add vs 2 muls) |
 
 ### 6.4 Special Optimizations
 
@@ -415,7 +427,7 @@ Each *Ops file contains a **CALL HIERARCHY** header comment documenting method d
 - Renaming methods
 - Adding cross-class calls
 
-All *Ops files have this header: `SpanOps.js`, `RectOpsAA.js`, `RectOpsRot.js`, `CircleOps.js`, `ArcOps.js`, `LineOps.js`, `RoundedRectOpsAA.js`, `RoundedRectOpsRot.js`
+All *Ops files have this header: `SpanOps.js`, `QuadScanOps.js`, `RectOpsAA.js`, `RectOpsRot.js`, `CircleOps.js`, `ArcOps.js`, `LineOps.js`, `RoundedRectOpsAA.js`, `RoundedRectOpsRot.js`
 
 **Note on Module Architecture:** The codebase uses a direct call pattern:
 - RectOpsAA and RoundedRectOpsAA handle axis-aligned (AA) operations only
@@ -439,6 +451,7 @@ All *Ops files have this header: `SpanOps.js`, `RectOpsAA.js`, `RectOpsRot.js`, 
 | File                               | Purpose                                           |
 |------------------------------------|---------------------------------------------------|
 | src/renderers/SpanOps.js           | Shared horizontal span utilities                  |
+| src/renderers/QuadScanOps.js       | Quadrilateral scanline fill (used by LineOps, RectOpsRot) |
 | src/renderers/RectOpsRot.js       | Rotated rectangle renderings (called by Context2D)|
 | src/renderers/RectOpsAA.js           | Axis-aligned rectangle renderings                 |
 | src/renderers/CircleOps.js         | Circle direct renderings                          |
