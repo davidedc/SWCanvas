@@ -563,3 +563,72 @@ While core functions are fully covered, these edge cases could be added:
 2. Clockwise vs counterclockwise arc direction
 3. Sub-pixel stroke widths (0.1-0.9px)
 4. Shapes larger than canvas bounds
+
+---
+
+## 12. Performance Testing
+
+Direct rendering tests support **dual-mode execution**: visual testing for correctness verification and performance testing for comparative benchmarking.
+
+### 12.1 Performance Testing Infrastructure
+
+**Location**: `tests/direct-rendering/performance-tests.html`
+
+The performance testing page provides ramp-up comparison between SWCanvas Direct rendering and native HTML5 Canvas:
+
+1. **Ramp-up methodology**: Incrementally increases shape count until frame budget is exceeded
+2. **Frame budget detection**: Automatically detects display refresh rate (60fps, 120fps, etc.)
+3. **Comparative metrics**: Reports maximum shapes per frame for both renderers
+4. **Performance ratio**: Calculates HTML5 Canvas / SWCanvas performance ratio
+
+### 12.2 Dual-Mode Test Pattern
+
+Tests registered with `displayName` metadata support both visual and performance testing:
+
+```javascript
+registerDirectRenderingTest(
+    'test-name',
+    function drawTest(ctx, iterationNumber, instances = null) {
+        const isPerformanceRun = instances !== null && instances > 0;
+        const numToDraw = isPerformanceRun ? instances : 1;
+
+        for (let i = 0; i < numToDraw; i++) {
+            // Draw shape using direct rendering API
+            ctx.fillCircle(x, y, radius);
+        }
+
+        // Performance runs return null, visual tests return {logs, checkData}
+        return isPerformanceRun ? null : { logs, checkData };
+    },
+    'circles',
+    { /* visual test checks */ },
+    {
+        title: 'Test Title',
+        displayName: 'Perf: Circle Fill'  // Enables performance registration
+    }
+);
+```
+
+### 12.3 Performance Registry
+
+Tests with `displayName` in metadata are automatically registered in `DIRECT_RENDERING_PERF_REGISTRY`:
+
+| Field | Description |
+|-------|-------------|
+| `id` | Test identifier (e.g., 'circle-fill-opaque') |
+| `drawFunction` | The drawing function supporting dual-mode |
+| `displayName` | Display name for UI (e.g., 'Perf: Circle Fill Opaque') |
+| `description` | Test description |
+| `category` | Shape category ('circles', 'rects', 'lines', 'arcs', 'rounded-rects') |
+
+### 12.4 Backward Compatibility
+
+The dual-mode pattern maintains full backward compatibility:
+
+| Runner | Call Signature | Expected Return |
+|--------|---------------|-----------------|
+| Node.js test runner | `drawFunction(ctx, iteration, null)` | `{logs, checkData}` |
+| Browser visual runner | `drawFunction(ctx, iteration, null)` | `{logs, checkData}` |
+| Performance runner | `drawFunction(ctx, 0, instanceCount)` | `null` |
+
+See `tests/README.md` for complete performance testing documentation.

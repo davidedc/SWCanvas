@@ -22,10 +22,14 @@ tests/
 │   └── browser-test-helpers.js    # Browser-specific interactive testing tools
 ├── direct-rendering/              # Direct rendering path verification tests (79 tests)
 │   ├── cases/                     # 79 individual parametrized test case files
+│   ├── performance-tests/         # Performance comparison infrastructure
+│   │   ├── performance-utils.js   # Core ramp-up testing engine
+│   │   └── performance-ui.js      # Dynamic UI generation
 │   ├── run-direct-rendering-tests.js    # Test runner with path verification
 │   ├── direct-rendering-test-utils.js   # Test utilities and registration
 │   ├── browser-test-runner.js     # Browser-based test execution
-│   └── index.html                 # Browser test interface
+│   ├── index.html                 # Browser test interface
+│   └── performance-tests.html     # Performance comparison interface
 ├── dist/                          # Built test files (auto-generated, .gitignored)
 │   ├── core-functionality-tests.js    # Auto-generated from /core/
 │   └── visual-rendering-tests.js      # Auto-generated from /visual/
@@ -235,11 +239,16 @@ npm run test:direct-rendering
 # Run specific test range
 node tests/direct-rendering/run-direct-rendering-tests.js -i 10
 
-# Browser testing
+# Browser testing (visual comparison)
 open tests/direct-rendering/index.html
+
+# Browser testing (performance comparison)
+open tests/direct-rendering/performance-tests.html
 ```
 
 **Browser Polyfills**: Browser tests use polyfills from `lib/swcanvas-compat-polyfill.js` which add SWCanvas-compatible methods (`fillCircle`, `strokeRoundRect`, `fillAndStrokeRoundRect`, etc.) to native HTML5 Canvas, enabling side-by-side comparison testing.
+
+**Performance Testing**: The performance testing page (`performance-tests.html`) provides ramp-up performance comparison between SWCanvas Direct rendering and native HTML5 Canvas. Tests incrementally increase shape count until the frame budget is exceeded, measuring maximum shapes per frame for each renderer. See [Performance Testing](#performance-testing) section below.
 
 **Test Coverage**:
 - Circle fill and stroke operations
@@ -251,6 +260,61 @@ open tests/direct-rendering/index.html
 - Multiple sizes (small, medium, large)
 
 For detailed documentation on the direct rendering system and APIs, see [DIRECT-RENDERING-SUMMARY.MD](../DIRECT-RENDERING-SUMMARY.MD).
+
+### Performance Testing
+
+The performance testing infrastructure enables comparative benchmarking between SWCanvas Direct rendering and native HTML5 Canvas.
+
+**Location**: `/tests/direct-rendering/performance-tests.html`
+
+**How It Works**:
+1. **Ramp-up methodology**: Incrementally increases shape count until frame budget is exceeded
+2. **Frame budget detection**: Automatically detects display refresh rate and calculates frame budget (e.g., 16.7ms at 60fps)
+3. **Dual-mode tests**: Tests support both visual testing (`instances=null`) and performance testing (`instances>0`)
+4. **Comparative results**: Reports maximum shapes per frame for both SWCanvas and HTML5 Canvas
+
+**Test Configuration Options**:
+- SW/HTML5 Canvas increment sizes (shapes added per iteration)
+- SW/HTML5 Canvas start counts
+- Consecutive budget exceedances required before stopping
+- Number of runs to average
+- Include/exclude blitting time for SWCanvas
+- Quiet mode (reduced logging)
+
+**Dual-Mode Test Pattern**:
+Tests registered with a `displayName` in their metadata are available for performance testing:
+
+```javascript
+registerDirectRenderingTest(
+    'test-name',
+    function drawTest(ctx, iterationNumber, instances = null) {
+        const isPerformanceRun = instances !== null && instances > 0;
+        const numToDraw = isPerformanceRun ? instances : 1;
+
+        for (let i = 0; i < numToDraw; i++) {
+            // Draw shape(s)
+        }
+
+        // Return null for performance runs, {logs, checkData} for visual tests
+        return isPerformanceRun ? null : { logs, checkData };
+    },
+    'category',
+    { /* checks */ },
+    {
+        title: 'Test Title',
+        description: 'Test description',
+        displayName: 'Perf: Test Display Name'  // Enables performance registration
+    }
+);
+```
+
+**Running Performance Tests**:
+```bash
+# Open in browser
+open tests/direct-rendering/performance-tests.html
+```
+
+The page provides interactive controls for running individual tests or all tests, with results displayed as text logs and performance charts.
 
 ## Benefits
 

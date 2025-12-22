@@ -164,10 +164,14 @@ This runs:
 ### Browser Tests
 
 Open `tests/browser/index.html` in a web browser for:
-- Side-by-side HTML5 Canvas vs SWCanvas comparisons  
+- Side-by-side HTML5 Canvas vs SWCanvas comparisons
 - Interactive visual tests
 - All 140 visual rendering tests comparisons (automatically uses built modular tests)
 - PNG/BMP download functionality
+
+### Performance Tests
+
+Open `tests/direct-rendering/performance-tests.html` for comparative benchmarking between SWCanvas Direct rendering and native HTML5 Canvas (ramp-up methodology measuring maximum shapes per frame).
 
 See [tests/README.md](tests/README.md) for detailed test documentation.
 
