@@ -8,6 +8,9 @@
 // Test registry - stores all registered tests
 const DIRECT_RENDERING_TESTS = [];
 
+// Performance test registry - stores tests with displayName for performance testing
+const DIRECT_RENDERING_PERF_REGISTRY = [];
+
 /**
  * SeededRandom - Deterministic random number generator for reproducible tests
  * Uses Small Fast Counter (SFC) 32-bit implementation
@@ -670,7 +673,7 @@ function calculate90DegQuadrantArcParams(options) {
  * @param {function} drawFunction - Function that draws the test
  * @param {string} category - Test category
  * @param {object} checks - Validation checks to perform
- * @param {object} metadata - Test metadata
+ * @param {object} metadata - Test metadata (include displayName for performance testing)
  */
 function registerDirectRenderingTest(name, drawFunction, category, checks, metadata = {}) {
     DIRECT_RENDERING_TESTS.push({
@@ -680,6 +683,17 @@ function registerDirectRenderingTest(name, drawFunction, category, checks, metad
         checks,
         metadata
     });
+
+    // Also register for performance tests if displayName is present
+    if (metadata.displayName) {
+        DIRECT_RENDERING_PERF_REGISTRY.push({
+            id: name,
+            drawFunction: drawFunction,
+            displayName: metadata.displayName,
+            description: metadata.description || '',
+            category: category
+        });
+    }
 }
 
 /**
@@ -1437,6 +1451,7 @@ function runValidationChecks(surface, checks) {
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
         DIRECT_RENDERING_TESTS,
+        DIRECT_RENDERING_PERF_REGISTRY,
         SeededRandom,
         getRandomColor,
         getRandomOpaqueColor,
@@ -1471,6 +1486,7 @@ if (typeof module !== 'undefined' && module.exports) {
 // Export for browser
 if (typeof window !== 'undefined') {
     window.DIRECT_RENDERING_TESTS = DIRECT_RENDERING_TESTS;
+    window.DIRECT_RENDERING_PERF_REGISTRY = DIRECT_RENDERING_PERF_REGISTRY;
     window.SeededRandom = SeededRandom;
     window.getRandomColor = getRandomColor;
     window.getRandomOpaqueColor = getRandomOpaqueColor;

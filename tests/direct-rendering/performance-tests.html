@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Performance Tests - SWCanvas vs HTML5 Canvas</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    h1, h2, h3 {
+      color: #333;
+    }
+
+    .test-controls {
+      margin-bottom: 20px;
+      padding: 15px;
+      background-color: #f5f5f5;
+      border-radius: 5px;
+    }
+
+    .canvas-container {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+
+    .canvas-wrapper {
+      width: 48%;
+    }
+
+    canvas {
+      border: 1px solid #ddd;
+      margin-bottom: 10px;
+    }
+
+    .test-buttons-container {
+      margin-top: 15px;
+    }
+
+    .test-list-container {
+      margin-bottom: 20px;
+    }
+
+    .test-list-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .test-list-title {
+      margin: 0;
+      color: #444;
+    }
+
+    .checkbox-buttons {
+      display: flex;
+      gap: 5px;
+    }
+
+    .small-button {
+      padding: 3px 8px;
+      font-size: 0.8em;
+      background-color: #6c757d;
+      color: white;
+      border: none;
+      border-radius: 3px;
+      cursor: pointer;
+    }
+
+    .small-button:hover {
+      background-color: #5a6268;
+    }
+
+    .test-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding: 10px;
+      background-color: #f5f5f5;
+      border-radius: 5px;
+    }
+
+    .test-item {
+      display: flex;
+      align-items: center;
+      padding: 8px;
+      background-color: white;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+
+    .test-checkbox {
+      margin-right: 10px;
+    }
+
+    .test-label {
+      flex: 1;
+      margin-right: 10px;
+      cursor: pointer;
+    }
+
+    .run-button {
+      padding: 5px 10px;
+      min-width: 60px;
+    }
+
+    button {
+      padding: 8px 16px;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #45a049;
+    }
+
+    button:disabled {
+      background-color: #cccccc;
+      cursor: not-allowed;
+    }
+
+    .results {
+      font-family: monospace;
+      padding: 15px;
+      background-color: #f8f8f8;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      white-space: pre-wrap;
+      overflow-x: auto;
+      max-height: 500px;
+      overflow-y: auto;
+    }
+
+    #overall-progress-container,
+    #current-test-progress-container {
+      width: 100%;
+      margin-top: 10px;
+      margin-bottom: 20px;
+    }
+
+    #overall-progress-bar,
+    #current-test-progress-bar {
+      height: 20px;
+      width: 0;
+      background-color: #4CAF50;
+      border-radius: 4px;
+      text-align: center;
+      color: white;
+      line-height: 20px;
+    }
+
+    .progress-label {
+      font-size: 0.9em;
+      margin-bottom: 3px;
+      color: #555;
+    }
+
+    label {
+      margin-right: 10px;
+    }
+
+    .value-display {
+      display: inline-block;
+      width: 50px;
+      text-align: center;
+    }
+
+    .chart-container {
+      width: 100%;
+      height: 400px;
+      margin-top: 20px;
+      margin-bottom: 30px;
+      border: 1px solid #ddd;
+      background-color: #fff;
+    }
+
+    .system-info {
+      background-color: #e9f7ef;
+      padding: 10px 15px;
+      border-radius: 4px;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .system-info-item {
+      display: flex;
+      align-items: center;
+    }
+
+    .system-info-label {
+      font-weight: bold;
+      margin-right: 5px;
+    }
+
+    .system-info-value {
+      padding: 3px 8px;
+      background-color: #fff;
+      border-radius: 3px;
+      border: 1px solid #ddd;
+      min-width: 30px;
+      text-align: center;
+    }
+
+    .checkbox-group {
+      display: flex;
+      gap: 20px;
+      margin-bottom: 10px;
+    }
+
+    .checkbox-label {
+      display: flex;
+      align-items: center;
+      user-select: none;
+    }
+
+    .checkbox-label input {
+      margin-right: 5px;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>Performance Tests - SWCanvas vs HTML5 Canvas</h1>
+
+  <div class="system-info">
+    <div class="system-info-item">
+      <span class="system-info-label">Display refresh rate:</span>
+      <span id="detected-fps" class="system-info-value">60</span> fps
+    </div>
+    <div class="system-info-item">
+      <span class="system-info-label">Frame budget:</span>
+      <span id="frame-budget" class="system-info-value">16.70</span> ms
+    </div>
+  </div>
+
+  <div class="test-controls">
+    <h2>Test Configuration</h2>
+
+    <div class="profiling-button-container" style="margin-bottom: 15px;">
+      <button id="btn-profiling-mode" class="profiling-button" style="background-color: #007bff;">Enable Profiling Mode</button>
+      <span class="profiling-hint" style="margin-left: 10px; font-size: 0.9em; color: #666;">
+        (sets high exceedance threshold and forces quieter mode for browser profiling)
+      </span>
+    </div>
+
+    <div>
+      <label for="sw-increment-size">SW Canvas increment size:</label>
+      <input type="number" id="sw-increment-size" min="1" max="100" value="10" style="width: 60px;">
+    </div>
+
+    <div>
+      <label for="html-increment-size">HTML5 Canvas increment size:</label>
+      <input type="number" id="html-increment-size" min="1" max="1000" value="50" style="width: 60px;">
+    </div>
+
+    <div>
+      <label for="sw-start-count">SW Canvas start count:</label>
+      <input type="number" id="sw-start-count" min="1" max="10000" value="10" style="width: 60px;">
+    </div>
+
+    <div>
+      <label for="html-start-count">HTML5 Canvas start count:</label>
+      <input type="number" id="html-start-count" min="1" max="10000" value="10" style="width: 60px;">
+    </div>
+
+    <div>
+      <label for="consecutive-exceedances">Consecutive budget exceedances:</label>
+      <input type="number" id="consecutive-exceedances" min="1" max="100000" value="10" style="width: 60px;">
+    </div>
+
+    <div>
+      <label for="num-runs">Runs per test (average):</label>
+      <input type="number" id="num-runs" min="1" max="100" value="1" style="width: 60px;">
+    </div>
+
+    <div class="checkbox-group">
+      <label class="checkbox-label">
+        <input type="checkbox" id="include-blitting" checked>
+        Include blitting time for SWCanvas
+      </label>
+
+      <label class="checkbox-label">
+        <input type="checkbox" id="quiet-mode" checked>
+        Quieter mode (fewer logs)
+      </label>
+    </div>
+
+    <div class="test-buttons-container">
+      <!-- Test lists will be generated dynamically -->
+      <div id="line-tests" class="test-list-section">
+        <!-- Line tests will be inserted here -->
+      </div>
+      <div id="rectangle-tests" class="test-list-section">
+        <!-- Rectangle tests will be inserted here -->
+      </div>
+      <div id="rounded-rectangle-tests" class="test-list-section">
+        <!-- Rounded Rectangle tests will be inserted here -->
+      </div>
+      <div id="circle-tests" class="test-list-section">
+        <!-- Circle tests will be inserted here -->
+      </div>
+      <div id="arc-tests" class="test-list-section">
+        <!-- Arc tests will be inserted here -->
+      </div>
+      <div id="checkbox-controls" style="margin-top: 15px; margin-bottom: 10px; text-align: center;">
+        <button id="btn-check-all" class="small-button">Check All Tests</button>
+        <button id="btn-uncheck-all" class="small-button">Uncheck All Tests</button>
+      </div>
+      <div id="control-buttons" style="margin-top: 10px; text-align: center;">
+        <button id="btn-run-checked">Run Checked Tests</button>
+        <button id="btn-run-all">Run All Tests</button>
+        <button id="btn-abort" disabled>Abort</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="overall-progress-container" style="display: none;">
+    <div class="progress-label">Overall progress:</div>
+    <div id="overall-progress-bar">0%</div>
+  </div>
+
+  <div id="current-test-progress-container" style="display: none;">
+    <div class="progress-label">Current test progress:</div>
+    <div id="current-test-progress-bar">0%</div>
+  </div>
+
+  <h3 id="canvas-label">Graphics will be shown here when tests start</h3>
+  <div class="canvas-container" style="justify-content: flex-start;">
+    <div class="canvas-wrapper" id="sw-canvas-container" style="display: none;">
+      <canvas id="sw-canvas"></canvas>
+    </div>
+    <div class="canvas-wrapper" id="html5-canvas-container" style="display: none;">
+      <canvas id="canvas"></canvas>
+    </div>
+  </div>
+
+  <h2>Test Results</h2>
+  <div class="results" id="results-container"></div>
+
+  <div class="chart-container" id="chart-container"></div>
+
+  <!-- Load SWCanvas library -->
+  <script src="../../dist/swcanvas.js"></script>
+  <script src="../../lib/swcanvas-compat-polyfill.js"></script>
+
+  <!-- Load test utilities -->
+  <script src="direct-rendering-test-utils.js"></script>
+
+  <!-- Load performance infrastructure -->
+  <script src="performance-tests/performance-utils.js"></script>
+
+  <script>
+    // Elements
+    const swCanvas = document.getElementById('sw-canvas');
+    const canvas = document.getElementById('canvas');
+    const resultsContainer = document.getElementById('results-container');
+    const currentTestProgressContainer = document.getElementById('current-test-progress-container');
+    const currentTestProgressBar = document.getElementById('current-test-progress-bar');
+    const overallProgressContainer = document.getElementById('overall-progress-container');
+    const overallProgressBar = document.getElementById('overall-progress-bar');
+    const chartContainer = document.getElementById('chart-container');
+
+    // Set canvas dimensions
+    swCanvas.width = CANVAS_WIDTH;
+    swCanvas.height = CANVAS_HEIGHT;
+    canvas.width = CANVAS_WIDTH;
+    canvas.height = CANVAS_HEIGHT;
+
+    // Create SWCanvas context
+    const swCanvasElement = SWCanvas.createCanvas(CANVAS_WIDTH, CANVAS_HEIGHT);
+    const swCtx = swCanvasElement.getContext('2d');
+    // Tests access ctx.canvas.width/height, so we need to set the canvas reference
+    swCtx.canvas = swCanvasElement;
+    // Bind swCtx to display canvas for blitting
+    swCtx._displayCanvas = swCanvas;
+
+    // HTML5 Canvas context
+    const ctx = canvas.getContext('2d');
+
+    // Add direct shape API methods to HTML5 Canvas context for compatibility
+    if (!ctx.fillCircle) {
+      ctx.fillCircle = function(cx, cy, r) {
+        this.beginPath();
+        this.arc(cx, cy, r, 0, Math.PI * 2);
+        this.fill();
+      };
+    }
+    if (!ctx.strokeCircle) {
+      ctx.strokeCircle = function(cx, cy, r) {
+        this.beginPath();
+        this.arc(cx, cy, r, 0, Math.PI * 2);
+        this.stroke();
+      };
+    }
+    if (!ctx.strokeLine) {
+      ctx.strokeLine = function(x1, y1, x2, y2) {
+        this.beginPath();
+        this.moveTo(x1, y1);
+        this.lineTo(x2, y2);
+        this.stroke();
+      };
+    }
+    if (!ctx.strokeRoundRect) {
+      ctx.strokeRoundRect = function(x, y, w, h, r) {
+        this.beginPath();
+        this.roundRect(x, y, w, h, r);
+        this.stroke();
+      };
+    }
+    if (!ctx.fillRoundRect) {
+      ctx.fillRoundRect = function(x, y, w, h, r) {
+        this.beginPath();
+        this.roundRect(x, y, w, h, r);
+        this.fill();
+      };
+    }
+    if (!ctx.fillArc) {
+      ctx.fillArc = function(cx, cy, r, startAngle, endAngle, counterClockwise) {
+        this.beginPath();
+        this.moveTo(cx, cy);
+        this.arc(cx, cy, r, startAngle, endAngle, counterClockwise);
+        this.closePath();
+        this.fill();
+      };
+    }
+    if (!ctx.strokeArc) {
+      ctx.strokeArc = function(cx, cy, r, startAngle, endAngle, counterClockwise) {
+        this.beginPath();
+        this.arc(cx, cy, r, startAngle, endAngle, counterClockwise);
+        this.stroke();
+      };
+    }
+    if (!ctx.fillOuterStrokeArc) {
+      ctx.fillOuterStrokeArc = function(cx, cy, r, startAngle, endAngle, counterClockwise) {
+        // Fill first
+        this.beginPath();
+        this.moveTo(cx, cy);
+        this.arc(cx, cy, r, startAngle, endAngle, counterClockwise);
+        this.closePath();
+        this.fill();
+        // Then stroke
+        this.beginPath();
+        this.arc(cx, cy, r, startAngle, endAngle, counterClockwise);
+        this.stroke();
+      };
+    }
+
+    // Controls
+    const swIncrementSize = document.getElementById('sw-increment-size');
+    const htmlIncrementSize = document.getElementById('html-increment-size');
+    const consecutiveExceedances = document.getElementById('consecutive-exceedances');
+    const includeBlittingCheckbox = document.getElementById('include-blitting');
+    const quietModeCheckbox = document.getElementById('quiet-mode');
+
+    // Buttons
+    const btnRunChecked = document.getElementById('btn-run-checked');
+    const btnRunAll = document.getElementById('btn-run-all');
+    const btnAbort = document.getElementById('btn-abort');
+  </script>
+
+  <!-- Load pilot test cases -->
+  <script src="cases/line-m20-szMix-fNone-sOpaq-sw1px-lytSpread-edgeNotCrisp-ornRand-test.js"></script>
+  <script src="cases/circle-fill-opaque-test.js"></script>
+  <script src="cases/rect-fill-opaque-test.js"></script>
+  <script src="cases/arc-m5-szMix-fOpaq-sOpaq-sw1-10px-lytSpread-cenRand-edgeNotCrisp-ornRand-arcARand-test.js"></script>
+  <script src="cases/roundrect-sgl-szMix-fNone-sOpaq-sw1px-lytCenter-cenGrid-edgeCrisp-ornAxial-rrrRand-test.js"></script>
+
+  <!-- Load performance UI (must be last) -->
+  <script src="performance-tests/performance-ui.js"></script>
+</body>
+</html>
