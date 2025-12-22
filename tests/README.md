@@ -261,60 +261,16 @@ open tests/direct-rendering/performance-tests.html
 
 For detailed documentation on the direct rendering system and APIs, see [DIRECT-RENDERING-SUMMARY.MD](../DIRECT-RENDERING-SUMMARY.MD).
 
+For comprehensive documentation on direct rendering tests (registration API, dual-mode pattern, check options, utility functions, naming conventions, and performance testing), see [tests/direct-rendering/README.md](direct-rendering/README.md).
+
 ### Performance Testing
 
-The performance testing infrastructure enables comparative benchmarking between SWCanvas Direct rendering and native HTML5 Canvas.
-
-**Location**: `/tests/direct-rendering/performance-tests.html`
-
-**How It Works**:
-1. **Ramp-up methodology**: Incrementally increases shape count until frame budget is exceeded
-2. **Frame budget detection**: Automatically detects display refresh rate and calculates frame budget (e.g., 16.7ms at 60fps)
-3. **Dual-mode tests**: Tests support both visual testing (`instances=null`) and performance testing (`instances>0`)
-4. **Comparative results**: Reports maximum shapes per frame for both SWCanvas and HTML5 Canvas
-
-**Test Configuration Options**:
-- SW/HTML5 Canvas increment sizes (shapes added per iteration)
-- SW/HTML5 Canvas start counts
-- Consecutive budget exceedances required before stopping
-- Number of runs to average
-- Include/exclude blitting time for SWCanvas
-- Quiet mode (reduced logging)
-
-**Dual-Mode Test Pattern**:
-Tests registered with a `displayName` in their metadata are available for performance testing:
-
-```javascript
-registerDirectRenderingTest(
-    'test-name',
-    function drawTest(ctx, iterationNumber, instances = null) {
-        const isPerformanceRun = instances !== null && instances > 0;
-        const numToDraw = isPerformanceRun ? instances : 1;
-
-        for (let i = 0; i < numToDraw; i++) {
-            // Draw shape(s)
-        }
-
-        // Return null for performance runs, {logs, checkData} for visual tests
-        return isPerformanceRun ? null : { logs, checkData };
-    },
-    'category',
-    { /* checks */ },
-    {
-        title: 'Test Title',
-        description: 'Test description',
-        displayName: 'Perf: Test Display Name'  // Enables performance registration
-    }
-);
-```
-
-**Running Performance Tests**:
 ```bash
-# Open in browser
+# Open performance tests in browser
 open tests/direct-rendering/performance-tests.html
 ```
 
-The page provides interactive controls for running individual tests or all tests, with results displayed as text logs and performance charts.
+Tests with `displayName` in metadata are available for performance benchmarking. See [direct-rendering/README.md](direct-rendering/README.md#7-performance-testing) for details.
 
 ## Benefits
 

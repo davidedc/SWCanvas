@@ -9,6 +9,7 @@ Each document has a **single responsibility** to avoid duplication:
 - **README.md**: Quick start, API examples, build instructions, brief testing overview
 - **ARCHITECTURE.md**: System design, component organization, architectural patterns, OO design
 - **tests/README.md**: Complete test system documentation, adding tests, build utilities
+- **tests/direct-rendering/README.md**: Direct rendering test API, dual-mode pattern, check options, utilities, naming conventions
 - **tests/build/README.md**: Build utility scripts documentation (concat-tests.js, renumber-tests.js)
 - **debug/README.md**: Debug utilities, investigation scripts, and debugging workflows
 - **examples/README.md**: Examples documentation and usage instructions
@@ -49,6 +50,7 @@ Each document has a **single responsibility** to avoid duplication:
 - **API examples**: README.md only
 - **Architecture details**: ARCHITECTURE.md only
 - **Test documentation**: tests/README.md only
+- **Direct rendering tests**: tests/direct-rendering/README.md only
 - **Build utilities**: tests/build/README.md only
 - **Debug utilities**: debug/README.md only
 - **Direct rendering system**: DIRECT-RENDERING-SUMMARY.MD only
@@ -59,6 +61,7 @@ Each document has a **single responsibility** to avoid duplication:
 - **Getting started** → README.md
 - **Understanding the design** → ARCHITECTURE.md
 - **Adding/running tests** → tests/README.md
+- **Direct rendering tests** → tests/direct-rendering/README.md
 - **Build utilities** → tests/build/README.md
 - **Debug utilities** → debug/README.md
 - **Examples and demos** → examples/README.md
