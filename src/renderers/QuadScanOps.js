@@ -16,6 +16,22 @@
  *   fillQuad   - Scanline fill the quad (calls SpanOps or per-pixel blend)
  */
 class QuadScanOps {
+    // Static pools - reused across calls to eliminate GC pressure
+    static _edges = [
+        { p1: null, p2: null, invDeltaY: 0, deltaX: 0, slope: 0, currentX: 0 },
+        { p1: null, p2: null, invDeltaY: 0, deltaX: 0, slope: 0, currentX: 0 },
+        { p1: null, p2: null, invDeltaY: 0, deltaX: 0, slope: 0, currentX: 0 },
+        { p1: null, p2: null, invDeltaY: 0, deltaX: 0, slope: 0, currentX: 0 }
+    ];
+    static _edgeCount = 0;
+
+    static _corners = [
+        { x: 0, y: 0 },
+        { x: 0, y: 0 },
+        { x: 0, y: 0 },
+        { x: 0, y: 0 }
+    ];
+
     /**
      * Convert a line segment to a quadrilateral by adding perpendicular thickness.
      *
@@ -41,12 +57,13 @@ class QuadScanOps {
         const perpXHalf = perpX * halfThickness;
         const perpYHalf = perpY * halfThickness;
 
-        return [
-            { x: x1 + perpXHalf, y: y1 + perpYHalf },
-            { x: x1 - perpXHalf, y: y1 - perpYHalf },
-            { x: x2 - perpXHalf, y: y2 - perpYHalf },
-            { x: x2 + perpXHalf, y: y2 + perpYHalf }
-        ];
+        // Reuse static corner pool instead of allocating new objects
+        const c = QuadScanOps._corners;
+        c[0].x = x1 + perpXHalf; c[0].y = y1 + perpYHalf;
+        c[1].x = x1 - perpXHalf; c[1].y = y1 - perpYHalf;
+        c[2].x = x2 - perpXHalf; c[2].y = y2 - perpYHalf;
+        c[3].x = x2 + perpXHalf; c[3].y = y2 + perpYHalf;
+        return c;
     }
 
     /**
@@ -83,19 +100,24 @@ class QuadScanOps {
         const minY = Math.max(0, Math.floor(Math.min(corners[0].y, corners[1].y, corners[2].y, corners[3].y)));
         const maxY = Math.min(height - 1, Math.ceil(Math.max(corners[0].y, corners[1].y, corners[2].y, corners[3].y)));
 
-        // Pre-compute edge data for faster intersection calculation
-        const edges = [];
+        // Pre-compute edge data using static pool (no allocation)
+        // Includes slope and initial currentX for incremental DDA
+        QuadScanOps._edgeCount = 0;
         for (let i = 0; i < 4; i++) {
             const p1 = corners[i];
             const p2 = corners[(i + 1) % 4];
 
             if (p1.y !== p2.y) { // Skip horizontal edges
-                edges.push({
-                    p1: p1,
-                    p2: p2,
-                    invDeltaY: 1 / (p2.y - p1.y),
-                    deltaX: p2.x - p1.x
-                });
+                const edge = QuadScanOps._edges[QuadScanOps._edgeCount++];
+                edge.p1 = p1;
+                edge.p2 = p2;
+                edge.invDeltaY = 1 / (p2.y - p1.y);
+                edge.deltaX = p2.x - p1.x;
+                edge.slope = edge.deltaX * edge.invDeltaY;
+                // Compute initial currentX at edge's first active scanline
+                const edgeMinY = Math.min(p1.y, p2.y);
+                const firstActiveY = Math.max(minY, Math.ceil(edgeMinY));
+                edge.currentX = p1.x + (firstActiveY - p1.y) * edge.slope;
             }
         }
 
@@ -103,19 +125,19 @@ class QuadScanOps {
         const usePerPixel = collectTo !== null || skipFrom !== null;
         const intersections = [];
 
-        // Scanline fill
+        // Scanline fill with incremental DDA
         for (let y = minY; y <= maxY; y++) {
             intersections.length = 0;
 
-            // Find x-intersections with polygon edges
-            for (let i = 0; i < edges.length; i++) {
-                const edge = edges[i];
+            // Find x-intersections using incremental currentX
+            for (let i = 0; i < QuadScanOps._edgeCount; i++) {
+                const edge = QuadScanOps._edges[i];
                 const p1 = edge.p1;
                 const p2 = edge.p2;
 
                 if ((y >= p1.y && y < p2.y) || (y >= p2.y && y < p1.y)) {
-                    const t = (y - p1.y) * edge.invDeltaY;
-                    intersections.push(p1.x + t * edge.deltaX);
+                    intersections.push(edge.currentX);
+                    edge.currentX += edge.slope;  // Incremental update (was: t * deltaX)
                 }
             }
 
