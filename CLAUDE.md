@@ -26,119 +26,21 @@ SWCanvas provides dual APIs - see README.md for complete API documentation and e
 
 Refer to README.md for detailed usage examples and ARCHITECTURE.md for design rationale.
 
-## Architecture (Object-Oriented Design)
+## Architecture Overview
 
-### Core Components
-```
-src/
-├── core/                     # Core engine primitives
-│   ├── Context2D.js          # Core 2D rendering context (explicit RGBA API)
-│   ├── Rasterizer.js         # Low-level pixel operations and rendering pipeline
-│   ├── Surface.js            # Memory buffer management - RGBA pixel data
-│   ├── SWPath2D.js           # Path definition and command recording
-│   ├── Transform2D.js        # Immutable transformation matrix mathematics
-│   ├── Color.js              # Immutable color handling with premultiplied alpha
-│   ├── ClipMask.js           # 1-bit stencil buffer using BitBuffer composition
-│   └── StateStack.js         # State stack management for save/restore operations
-│
-├── renderers/                # Shape-specific direct renderers (static utility classes)
-│   ├── SpanOps.js            # Horizontal span filling utilities (shared by shape ops)
-│   ├── FastPixelOps.js       # Fast pixel operation utilities
-│   ├── RectOpsAA.js          # Axis-aligned rectangle direct rendering
-│   ├── RectOpsRot.js         # Rotated rectangle direct rendering
-│   ├── CircleOps.js          # Circle fill/stroke direct rendering (Bresenham, annulus)
-│   ├── LineOps.js            # Line stroke direct rendering (Bresenham, polygon scan)
-│   ├── ArcOps.js             # Arc fill/stroke direct rendering (partial arcs, pie slices)
-│   ├── RoundedRectOpsAA.js   # Axis-aligned rounded rectangle direct rendering
-│   ├── RoundedRectOpsRot.js  # Rotated rounded rectangle direct rendering
-│   ├── PolygonFiller.js      # Scanline polygon filling with paint source support
-│   ├── PathFlattener.js      # Converts paths to polygons
-│   └── StrokeGenerator.js    # Geometric stroke path generation with line dashing
-│
-├── utils/                    # Shared internal utilities
-│   ├── BitBuffer.js          # 1-bit per pixel utility for mask operations
-│   ├── BoundsTracker.js      # Reusable bounds tracking utility for optimization
-│   ├── Point.js              # Immutable 2D point operations
-│   ├── Rectangle.js          # Immutable rectangle operations
-│   ├── ImageProcessor.js     # ImageLike validation and format conversion
-│   └── CompositeOperations.js # Porter-Duff composite operation utilities
-│
-├── paint/                    # Paint sources (gradients, patterns, colors)
-│   ├── Gradient.js           # Linear, radial, and conic gradient paint sources
-│   ├── Pattern.js            # Repeating image pattern paint sources
-│   └── ColorParser.js        # CSS color string parsing (hex, rgb, named colors)
-│
-├── filters/                  # Image processing & effects
-│   ├── BoxBlur.js            # Multi-pass box blur algorithm approximating Gaussian blur
-│   └── ShadowBuffer.js       # Sparse shadow alpha storage with extended bounds
-│
-├── io/                       # File format encoders
-│   ├── PngEncoder.js         # PNG file format encoding with transparency support
-│   ├── PngEncodingOptions.js # PNG encoding configuration (immutable options)
-│   ├── BitmapEncoder.js      # BMP file format encoding (legacy - composites with background)
-│   └── BitmapEncodingOptions.js # BMP encoding configuration (immutable options)
-│
-└── compat/                   # HTML5 Canvas Compatibility Layer
-    ├── SWCanvasElement.js    # Canvas-like object (width/height properties, getContext)
-    ├── CanvasCompatibleContext2D.js  # HTML5 Canvas 2D Context API wrapper
-    └── SourceMask.js         # 1-bit source coverage tracking for canvas-wide compositing
+SWCanvas uses object-oriented ES6 class design organized into 7 semantic directories: `core/`, `renderers/`, `utils/`, `paint/`, `filters/`, `io/`, `compat/`. See ARCHITECTURE.md for complete component details and design rationale.
 
-# Optional Utilities
-lib/swcanvas-compat-polyfill.js  # HTML5 Canvas polyfill for SWCanvas-specific methods
-```
+### Quick Reference
+- **Entry points**: `Context2D.js` (Core API), `CanvasCompatibleContext2D.js` (HTML5 API)
+- **Rendering pipeline**: Context2D → Rasterizer → Shape *Ops classes → Surface
+- **Key patterns**: Immutable value objects, static utility classes, composition over inheritance
+- **Direct rendering**: See DIRECT-RENDERING-SUMMARY.MD for optimized shape renderers
 
-### Key Systems
+## Build & Test
 
-See ARCHITECTURE.md for complete details on all systems below.
+See README.md for complete build commands and test instructions.
 
-- **Clipping**: 1-bit stencil buffer via ClipMask class with AND intersections and save/restore support
-- **Color**: Immutable Color class with premultiplied alpha; Surface stores non-premultiplied RGBA
-- **Transform**: Immutable Transform2D matrix with factory methods (.translation(), .scaling(), .rotation())
-- **Geometry**: Immutable Point and Rectangle classes with rich operations
-- **Sub-pixel Strokes**: Strokes < 1px render with proportional opacity (0.5px = 50% opacity)
-- **Line Dashing**: HTML5-compatible setLineDash()/getLineDash() via StrokeGenerator.js
-- **Paint Sources**: Unified interface for Color, LinearGradient, RadialGradient, ConicGradient, Pattern
-- **Direct Rendering**: See DIRECT-RENDERING-SUMMARY.MD for RectOpsAA, RectOpsRot, CircleOps, LineOps, ArcOps, RoundedRectOpsAA, RoundedRectOpsRot
-- **Shadows**: See ARCHITECTURE.md for ShadowBuffer and BoxBlur dual-buffer pipeline
-- **Compositing**: See ARCHITECTURE.md for Porter-Duff operations (10 modes with source masks)
-
-## Build & Test Commands
-
-See README.md for complete build and test instructions.
-
-### Development Workflow
-
-**Standard development cycle:**
-1. Edit source files in `src/` or individual test files
-2. `npm run build` to regenerate library and test suites  
-3. `npm test` to verify no regressions
-4. Browser testing via `tests/browser/index.html`
-
-**Production workflow:**
-1. `npm run build:prod` (builds + minifies in one command)
-2. Test minified version with `examples/showcase.html`
-3. Verify PNG output matches expectations
-
-**Build commands available:**
-- `npm run build` - Development build only
-- `npm run minify` - Minify existing build (requires Terser)
-- `npm run build:prod` - Complete production workflow
-
-**Testing and examples:**
-- See `tests/README.md` for test development details
-- See `examples/README.md` for example development
-- Use `examples/showcase.html` to verify features work with minified build
-
-## Test System
-
-SWCanvas uses a comprehensive test system with modular architecture. See `tests/README.md` for complete test documentation including:
-
-- Test architecture and organization
-- Adding new tests (core and visual)
-- Build utilities and renumbering tools
-- Cross-platform validation approach
-
-Quick reference: `npm run build` then `npm test` to run all 36 core + 140 visual tests. Direct rendering tests (79 tests) run separately via `npm run test:direct-rendering`.
+**Quick reference**: `npm run build` → `npm test` for development cycle.
 
 ## Common Tasks
 

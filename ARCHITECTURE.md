@@ -449,7 +449,7 @@ The first composition pattern addresses bit manipulation code duplication:
 `ClipMask` and `SourceMask` shared significant bit manipulation code but represented fundamentally different abstractions:
 
 - **ClipMask**: Controls which pixels **can be rendered** (default: all visible, 1s)
-- **SourceMask**: Tracks which pixels **were covered** by drawing operations (default: none covered, 0s)
+- **SourceMask**: Tracks which pixels **have been covered** by drawing operations (default: none covered, 0s)
 
 #### The Solution: BitBuffer Composition Component
 
@@ -594,9 +594,9 @@ SWCanvas implements a **static utility class pattern** (following the existing `
 
 See `DIRECT-RENDERING-SUMMARY.MD` for complete direct rendering implementation details, API reference, and performance characteristics.
 
-### The Problem: Growing Context2D Complexity
+### The Problem: Context2D Complexity
 
-As direct rendering methods for different shapes were added to `Context2D.js`, the file grew large with shape-specific methods scattered throughout:
+With direct rendering methods for many shapes, placing all methods in `Context2D.js` would create a large file with shape-specific methods scattered throughout:
 - Rectangle direct rendering 400+ lines from `strokeRect()`
 - Circle methods spanning 900+ lines
 - Line methods spanning 400+ lines

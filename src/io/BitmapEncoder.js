@@ -1,11 +1,11 @@
 /**
  * BitmapEncoder class for SWCanvas
- * 
+ *
  * Handles encoding of Surface data to BMP (Windows Bitmap) format.
  * Provides static methods for encoding with proper premultiplied alpha handling
  * and BMP format compliance.
- * 
- * Converted from functional to class-based approach following OO best practices:
+ *
+ * Class-based design following OO best practices:
  * - Static methods for stateless encoding operations
  * - Clear separation of header generation and pixel processing
  * - Proper error handling and validation

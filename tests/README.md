@@ -312,18 +312,7 @@ Add interactive tests to `tests/browser/index.html` for features requiring DOM i
 
 ## Key Features
 
-### Stencil-Based Clipping System
-SWCanvas uses a 1-bit stencil buffer approach for clipping:
-- Memory efficient (1 bit per pixel)
-- Supports proper clip intersections with AND operations
-- Handles complex nested clipping scenarios
-- Matches HTML5 Canvas behavior exactly
-
-### Color Consistency System
-Standard HTML5 Canvas API ensures consistent colors:
-- Use `ctx.fillStyle` and `ctx.strokeStyle` with CSS color names
-- Works identically with both SWCanvas and HTML5 Canvas
-- Eliminates need for helper functions or color mapping
+For architectural details about clipping systems and color handling, see ARCHITECTURE.md.
 
 ### Comprehensive Modular Test Coverage
 - **36 modular core tests** covering all API functionality with individual files

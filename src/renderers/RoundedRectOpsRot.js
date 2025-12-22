@@ -1,6 +1,6 @@
 /**
  * RoundedRectOpsRot - Static methods for rotated rounded rectangle rendering
- * Extracted from RoundedRectOpsAA to separate rotated logic from axis-aligned logic.
+ * Provides rotated rendering separately from axis-aligned logic in RoundedRectOpsAA.
  *
  * This class is loaded BEFORE RoundedRectOpsAA and provides all rotated rounded rectangle
  * rendering implementations. Called directly by Context2D for rotated cases.

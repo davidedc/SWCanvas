@@ -11,7 +11,8 @@ Each document has a **single responsibility** to avoid duplication:
 - **tests/README.md**: Complete test system documentation, adding tests, build utilities
 - **tests/build/README.md**: Build utility scripts documentation (concat-tests.js, renumber-tests.js)
 - **debug/README.md**: Debug utilities, investigation scripts, and debugging workflows
-- **DIRECT-RENDERING-SUMMARY.MD**: Direct rendering system documentation, APIs, and implementation details
+- **examples/README.md**: Examples documentation and usage instructions
+- **DIRECT-RENDERING-SUMMARY.MD**: Direct rendering system documentation, APIs, conditions, and implementation details
 - **CLAUDE.md**: Claude-specific development context and workflow tips ONLY
 
 ### What NOT to Include (Anti-Duplication Rules)

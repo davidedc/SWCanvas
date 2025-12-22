@@ -169,14 +169,6 @@ Open `tests/browser/index.html` in a web browser for:
 - All 140 visual rendering tests comparisons (automatically uses built modular tests)
 - PNG/BMP download functionality
 
-### Test Architecture
-
-- **Core Functionality Tests** (36): Individual test files in `/tests/core/` - API correctness, edge cases, mathematical accuracy
-- **Visual Rendering Tests** (140): Individual test files in `/tests/visual/` - Rendering verification with PNG generation  
-- **Browser Tests**: Interactive visual comparison tools using built test suites with HTML5 Canvas vs SWCanvas side-by-side
-
-The modular architecture allows individual test development while maintaining build-time concatenation for performance.
-
 See [tests/README.md](tests/README.md) for detailed test documentation.
 
 ## API Documentation
@@ -593,7 +585,7 @@ const blackBmp = SWCanvas.Core.BitmapEncoder.encode(surface,
 
 ## Architecture
 
-For detailed architecture, design patterns, component organization, and build process, see [ARCHITECTURE.md](ARCHITECTURE.md).
+For detailed architecture, design patterns, and component organization, see [ARCHITECTURE.md](ARCHITECTURE.md).
 
 For direct rendering system documentation (RectOps, CircleOps, LineOps, ArcOps, RoundedRectOps), see [DIRECT-RENDERING-SUMMARY.MD](DIRECT-RENDERING-SUMMARY.MD).
 
@@ -610,7 +602,7 @@ MIT License - see LICENSE file for details.
 1. **Build**: `npm run build`
 2. **Test**: `npm test` 
 3. **Visual Test**: Open `tests/browser/index.html` in browser
-4. **Add Tests**: Create individual test files in `/tests/core/` or `/tests/visual/` (see [tests/build/README.md](tests/build/README.md) for advanced organization)
+4. **Add Tests**: Create individual test files in `/tests/core/` or `/tests/visual/` (see [tests/README.md](tests/README.md) for test development, [tests/build/README.md](tests/build/README.md) for build utilities)
 5. **Verify**: Ensure identical results in both Node.js and browser
 
 The comprehensive test suite ensures any changes maintain compatibility/similarity with HTML5 Canvas.
