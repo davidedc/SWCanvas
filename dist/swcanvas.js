@@ -5221,7 +5221,7 @@ class LineOps {
 
 /**
  * RoundedRectOpsRot - Static methods for rotated rounded rectangle rendering
- * Extracted from RoundedRectOpsAA to separate rotated logic from axis-aligned logic.
+ * Provides rotated rendering separately from axis-aligned logic in RoundedRectOpsAA.
  *
  * This class is loaded BEFORE RoundedRectOpsAA and provides all rotated rounded rectangle
  * rendering implementations. Called directly by Context2D for rotated cases.
@@ -7628,12 +7628,12 @@ BitmapEncodingOptions.DEFAULT = new BitmapEncodingOptions();
 
 /**
  * BitmapEncoder class for SWCanvas
- * 
+ *
  * Handles encoding of Surface data to BMP (Windows Bitmap) format.
  * Provides static methods for encoding with proper premultiplied alpha handling
  * and BMP format compliance.
- * 
- * Converted from functional to class-based approach following OO best practices:
+ *
+ * Class-based design following OO best practices:
  * - Static methods for stateless encoding operations
  * - Clear separation of header generation and pixel processing
  * - Proper error handling and validation
