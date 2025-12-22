@@ -43,11 +43,13 @@ src/
 ├── renderers/                # Shape-specific direct renderers (static utility classes)
 │   ├── SpanOps.js            # Horizontal span filling utilities (shared by shape ops)
 │   ├── FastPixelOps.js       # Fast pixel operation utilities
-│   ├── RectOps.js            # Rectangle stroke direct rendering (1px opaque/alpha, thick)
+│   ├── RectOpsAA.js          # Axis-aligned rectangle direct rendering
+│   ├── RectOpsRot.js         # Rotated rectangle direct rendering
 │   ├── CircleOps.js          # Circle fill/stroke direct rendering (Bresenham, annulus)
 │   ├── LineOps.js            # Line stroke direct rendering (Bresenham, polygon scan)
 │   ├── ArcOps.js             # Arc fill/stroke direct rendering (partial arcs, pie slices)
-│   ├── RoundedRectOps.js     # Rounded rectangle direct rendering (fill, stroke, combined)
+│   ├── RoundedRectOpsAA.js   # Axis-aligned rounded rectangle direct rendering
+│   ├── RoundedRectOpsRot.js  # Rotated rounded rectangle direct rendering
 │   ├── PolygonFiller.js      # Scanline polygon filling with paint source support
 │   ├── PathFlattener.js      # Converts paths to polygons
 │   └── StrokeGenerator.js    # Geometric stroke path generation with line dashing

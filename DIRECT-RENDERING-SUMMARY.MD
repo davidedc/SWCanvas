@@ -34,45 +34,45 @@ All entry points are in `Context2D.js`. Use grep to find exact locations: `grep 
 
 ## 2. Direct Rendering Functions by Shape and Case
 
-### 2.1 RECTANGLES (RectOps.js)
+### 2.1 RECTANGLES (RectOpsAA.js + RectOpsRot.js)
 
-| Stroke Width | Orientation             | Opacity          | Function                      | Clipping TO |
-|--------------|-------------------------|------------------|-------------------------------|-------------|
-| N/A (fill)   | Axis-aligned            | Opaque           | RectOps.fill_AA_Opaq()        | YES      |
-| N/A (fill)   | Axis-aligned            | Semi-transparent | RectOps.fill_AA_Alpha()       | YES      |
-| N/A (fill)   | Rotated (uniform scale) | Both             | RectOps.fill_Rot_Any()        | YES      |
-| 1px          | Axis-aligned            | Opaque           | RectOps.stroke1px_AA_Opaq()   | YES      |
-| 1px          | Axis-aligned            | Semi-transparent | RectOps.stroke1px_AA_Alpha()  | YES      |
-| >1px         | Axis-aligned            | Opaque           | RectOps.strokeThick_AA_Opaq() | YES      |
-| >1px         | Axis-aligned            | Semi-transparent | RectOps.strokeThick_AA_Alpha()| YES      |
-| Any          | Rotated (uniform scale) | Both             | RectOps.stroke_Rot_Any()      | YES      |
-| Any          | Axis-aligned            | Both             | RectOps.fillStroke_AA_Any()   | YES      |
-| 0px          | Any                     | Any              | IGNORED (per HTML5 spec)      | -        |
-
-Notes:
-- `RectOps.fillStroke_AA_Any()` uses single-scan span-based rendering with fill-first ordering for correct semi-transparent stroke blending. Fill extent is conditional: PATH extent for semi-transparent strokes (so stroke blends with fill), INNER extent for opaque strokes (optimization).
-
-### 2.2 ROUNDED RECTANGLES (RoundedRectOps.js)
-
-| Stroke Width | Orientation  | Opacity          | Function                             | Clipping TO |
-|--------------|--------------|------------------|--------------------------------------|-------------|
-| N/A (fill)   | Axis-aligned | Opaque           | RoundedRectOps.fill_AA_Opaq()        | YES      |
-| N/A (fill)   | Axis-aligned | Semi-transparent | RoundedRectOps.fill_AA_Alpha()       | YES      |
-| N/A (fill)   | Rotated      | Opaque           | RoundedRectOps.fill_Rot_Any()        | YES      |
-| N/A (fill)   | Rotated      | Semi-transparent | RoundedRectOps.fill_Rot_Any()        | YES      |
-| 1px          | Axis-aligned | Opaque           | RoundedRectOps.stroke1px_AA_Opaq()   | YES      |
-| 1px          | Axis-aligned | Semi-transparent | RoundedRectOps.stroke1px_AA_Alpha()  | YES      |
-| 1px          | Rotated      | Opaque           | RoundedRectOps.stroke_Rot_Any()      | YES      |
-| 1px          | Rotated      | Semi-transparent | RoundedRectOps.stroke_Rot_Any()      | YES      |
-| >1px         | Axis-aligned | Opaque           | RoundedRectOps.strokeThick_AA_Opaq() | YES      |
-| >1px         | Axis-aligned | Semi-transparent | RoundedRectOps.strokeThick_AA_Alpha()| YES      |
-| >1px         | Rotated      | Opaque           | RoundedRectOps.stroke_Rot_Any()      | YES      |
-| >1px         | Rotated      | Semi-transparent | RoundedRectOps.stroke_Rot_Any()      | YES      |
-| Any          | Axis-aligned | Both             | RoundedRectOps.fillStroke_AA_Any()   | YES      |
-| Any          | Rotated      | Both             | RoundedRectOps.fillStroke_Rot_Any()  | YES      |
-| 0px          | Any          | Any              | IGNORED                              | -        |
+| Stroke Width | Orientation             | Opacity          | Function                        | Clipping TO |
+|--------------|-------------------------|------------------|---------------------------------|-------------|
+| N/A (fill)   | Axis-aligned            | Opaque           | RectOpsAA.fill_AA_Opaq()          | YES      |
+| N/A (fill)   | Axis-aligned            | Semi-transparent | RectOpsAA.fill_AA_Alpha()         | YES      |
+| N/A (fill)   | Rotated (uniform scale) | Both             | RectOpsRot.fill_Rot_Any()      | YES      |
+| 1px          | Axis-aligned            | Opaque           | RectOpsAA.stroke1px_AA_Opaq()     | YES      |
+| 1px          | Axis-aligned            | Semi-transparent | RectOpsAA.stroke1px_AA_Alpha()    | YES      |
+| >1px         | Axis-aligned            | Opaque           | RectOpsAA.strokeThick_AA_Opaq()   | YES      |
+| >1px         | Axis-aligned            | Semi-transparent | RectOpsAA.strokeThick_AA_Alpha()  | YES      |
+| Any          | Rotated (uniform scale) | Both             | RectOpsRot.stroke_Rot_Any()    | YES      |
+| Any          | Axis-aligned            | Both             | RectOpsAA.fillStroke_AA_Any()     | YES      |
+| Any          | Rotated (uniform scale) | Both             | RectOpsRot.fillStroke_Rot_Any()| YES      |
+| 0px          | Any                     | Any              | IGNORED (per HTML5 spec)        | -        |
 
 Notes:
+- Context2D calls RectOpsAA for axis-aligned (AA) operations and RectOpsRot directly for rotated operations.
+- `RectOpsAA.fillStroke_AA_Any()` uses single-scan span-based rendering with fill-first ordering for correct semi-transparent stroke blending. Fill extent is conditional: PATH extent for semi-transparent strokes (so stroke blends with fill), INNER extent for opaque strokes (optimization).
+
+### 2.2 ROUNDED RECTANGLES (RoundedRectOpsAAAA.js + RoundedRectOpsAARot.js)
+
+| Stroke Width | Orientation  | Opacity          | Function                               | Clipping TO |
+|--------------|--------------|------------------|----------------------------------------|-------------|
+| N/A (fill)   | Axis-aligned | Opaque           | RoundedRectOpsAAAA.fill_AA_Opaq()          | YES      |
+| N/A (fill)   | Axis-aligned | Semi-transparent | RoundedRectOpsAAAA.fill_AA_Alpha()         | YES      |
+| N/A (fill)   | Rotated      | Both             | RoundedRectOpsAARot.fill_Rot_Any()      | YES      |
+| 1px          | Axis-aligned | Opaque           | RoundedRectOpsAAAA.stroke1px_AA_Opaq()     | YES      |
+| 1px          | Axis-aligned | Semi-transparent | RoundedRectOpsAAAA.stroke1px_AA_Alpha()    | YES      |
+| Any          | Rotated      | Both             | RoundedRectOpsAARot.stroke_Rot_Any()    | YES      |
+| >1px         | Axis-aligned | Opaque           | RoundedRectOpsAAAA.strokeThick_AA_Opaq()   | YES      |
+| >1px         | Axis-aligned | Semi-transparent | RoundedRectOpsAAAA.strokeThick_AA_Alpha()  | YES      |
+| Any          | Axis-aligned | Both             | RoundedRectOpsAAAA.fillStroke_AA_Any()     | YES      |
+| Any          | Rotated      | Both             | RoundedRectOpsAARot.fillStroke_Rot_Any()| YES      |
+| 0px          | Any          | Any              | IGNORED                                | -        |
+
+Notes:
+- Context2D calls RoundedRectOpsAAAA for axis-aligned (AA) operations and RoundedRectOpsAARot directly for rotated operations.
+- RoundedRectOpsAARot falls back to RectOpsRot (not RectOpsAA) when radius=0 for consistency.
 - Axis-aligned rounded rectangle **stroke** (1px alpha) uses Set deduplication to prevent overdraw at edge-arc junctions.
 - Rotated rounded rectangle **stroke** (1px opaque) uses hybrid algorithm: 4 edges via LineOps + 4 corner arcs via ArcOps.stroke1px_Opaq_Exact().
 - Rotated rounded rectangle **stroke** (1px alpha) uses hybrid algorithm + Set deduplication to prevent overdraw at edge-arc junctions.
@@ -124,7 +124,7 @@ Note: Lines already handle all orientations - no separate "rotated" variant need
 | Any          | Both             | ArcOps.fillStrokeOuter_Any()       | YES      |
 
 Note: Arc uses Bresenham + angle filtering. 1px paths skip Set overhead for opaque.
-**stroke1px_Opaq_Exact()** uses angle-based iteration (not Bresenham) guaranteeing pixels at exact start/end angles - used by RoundedRectOps.stroke_Rot_Any() for junction alignment.
+**stroke1px_Opaq_Exact()** uses angle-based iteration (not Bresenham) guaranteeing pixels at exact start/end angles - used by RoundedRectOpsAAAA.stroke_Rot_Any() for junction alignment.
 **Requires lineCap === 'butt' for direct rendering (non-butt caps fall to path-based rendering).**
 
 ---
@@ -157,25 +157,33 @@ Note: Arc uses Bresenham + angle filtering. 1px paths skip Set overhead for opaq
 ## 4. Interdependencies Between Direct Renderings
 
 ```
-RectOps.stroke_Rot_Any() ─────────► LineOps.stroke_Any()
+Context2D ────────────────────────► RectOpsRot.*_Rot_*() for rotated rectangles
+                                   ► RoundedRectOpsAARot.*_Rot_*() for rotated rounded rects
+                                   ► RectOpsAA.*_AA_*() for axis-aligned rectangles
+                                   ► RoundedRectOpsAAAA.*_AA_*() for axis-aligned rounded rects
+
+RectOpsRot.stroke_Rot_Any() ─────► LineOps.stroke_Any()
    (draws each edge as thick line)
 
-RoundedRectOps.stroke_Rot_Any() ──► LineOps.stroke_Any() + ArcOps.stroke1px_Opaq_Exact()
+RoundedRectOpsAARot.stroke_Rot_Any() ► LineOps.stroke_Any() + ArcOps.stroke1px_Opaq_Exact()
    (4 edges + 4 corner arcs, 1px opaque only)
 
-RoundedRectOps.fill_Rot_Any() ────► Edge Buffer Rasterization (self-contained)
+RoundedRectOpsAARot.fill_Rot_Any() ─► Edge Buffer Rasterization (self-contained)
    (perimeter via Bresenham lines + angle-based arcs → scanline fill)
 
-RoundedRectOps.stroke1px_AA_Opaq() ► RectOps.stroke1px_AA_Opaq()
+RoundedRectOpsAARot.*_Rot_*() ─────► RectOpsRot.*_Rot_*()
+   (fallback when radius=0 - direct call, not via RectOpsAA)
+
+RoundedRectOpsAAAA.stroke1px_AA_Opaq() ► RectOpsAA.stroke1px_AA_Opaq()
    (fallback when radius=0)
 
-RoundedRectOps.fill_AA_Opaq() ────► RectOps.fill_AA_Opaq()
+RoundedRectOpsAAAA.fill_AA_Opaq() ────► RectOpsAA.fill_AA_Opaq()
    (fallback when radius=0)
 
-RoundedRectOps.strokeThick_AA_Opaq() ► RectOps.strokeThick_AA_Opaq()
+RoundedRectOpsAAAA.strokeThick_AA_Opaq() ► RectOpsAA.strokeThick_AA_Opaq()
    (fallback when radius=0)
 
-RoundedRectOps.fillStroke_AA_Any() ► RectOps.* methods
+RoundedRectOpsAAAA.fillStroke_AA_Any() ► RectOpsAA.* methods
    (fallback when radius=0)
 
 LineOps.stroke_Any() ─────────────► SpanOps.fill_Opaq()
@@ -190,14 +198,14 @@ CircleOps.fill_Opaq() ────────────► SpanOps.fill_Opaq(
 CircleOps.fill_Alpha() ───────────► SpanOps.fill_Alpha()
    (each scanline)
 
-RoundedRectOps.fill_AA_Opaq() ────► SpanOps.fill_Opaq()
+RoundedRectOpsAAAA.fill_AA_Opaq() ────► SpanOps.fill_Opaq()
    (each scanline)
 
 All *Ops.fill*() ─────────────────► SpanOps.fill_Opaq() or SpanOps.fill_Alpha()
    (most shapes)                      (shared horizontal span utility)
 ```
 
-**SpanOps is the shared primitive** - used by RectOps, CircleOps, LineOps, RoundedRectOps
+**SpanOps is the shared primitive** - used by RectOpsAA, RectOpsRot, CircleOps, LineOps, RoundedRectOpsAAAA, RoundedRectOpsAARot
 
 ---
 
@@ -285,27 +293,27 @@ if (clipBuffer[byteIndex] === 0) {
 | Bresenham circle    | CircleOps.stroke1px*, generateExtents    | Pixel-perfect circle outline           |
 | Bresenham line      | LineOps thin strokes                     | Pixel-perfect line rasterization       |
 | 8-way symmetry      | CircleOps.stroke1px*                     | Generate 8 points per Bresenham step   |
-| Edge function       | RectOps.fillRotated                      | Test if pixel inside rotated rect      |
+| Edge function       | RectOpsAA.fillRotated                      | Test if pixel inside rotated rect      |
 | Polygon scanline    | LineOps.strokeThickPolygonScan           | Fill thick diagonal lines              |
 | Sqrt-based extent   | CircleOps.fillStroke, strokeThick     | Analytical circle intersection         |
 | Annulus (ring)      | CircleOps.strokeThick, fillStroke     | Inner/outer radius for thick strokes   |
 | Angle filtering     | ArcOps.*                                 | Filter Bresenham points by angle range |
 | Angle-based iterate | ArcOps.stroke1pxOpaqueExactEndpoints     | Exact start/end pixels for junctions   |
 | Set deduplication   | CircleOps.stroke1pxAlpha, ArcOps         | Prevent overdraw for alpha blending    |
-| Hybrid edges+arcs   | RoundedRectOps.strokeRotated (1px)       | 4 lines + 4 arcs for rotated rrect     |
-| Edge Buffer Raster  | RoundedRectOps.fillRotated               | O(H+P+A) optimal rotated fill          |
-| Dual Edge Buffer    | RoundedRectOps.strokeRotated (thick)     | Outer+inner perimeters, fill annulus   |
-| Span-based fill-first | RectOps.fillStroke                  | Correct semi-transparent stroke blending |
+| Hybrid edges+arcs   | RoundedRectOpsAAAA.strokeRotated (1px)       | 4 lines + 4 arcs for rotated rrect     |
+| Edge Buffer Raster  | RoundedRectOpsAAAA.fillRotated               | O(H+P+A) optimal rotated fill          |
+| Dual Edge Buffer    | RoundedRectOpsAAAA.strokeRotated (thick)     | Outer+inner perimeters, fill annulus   |
+| Span-based fill-first | RectOpsAA.fillStroke                  | Correct semi-transparent stroke blending |
 
 ### 6.4 Special Optimizations
 
 | Optimization         | Where                                                          | Description                                        |
 |----------------------|----------------------------------------------------------------|----------------------------------------------------|
-| Epsilon contraction  | CircleOps.fillStroke, RoundedRectOps.fillStroke          | FILL_EPSILON = 0.0001 prevents boundary speckles   |
-| Line extend/shorten  | RectOps.strokeRotated                                          | Proper miter corners for thick rotated rect stroke |
+| Epsilon contraction  | CircleOps.fillStroke, RoundedRectOpsAAAA.fillStroke          | FILL_EPSILON = 0.0001 prevents boundary speckles   |
+| Line extend/shorten  | RectOpsAA.strokeRotated                                          | Proper miter corners for thick rotated rect stroke |
 | Crisp center adjust  | CircleOps, ArcOps                                              | floor(cx - 0.5) for consistent pixel placement     |
 | Exact endpoints      | ArcOps.stroke1pxOpaqueExactEndpoints                           | Angle-based iteration guarantees junction pixels   |
-| Conditional fill extent | RectOps.fillStroke                                          | Semi-transparent stroke → PATH extent; opaque → INNER extent |
+| Conditional fill extent | RectOpsAA.fillStroke                                          | Semi-transparent stroke → PATH extent; opaque → INNER extent |
 
 ---
 
@@ -340,32 +348,38 @@ Methods follow the dual-suffix pattern: `{operation}[Thickness]_{orientation}_{o
 
 ### Public Methods (by Class)
 
-| Class          | Fill Methods                                      | Stroke Methods                                                                                         |
-|----------------|---------------------------------------------------|--------------------------------------------------------------------------------------------------------|
-| RectOps        | fill_AA_Opaq, fill_AA_Alpha, fill_Rot_Any         | stroke1px_AA_Opaq, stroke1px_AA_Alpha, strokeThick_AA_Opaq, strokeThick_AA_Alpha, stroke_Rot_Any       |
-| RoundedRectOps | fill_AA_Opaq, fill_AA_Alpha, fill_Rot_Any         | stroke1px_AA_Opaq, stroke1px_AA_Alpha, strokeThick_AA_Opaq, strokeThick_AA_Alpha, stroke_Rot_Any       |
-| CircleOps      | fill_Opaq, fill_Alpha                             | stroke1px_Opaq, stroke1px_Alpha, strokeThick_Any, strokeThick_Alpha                                    |
-| LineOps        | N/A                                               | stroke_Any (public dispatcher)                                                                         |
-| ArcOps         | fill_Opaq, fill_Alpha                             | stroke1px_Opaq, stroke1px_Opaq_Exact, stroke1px_Alpha, strokeOuter_Opaq, strokeOuter_Alpha             |
-| SpanOps        | fill_Opaq, fill_Alpha                             | N/A                                                                                                    |
+| Class              | Fill Methods                                      | Stroke Methods                                                                                         |
+|--------------------|---------------------------------------------------|--------------------------------------------------------------------------------------------------------|
+| RectOpsAA            | fill_AA_Opaq, fill_AA_Alpha                       | stroke1px_AA_Opaq, stroke1px_AA_Alpha, strokeThick_AA_Opaq, strokeThick_AA_Alpha                       |
+| RectOpsRot        | fill_Rot_Any                                      | stroke_Rot_Any                                                                                         |
+| RoundedRectOpsAAAA     | fill_AA_Opaq, fill_AA_Alpha                       | stroke1px_AA_Opaq, stroke1px_AA_Alpha, strokeThick_AA_Opaq, strokeThick_AA_Alpha                       |
+| RoundedRectOpsAARot | fill_Rot_Any                                      | stroke_Rot_Any                                                                                         |
+| CircleOps          | fill_Opaq, fill_Alpha                             | stroke1px_Opaq, stroke1px_Alpha, strokeThick_Any, strokeThick_Alpha                                    |
+| LineOps            | N/A                                               | stroke_Any (public dispatcher)                                                                         |
+| ArcOps             | fill_Opaq, fill_Alpha                             | stroke1px_Opaq, stroke1px_Opaq_Exact, stroke1px_Alpha, strokeOuter_Opaq, strokeOuter_Alpha             |
+| SpanOps            | fill_Opaq, fill_Alpha                             | N/A                                                                                                    |
+
+Note: Context2D calls *Ops classes for axis-aligned operations and *Rotated classes directly for rotated operations.
 
 ### Combined Methods
 
-| Class          | fillStroke Methods                               |
-|----------------|--------------------------------------------------|
-| RectOps        | fillStroke_AA_Any                                |
-| RoundedRectOps | fillStroke_AA_Any, fillStroke_Rot_Any            |
-| CircleOps      | fillStroke_Any                                   |
-| ArcOps         | fillStrokeOuter_Any                              |
+| Class              | fillStroke Methods                               |
+|--------------------|--------------------------------------------------|
+| RectOpsAA            | fillStroke_AA_Any                                |
+| RectOpsRot        | fillStroke_Rot_Any                               |
+| RoundedRectOpsAAAA     | fillStroke_AA_Any                                |
+| RoundedRectOpsAARot | fillStroke_Rot_Any                               |
+| CircleOps          | fillStroke_Any                                   |
+| ArcOps             | fillStrokeOuter_Any                              |
 
 ### Internal Methods (underscore prefix)
 
-| Class          | Private/Internal Methods                                                                    |
-|----------------|--------------------------------------------------------------------------------------------|
-| RectOps        | _stroke_Rot_Alpha, _extendLine, _shortenLine, _blendPixelAlpha, _renderAndCollectLinePixels, _renderLinePixelsWithCheck |
-| RoundedRectOps | _fill_Rot_Opaq, _fill_Rot_Alpha, _stroke1px_Rot_Opaq, _stroke1px_Rot_Alpha, _strokeThick_Rot_Opaq, _strokeThick_Rot_Alpha |
-| LineOps        | _strokeThick_PolyScan                                                                      |
-| SpanOps        | blendPixel_Alpha                                                                           |
+| Class              | Private/Internal Methods                                                                    |
+|--------------------|--------------------------------------------------------------------------------------------|
+| RectOpsRot        | _stroke_Rot_Alpha, _extendLine, _shortenLine, _blendPixelAlpha, _renderAndCollectLinePixels, _renderLinePixelsWithCheck |
+| RoundedRectOpsAARot | _fill_Rot_Opaq, _fill_Rot_Alpha, _stroke1px_Rot_Opaq, _stroke1px_Rot_Alpha, _strokeThick_Rot_Opaq, _strokeThick_Rot_Alpha, _transform, _generateEdgePixels, _generateArcPixels, _generatePerimeter |
+| LineOps            | _strokeThick_PolyScan                                                                      |
+| SpanOps            | blendPixel_Alpha                                                                           |
 
 ### 8.1 Call Hierarchy System
 
@@ -378,28 +392,20 @@ Each *Ops file contains a **CALL HIERARCHY** header comment documenting method d
 | **Layer 2** | Internal | Underscore-prefixed internal implementations called by dispatchers |
 | **Layer 3** | Dispatchers/Composites | Public methods that dispatch to internal implementations or combine multiple operations |
 
-**Example header (from RoundedRectOps.js):**
+**Example header (from RoundedRectOpsAAAA.js):**
 ```javascript
 /**
  * CALL HIERARCHY:
  * ---------------
  * Layer 0 (Foundation): SpanOps.fill_Opaq, SpanOps.fill_Alpha
  *
- * Layer 1 (Primitives - call SpanOps, fallback to RectOps for radius=0):
+ * Layer 1 (Primitives - call SpanOps, fallback to RectOpsAA for radius=0):
  *   fill_AA_Opaq, fill_AA_Alpha
  *   stroke1px_AA_Opaq, stroke1px_AA_Alpha
  *   strokeThick_AA_Opaq, strokeThick_AA_Alpha
  *
- * Layer 2 (Rotated - internal implementations):
- *   _fill_Rot_Opaq, _fill_Rot_Alpha (called by fill_Rot_Any)
- *   _stroke1px_Rot_Opaq, _stroke1px_Rot_Alpha (called by stroke_Rot_Any)
- *   _strokeThick_Rot_Opaq, _strokeThick_Rot_Alpha (called by stroke_Rot_Any)
- *
- * Layer 3 (Dispatchers and Composites):
- *   fill_Rot_Any       → _fill_Rot_Opaq / _fill_Rot_Alpha
- *   stroke_Rot_Any     → _stroke1px_Rot_* / _strokeThick_Rot_* + LineOps.stroke_Any
+ * Layer 2 (Composites):
  *   fillStroke_AA_Any  → Inline implementation (SpanOps + corner arcs)
- *   fillStroke_Rot_Any → fill_Rot_Any + stroke_Rot_Any
  */
 ```
 
@@ -409,7 +415,14 @@ Each *Ops file contains a **CALL HIERARCHY** header comment documenting method d
 - Renaming methods
 - Adding cross-class calls
 
-All *Ops files have this header: `SpanOps.js`, `RectOps.js`, `CircleOps.js`, `ArcOps.js`, `LineOps.js`, `RoundedRectOps.js`
+All *Ops files have this header: `SpanOps.js`, `RectOpsAA.js`, `RectOpsRot.js`, `CircleOps.js`, `ArcOps.js`, `LineOps.js`, `RoundedRectOpsAAAA.js`, `RoundedRectOpsAARot.js`
+
+**Note on Module Architecture:** The codebase uses a direct call pattern:
+- RectOpsAA and RoundedRectOpsAAAA handle axis-aligned (AA) operations only
+- RectOpsRot and RoundedRectOpsAARot handle rotated (Rot) operations only
+- Context2D calls the appropriate module directly based on transform state
+- RoundedRectOpsAARot falls back to RectOpsRot (not RectOpsAA) when radius=0
+- This separation keeps each file focused and eliminates unnecessary indirection
 
 ---
 
@@ -423,16 +436,22 @@ All *Ops files have this header: `SpanOps.js`, `RectOps.js`, `CircleOps.js`, `Ar
 
 ## 10. Code File Summary
 
-| File                           | Purpose                              |
-|--------------------------------|--------------------------------------|
-| src/renderers/SpanOps.js       | Shared horizontal span utilities     |
-| src/renderers/RectOps.js       | Rectangle direct renderings          |
-| src/renderers/CircleOps.js     | Circle direct renderings             |
-| src/renderers/LineOps.js       | Line direct renderings               |
-| src/renderers/RoundedRectOps.js| Rounded rectangle direct renderings  |
-| src/renderers/ArcOps.js        | Partial arc direct renderings        |
-| src/renderers/FastPixelOps.js  | Low-level pixel ops and clipping     |
-| src/core/Context2D.js          | Entry points and dispatch logic      |
+| File                               | Purpose                                           |
+|------------------------------------|---------------------------------------------------|
+| src/renderers/SpanOps.js           | Shared horizontal span utilities                  |
+| src/renderers/RectOpsRot.js       | Rotated rectangle renderings (called by Context2D)|
+| src/renderers/RectOpsAA.js           | Axis-aligned rectangle renderings                 |
+| src/renderers/CircleOps.js         | Circle direct renderings                          |
+| src/renderers/LineOps.js           | Line direct renderings                            |
+| src/renderers/RoundedRectOpsAARot.js| Rotated rounded rectangle renderings (called by Context2D) |
+| src/renderers/RoundedRectOpsAAAA.js    | Axis-aligned rounded rectangle renderings         |
+| src/renderers/ArcOps.js            | Partial arc direct renderings                     |
+| src/renderers/FastPixelOps.js      | Low-level pixel ops and clipping                  |
+| src/core/Context2D.js              | Entry points and dispatch logic                   |
+
+**Direct Call Architecture:** Context2D dispatches directly to the appropriate module based on transform state:
+- Axis-aligned transforms → *Ops classes (RectOpsAA, RoundedRectOpsAAAA)
+- Rotated/scaled transforms → *Rotated classes (RectOpsRot, RoundedRectOpsAARot)
 
 ---
 
@@ -442,34 +461,34 @@ All 39 documented direct rendering functions have **100% explicit test coverage*
 
 ### 11.1 Coverage Matrix
 
-#### RECTANGULAR (RectOps.js) - 9/9 Functions Covered
+#### RECTANGULAR (RectOpsAA.js + RectOpsRot.js) - 9/9 Functions Covered
 
 | Function | Test File(s) |
 |----------|--------------|
-| `fill_AA_Opaq()` | `rect-fill-opaque-test.js` |
-| `fill_AA_Alpha()` | `rect-sgl-*-fSemi-*` tests |
-| `fill_Rot_Any()` | `rect-sgl-szMix-fOpaq-sOpaq-*-ctxRotRand-test.js` |
-| `stroke1px_AA_Opaq()` | `rect-sgl-szMix-fNone-sOpaq-sw1px-*` tests |
-| `stroke1px_AA_Alpha()` | `rect-sgl-szMix-fNone-sSemi-sw1px-lytCenter-cenMixPG-edgeCrisp-ornAxial-test.js` |
-| `strokeThick_AA_Opaq()` | `rect-*-sw1-10px-*-sOpaq-*` tests |
-| `strokeThick_AA_Alpha()` | `rect-*-sw1-10px-*-sSemi-*` tests |
-| `stroke_Rot_Any()` | `rect-sgl-szMix-fOpaq-sOpaq-*-ctxRotRand-test.js` |
-| `fillStroke_AA_Any()` | `rect-*-fSemi-sMix-*` tests |
+| `RectOpsAA.fill_AA_Opaq()` | `rect-fill-opaque-test.js` |
+| `RectOpsAA.fill_AA_Alpha()` | `rect-sgl-*-fSemi-*` tests |
+| `RectOpsRot.fill_Rot_Any()` | `rect-sgl-szMix-fOpaq-sOpaq-*-ctxRotRand-test.js` |
+| `RectOpsAA.stroke1px_AA_Opaq()` | `rect-sgl-szMix-fNone-sOpaq-sw1px-*` tests |
+| `RectOpsAA.stroke1px_AA_Alpha()` | `rect-sgl-szMix-fNone-sSemi-sw1px-lytCenter-cenMixPG-edgeCrisp-ornAxial-test.js` |
+| `RectOpsAA.strokeThick_AA_Opaq()` | `rect-*-sw1-10px-*-sOpaq-*` tests |
+| `RectOpsAA.strokeThick_AA_Alpha()` | `rect-*-sw1-10px-*-sSemi-*` tests |
+| `RectOpsRot.stroke_Rot_Any()` | `rect-sgl-szMix-fOpaq-sOpaq-*-ctxRotRand-test.js` |
+| `RectOpsAA.fillStroke_AA_Any()` | `rect-*-fSemi-sMix-*` tests |
 
-#### ROUNDED RECTANGLES (RoundedRectOps.js) - 10/10 Functions Covered
+#### ROUNDED RECTANGLES (RoundedRectOpsAAAA.js + RoundedRectOpsAARot.js) - 10/10 Functions Covered
 
 | Function | Test File(s) |
 |----------|--------------|
-| `fill_AA_Opaq()` | `roundrect-sgl-szMix-fOpaq-sNone-lytCenter-cenMixPG-edgeCrisp-ornAxial-rrrRand-test.js` |
-| `fill_AA_Alpha()` | `roundrect-m8-xl-fSemi-sNone-*` |
-| `fill_Rot_Any()` | `roundrect-sgl-szRand-f{Opaq,Semi}-sNone-sw0-lytCenter-cenRand-edgeNotCrisp-ornRot-rrrRand-test.js` |
-| `stroke1px_AA_Opaq()` | `roundrect-*-sw1px-*-sOpaq-*` tests |
-| `stroke1px_AA_Alpha()` | `roundrect-sgl-szMix-fNone-sSemi-sw1px-lytCenter-cenMixPG-edgeCrisp-ornAxial-rrrRand-test.js` |
-| `strokeThick_AA_Opaq()` | `roundrect-*-sw1-11px-*-sOpaq-*` tests |
-| `strokeThick_AA_Alpha()` | `roundrect-m6-*-sSemi-*`, `roundrect-m8-*` tests |
-| `stroke_Rot_Any()` | `roundrect-m12-*-ornRot-*`, `roundrect-sgl-szRand-*-ornRot-*` tests |
-| `fillStroke_AA_Any()` | Multiple fill+stroke tests |
-| `fillStroke_Rot_Any()` | `roundrect-sgl-szRand-fOpaq-sSemi-sw{1px,2-40px}-*-ornRot-*` tests |
+| `RoundedRectOpsAAAA.fill_AA_Opaq()` | `roundrect-sgl-szMix-fOpaq-sNone-lytCenter-cenMixPG-edgeCrisp-ornAxial-rrrRand-test.js` |
+| `RoundedRectOpsAAAA.fill_AA_Alpha()` | `roundrect-m8-xl-fSemi-sNone-*` |
+| `RoundedRectOpsAARot.fill_Rot_Any()` | `roundrect-sgl-szRand-f{Opaq,Semi}-sNone-sw0-lytCenter-cenRand-edgeNotCrisp-ornRot-rrrRand-test.js` |
+| `RoundedRectOpsAAAA.stroke1px_AA_Opaq()` | `roundrect-*-sw1px-*-sOpaq-*` tests |
+| `RoundedRectOpsAAAA.stroke1px_AA_Alpha()` | `roundrect-sgl-szMix-fNone-sSemi-sw1px-lytCenter-cenMixPG-edgeCrisp-ornAxial-rrrRand-test.js` |
+| `RoundedRectOpsAAAA.strokeThick_AA_Opaq()` | `roundrect-*-sw1-11px-*-sOpaq-*` tests |
+| `RoundedRectOpsAAAA.strokeThick_AA_Alpha()` | `roundrect-m6-*-sSemi-*`, `roundrect-m8-*` tests |
+| `RoundedRectOpsAARot.stroke_Rot_Any()` | `roundrect-m12-*-ornRot-*`, `roundrect-sgl-szRand-*-ornRot-*` tests |
+| `RoundedRectOpsAAAA.fillStroke_AA_Any()` | Multiple fill+stroke tests |
+| `RoundedRectOpsAARot.fillStroke_Rot_Any()` | `roundrect-sgl-szRand-fOpaq-sSemi-sw{1px,2-40px}-*-ornRot-*` tests |
 
 #### CIRCLES (CircleOps.js) - 7/7 Functions Covered
 

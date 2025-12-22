@@ -49,7 +49,9 @@ echo "" >> dist/swcanvas.js
 # Phase 1.5: Shape rendering operations (depend on Surface)
 cat src/renderers/SpanOps.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
-cat src/renderers/RectOps.js >> dist/swcanvas.js
+cat src/renderers/RectOpsRot.js >> dist/swcanvas.js
+echo "" >> dist/swcanvas.js
+cat src/renderers/RectOpsAA.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
 cat src/renderers/CircleOps.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
@@ -57,7 +59,9 @@ cat src/renderers/ArcOps.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
 cat src/renderers/LineOps.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
-cat src/renderers/RoundedRectOps.js >> dist/swcanvas.js
+cat src/renderers/RoundedRectOpsRot.js >> dist/swcanvas.js
+echo "" >> dist/swcanvas.js
+cat src/renderers/RoundedRectOpsAA.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
 
 # Phase 2: Core Service classes (depend on foundation)
@@ -191,7 +195,7 @@ if (typeof window !== 'undefined') {
             ConicGradient: ConicGradient,
             Pattern: Pattern,
             FastPixelOps: FastPixelOps,
-            RoundedRectOps: RoundedRectOps
+            RoundedRectOpsAA: RoundedRectOpsAA
         }
     };
 } else if (typeof module !== 'undefined' && module.exports) {
@@ -233,7 +237,7 @@ if (typeof window !== 'undefined') {
             ConicGradient: ConicGradient,
             Pattern: Pattern,
             FastPixelOps: FastPixelOps,
-            RoundedRectOps: RoundedRectOps
+            RoundedRectOpsAA: RoundedRectOpsAA
         }
     };
 }

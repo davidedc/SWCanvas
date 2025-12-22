@@ -383,26 +383,26 @@ class Context2D {
             const isOpaque = this._fillStyle.a === 255 && this.globalAlpha >= 1.0;
 
             if (t.isAxisAligned) {
-                // Inline dimension swapping - no RectOps.getRotatedDimensions() call needed
+                // Inline dimension swapping - no RectOpsAA.getRotatedDimensions() call needed
                 const finalW = t.is90DegreeRotated ? scaledH : scaledW;
                 const finalH = t.is90DegreeRotated ? scaledW : scaledH;
                 const tlX = center.x - finalW / 2;
                 const tlY = center.y - finalH / 2;
 
                 if (isOpaque) {
-                    RectOps.fill_AA_Opaq(this.surface, tlX, tlY, finalW, finalH, this._fillStyle, clip);
+                    RectOpsAA.fill_AA_Opaq(this.surface, tlX, tlY, finalW, finalH, this._fillStyle, clip);
                     return;
                 } else {
-                    RectOps.fill_AA_Alpha(this.surface, tlX, tlY, finalW, finalH, this._fillStyle, this.globalAlpha, clip);
+                    RectOpsAA.fill_AA_Alpha(this.surface, tlX, tlY, finalW, finalH, this._fillStyle, this.globalAlpha, clip);
                     return;
                 }
             } else if (t.isUniformScale) {
                 // Rotated with uniform scale: use edge-function algorithm
                 if (isOpaque) {
-                    RectOps.fill_Rot_Any(this.surface, center.x, center.y, scaledW, scaledH, t.rotationAngle, this._fillStyle, 1.0, clip);
+                    RectOpsRot.fill_Rot_Any(this.surface, center.x, center.y, scaledW, scaledH, t.rotationAngle, this._fillStyle, 1.0, clip);
                     return;
                 } else {
-                    RectOps.fill_Rot_Any(this.surface, center.x, center.y, scaledW, scaledH, t.rotationAngle, this._fillStyle, this.globalAlpha, clip);
+                    RectOpsRot.fill_Rot_Any(this.surface, center.x, center.y, scaledW, scaledH, t.rotationAngle, this._fillStyle, this.globalAlpha, clip);
                     return;
                 }
             }
@@ -454,24 +454,24 @@ class Context2D {
 
                 if (is1pxStroke) {
                     if (isOpaque) {
-                        RectOps.stroke1px_AA_Opaq(this.surface, tlX, tlY, finalW, finalH, this._strokeStyle, clip);
+                        RectOpsAA.stroke1px_AA_Opaq(this.surface, tlX, tlY, finalW, finalH, this._strokeStyle, clip);
                         return;
                     } else {
-                        RectOps.stroke1px_AA_Alpha(this.surface, tlX, tlY, finalW, finalH, this._strokeStyle, this.globalAlpha, clip);
+                        RectOpsAA.stroke1px_AA_Alpha(this.surface, tlX, tlY, finalW, finalH, this._strokeStyle, this.globalAlpha, clip);
                         return;
                     }
                 } else if (isThickStroke) {
                     if (isOpaque) {
-                        RectOps.strokeThick_AA_Opaq(this.surface, tlX, tlY, finalW, finalH, scaledLineWidth, this._strokeStyle, clip);
+                        RectOpsAA.strokeThick_AA_Opaq(this.surface, tlX, tlY, finalW, finalH, scaledLineWidth, this._strokeStyle, clip);
                         return;
                     } else {
-                        RectOps.strokeThick_AA_Alpha(this.surface, tlX, tlY, finalW, finalH, scaledLineWidth, this._strokeStyle, this.globalAlpha, clip);
+                        RectOpsAA.strokeThick_AA_Alpha(this.surface, tlX, tlY, finalW, finalH, scaledLineWidth, this._strokeStyle, this.globalAlpha, clip);
                         return;
                     }
                 }
             } else if (t.isUniformScale) {
                 // Rotated with uniform scale: use line-based stroke
-                RectOps.stroke_Rot_Any(this.surface, center.x, center.y, scaledW, scaledH, t.rotationAngle, scaledLineWidth, this._strokeStyle, this.globalAlpha, clip);
+                RectOpsRot.stroke_Rot_Any(this.surface, center.x, center.y, scaledW, scaledH, t.rotationAngle, scaledLineWidth, this._strokeStyle, this.globalAlpha, clip);
                 return;
             }
             // Non-uniform scale + rotation: fall through to path-based rendering (produces parallelogram)
@@ -551,7 +551,7 @@ class Context2D {
                 const tlX = center.x - finalW / 2;
                 const tlY = center.y - finalH / 2;
 
-                RectOps.fillStroke_AA_Any(
+                RectOpsAA.fillStroke_AA_Any(
                     this.surface,
                     tlX, tlY, finalW, finalH,
                     scaledLineWidth,
@@ -563,7 +563,7 @@ class Context2D {
                 return;
             } else if (t.isUniformScale) {
                 // Rotated with uniform scale: use rotated fill+stroke wrapper
-                RectOps.fillStroke_Rot_Any(
+                RectOpsRot.fillStroke_Rot_Any(
                     this.surface,
                     center.x, center.y, scaledW, scaledH, t.rotationAngle,
                     scaledLineWidth,
@@ -736,15 +736,15 @@ class Context2D {
                     // No transform: use axis-aligned methods with original coordinates
                     if (is1pxStroke) {
                         if (isOpaque) {
-                            RoundedRectOps.stroke1px_AA_Opaq(this.surface, x, y, width, height, radii, this._strokeStyle, clip);
+                            RoundedRectOpsAA.stroke1px_AA_Opaq(this.surface, x, y, width, height, radii, this._strokeStyle, clip);
                         } else {
-                            RoundedRectOps.stroke1px_AA_Alpha(this.surface, x, y, width, height, radii, this._strokeStyle, this.globalAlpha, clip);
+                            RoundedRectOpsAA.stroke1px_AA_Alpha(this.surface, x, y, width, height, radii, this._strokeStyle, this.globalAlpha, clip);
                         }
                     } else {
                         if (isOpaque) {
-                            RoundedRectOps.strokeThick_AA_Opaq(this.surface, x, y, width, height, radii, this._lineWidth, this._strokeStyle, clip);
+                            RoundedRectOpsAA.strokeThick_AA_Opaq(this.surface, x, y, width, height, radii, this._lineWidth, this._strokeStyle, clip);
                         } else {
-                            RoundedRectOps.strokeThick_AA_Alpha(this.surface, x, y, width, height, radii, this._lineWidth, this._strokeStyle, this.globalAlpha, clip);
+                            RoundedRectOpsAA.strokeThick_AA_Alpha(this.surface, x, y, width, height, radii, this._lineWidth, this._strokeStyle, this.globalAlpha, clip);
                         }
                     }
                     return;
@@ -759,21 +759,21 @@ class Context2D {
 
                     if (is1pxStroke) {
                         if (isOpaque) {
-                            RoundedRectOps.stroke1px_AA_Opaq(this.surface, tlX, tlY, finalW, finalH, scaledRadius, this._strokeStyle, clip);
+                            RoundedRectOpsAA.stroke1px_AA_Opaq(this.surface, tlX, tlY, finalW, finalH, scaledRadius, this._strokeStyle, clip);
                         } else {
-                            RoundedRectOps.stroke1px_AA_Alpha(this.surface, tlX, tlY, finalW, finalH, scaledRadius, this._strokeStyle, this.globalAlpha, clip);
+                            RoundedRectOpsAA.stroke1px_AA_Alpha(this.surface, tlX, tlY, finalW, finalH, scaledRadius, this._strokeStyle, this.globalAlpha, clip);
                         }
                     } else {
                         if (isOpaque) {
-                            RoundedRectOps.strokeThick_AA_Opaq(this.surface, tlX, tlY, finalW, finalH, scaledRadius, scaledLineWidth, this._strokeStyle, clip);
+                            RoundedRectOpsAA.strokeThick_AA_Opaq(this.surface, tlX, tlY, finalW, finalH, scaledRadius, scaledLineWidth, this._strokeStyle, clip);
                         } else {
-                            RoundedRectOps.strokeThick_AA_Alpha(this.surface, tlX, tlY, finalW, finalH, scaledRadius, scaledLineWidth, this._strokeStyle, this.globalAlpha, clip);
+                            RoundedRectOpsAA.strokeThick_AA_Alpha(this.surface, tlX, tlY, finalW, finalH, scaledRadius, scaledLineWidth, this._strokeStyle, this.globalAlpha, clip);
                         }
                     }
                     return;
                 } else {
                     // Rotated with uniform scale: use strokeRotated
-                    RoundedRectOps.stroke_Rot_Any(
+                    RoundedRectOpsRot.stroke_Rot_Any(
                         this.surface,
                         center.x, center.y, scaledW, scaledH,
                         scaledRadius,
@@ -845,9 +845,9 @@ class Context2D {
                 if (t.isIdentity) {
                     // No transform: use axis-aligned methods with original coordinates
                     if (isOpaque) {
-                        RoundedRectOps.fill_AA_Opaq(this.surface, x, y, width, height, radii, this._fillStyle, clip);
+                        RoundedRectOpsAA.fill_AA_Opaq(this.surface, x, y, width, height, radii, this._fillStyle, clip);
                     } else {
-                        RoundedRectOps.fill_AA_Alpha(this.surface, x, y, width, height, radii, this._fillStyle, this.globalAlpha, clip);
+                        RoundedRectOpsAA.fill_AA_Alpha(this.surface, x, y, width, height, radii, this._fillStyle, this.globalAlpha, clip);
                     }
                     return;
                 }
@@ -860,14 +860,14 @@ class Context2D {
                     const tlY = center.y - finalH / 2;
 
                     if (isOpaque) {
-                        RoundedRectOps.fill_AA_Opaq(this.surface, tlX, tlY, finalW, finalH, scaledRadius, this._fillStyle, clip);
+                        RoundedRectOpsAA.fill_AA_Opaq(this.surface, tlX, tlY, finalW, finalH, scaledRadius, this._fillStyle, clip);
                     } else {
-                        RoundedRectOps.fill_AA_Alpha(this.surface, tlX, tlY, finalW, finalH, scaledRadius, this._fillStyle, this.globalAlpha, clip);
+                        RoundedRectOpsAA.fill_AA_Alpha(this.surface, tlX, tlY, finalW, finalH, scaledRadius, this._fillStyle, this.globalAlpha, clip);
                     }
                     return;
                 } else {
                     // Rotated with uniform scale: use fillRotated
-                    RoundedRectOps.fill_Rot_Any(
+                    RoundedRectOpsRot.fill_Rot_Any(
                         this.surface,
                         center.x, center.y, scaledW, scaledH,
                         scaledRadius,
@@ -940,7 +940,7 @@ class Context2D {
 
                 if (t.isIdentity) {
                     // Axis-aligned, no transform: use top-left coordinates
-                    RoundedRectOps.fillStroke_AA_Any(
+                    RoundedRectOpsAA.fillStroke_AA_Any(
                         this.surface,
                         x, y, width, height,
                         radii,
@@ -960,7 +960,7 @@ class Context2D {
                     const tlX = center.x - finalW / 2;
                     const tlY = center.y - finalH / 2;
 
-                    RoundedRectOps.fillStroke_AA_Any(
+                    RoundedRectOpsAA.fillStroke_AA_Any(
                         this.surface,
                         tlX, tlY, finalW, finalH,
                         scaledRadius,
@@ -973,7 +973,7 @@ class Context2D {
                     return;
                 } else {
                     // Rotated with uniform scale: use rotated fill+stroke
-                    RoundedRectOps.fillStroke_Rot_Any(
+                    RoundedRectOpsRot.fillStroke_Rot_Any(
                         this.surface,
                         center.x, center.y, scaledW, scaledH,
                         scaledRadius,
