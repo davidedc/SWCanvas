@@ -6,19 +6,18 @@
  *
  * CALL HIERARCHY:
  * ---------------
- * Layer 0 (Foundation): none (uses inline blending)
+ * Layer 0 (Foundation): QuadScanOps.fillQuad, QuadScanOps.fillSquare
  *
  * Layer 1 (Primitives - do atomic rendering):
- *   fill_Rot_Any
- *   _stroke_Rot_Alpha (internal)
+ *   fill_Rot_Any (edge function algorithm)
+ *   _stroke_Rot_Alpha (internal, uses QuadScanOps with Set tracking)
  *
  * Layer 2 (Composites - call other *Ops methods):
  *   stroke_Rot_Any       → LineOps.stroke_Any (for edges), _stroke_Rot_Alpha
  *   fillStroke_Rot_Any   → fill_Rot_Any + stroke_Rot_Any
  *
  * Helpers (private, used by rotated methods):
- *   _extendLine, _shortenLine, _blendPixelAlpha,
- *   _renderAndCollectLinePixels, _renderLinePixelsWithCheck
+ *   _extendLine, _shortenLine, _blendPixelAlpha
  */
 class RectOpsRot {
     // ========================================================================
@@ -101,174 +100,6 @@ class RectOpsRot {
             data[idx + 1] = (g * effectiveAlpha + data[idx + 1] * oldAlphaScaled) * blendFactor;
             data[idx + 2] = (b * effectiveAlpha + data[idx + 2] * oldAlphaScaled) * blendFactor;
             data[idx + 3] = newAlpha * 255;
-        }
-    }
-
-    /**
-     * Render thick line pixels with alpha AND add to Set.
-     * Used for "short" edges that render first in _stroke_Rot_Alpha.
-     * Based on LineOps.strokeThickPolygonScan() polygon scan algorithm.
-     */
-    static _renderAndCollectLinePixels(surface, data, x1, y1, x2, y2, lineWidth,
-                                        r, g, b, effectiveAlpha, invAlpha, clipBuffer, pixelSet) {
-        const surfaceWidth = surface.width;
-        const surfaceHeight = surface.height;
-
-        const dx = x2 - x1;
-        const dy = y2 - y1;
-        const lineLength = Math.sqrt(dx * dx + dy * dy);
-
-        if (lineLength === 0) {
-            // Zero-length line - render a square of pixels
-            const radius = (lineWidth / 2) | 0;
-            const centerX = x1 | 0;
-            const centerY = y1 | 0;
-            for (let py = -radius; py <= radius; py++) {
-                const y = centerY + py;
-                if (y < 0 || y >= surfaceHeight) continue;
-                for (let x = Math.max(0, centerX - radius); x <= Math.min(surfaceWidth - 1, centerX + radius); x++) {
-                    const pos = y * surfaceWidth + x;
-                    pixelSet.add(pos);
-                    RectOpsRot._blendPixelAlpha(data, pos, r, g, b, effectiveAlpha, invAlpha, clipBuffer);
-                }
-            }
-            return;
-        }
-
-        // Calculate perpendicular vector and 4 corners
-        const invLineLength = 1 / lineLength;
-        const perpX = -dy * invLineLength;
-        const perpY = dx * invLineLength;
-        const halfThick = lineWidth * 0.5;
-        const perpXHalfThick = perpX * halfThick;
-        const perpYHalfThick = perpY * halfThick;
-
-        const corners = [
-            { x: x1 + perpXHalfThick, y: y1 + perpYHalfThick },
-            { x: x1 - perpXHalfThick, y: y1 - perpYHalfThick },
-            { x: x2 - perpXHalfThick, y: y2 - perpYHalfThick },
-            { x: x2 + perpXHalfThick, y: y2 + perpYHalfThick }
-        ];
-
-        const minY = Math.max(0, Math.floor(Math.min(corners[0].y, corners[1].y, corners[2].y, corners[3].y)));
-        const maxY = Math.min(surfaceHeight - 1, Math.floor(Math.max(corners[0].y, corners[1].y, corners[2].y, corners[3].y)));
-
-        // Pre-compute edges
-        const edges = [];
-        for (let i = 0; i < 4; i++) {
-            const p1 = corners[i];
-            const p2 = corners[(i + 1) % 4];
-            if (p1.y !== p2.y) {
-                edges.push({ p1, p2, invDeltaY: 1 / (p2.y - p1.y), deltaX: p2.x - p1.x });
-            }
-        }
-
-        // Scanline rendering + collection
-        const intersections = [];
-        for (let y = minY; y <= maxY; y++) {
-            intersections.length = 0;
-            for (let i = 0; i < edges.length; i++) {
-                const edge = edges[i];
-                const p1 = edge.p1;
-                const p2 = edge.p2;
-                if ((y >= p1.y && y < p2.y) || (y >= p2.y && y < p1.y)) {
-                    intersections.push(p1.x + (y - p1.y) * edge.invDeltaY * edge.deltaX);
-                }
-            }
-            if (intersections.length >= 2) {
-                const leftX = Math.max(0, Math.floor(Math.min(intersections[0], intersections[1])));
-                const rightX = Math.min(surfaceWidth - 1, Math.floor(Math.max(intersections[0], intersections[1])));
-                for (let x = leftX; x <= rightX; x++) {
-                    const pos = y * surfaceWidth + x;
-                    pixelSet.add(pos);
-                    RectOpsRot._blendPixelAlpha(data, pos, r, g, b, effectiveAlpha, invAlpha, clipBuffer);
-                }
-            }
-        }
-    }
-
-    /**
-     * Render thick line pixels with alpha, checking Set to skip already-rendered.
-     * Used for "long" edges that render second in _stroke_Rot_Alpha.
-     * Based on LineOps.strokeThickPolygonScan() polygon scan algorithm.
-     */
-    static _renderLinePixelsWithCheck(surface, data, x1, y1, x2, y2, lineWidth,
-                                       r, g, b, effectiveAlpha, invAlpha, clipBuffer, pixelSet) {
-        const surfaceWidth = surface.width;
-        const surfaceHeight = surface.height;
-
-        const dx = x2 - x1;
-        const dy = y2 - y1;
-        const lineLength = Math.sqrt(dx * dx + dy * dy);
-
-        if (lineLength === 0) {
-            // Zero-length line - render a square of pixels (with check)
-            const radius = (lineWidth / 2) | 0;
-            const centerX = x1 | 0;
-            const centerY = y1 | 0;
-            for (let py = -radius; py <= radius; py++) {
-                const y = centerY + py;
-                if (y < 0 || y >= surfaceHeight) continue;
-                for (let x = Math.max(0, centerX - radius); x <= Math.min(surfaceWidth - 1, centerX + radius); x++) {
-                    const pos = y * surfaceWidth + x;
-                    if (!pixelSet.has(pos)) {
-                        RectOpsRot._blendPixelAlpha(data, pos, r, g, b, effectiveAlpha, invAlpha, clipBuffer);
-                    }
-                }
-            }
-            return;
-        }
-
-        // Calculate perpendicular vector and 4 corners
-        const invLineLength = 1 / lineLength;
-        const perpX = -dy * invLineLength;
-        const perpY = dx * invLineLength;
-        const halfThick = lineWidth * 0.5;
-        const perpXHalfThick = perpX * halfThick;
-        const perpYHalfThick = perpY * halfThick;
-
-        const corners = [
-            { x: x1 + perpXHalfThick, y: y1 + perpYHalfThick },
-            { x: x1 - perpXHalfThick, y: y1 - perpYHalfThick },
-            { x: x2 - perpXHalfThick, y: y2 - perpYHalfThick },
-            { x: x2 + perpXHalfThick, y: y2 + perpYHalfThick }
-        ];
-
-        const minY = Math.max(0, Math.floor(Math.min(corners[0].y, corners[1].y, corners[2].y, corners[3].y)));
-        const maxY = Math.min(surfaceHeight - 1, Math.floor(Math.max(corners[0].y, corners[1].y, corners[2].y, corners[3].y)));
-
-        // Pre-compute edges
-        const edges = [];
-        for (let i = 0; i < 4; i++) {
-            const p1 = corners[i];
-            const p2 = corners[(i + 1) % 4];
-            if (p1.y !== p2.y) {
-                edges.push({ p1, p2, invDeltaY: 1 / (p2.y - p1.y), deltaX: p2.x - p1.x });
-            }
-        }
-
-        // Scanline rendering with Set check
-        const intersections = [];
-        for (let y = minY; y <= maxY; y++) {
-            intersections.length = 0;
-            for (let i = 0; i < edges.length; i++) {
-                const edge = edges[i];
-                const p1 = edge.p1;
-                const p2 = edge.p2;
-                if ((y >= p1.y && y < p2.y) || (y >= p2.y && y < p1.y)) {
-                    intersections.push(p1.x + (y - p1.y) * edge.invDeltaY * edge.deltaX);
-                }
-            }
-            if (intersections.length >= 2) {
-                const leftX = Math.max(0, Math.floor(Math.min(intersections[0], intersections[1])));
-                const rightX = Math.min(surfaceWidth - 1, Math.floor(Math.max(intersections[0], intersections[1])));
-                for (let x = leftX; x <= rightX; x++) {
-                    const pos = y * surfaceWidth + x;
-                    if (!pixelSet.has(pos)) {
-                        RectOpsRot._blendPixelAlpha(data, pos, r, g, b, effectiveAlpha, invAlpha, clipBuffer);
-                    }
-                }
-            }
         }
     }
 
@@ -388,6 +219,7 @@ class RectOpsRot {
 
     /**
      * Rotated rectangle stroke with alpha blending (no overdraw).
+     * Uses QuadScanOps with Set tracking to prevent overdraw at corner regions.
      * Single-pass optimization: render short edges first (add to Set), then long edges (check Set).
      * @param {Surface} surface - Target surface
      * @param {number} centerX - Center X coordinate
@@ -402,10 +234,6 @@ class RectOpsRot {
      */
     static _stroke_Rot_Alpha(surface, centerX, centerY, width, height, rotation,
                               lineWidth, color, globalAlpha, clipBuffer) {
-        const surfaceWidth = surface.width;
-        const surfaceHeight = surface.height;
-        const data = surface.data;
-
         const effectiveAlpha = (color.a / 255) * globalAlpha;
         if (effectiveAlpha <= 0) return;
         const invAlpha = 1 - effectiveAlpha;
@@ -433,20 +261,38 @@ class RectOpsRot {
 
         const renderedPixels = new Set();
 
-        // Helper to process a single edge
+        // Common params for QuadScanOps
+        const baseParams = {
+            surface,
+            r, g, b,
+            isOpaque: false,
+            incomingAlpha: effectiveAlpha,
+            inverseIncomingAlpha: invAlpha,
+            clipBuffer
+        };
+
+        // Helper to process a single edge using QuadScanOps
         const processEdge = (i, extend, renderFirst) => {
             const p1 = corners[i];
             const p2 = corners[(i + 1) % 4];
             const line = extend ? RectOpsRot._extendLine(p1, p2, halfStroke)
                                 : RectOpsRot._shortenLine(p1, p2, halfStroke);
-            if (renderFirst) {
-                RectOpsRot._renderAndCollectLinePixels(surface, data,
-                    line.start.x, line.start.y, line.end.x, line.end.y, lineWidth,
-                    r, g, b, effectiveAlpha, invAlpha, clipBuffer, renderedPixels);
+
+            const quadCorners = QuadScanOps.lineToQuad(
+                line.start.x, line.start.y, line.end.x, line.end.y, halfStroke
+            );
+
+            const params = {
+                ...baseParams,
+                collectTo: renderFirst ? renderedPixels : null,
+                skipFrom: renderFirst ? null : renderedPixels
+            };
+
+            if (quadCorners === null) {
+                // Zero-length edge - use fillSquare
+                QuadScanOps.fillSquare(line.start.x, line.start.y, halfStroke, params);
             } else {
-                RectOpsRot._renderLinePixelsWithCheck(surface, data,
-                    line.start.x, line.start.y, line.end.x, line.end.y, lineWidth,
-                    r, g, b, effectiveAlpha, invAlpha, clipBuffer, renderedPixels);
+                QuadScanOps.fillQuad(quadCorners, params);
             }
         };
 

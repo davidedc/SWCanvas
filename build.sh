@@ -49,6 +49,8 @@ echo "" >> dist/swcanvas.js
 # Phase 1.5: Shape rendering operations (depend on Surface)
 cat src/renderers/SpanOps.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
+cat src/renderers/QuadScanOps.js >> dist/swcanvas.js
+echo "" >> dist/swcanvas.js
 cat src/renderers/RectOpsRot.js >> dist/swcanvas.js
 echo "" >> dist/swcanvas.js
 cat src/renderers/RectOpsAA.js >> dist/swcanvas.js
