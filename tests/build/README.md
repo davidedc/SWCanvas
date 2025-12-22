@@ -107,9 +107,11 @@ The renumbering script generates an `undo-renumber.sh` script:
 
 ## File Naming Convention
 
-All test files follow this naming pattern:
+**Note**: This naming convention applies to `/tests/core/` and `/tests/visual/` directories only. Direct rendering tests in `/tests/direct-rendering/cases/` use a different parametrized naming scheme (e.g., `rect-fill-opaque-test.js`, `circle-m8-szMix-fOpaq-test.js`).
+
+Test files in `/tests/core/` and `/tests/visual/` follow this naming pattern:
 - **Format**: `{3-digit-number}-{descriptive-name}.js`
-- **Examples**: 
+- **Examples**:
   - `001-simple-rectangle-test.js`
   - `025-enhanced-clipping-intersection-test.js`
   - `056-stroke-pixel-analysis-test.js`

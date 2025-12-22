@@ -38,7 +38,8 @@ src/
 │   ├── SWPath2D.js           # Path definition and command recording
 │   ├── Transform2D.js        # Immutable transformation matrix mathematics
 │   ├── Color.js              # Immutable color handling with premultiplied alpha
-│   └── ClipMask.js           # 1-bit stencil buffer using BitBuffer composition
+│   ├── ClipMask.js           # 1-bit stencil buffer using BitBuffer composition
+│   └── StateStack.js         # State stack management for save/restore operations
 │
 ├── renderers/                # Shape-specific direct renderers (static utility classes)
 │   ├── SpanOps.js            # Horizontal span filling utilities (shared by shape ops)
@@ -97,7 +98,7 @@ See ARCHITECTURE.md for complete details on all systems below.
 - **Sub-pixel Strokes**: Strokes < 1px render with proportional opacity (0.5px = 50% opacity)
 - **Line Dashing**: HTML5-compatible setLineDash()/getLineDash() via StrokeGenerator.js
 - **Paint Sources**: Unified interface for Color, LinearGradient, RadialGradient, ConicGradient, Pattern
-- **Direct Rendering**: See DIRECT-RENDERING-SUMMARY.MD for RectOps, CircleOps, LineOps, ArcOps, RoundedRectOps
+- **Direct Rendering**: See DIRECT-RENDERING-SUMMARY.MD for RectOpsAA, RectOpsRot, CircleOps, LineOps, ArcOps, RoundedRectOpsAA, RoundedRectOpsRot
 - **Shadows**: See ARCHITECTURE.md for ShadowBuffer and BoxBlur dual-buffer pipeline
 - **Compositing**: See ARCHITECTURE.md for Porter-Duff operations (10 modes with source masks)
 

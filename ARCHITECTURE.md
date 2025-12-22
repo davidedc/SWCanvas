@@ -52,11 +52,13 @@ src/filters/        → Effects
 src/renderers/      → Shape-Specific Direct Renderers (static utility classes)
   FastPixelOps.js   → Fast pixel operation utilities (optimized pixel writes)
   SpanOps.js        → Horizontal span fill utilities (shared by shape renderers)
-  RectOps.js        → Rectangle stroke direct rendering (1px opaque/alpha, thick strokes)
+  RectOpsAA.js      → Axis-aligned rectangle direct rendering (fill, stroke)
+  RectOpsRot.js     → Rotated rectangle direct rendering (fill, stroke)
   CircleOps.js      → Circle fill/stroke direct rendering (Bresenham, annulus rendering)
   ArcOps.js         → Arc fill/stroke direct rendering (partial arcs, pie slices)
   LineOps.js        → Line stroke direct rendering (Bresenham, polygon scan algorithm)
-  RoundedRectOps.js → Rounded rectangle direct rendering (fill, stroke, combined)
+  RoundedRectOpsAA.js  → Axis-aligned rounded rectangle direct rendering
+  RoundedRectOpsRot.js → Rotated rounded rectangle direct rendering
   PolygonFiller.js  → Scanline polygon filling with paint source support
   PathFlattener.js  → Converts paths to polygons
   StrokeGenerator.js → Geometric stroke path generation with line dashing
@@ -609,100 +611,37 @@ Extract shape-specific rendering into static utility classes that:
 
 ### Architecture
 
+Context2D dispatches to shape-specific renderer classes based on transform state:
+
 ```
-Context2D                     # Orchestration and state management
-├── strokeRect() ────────────→ RectOps.stroke1pxOpaque()
-│                            → RectOps.stroke1pxAlpha()
-│                            → RectOps.strokeThickOpaque()
-│                            → RectOps.strokeThickAlpha()
-│
-├── _fillCircleDirect() ─────→ CircleOps.fillOpaque()
-│                            → CircleOps.fillAlpha()
-│
-├── _strokeCircleDirect() ───→ CircleOps.stroke1pxOpaque()
-│                            → CircleOps.stroke1pxAlpha()
-│                            → CircleOps.strokeThick()
-│
-└── _strokeLineDirect() ─────→ LineOps.strokeDirect()
-                             → LineOps.strokeThickPolygonScan()
+Context2D                              # Orchestration and state management
+├── fillRect/strokeRect ─────────────→ RectOpsAA.*_AA_*()     [axis-aligned]
+│                                    → RectOpsRot.*_Rot_*()   [rotated]
+├── fillCircle/strokeCircle ─────────→ CircleOps.*()
+├── strokeLine ──────────────────────→ LineOps.stroke_Any()
+├── fillArc/strokeArc ───────────────→ ArcOps.*()
+└── fillRoundRect/strokeRoundRect ───→ RoundedRectOpsAA.*_AA_*()  [axis-aligned]
+                                     → RoundedRectOpsRot.*_Rot_*() [rotated]
 ```
 
 ### Static Utility Classes
 
-**SpanOps** - Shared horizontal span filling:
-```javascript
-SpanOps.fillOpaque(data32, width, height, x, y, length, packedColor, clipBuffer)
-SpanOps.fillAlpha(data, width, height, x, y, length, r, g, b, alpha, invAlpha, clipBuffer)
-SpanOps.blendPixelAlpha(data, offset, r, g, b, alpha, invAlpha)
-```
+| Class | Purpose |
+|-------|---------|
+| **SpanOps** | Shared horizontal span filling (foundation for all shape renderers) |
+| **RectOpsAA** | Axis-aligned rectangle fill and stroke |
+| **RectOpsRot** | Rotated rectangle fill and stroke |
+| **CircleOps** | Circle fill and stroke (rotation-invariant) |
+| **LineOps** | Line stroke (Bresenham thin, polygon scan thick) |
+| **ArcOps** | Partial arc fill and stroke |
+| **RoundedRectOpsAA** | Axis-aligned rounded rectangle fill and stroke |
+| **RoundedRectOpsRot** | Rotated rounded rectangle fill and stroke |
 
-**RectOps** - Rectangle fill and stroke rendering:
-```javascript
-// Fill methods
-RectOps.fillOpaque(surface, x, y, width, height, color, clipBuffer)
-RectOps.fillAlpha(surface, x, y, width, height, color, globalAlpha, clipBuffer)
-RectOps.fillRotated(surface, centerX, centerY, width, height, rotation, color, globalAlpha, clipBuffer)
-RectOps.fillStroke(surface, x, y, width, height, lineWidth, fillColor, strokeColor, globalAlpha, clipBuffer)
-RectOps.fillStrokeRotated(surface, centerX, centerY, width, height, rotation, ...)
+**Method naming convention**: `{operation}[Thickness]_{orientation}_{opacity}`
+- Orientation: `AA` (axis-aligned) or `Rot` (rotated)
+- Opacity: `Opaq`, `Alpha`, or `Any` (handles both)
 
-// Stroke methods
-RectOps.stroke1pxOpaque(surface, x, y, width, height, color, clipBuffer)
-RectOps.stroke1pxAlpha(surface, x, y, width, height, color, globalAlpha, clipBuffer)
-RectOps.strokeThickOpaque(surface, x, y, width, height, lineWidth, color, clipBuffer)
-RectOps.strokeThickAlpha(surface, x, y, width, height, lineWidth, color, globalAlpha, clipBuffer)
-RectOps.strokeRotated(surface, centerX, centerY, width, height, rotation, lineWidth, color, globalAlpha, clipBuffer)
-```
-
-**CircleOps** - Circle fill and stroke rendering:
-```javascript
-// Fill methods
-CircleOps.fillOpaque(surface, cx, cy, radius, color, clipBuffer)
-CircleOps.fillAlpha(surface, cx, cy, radius, color, globalAlpha, clipBuffer)
-CircleOps.fillStroke(surface, cx, cy, radius, lineWidth, fillColor, strokeColor, globalAlpha, clipBuffer)
-
-// Stroke methods
-CircleOps.stroke1pxOpaque(surface, cx, cy, radius, color, clipBuffer)
-CircleOps.stroke1pxAlpha(surface, cx, cy, radius, color, globalAlpha, clipBuffer)
-CircleOps.strokeThick(surface, cx, cy, radius, lineWidth, color, globalAlpha, clipBuffer)
-CircleOps.strokeThickAlpha(surface, cx, cy, radius, lineWidth, color, globalAlpha, clipBuffer)
-
-// Utility methods
-CircleOps.generateExtents(radius)          // Bresenham scanline extents
-```
-
-**LineOps** - Line stroke rendering:
-```javascript
-LineOps.strokeDirect(surface, x1, y1, x2, y2, lineWidth, paintSource, globalAlpha, clipBuffer, isOpaqueColor, isSemiTransparentColor)
-LineOps.strokeThickPolygonScan(surface, x1, y1, x2, y2, lineWidth, paintSource, globalAlpha, clipBuffer, useSemiTransparent)
-```
-
-**ArcOps** - Arc fill and stroke rendering:
-```javascript
-// Fill methods (pie slices)
-ArcOps.fillOpaque(surface, cx, cy, radius, startAngle, endAngle, color, clipBuffer)
-ArcOps.fillAlpha(surface, cx, cy, radius, startAngle, endAngle, color, globalAlpha, clipBuffer)
-ArcOps.fillStrokeOuter(surface, cx, cy, radius, startAngle, endAngle, lineWidth, fillColor, strokeColor, globalAlpha, clipBuffer)
-
-// Stroke methods (arc curves)
-ArcOps.stroke1pxOpaque(surface, cx, cy, radius, startAngle, endAngle, color, clipBuffer)
-ArcOps.stroke1pxAlpha(surface, cx, cy, radius, startAngle, endAngle, color, globalAlpha, clipBuffer)
-ArcOps.strokeOuterOpaque(surface, cx, cy, radius, startAngle, endAngle, lineWidth, color, clipBuffer)
-ArcOps.strokeOuterAlpha(surface, cx, cy, radius, startAngle, endAngle, lineWidth, color, globalAlpha, clipBuffer)
-```
-
-**RoundedRectOps** - Rounded rectangle fill and stroke rendering:
-```javascript
-// Fill methods
-RoundedRectOps.fillOpaque(surface, x, y, width, height, radii, color, clipBuffer)
-RoundedRectOps.fillAlpha(surface, x, y, width, height, radii, color, globalAlpha, clipBuffer)
-RoundedRectOps.fillStroke(surface, x, y, width, height, radii, lineWidth, fillColor, strokeColor, globalAlpha, clipBuffer)
-
-// Stroke methods
-RoundedRectOps.stroke1pxOpaque(surface, x, y, width, height, radii, color, clipBuffer)
-RoundedRectOps.stroke1pxAlpha(surface, x, y, width, height, radii, color, globalAlpha, clipBuffer)
-RoundedRectOps.strokeThickOpaque(surface, x, y, width, height, radii, lineWidth, color, clipBuffer)
-RoundedRectOps.strokeThickAlpha(surface, x, y, width, height, radii, lineWidth, color, globalAlpha, clipBuffer)
-```
+For complete API reference with method signatures, conditions, and algorithms, see **DIRECT-RENDERING-SUMMARY.MD**.
 
 ### Benefits
 
@@ -719,11 +658,13 @@ The shape ops classes depend on `Surface` and are loaded in Phase 1.5 of the bui
 ```bash
 # Phase 1.5: Shape rendering operations (depend on Surface)
 cat src/renderers/SpanOps.js >> dist/swcanvas.js
-cat src/renderers/RectOps.js >> dist/swcanvas.js
+cat src/renderers/RectOpsRot.js >> dist/swcanvas.js
+cat src/renderers/RectOpsAA.js >> dist/swcanvas.js
 cat src/renderers/CircleOps.js >> dist/swcanvas.js
 cat src/renderers/ArcOps.js >> dist/swcanvas.js
 cat src/renderers/LineOps.js >> dist/swcanvas.js
-cat src/renderers/RoundedRectOps.js >> dist/swcanvas.js
+cat src/renderers/RoundedRectOpsRot.js >> dist/swcanvas.js
+cat src/renderers/RoundedRectOpsAA.js >> dist/swcanvas.js
 ```
 
 Note: `FastPixelOps.js` is loaded earlier (before Phase 1.5) as it provides foundational pixel utilities.

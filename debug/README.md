@@ -23,6 +23,7 @@ Debug utilities help developers:
 - `debug-copy-composition.js` - Copy vs source-over comparison analysis
 - `debug-browser-copy.js` - Browser rendering behavior analysis
 - `debug-minimal-xor.js` - Minimal XOR test case analysis
+- `debug-simple-xor.js` - Simple XOR debug with step-by-step analysis
 - `debug-html5-xor.js` - HTML5-compatible API XOR testing
 - `debug-overlap-analysis.js` - Coordinate overlap calculation and verification
 - `debug-specific-pixel.js` - Individual pixel behavior investigation
