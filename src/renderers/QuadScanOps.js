@@ -81,7 +81,7 @@ class QuadScanOps {
 
         // Find bounding box
         const minY = Math.max(0, Math.floor(Math.min(corners[0].y, corners[1].y, corners[2].y, corners[3].y)));
-        const maxY = Math.min(height - 1, Math.floor(Math.max(corners[0].y, corners[1].y, corners[2].y, corners[3].y)));
+        const maxY = Math.min(height - 1, Math.ceil(Math.max(corners[0].y, corners[1].y, corners[2].y, corners[3].y)));
 
         // Pre-compute edge data for faster intersection calculation
         const edges = [];
@@ -149,7 +149,7 @@ class QuadScanOps {
                 // Two or more intersections - draw span between min and max
                 const x1i = intersections[0];
                 const x2i = intersections[1];
-                const leftX = Math.max(0, Math.floor(Math.min(x1i, x2i)));
+                const leftX = Math.max(0, Math.ceil(Math.min(x1i, x2i)));
                 const rightX = Math.min(width - 1, Math.floor(Math.max(x1i, x2i)));
                 const spanLength = rightX - leftX + 1;
 
@@ -213,18 +213,16 @@ class QuadScanOps {
         const data32 = surface.data32;
         const data = surface.data;
 
-        const radius = halfSize | 0;
-        const cx = centerX | 0;
-        const cy = centerY | 0;
-
         const usePerPixel = collectTo !== null || skipFrom !== null;
 
-        for (let py = -radius; py <= radius; py++) {
-            const y = cy + py;
-            if (y < 0 || y >= height) continue;
+        // Calculate Y bounds using proper rounding
+        const minY = Math.max(0, Math.floor(centerY - halfSize));
+        const maxY = Math.min(height - 1, Math.ceil(centerY + halfSize));
 
-            const leftX = Math.max(0, cx - radius);
-            const rightX = Math.min(width - 1, cx + radius);
+        for (let y = minY; y <= maxY; y++) {
+            // Calculate X bounds using ceil/floor for consistency with fillQuad
+            const leftX = Math.max(0, Math.ceil(centerX - halfSize));
+            const rightX = Math.min(width - 1, Math.floor(centerX + halfSize));
             const spanLength = rightX - leftX + 1;
 
             if (spanLength <= 0) continue;
