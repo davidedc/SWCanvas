@@ -12,7 +12,7 @@ function generateTestButtons() {
   const arcTestsContainer = document.getElementById('arc-tests');
 
   if (!lineTestsContainer || !rectangleTestsContainer || !circleTestsContainer ||
-      !roundedRectangleTestsContainer || !arcTestsContainer) return;
+    !roundedRectangleTestsContainer || !arcTestsContainer) return;
 
   // Clear existing content
   lineTestsContainer.innerHTML = '';
@@ -53,7 +53,7 @@ function generateTestButtons() {
       createTestEntry(test, targetListElement);
     } else {
       if (test && test.category &&
-          !['lines', 'rects', 'circles', 'rounded-rects', 'arcs'].includes(test.category)) {
+        !['lines', 'rects', 'circles', 'rounded-rects', 'arcs'].includes(test.category)) {
         console.warn(`[UI] Test "${test.displayName}" has unhandled category: ${test.category}`);
       }
     }
@@ -190,24 +190,25 @@ function uncheckAllTests() {
   });
 }
 
-// Profiling mode toggle
-document.getElementById('btn-profiling-mode').addEventListener('click', function() {
+// Profiling mode toggle (simplified for adaptive algorithm)
+document.getElementById('btn-profiling-mode').addEventListener('click', function () {
   const button = this;
   const isProfilingMode = button.textContent.includes('Disable');
 
   if (isProfilingMode) {
     button.textContent = 'Enable Profiling Mode';
     button.style.backgroundColor = '#007bff';
-    consecutiveExceedances.value = '10';
+    convergencePrecision.value = '10';
     quietModeCheckbox.checked = true;
   } else {
     button.textContent = 'Disable Profiling Mode';
     button.style.backgroundColor = '#ff4d4d';
-    consecutiveExceedances.value = '100000';
+    // In profiling mode, use larger precision for longer stable runs
+    convergencePrecision.value = '1000';
     quietModeCheckbox.checked = true;
 
     const originalHtml = resultsContainer.innerHTML;
-    resultsContainer.innerHTML = "Profiling mode enabled. Tests will run without stopping at the frame budget, allowing you to use browser profiling tools on stable rendering.\n\n" + originalHtml;
+    resultsContainer.innerHTML = "Profiling mode enabled. Tests will run with larger precision for longer stable rendering, suitable for browser profiling tools.\n\n" + originalHtml;
     resultsContainer.scrollTop = resultsContainer.scrollHeight;
   }
 });
@@ -352,30 +353,30 @@ function setButtonsState(enabled) {
 const numRunsInput = document.getElementById('num-runs');
 const swStartCountInput = document.getElementById('sw-start-count');
 const htmlStartCountInput = document.getElementById('html-start-count');
+const growthFactorInput = document.getElementById('growth-factor');
 
 function runTest(testType, callback = null, clearResults = true) {
   setButtonsState(false);
   currentTest = testType;
   abortRequested = false;
 
-  const swIncrement = parseInt(swIncrementSize.value);
-  const htmlIncrement = parseInt(htmlIncrementSize.value);
+  const precision = parseInt(convergencePrecision.value) || 1;
   const swStartCount = parseInt(swStartCountInput.value) || 10;
   const htmlStartCount = parseInt(htmlStartCountInput.value) || 10;
-  const requiredExceedances = parseInt(consecutiveExceedances.value);
+  const growthFactor = parseFloat(growthFactorInput.value) || 1.1;
   const includeBlitting = includeBlittingCheckbox.checked;
   const isQuietMode = quietModeCheckbox.checked;
-  const numRuns = parseInt(numRunsInput.value) || 1;
+  const numRuns = parseInt(numRunsInput.value) || 3;
 
   const testDisplayName = testType.displayName;
 
   if (clearResults) {
-    let header = `Running ${testDisplayName} test (averaging ${numRuns} runs) with SW increment ${swIncrement}, HTML increment ${htmlIncrement}`;
+    let header = `Running ${testDisplayName} test (averaging ${numRuns} runs) with adaptive algorithm`;
     header += `${includeBlitting ? ' (including blitting time)' : ' (excluding blitting time)'}`;
     header += `${isQuietMode ? ' in quieter mode' : ''}...\n\n`;
     resultsContainer.innerHTML = header;
   } else {
-    let header = `\nRunning ${testDisplayName} test (averaging ${numRuns} runs) with SW increment ${swIncrement}, HTML increment ${htmlIncrement}`;
+    let header = `\nRunning ${testDisplayName} test (averaging ${numRuns} runs) with adaptive algorithm`;
     header += `${includeBlitting ? ' (including blitting time)' : ' (excluding blitting time)'}`;
     header += `${isQuietMode ? ' in quieter mode' : ''}...\n\n`;
     resultsContainer.innerHTML += header;
@@ -402,10 +403,9 @@ function runTest(testType, callback = null, clearResults = true) {
     const singleRunData = {
       testType: testType,
       testDisplayName: testDisplayName,
-      swIncrement,
-      htmlIncrement,
+      precision,
+      growthFactor,
       includeBlitting,
-      requiredExceedances,
       isQuietMode,
       swShapeCounts: [],
       swTimings: [],
@@ -420,13 +420,13 @@ function runTest(testType, callback = null, clearResults = true) {
     resultsContainer.scrollTop = resultsContainer.scrollHeight;
 
     showSwCanvas();
-    runSWCanvasRampTest(testType, swStartCount, swIncrement, includeBlitting, requiredExceedances, singleRunData, () => {
+    runAdaptiveSWCanvasRampTest(testType, swStartCount, precision, growthFactor, includeBlitting, singleRunData, () => {
       if (abortRequested) return iterationCallback(null);
 
       showHtml5Canvas();
       resultsContainer.scrollTop = resultsContainer.scrollHeight;
 
-      runHTML5CanvasRampTest(testType, htmlStartCount, htmlIncrement, requiredExceedances, singleRunData, () => {
+      runAdaptiveHTML5CanvasRampTest(testType, htmlStartCount, precision, growthFactor, singleRunData, () => {
         if (abortRequested) return iterationCallback(null);
 
         accumulatedData.swMaxShapesTotal += singleRunData.swMaxShapes;
@@ -438,7 +438,8 @@ function runTest(testType, callback = null, clearResults = true) {
 
         lastSingleRunData = singleRunData;
 
-        resultsContainer.innerHTML += `  Run ${runNum} complete: SW Max = ${singleRunData.swMaxShapes}, HTML Max = ${singleRunData.canvasMaxShapes}\n`;
+        const runRatioValue = (singleRunData.canvasMaxShapes / singleRunData.swMaxShapes).toFixed(2);
+        resultsContainer.innerHTML += `  Run ${runNum}: SW=${singleRunData.swMaxShapes} | HTML5=${singleRunData.canvasMaxShapes} | ${runRatioValue}x\n`;
         resultsContainer.scrollTop = resultsContainer.scrollHeight;
 
         iterationCallback(singleRunData);
@@ -486,12 +487,11 @@ function runTest(testType, callback = null, clearResults = true) {
     const finalResultsData = {
       testType: testType,
       testDisplayName: testDisplayName,
-      swIncrement,
-      htmlIncrement,
+      precision,
+      growthFactor,
       swStartCount,
       htmlStartCount,
       includeBlitting,
-      requiredExceedances,
       isQuietMode,
       numRuns: finalAccumulatedData.runCount,
       swMaxShapes: avgSwMaxShapes,

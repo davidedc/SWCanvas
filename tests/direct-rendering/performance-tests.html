@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html>
+
 <head>
   <title>Performance Tests - SWCanvas vs HTML5 Canvas</title>
   <link rel="stylesheet" href="styles.css">
@@ -11,7 +12,9 @@
       margin: 0 auto;
     }
 
-    h1, h2, h3 {
+    h1,
+    h2,
+    h3 {
       color: #333;
     }
 
@@ -247,20 +250,11 @@
     <h2>Test Configuration</h2>
 
     <div class="profiling-button-container" style="margin-bottom: 15px;">
-      <button id="btn-profiling-mode" class="profiling-button" style="background-color: #007bff;">Enable Profiling Mode</button>
+      <button id="btn-profiling-mode" class="profiling-button" style="background-color: #007bff;">Enable Profiling
+        Mode</button>
       <span class="profiling-hint" style="margin-left: 10px; font-size: 0.9em; color: #666;">
         (sets high exceedance threshold and forces quieter mode for browser profiling)
       </span>
-    </div>
-
-    <div>
-      <label for="sw-increment-size">SW Canvas increment size:</label>
-      <input type="number" id="sw-increment-size" min="1" max="100" value="10" style="width: 60px;">
-    </div>
-
-    <div>
-      <label for="html-increment-size">HTML5 Canvas increment size:</label>
-      <input type="number" id="html-increment-size" min="1" max="1000" value="50" style="width: 60px;">
     </div>
 
     <div>
@@ -274,13 +268,24 @@
     </div>
 
     <div>
-      <label for="consecutive-exceedances">Consecutive budget exceedances:</label>
-      <input type="number" id="consecutive-exceedances" min="1" max="100000" value="10" style="width: 60px;">
+      <label for="convergence-precision">Convergence precision (shapes):</label>
+      <input type="number" id="convergence-precision" min="1" max="1000" value="1" style="width: 60px;">
+    </div>
+
+    <div>
+      <label for="growth-factor">Growth factor:</label>
+      <input type="number" id="growth-factor" min="1.1" max="10" step="0.1" value="1.1" style="width: 60px;">
+    </div>
+
+    <!-- Samples-per-count removed: single-sample measurement prevents GPU saturation -->
+    <div style="display: none;">
+      <label for="samples-per-count">Samples per count (averaging):</label>
+      <input type="number" id="samples-per-count" min="1" max="10" value="1" style="width: 60px;">
     </div>
 
     <div>
       <label for="num-runs">Runs per test (average):</label>
-      <input type="number" id="num-runs" min="1" max="100" value="1" style="width: 60px;">
+      <input type="number" id="num-runs" min="1" max="100" value="3" style="width: 60px;">
     </div>
 
     <div class="checkbox-group">
@@ -389,21 +394,21 @@
 
     // Add direct shape API methods to HTML5 Canvas context for compatibility
     if (!ctx.fillCircle) {
-      ctx.fillCircle = function(cx, cy, r) {
+      ctx.fillCircle = function (cx, cy, r) {
         this.beginPath();
         this.arc(cx, cy, r, 0, Math.PI * 2);
         this.fill();
       };
     }
     if (!ctx.strokeCircle) {
-      ctx.strokeCircle = function(cx, cy, r) {
+      ctx.strokeCircle = function (cx, cy, r) {
         this.beginPath();
         this.arc(cx, cy, r, 0, Math.PI * 2);
         this.stroke();
       };
     }
     if (!ctx.strokeLine) {
-      ctx.strokeLine = function(x1, y1, x2, y2) {
+      ctx.strokeLine = function (x1, y1, x2, y2) {
         this.beginPath();
         this.moveTo(x1, y1);
         this.lineTo(x2, y2);
@@ -411,21 +416,21 @@
       };
     }
     if (!ctx.strokeRoundRect) {
-      ctx.strokeRoundRect = function(x, y, w, h, r) {
+      ctx.strokeRoundRect = function (x, y, w, h, r) {
         this.beginPath();
         this.roundRect(x, y, w, h, r);
         this.stroke();
       };
     }
     if (!ctx.fillRoundRect) {
-      ctx.fillRoundRect = function(x, y, w, h, r) {
+      ctx.fillRoundRect = function (x, y, w, h, r) {
         this.beginPath();
         this.roundRect(x, y, w, h, r);
         this.fill();
       };
     }
     if (!ctx.fillArc) {
-      ctx.fillArc = function(cx, cy, r, startAngle, endAngle, counterClockwise) {
+      ctx.fillArc = function (cx, cy, r, startAngle, endAngle, counterClockwise) {
         this.beginPath();
         this.moveTo(cx, cy);
         this.arc(cx, cy, r, startAngle, endAngle, counterClockwise);
@@ -434,14 +439,14 @@
       };
     }
     if (!ctx.strokeArc) {
-      ctx.strokeArc = function(cx, cy, r, startAngle, endAngle, counterClockwise) {
+      ctx.strokeArc = function (cx, cy, r, startAngle, endAngle, counterClockwise) {
         this.beginPath();
         this.arc(cx, cy, r, startAngle, endAngle, counterClockwise);
         this.stroke();
       };
     }
     if (!ctx.fillOuterStrokeArc) {
-      ctx.fillOuterStrokeArc = function(cx, cy, r, startAngle, endAngle, counterClockwise) {
+      ctx.fillOuterStrokeArc = function (cx, cy, r, startAngle, endAngle, counterClockwise) {
         // Fill first
         this.beginPath();
         this.moveTo(cx, cy);
@@ -456,9 +461,8 @@
     }
 
     // Controls
-    const swIncrementSize = document.getElementById('sw-increment-size');
-    const htmlIncrementSize = document.getElementById('html-increment-size');
-    const consecutiveExceedances = document.getElementById('consecutive-exceedances');
+    const convergencePrecision = document.getElementById('convergence-precision');
+    const samplesPerCount = document.getElementById('samples-per-count');
     const includeBlittingCheckbox = document.getElementById('include-blitting');
     const quietModeCheckbox = document.getElementById('quiet-mode');
 
@@ -472,10 +476,13 @@
   <script src="cases/line-m20-szMix-fNone-sOpaq-sw1px-lytSpread-edgeNotCrisp-ornRand-test.js"></script>
   <script src="cases/circle-fill-opaque-test.js"></script>
   <script src="cases/rect-fill-opaque-test.js"></script>
-  <script src="cases/arc-m5-szMix-fOpaq-sOpaq-sw1-10px-lytSpread-cenRand-edgeNotCrisp-ornRand-arcARand-test.js"></script>
-  <script src="cases/roundrect-sgl-szMix-fNone-sOpaq-sw1px-lytCenter-cenGrid-edgeCrisp-ornAxial-rrrRand-test.js"></script>
+  <script
+    src="cases/arc-m5-szMix-fOpaq-sOpaq-sw1-10px-lytSpread-cenRand-edgeNotCrisp-ornRand-arcARand-test.js"></script>
+  <script
+    src="cases/roundrect-sgl-szMix-fNone-sOpaq-sw1px-lytCenter-cenGrid-edgeCrisp-ornAxial-rrrRand-test.js"></script>
 
   <!-- Load performance UI (must be last) -->
   <script src="performance-tests/performance-ui.js"></script>
 </body>
+
 </html>

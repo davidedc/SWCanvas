@@ -106,7 +106,163 @@ function findMaxShapes(shapeCounts, timings) {
   return shapeCounts[shapeCounts.length - 1];
 }
 
-// SWCanvas Ramp Test
+// Warm-up function to ensure JIT optimization before measurement
+// This is critical for accurate results - the adaptive algorithm reaches high shape counts
+// too quickly for the JIT compiler to optimize, causing inaccurate measurements.
+function runWarmup(testType, targetCtx, warmupCount, warmupIterations, includeBlitting, callback) {
+  let iteration = 0;
+
+  resultsContainer.innerHTML += `  Warmup (${warmupIterations}x${warmupCount})... `;
+  resultsContainer.scrollTop = resultsContainer.scrollHeight;
+
+  function warmupIteration() {
+    if (iteration >= warmupIterations) {
+      resultsContainer.innerHTML += `done.\n`;
+      resultsContainer.scrollTop = resultsContainer.scrollHeight;
+      callback();
+      return;
+    }
+
+    targetCtx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    SeededRandom.seedWithInteger(iteration);
+    testType.drawFunction(targetCtx, 0, warmupCount);
+
+    // For SWCanvas, also warm up the blitting path if needed
+    if (includeBlitting && targetCtx._displayCanvas) {
+      blitSwCanvasToDisplay();
+    }
+
+    iteration++;
+    animationFrameId = requestAnimationFrame(warmupIteration);
+  }
+
+  warmupIteration();
+}
+
+// Adaptive SWCanvas Ramp Test (Geometric Growth + Binary Search)
+function runAdaptiveSWCanvasRampTest(testType, startCount, precision, growthFactor, includeBlitting, testData, callback) {
+  const isQuietMode = testData.isQuietMode;
+
+  resultsContainer.innerHTML += "PHASE 1: Testing SWCanvas (Adaptive Algorithm)...\n";
+  resultsContainer.innerHTML += `  Precision: ${precision} shapes, Growth factor: ${growthFactor}\n`;
+  resultsContainer.scrollTop = resultsContainer.scrollHeight;
+
+  // Warm-up phase first to ensure JIT optimization
+  runWarmup(testType, swCtx, 500, 100, includeBlitting, () => {
+    // Now run the actual adaptive measurement
+    let count = startCount;
+    let lowerBound = 0;
+    let upperBound = Infinity;
+    let phase = 'growth';
+    let iteration = 0;
+    const maxIterations = 500;
+    let lastPassTime = FRAME_BUDGET; // Track avgTime from last PASS for convergence logging
+
+    // For SWCanvas (pure JavaScript), use performance.now() timing
+    // JavaScript execution is synchronous, no GPU deferral issues
+    function measureAtCount(targetCount, measuredCallback) {
+      animationFrameId = requestAnimationFrame(() => {
+        swCtx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+        SeededRandom.seedWithInteger(iteration);
+
+        const startTime = performance.now();
+        testType.drawFunction(swCtx, 0, targetCount);
+        if (includeBlitting) blitSwCanvasToDisplay();
+        const endTime = performance.now();
+
+        if (!includeBlitting) blitSwCanvasToDisplay(); // Visual feedback
+
+        measuredCallback(endTime - startTime);
+      });
+    }
+
+    function iterate() {
+      if (abortRequested) {
+        testData.swMaxShapes = lowerBound;
+        resultsContainer.innerHTML += `SWCanvas aborted: ${lowerBound} shapes @ ${lastPassTime.toFixed(1)}ms\n`;
+        resultsContainer.scrollTop = resultsContainer.scrollHeight;
+        callback();
+        return;
+      }
+
+      if (iteration >= maxIterations) {
+        testData.swMaxShapes = lowerBound;
+        resultsContainer.innerHTML += `SWCanvas max iterations: ${lowerBound} shapes @ ${lastPassTime.toFixed(1)}ms (${iteration} iter)\n`;
+        resultsContainer.scrollTop = resultsContainer.scrollHeight;
+        callback();
+        return;
+      }
+
+      // Check convergence
+      if (upperBound !== Infinity && (upperBound - lowerBound) <= precision) {
+        testData.swMaxShapes = lowerBound;
+        resultsContainer.innerHTML += `SWCanvas converged: ${lowerBound} shapes @ ${lastPassTime.toFixed(1)}ms (${iteration} iter)\n`;
+        resultsContainer.scrollTop = resultsContainer.scrollHeight;
+        callback();
+        return;
+      }
+
+      iteration++;
+
+      // Update progress estimate
+      const estimatedTotal = upperBound === Infinity ? 20 : Math.ceil(Math.log2(Math.max(1, upperBound - lowerBound))) + iteration;
+      const progress = Math.min(50, Math.round((iteration / Math.max(estimatedTotal, iteration + 5)) * 50));
+      currentTestProgressBar.style.width = `${progress}%`;
+      currentTestProgressBar.textContent = `${progress}%`;
+      if (progress > 0) currentTestProgressBar.style.color = 'white';
+
+      measureAtCount(count, (avgTime) => {
+        // Record data point for chart
+        testData.swShapeCounts.push(count);
+        testData.swTimings.push(avgTime);
+
+        if (avgTime < FRAME_BUDGET) {
+          // Under budget - this count is safe
+          lowerBound = count;
+          lastPassTime = avgTime; // Track for convergence logging
+
+          if (upperBound === Infinity) {
+            // Growth phase - multiply by growth factor
+            const nextCount = Math.floor(count * growthFactor);
+            if (!isQuietMode) {
+              resultsContainer.innerHTML += `  [Growth] ${count} shapes: ${avgTime.toFixed(2)}ms (PASS) -> trying ${nextCount}\n`;
+              resultsContainer.scrollTop = resultsContainer.scrollHeight;
+            }
+            count = nextCount;
+          } else {
+            // Refinement phase
+            const newCount = Math.floor((lowerBound + upperBound) / 2);
+            if (!isQuietMode) {
+              resultsContainer.innerHTML += `  [Refine] ${count} shapes: ${avgTime.toFixed(2)}ms (PASS) -> [${lowerBound}, ${upperBound}]\n`;
+              resultsContainer.scrollTop = resultsContainer.scrollHeight;
+            }
+            count = newCount;
+          }
+        } else {
+          // Over budget
+          upperBound = count;
+          const newCount = Math.floor((lowerBound + upperBound) / 2);
+
+          if (phase === 'growth') {
+            phase = 'refinement';
+            resultsContainer.innerHTML += `  [Growth->Refine] ${count} shapes: ${avgTime.toFixed(2)}ms (FAIL) -> refining [${lowerBound}, ${upperBound}]\n`;
+            resultsContainer.scrollTop = resultsContainer.scrollHeight;
+          } else if (!isQuietMode) {
+            resultsContainer.innerHTML += `  [Refine] ${count} shapes: ${avgTime.toFixed(2)}ms (FAIL) -> [${lowerBound}, ${upperBound}]\n`;
+            resultsContainer.scrollTop = resultsContainer.scrollHeight;
+          }
+          count = newCount;
+        }
+
+        animationFrameId = requestAnimationFrame(iterate);
+      });
+    }
+
+    iterate();
+  }); // End of warm-up callback
+}
+
+// Legacy SWCanvas Ramp Test (kept for reference, can be removed later)
 function runSWCanvasRampTest(testType, startCount, incrementSize, includeBlitting, requiredExceedances, testData, callback) {
   let currentShapeCount = startCount;
   let exceededBudget = false;
@@ -198,7 +354,211 @@ function runSWCanvasRampTest(testType, startCount, incrementSize, includeBlittin
   testNextShapeCount();
 }
 
-// HTML5 Canvas Ramp Test
+// Adaptive HTML5 Canvas Ramp Test (Geometric Growth + Binary Search)
+function runAdaptiveHTML5CanvasRampTest(testType, startCount, precision, growthFactor, testData, callback) {
+  const isQuietMode = testData.isQuietMode;
+
+  resultsContainer.innerHTML += "\nPHASE 2: Testing HTML5 Canvas (Adaptive Algorithm)...\n";
+  resultsContainer.innerHTML += `  Precision: ${precision} shapes, Growth factor: ${growthFactor}\n`;
+  resultsContainer.scrollTop = resultsContainer.scrollHeight;
+
+  // Warm-up phase first to ensure JIT optimization
+  runWarmup(testType, ctx, 500, 100, false, () => {
+    // Now run the actual adaptive measurement
+    let count = startCount;
+    let lowerBound = 0;
+    let upperBound = Infinity;
+    let phase = 'growth';
+    let iteration = 0;
+    const maxIterations = 500;
+    let lastPassTime = FRAME_BUDGET; // Track avgFrameTime from last PASS for scaling
+
+    // VSync Cliff Detection for HTML5 Canvas
+    // Treats measurement as Pass/Fail stress test to work around VSync-locked RAF
+    // Instead of measuring render time, we detect when frames start dropping
+    function measureAtCount(targetCount, measuredCallback) {
+      const WARMUP_FRAMES = 5;   // Let GPU settle per-measurement
+      const MEASURE_FRAMES = 15; // Average out OS/GC jitter
+
+      // Dynamic threshold: 50% above VSync interval
+      const DROP_THRESHOLD_MS = FRAME_BUDGET * 1.5;
+
+      let frameCount = 0;
+      let startTime = 0;
+
+      // Seed random once per measurement for reproducibility
+      SeededRandom.seedWithInteger(iteration);
+
+      function runFrame(timestamp) {
+        // Handle abort
+        if (abortRequested) {
+          measuredCallback(false, FRAME_BUDGET * 2);
+          return;
+        }
+
+        // Warmup Phase: Render but don't measure
+        if (frameCount < WARMUP_FRAMES) {
+          ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+          testType.drawFunction(ctx, 0, targetCount);
+          frameCount++;
+          animationFrameId = requestAnimationFrame(runFrame);
+          return;
+        }
+
+        // Start timing at beginning of measurement phase
+        if (frameCount === WARMUP_FRAMES) {
+          startTime = timestamp;
+        }
+
+        // Measurement Phase: Render and continue
+        if (frameCount < WARMUP_FRAMES + MEASURE_FRAMES) {
+          ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+          testType.drawFunction(ctx, 0, targetCount);
+          frameCount++;
+          animationFrameId = requestAnimationFrame(runFrame);
+          return;
+        }
+
+        // Calculation Phase
+        const endTime = timestamp;
+        const totalTime = endTime - startTime;
+        const avgFrameTime = totalTime / MEASURE_FRAMES;
+
+        // VSync Cliff Detection:
+        // PASS: avgFrameTime < threshold → GPU keeping up
+        // FAIL: avgFrameTime >= threshold → frames dropping
+        const passed = avgFrameTime < DROP_THRESHOLD_MS;
+        measuredCallback(passed, avgFrameTime);
+      }
+
+      animationFrameId = requestAnimationFrame(runFrame);
+    }
+
+    // Helper to calculate final result with scaling if avgFrameTime > FRAME_BUDGET
+    // Returns { shapes, wasScaled, rawShapes, scalingFactor, measuredTime } for convergence logging
+    function getFinalMaxShapes() {
+      if (lastPassTime > FRAME_BUDGET) {
+        // Scale down: if N shapes took T ms, estimate shapes for FRAME_BUDGET
+        const scalingFactor = FRAME_BUDGET / lastPassTime;
+        const scaled = Math.floor(lowerBound * scalingFactor);
+        return {
+          shapes: scaled,
+          wasScaled: true,
+          rawShapes: lowerBound,
+          scalingFactor: scalingFactor,
+          measuredTime: lastPassTime
+        };
+      }
+      return {
+        shapes: lowerBound,
+        wasScaled: false,
+        rawShapes: lowerBound,
+        scalingFactor: 1.0,
+        measuredTime: lastPassTime
+      };
+    }
+
+    // Helper to format convergence message with optional scaling info
+    function formatConvergenceMsg(prefix, result, iterCount) {
+      if (result.wasScaled) {
+        return `${prefix}: ${result.shapes} shapes (scaled x${result.scalingFactor.toFixed(2)} from ${result.rawShapes} @ ${result.measuredTime.toFixed(1)}ms) (${iterCount} iter)\n`;
+      } else {
+        return `${prefix}: ${result.shapes} shapes @ ${result.measuredTime.toFixed(1)}ms (${iterCount} iter)\n`;
+      }
+    }
+
+    function iterate() {
+      if (abortRequested) {
+        const result = getFinalMaxShapes();
+        testData.canvasMaxShapes = result.shapes;
+        resultsContainer.innerHTML += formatConvergenceMsg('HTML5 aborted', result, iteration);
+        resultsContainer.scrollTop = resultsContainer.scrollHeight;
+        callback();
+        return;
+      }
+
+      if (iteration >= maxIterations) {
+        const result = getFinalMaxShapes();
+        testData.canvasMaxShapes = result.shapes;
+        resultsContainer.innerHTML += formatConvergenceMsg('HTML5 max iterations', result, iteration);
+        resultsContainer.scrollTop = resultsContainer.scrollHeight;
+        callback();
+        return;
+      }
+
+      // Check convergence
+      if (upperBound !== Infinity && (upperBound - lowerBound) <= precision) {
+        const result = getFinalMaxShapes();
+        testData.canvasMaxShapes = result.shapes;
+        resultsContainer.innerHTML += formatConvergenceMsg('HTML5 converged', result, iteration);
+        resultsContainer.scrollTop = resultsContainer.scrollHeight;
+        callback();
+        return;
+      }
+
+      iteration++;
+
+      // Update progress estimate (second half of progress bar, 50-100%)
+      const estimatedTotal = upperBound === Infinity ? 20 : Math.ceil(Math.log2(Math.max(1, upperBound - lowerBound))) + iteration;
+      const progress = Math.min(100, 50 + Math.round((iteration / Math.max(estimatedTotal, iteration + 5)) * 50));
+      currentTestProgressBar.style.width = `${progress}%`;
+      currentTestProgressBar.textContent = `${progress}%`;
+      if (progress > 0) currentTestProgressBar.style.color = 'white';
+
+      measureAtCount(count, (passed, actualTime) => {
+        // Record actual time for chart
+        testData.canvasShapeCounts.push(count);
+        testData.canvasTimings.push(actualTime);
+
+        const status = passed ? 'PASS' : 'FAIL';
+
+        if (passed) {
+          // Under budget - this count is safe
+          lowerBound = count;
+          lastPassTime = actualTime; // Track for scaling at convergence
+
+          if (upperBound === Infinity) {
+            // Growth phase - multiply by growth factor
+            const nextCount = Math.floor(count * growthFactor);
+            if (!isQuietMode) {
+              resultsContainer.innerHTML += `  [Growth] ${count} shapes: ${actualTime.toFixed(2)}ms (${status}) -> trying ${nextCount}\n`;
+              resultsContainer.scrollTop = resultsContainer.scrollHeight;
+            }
+            count = nextCount;
+          } else {
+            // Refinement phase
+            const newCount = Math.floor((lowerBound + upperBound) / 2);
+            if (!isQuietMode) {
+              resultsContainer.innerHTML += `  [Refine] ${count} shapes: ${actualTime.toFixed(2)}ms (${status}) -> [${lowerBound}, ${upperBound}]\n`;
+              resultsContainer.scrollTop = resultsContainer.scrollHeight;
+            }
+            count = newCount;
+          }
+        } else {
+          // Over budget
+          upperBound = count;
+          const newCount = Math.floor((lowerBound + upperBound) / 2);
+
+          if (phase === 'growth') {
+            phase = 'refinement';
+            resultsContainer.innerHTML += `  [Growth->Refine] ${count} shapes: ${actualTime.toFixed(2)}ms (${status}) -> refining [${lowerBound}, ${upperBound}]\n`;
+            resultsContainer.scrollTop = resultsContainer.scrollHeight;
+          } else if (!isQuietMode) {
+            resultsContainer.innerHTML += `  [Refine] ${count} shapes: ${actualTime.toFixed(2)}ms (${status}) -> [${lowerBound}, ${upperBound}]\n`;
+            resultsContainer.scrollTop = resultsContainer.scrollHeight;
+          }
+          count = newCount;
+        }
+
+        animationFrameId = requestAnimationFrame(iterate);
+      });
+    }
+
+    iterate();
+  }); // End of warm-up callback
+}
+
+// Legacy HTML5 Canvas Ramp Test (kept for reference, can be removed later)
 function runHTML5CanvasRampTest(testType, startCount, incrementSize, requiredExceedances, testData, callback) {
   let currentShapeCount = startCount;
   let exceededBudget = false;
@@ -282,16 +642,16 @@ function displayRampTestResults(testData) {
   let results = "";
   results += `\n=== ${testData.testDisplayName.toUpperCase()} TEST RESULTS ===\n`;
   if (testData.numRuns && testData.numRuns > 1) {
-      results += `(Averaged over ${testData.numRuns} runs)\n`;
+    results += `(Averaged over ${testData.numRuns} runs)\n`;
   }
   results += `Test Parameters:\n`;
   results += `- Display refresh rate: ${DETECTED_FPS} fps (standard rate, raw detected: ${window.RAW_DETECTED_FPS || DETECTED_FPS} fps)\n`;
   results += `- Frame budget: ${FRAME_BUDGET.toFixed(2)}ms\n`;
+  results += `- Algorithm: Adaptive (geometric growth + binary search)\n`;
   results += `- SW Canvas start count: ${testData.swStartCount}\n`;
-  results += `- SW Canvas increment: ${testData.swIncrement}\n`;
   results += `- HTML5 Canvas start count: ${testData.htmlStartCount}\n`;
-  results += `- HTML5 Canvas increment: ${testData.htmlIncrement}\n`;
-  results += `- Consecutive exceedances required: ${testData.requiredExceedances}\n`;
+  results += `- Convergence precision: ${testData.precision} shapes\n`;
+  results += `- Growth factor: ${testData.growthFactor}\n`;
   results += `- Blitting time: ${testData.includeBlitting ? "Included" : "Excluded"}\n`;
   if (testData.isQuietMode) {
     results += `- Log mode: Quieter (frame-by-frame logs suppressed)\n`;
@@ -301,10 +661,10 @@ function displayRampTestResults(testData) {
   results += `\n`;
 
   results += `SWCanvas Performance:\n`;
-  results += `- Maximum shapes per frame: ${testData.swMaxShapes}\n\n`;
+  results += `- Maximum shapes per frame: ${Math.round(testData.swMaxShapes)}\n\n`;
 
   results += `HTML5 Canvas Performance:\n`;
-  results += `- Maximum shapes per frame: ${testData.canvasMaxShapes}\n\n`;
+  results += `- Maximum shapes per frame: ${Math.round(testData.canvasMaxShapes)}\n\n`;
 
   results += `Performance Ratio (HTML5 / SWCanvas): ${testData.ratio.toFixed(2)}x`;
 
@@ -333,7 +693,7 @@ function displayOverallResults(allResults) {
 
   results += "Test Summary:\n";
   for (let i = 0; i < allResults.tests.length; i++) {
-    results += `- ${allResults.tests[i].toUpperCase()}: SWCanvas ${allResults.swMaxShapes[i]} shapes, HTML5 Canvas ${allResults.canvasMaxShapes[i]} shapes, Ratio ${allResults.ratios[i].toFixed(2)}x\n`;
+    results += `- ${allResults.tests[i]}: SW=${Math.round(allResults.swMaxShapes[i])} | HTML5=${Math.round(allResults.canvasMaxShapes[i])} | ${allResults.ratios[i].toFixed(2)}x\n`;
   }
   results += "\n";
 
@@ -421,8 +781,8 @@ function generatePerformanceChart(testData) {
   chartCtx.font = '16px Arial';
   chartCtx.textAlign = 'center';
   const chartTitle = testData.numRuns && testData.numRuns > 1
-      ? `${testData.testDisplayName} Test: Render Time vs. Shape Count (Last Run Data)`
-      : `${testData.testDisplayName} Test: Render Time vs. Shape Count`;
+    ? `${testData.testDisplayName} Test: Render Time vs. Shape Count (Last Run Data)`
+    : `${testData.testDisplayName} Test: Render Time vs. Shape Count`;
   chartCtx.fillText(chartTitle, chartPadding.left + chartWidth / 2, 20);
 
   // Draw SWCanvas data points
