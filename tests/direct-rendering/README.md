@@ -628,6 +628,12 @@ Tests are organized into five categories matching direct rendering shape types:
 
 Performance tests compare SWCanvas direct rendering against native HTML5 Canvas using ramp-up methodology.
 
+**Important**: SWCanvas and HTML5 Canvas use different measurement strategies due to fundamental differences in how they render:
+- **SWCanvas**: Uses direct `performance.now()` timing (synchronous CPU rendering)
+- **HTML5 Canvas**: Uses VSync cliff detection (asynchronous GPU rendering)
+
+For a detailed explanation of why this is necessary and how it works, see [PERFORMANCE-BENCHMARKING.md](PERFORMANCE-BENCHMARKING.md).
+
 ### Enabling Performance Testing
 
 Add `displayName` to test metadata:
@@ -671,11 +677,12 @@ open tests/direct-rendering/performance-tests.html
 ### How Ramp-Up Works
 
 1. Start with initial shape count
-2. Draw shapes and measure time
-3. If time < frame budget (16.7ms at 60fps): increment shape count
-4. If time > frame budget: increment consecutive exceedance counter
-5. Stop when exceedance threshold reached
-6. Report maximum shapes that stayed within budget
+2. Draw shapes and measure time (see [PERFORMANCE-BENCHMARKING.md](PERFORMANCE-BENCHMARKING.md) for measurement details)
+3. If time < frame budget threshold: increment shape count (binary search growth)
+4. If time > frame budget threshold: refine search to find exact cliff
+5. Stop when convergence precision reached
+6. Apply scaling correction for HTML5 Canvas results (normalizes to frame budget)
+7. Report maximum shapes per frame
 
 ### Performance Test Output
 
@@ -731,5 +738,6 @@ open tests/direct-rendering/performance-tests.html
 ## See Also
 
 - [tests/README.md](../README.md) - Main test documentation
+- [PERFORMANCE-BENCHMARKING.md](PERFORMANCE-BENCHMARKING.md) - Performance benchmarking mechanics (VSync cliff detection, scaling)
 - [DIRECT-RENDERING-SUMMARY.MD](../../DIRECT-RENDERING-SUMMARY.MD) - Direct rendering implementation details
 - [tests/build/README.md](../build/README.md) - Build utilities for test management
