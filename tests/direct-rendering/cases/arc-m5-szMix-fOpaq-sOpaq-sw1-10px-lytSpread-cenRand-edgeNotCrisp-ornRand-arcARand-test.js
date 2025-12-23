@@ -111,8 +111,8 @@ registerDirectRenderingTest(
         // Default visual comparison - no allowPathBasedRendering means direct rendering required
     },
     {
-        title: 'Arcs: 5 fully random',
-        displayName: 'Arcs: 5 fully random',
+        title: 'Perf: Arc 5 Fully Random',
+        displayName: 'Perf: Arc 5 Fully Random',
         description: 'Test with 5 arcs, all parameters fully randomized.'
     }
 );
