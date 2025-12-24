@@ -31,6 +31,7 @@ class RectOpsRot {
      * @param {Object} p2 - End point {x, y}
      * @param {number} amount - Amount to extend at each end
      * @returns {Object} Extended line {start: {x, y}, end: {x, y}}
+     * @private
      */
     static _extendLine(p1, p2, amount) {
         const dx = p2.x - p1.x;
@@ -55,6 +56,7 @@ class RectOpsRot {
      * @param {Object} p2 - End point {x, y}
      * @param {number} amount - Amount to shorten at each end
      * @returns {Object} Shortened line {start: {x, y}, end: {x, y}}
+     * @private
      */
     static _shortenLine(p1, p2, amount) {
         const dx = p2.x - p1.x;
@@ -75,7 +77,7 @@ class RectOpsRot {
     /**
      * Blend a single pixel with alpha (with clipping check)
      * Used by _stroke_Rot_Alpha for overdraw prevention.
-     * @param {Uint8ClampedArray} data - Surface data array
+     * @param {Uint8Array|Uint8ClampedArray} data - Surface data array
      * @param {number} pos - Pixel position (y * width + x)
      * @param {number} r - Red component (0-255)
      * @param {number} g - Green component (0-255)
@@ -83,6 +85,7 @@ class RectOpsRot {
      * @param {number} effectiveAlpha - Effective alpha (0-1)
      * @param {number} invAlpha - 1 - effectiveAlpha
      * @param {Uint8Array|null} clipBuffer - Clip mask buffer
+     * @private
      */
     static _blendPixelAlpha(data, pos, r, g, b, effectiveAlpha, invAlpha, clipBuffer) {
         if (clipBuffer) {

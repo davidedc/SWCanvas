@@ -7,7 +7,7 @@
  * Memory Layout:
  * - Each pixel is represented by 1 bit (1 = visible, 0 = clipped)
  * - Bits are packed into Uint8Array (8 pixels per byte)
- * - Memory usage: width × height ÷ 8 bytes (87.5% reduction vs full coverage)
+ * - Memory usage: width × height ÷ 8 bytes (96.9% reduction vs RGBA coverage)
  * - Lazy allocation: only created when first clip() operation is performed
  * 
  * Clipping Operations:
@@ -637,9 +637,9 @@ class Context2D {
 
             // Get integer pixel bounds
             const startX = Math.max(0, Math.floor(rectLeft));
-            const endX = Math.min(surface.width - 1, Math.floor(rectRight) - 1); // Exclusive end
+            const endX = Math.min(surface.width - 1, Math.floor(rectRight) - 1); // Inclusive end
             const startY = Math.max(0, Math.floor(rectTop));
-            const endY = Math.min(surface.height - 1, Math.floor(rectBottom) - 1); // Exclusive end
+            const endY = Math.min(surface.height - 1, Math.floor(rectBottom) - 1); // Inclusive end
 
             for (let py = startY; py <= endY; py++) {
                 for (let px = startX; px <= endX; px++) {

@@ -64,8 +64,10 @@ Debug utilities help developers:
 
 Generated output files from debug scripts for visual inspection:
 - `debug-copy-color.bmp` - Copy operation color output
+- `debug-copy-vs-sourceover.bmp` - Copy vs source-over comparison output
 - `debug-minimal-xor.bmp` - Minimal XOR test result
 - `debug-html5-xor.bmp` - HTML5 API XOR result
+- `debug-simple-xor-analysis.bmp` - Simple XOR analysis (BMP legacy format)
 - `debug-simple-xor-analysis.basic.png` - Simple XOR analysis (PNG with transparency)
 - `debug-complex-xor-fixed.bmp` - Complex XOR after fixes
 

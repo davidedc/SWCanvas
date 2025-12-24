@@ -304,7 +304,7 @@ Create a new individual file in `/tests/visual/` following the same [naming conv
 
 ```bash
 # Create new visual test
-cat > tests/visual/057-new-visual-test.js << 'EOF'
+cat > tests/visual/141-new-visual-test.js << 'EOF'
 // Test: New Visual Test
 // This file will be concatenated into the main visual test suite
 

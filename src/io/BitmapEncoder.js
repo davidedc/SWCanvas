@@ -155,7 +155,7 @@ class BitmapEncoder {
     /**
      * Convert RGBA surface data to BMP pixel format and write to buffer
      * @param {Uint8Array} bytes - Byte array for writing
-     * @param {Uint8ClampedArray} data - Surface RGBA data (premultiplied)
+     * @param {Uint8ClampedArray} data - Surface RGBA data (non-premultiplied)
      * @param {Surface} surface - Original surface for stride info
      * @param {Object} dimensions - Dimension information
      * @param {BitmapEncodingOptions} options - Encoding options
@@ -170,13 +170,13 @@ class BitmapEncoder {
             for (let x = 0; x < dimensions.width; x++) {
                 const srcOffset = (y * surface.stride) + (x * 4);
                 
-                // Get RGBA values (premultiplied from surface)
+                // Get RGBA values from surface (non-premultiplied)
                 const r = data[srcOffset];
                 const g = data[srcOffset + 1];
                 const b = data[srcOffset + 2];
                 const a = data[srcOffset + 3];
                 
-                // Convert premultiplied RGBA to non-premultiplied RGB
+                // Composite with background color for BMP output (which doesn't support alpha)
                 const rgb = BitmapEncoder._unpremultiplyAlpha(r, g, b, a, options.backgroundColor);
                 
                 // BMP stores pixels as BGR (not RGB)

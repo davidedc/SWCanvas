@@ -3,7 +3,7 @@
  * Follows the PolygonFiller/RectOpsAA/CircleOps/LineOps pattern.
  *
  * Direct rendering is available exclusively via dedicated Context2D methods:
- * fillRoundRect(), strokeRoundRect(), fillStroke_AA_AnyRoundRect()
+ * fillRoundRect(), strokeRoundRect(), fillStrokeRoundRect()
  *
  * Path-based rounded rectangles (beginPath() + roundRect() + fill()/stroke()) use the
  * generic polygon pipeline for consistent, predictable behavior.

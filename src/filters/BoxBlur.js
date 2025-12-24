@@ -1,16 +1,19 @@
 /**
  * BoxBlur class for SWCanvas
- * 
- * Implements multi-pass box blur using Summed Area Tables (SAT) for efficient
- * O(1) box filtering. Multiple box blur passes approximate Gaussian blur
+ *
+ * Implements multi-pass box blur using separable running sum approach for
+ * efficient O(n) filtering. Multiple box blur passes approximate Gaussian blur
  * based on the Central Limit Theorem.
- * 
+ *
+ * An alternative Summed Area Table (SAT) implementation is also provided for
+ * O(1) lookups at the cost of higher memory usage.
+ *
  * This approach matches the reference implementation and provides good
  * performance characteristics for shadow blur effects.
  */
 class BoxBlur {
     /**
-     * Apply box blur to image data using multi-pass SAT approach
+     * Apply box blur to image data using multi-pass running sum approach
      * @param {Float32Array} data - Image data (alpha values 0-1)
      * @param {number} width - Image width
      * @param {number} height - Image height  
@@ -66,7 +69,7 @@ class BoxBlur {
     }
     
     /**
-     * Apply single box blur pass using Summed Area Table
+     * Apply single box blur pass using separable horizontal/vertical blurs
      * @param {Float32Array} data - Input image data
      * @param {number} width - Image width
      * @param {number} height - Image height

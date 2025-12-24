@@ -2248,6 +2248,7 @@ class RectOpsRot {
      * @param {Object} p2 - End point {x, y}
      * @param {number} amount - Amount to extend at each end
      * @returns {Object} Extended line {start: {x, y}, end: {x, y}}
+     * @private
      */
     static _extendLine(p1, p2, amount) {
         const dx = p2.x - p1.x;
@@ -2272,6 +2273,7 @@ class RectOpsRot {
      * @param {Object} p2 - End point {x, y}
      * @param {number} amount - Amount to shorten at each end
      * @returns {Object} Shortened line {start: {x, y}, end: {x, y}}
+     * @private
      */
     static _shortenLine(p1, p2, amount) {
         const dx = p2.x - p1.x;
@@ -2292,7 +2294,7 @@ class RectOpsRot {
     /**
      * Blend a single pixel with alpha (with clipping check)
      * Used by _stroke_Rot_Alpha for overdraw prevention.
-     * @param {Uint8ClampedArray} data - Surface data array
+     * @param {Uint8Array|Uint8ClampedArray} data - Surface data array
      * @param {number} pos - Pixel position (y * width + x)
      * @param {number} r - Red component (0-255)
      * @param {number} g - Green component (0-255)
@@ -2300,6 +2302,7 @@ class RectOpsRot {
      * @param {number} effectiveAlpha - Effective alpha (0-1)
      * @param {number} invAlpha - 1 - effectiveAlpha
      * @param {Uint8Array|null} clipBuffer - Clip mask buffer
+     * @private
      */
     static _blendPixelAlpha(data, pos, r, g, b, effectiveAlpha, invAlpha, clipBuffer) {
         if (clipBuffer) {
@@ -6338,7 +6341,7 @@ class RoundedRectOpsRot {
  * Follows the PolygonFiller/RectOpsAA/CircleOps/LineOps pattern.
  *
  * Direct rendering is available exclusively via dedicated Context2D methods:
- * fillRoundRect(), strokeRoundRect(), fillStroke_AA_AnyRoundRect()
+ * fillRoundRect(), strokeRoundRect(), fillStrokeRoundRect()
  *
  * Path-based rounded rectangles (beginPath() + roundRect() + fill()/stroke()) use the
  * generic polygon pipeline for consistent, predictable behavior.
@@ -7783,7 +7786,7 @@ class BitmapEncoder {
     /**
      * Convert RGBA surface data to BMP pixel format and write to buffer
      * @param {Uint8Array} bytes - Byte array for writing
-     * @param {Uint8ClampedArray} data - Surface RGBA data (premultiplied)
+     * @param {Uint8ClampedArray} data - Surface RGBA data (non-premultiplied)
      * @param {Surface} surface - Original surface for stride info
      * @param {Object} dimensions - Dimension information
      * @param {BitmapEncodingOptions} options - Encoding options
@@ -7798,13 +7801,13 @@ class BitmapEncoder {
             for (let x = 0; x < dimensions.width; x++) {
                 const srcOffset = (y * surface.stride) + (x * 4);
                 
-                // Get RGBA values (premultiplied from surface)
+                // Get RGBA values from surface (non-premultiplied)
                 const r = data[srcOffset];
                 const g = data[srcOffset + 1];
                 const b = data[srcOffset + 2];
                 const a = data[srcOffset + 3];
                 
-                // Convert premultiplied RGBA to non-premultiplied RGB
+                // Composite with background color for BMP output (which doesn't support alpha)
                 const rgb = BitmapEncoder._unpremultiplyAlpha(r, g, b, a, options.backgroundColor);
                 
                 // BMP stores pixels as BGR (not RGB)
@@ -9341,7 +9344,7 @@ class PolygonFiller {
      * @param {Array} polygons - Transformed polygons
      * @param {Color|Gradient|Pattern} paintSource - Paint source
      * @param {string} fillRule - Winding rule
-     * @param {Uint8Array|null} clipMask - Clipping mask
+     * @param {ClipMask|null} clipMask - Clipping mask
      * @param {Transform2D} transform - Canvas transform (for gradients/patterns)
      * @param {number} globalAlpha - Global alpha value (0-1)
      * @param {number} subPixelOpacity - Sub-pixel opacity for thin strokes (0-1)
@@ -11645,17 +11648,20 @@ class ShadowBuffer {
 }
 /**
  * BoxBlur class for SWCanvas
- * 
- * Implements multi-pass box blur using Summed Area Tables (SAT) for efficient
- * O(1) box filtering. Multiple box blur passes approximate Gaussian blur
+ *
+ * Implements multi-pass box blur using separable running sum approach for
+ * efficient O(n) filtering. Multiple box blur passes approximate Gaussian blur
  * based on the Central Limit Theorem.
- * 
+ *
+ * An alternative Summed Area Table (SAT) implementation is also provided for
+ * O(1) lookups at the cost of higher memory usage.
+ *
  * This approach matches the reference implementation and provides good
  * performance characteristics for shadow blur effects.
  */
 class BoxBlur {
     /**
-     * Apply box blur to image data using multi-pass SAT approach
+     * Apply box blur to image data using multi-pass running sum approach
      * @param {Float32Array} data - Image data (alpha values 0-1)
      * @param {number} width - Image width
      * @param {number} height - Image height  
@@ -11711,7 +11717,7 @@ class BoxBlur {
     }
     
     /**
-     * Apply single box blur pass using Summed Area Table
+     * Apply single box blur pass using separable horizontal/vertical blurs
      * @param {Float32Array} data - Input image data
      * @param {number} width - Image width
      * @param {number} height - Image height
@@ -13870,7 +13876,7 @@ class Rasterizer {
  * Memory Layout:
  * - Each pixel is represented by 1 bit (1 = visible, 0 = clipped)
  * - Bits are packed into Uint8Array (8 pixels per byte)
- * - Memory usage: width × height ÷ 8 bytes (87.5% reduction vs full coverage)
+ * - Memory usage: width × height ÷ 8 bytes (96.9% reduction vs RGBA coverage)
  * - Lazy allocation: only created when first clip() operation is performed
  * 
  * Clipping Operations:
@@ -14500,9 +14506,9 @@ class Context2D {
 
             // Get integer pixel bounds
             const startX = Math.max(0, Math.floor(rectLeft));
-            const endX = Math.min(surface.width - 1, Math.floor(rectRight) - 1); // Exclusive end
+            const endX = Math.min(surface.width - 1, Math.floor(rectRight) - 1); // Inclusive end
             const startY = Math.max(0, Math.floor(rectTop));
-            const endY = Math.min(surface.height - 1, Math.floor(rectBottom) - 1); // Exclusive end
+            const endY = Math.min(surface.height - 1, Math.floor(rectBottom) - 1); // Inclusive end
 
             for (let py = startY; py <= endY; py++) {
                 for (let px = startX; px <= endX; px++) {

@@ -196,7 +196,7 @@ class PolygonFiller {
      * @param {Array} polygons - Transformed polygons
      * @param {Color|Gradient|Pattern} paintSource - Paint source
      * @param {string} fillRule - Winding rule
-     * @param {Uint8Array|null} clipMask - Clipping mask
+     * @param {ClipMask|null} clipMask - Clipping mask
      * @param {Transform2D} transform - Canvas transform (for gradients/patterns)
      * @param {number} globalAlpha - Global alpha value (0-1)
      * @param {number} subPixelOpacity - Sub-pixel opacity for thin strokes (0-1)
