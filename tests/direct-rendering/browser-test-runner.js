@@ -346,6 +346,13 @@ class DirectRenderingTestRunner {
         results.style.display = 'none';
         section.appendChild(results);
 
+        // Add back-to-top link
+        const backToTop = document.createElement('a');
+        backToTop.href = '#navigation';
+        backToTop.className = 'back-to-top';
+        backToTop.textContent = 'Back to top';
+        section.appendChild(backToTop);
+
         return section;
     }
 

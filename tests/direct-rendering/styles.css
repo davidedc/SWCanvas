@@ -517,3 +517,17 @@ canvas[data-renderer="html5"] {
         justify-content: center;
     }
 }
+
+/* Back to Top Link */
+.back-to-top {
+    display: block;
+    text-align: right;
+    padding: 10px 20px;
+    color: #1976d2;
+    text-decoration: none;
+    font-size: 13px;
+}
+
+.back-to-top:hover {
+    text-decoration: underline;
+}
